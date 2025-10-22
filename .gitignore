@@ -1,6 +1,20 @@
-./build/**
-./tools/**
+# Ignore build output
+build/
 
-./.cache/**
-./.github/**
-./.vscode/**
+# Ignore GitHub workflows or metadata
+.github/
+
+# Ignore VS Code settings
+.vscode/
+
+# Ignore cache files
+.cache/
+
+# Ignore tools
+tools/
+
+# Ignore clang format
+.clang-format
+
+# Ignore workspace
+M3VK.code-workspace
