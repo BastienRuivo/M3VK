@@ -2,12 +2,173 @@
 #include <GLFW/glfw3.h>
 #include <cstdint>
 #include <cstring>
+#include <optional>
+#include <set>
 #include <stdexcept>
 #include <string>
 #include <vector>
 #include <vulkan/vulkan_core.h>
 
+#ifdef M3VK_VERBOSE_LOG
+    #include <iostream>
+#endif
 
+void HelloTriangleApp::CreateWindowSurface()
+{
+    if(glfwCreateWindowSurface(_instance, _pWindow, nullptr, &_windowSurface) != VK_SUCCESS)
+    {
+        throw std::runtime_error("Failed to create windows surface !");
+    }
+
+
+
+
+}
+
+void HelloTriangleApp::CreateLogicalDevice()
+{
+    QueueFamilyId queueFamilyId = FindQueueFamilies(_physicalDevice);
+
+    std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
+    std::set<uint32_t> uniqueQueueIds =
+    {
+        queueFamilyId.Graphics.value(),
+        queueFamilyId.Present.value()
+    };
+
+    float queuePriority = 1.0f;
+    for(uint32_t queueId : uniqueQueueIds)
+    {
+        VkDeviceQueueCreateInfo queueCreateInfo = {};
+        queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+        queueCreateInfo.queueFamilyIndex = queueId;
+        queueCreateInfo.queueCount = 1;
+        queueCreateInfo.pQueuePriorities = &queuePriority;
+        queueCreateInfos.push_back(queueCreateInfo);
+    }
+
+    VkPhysicalDeviceFeatures deviceFeatures = {};
+
+    VkDeviceCreateInfo deviceCreateInfo = {};
+    deviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+    deviceCreateInfo.pQueueCreateInfos = queueCreateInfos.data();
+    deviceCreateInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
+    deviceCreateInfo.pEnabledFeatures = &deviceFeatures;
+    deviceCreateInfo.enabledExtensionCount = 0;
+
+    if(_vkDebugLayer.Enabled)
+    {
+        deviceCreateInfo.enabledLayerCount = static_cast<uint32_t>(_vkDebugLayer.validationLayer.size());
+        deviceCreateInfo.ppEnabledLayerNames = _vkDebugLayer.validationLayer.data();
+    }
+    else
+    {
+        deviceCreateInfo.enabledLayerCount = 0;
+    }
+
+    VkResult deviceCreation = vkCreateDevice(_physicalDevice, &deviceCreateInfo, nullptr, &_logicalDevice);
+    if(deviceCreation != VK_SUCCESS)
+    {
+        throw std::runtime_error("Failed to create VK Logical Device !");
+    }
+
+    vkGetDeviceQueue(_logicalDevice, queueFamilyId.Graphics.value(), 0, &_graphicsQueue);
+    vkGetDeviceQueue(_logicalDevice, queueFamilyId.Present.value(), 0, &_presentQueue);
+}
+
+HelloTriangleApp::QueueFamilyId HelloTriangleApp::FindQueueFamilies(const VkPhysicalDevice& device) const
+{
+    QueueFamilyId queueIds;
+
+    uint32_t queueFamiliesCount = 0;
+
+    vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamiliesCount, nullptr);
+    std::vector<VkQueueFamilyProperties> families(queueFamiliesCount);
+    vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamiliesCount, families.data());
+
+    for(int i = 0; i < families.size(); ++i)
+    {
+        if(families[i].queueFlags & VK_QUEUE_GRAPHICS_BIT)
+        {
+            queueIds.Graphics = i;
+        }
+
+        VkBool32 isPresentSupported = false;
+        vkGetPhysicalDeviceSurfaceSupportKHR(device, i, _windowSurface, &isPresentSupported);
+
+        if(isPresentSupported)
+        {
+            queueIds.Present = i;
+        }
+    }
+
+
+
+    return queueIds;
+}
+
+int HelloTriangleApp::ScoreDeviceSuitability(const VkPhysicalDevice& device) const
+{
+    VkPhysicalDeviceProperties deviceProperties;
+    vkGetPhysicalDeviceProperties(device, &deviceProperties);
+
+    // support of addtionnal feature (texture compression, 64bit double, multi viewport rendering)
+    VkPhysicalDeviceFeatures deviceFeatures;
+    vkGetPhysicalDeviceFeatures(device, &deviceFeatures);
+
+    int score = 0;
+
+
+    QueueFamilyId ids = FindQueueFamilies(device);
+
+    // Mandatory feature, if any return 0 and this will be the only way to have 0 score meaning there's no suitable GPU
+    if(!QueueFamilyId::AreAllQueueAvailable(ids))
+    {
+        return score;
+    }
+
+    // Else we try to find the best available GPU for our criteria
+    switch (deviceProperties.deviceType)
+    {
+        case VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU: score += 600; break;
+        case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU: score += 800; break;
+        case VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU: score += 1000; break;
+        default: break;
+    }
+
+    return score;
+}
+
+void HelloTriangleApp::PickPhysicalDevice()
+{
+    _physicalDevice = VK_NULL_HANDLE;
+    uint32_t deviceCount = 0;
+    vkEnumeratePhysicalDevices(_instance, &deviceCount, nullptr);
+
+    if(deviceCount == 0)
+    {
+        throw std::runtime_error("Failed to find a Vulkan compatible GPU on this device");
+    }
+
+    std::vector<VkPhysicalDevice> devices(deviceCount);
+    vkEnumeratePhysicalDevices(_instance, &deviceCount, devices.data());
+
+    int bestScore = 0;
+    for(const VkPhysicalDevice& device : devices)
+    {
+        int score = ScoreDeviceSuitability(device);
+        if(score > bestScore)
+        {
+            bestScore = score;
+            _physicalDevice = device;
+        }
+    }
+
+    if(_physicalDevice == VK_NULL_HANDLE)
+    {
+        throw std::runtime_error("Failed to find a suitable GPU on this device");
+    }
+}
 
 void HelloTriangleApp::InitWindow()
 {
@@ -24,6 +185,9 @@ void HelloTriangleApp::InitVulkan()
 {
     CreateVKInstance();
     _vkDebugLayer.Create(_instance);
+    CreateWindowSurface();
+    PickPhysicalDevice();
+    CreateLogicalDevice();
 }
 
 void HelloTriangleApp::CreateVKInstance()
@@ -127,7 +291,9 @@ void HelloTriangleApp::DisposeWindow()
 
 void HelloTriangleApp::Dispose()
 {
+    vkDestroyDevice(_logicalDevice, nullptr);
     _vkDebugLayer.Dispose(_instance);
+    vkDestroySurfaceKHR(_instance, _windowSurface, nullptr);
     vkDestroyInstance(_instance, nullptr);
     DisposeWindow();
 }
@@ -136,6 +302,7 @@ void HelloTriangleApp::Run()
 {
     InitWindow();
     InitVulkan();
+
     MainLoop();
     Dispose();
 }
