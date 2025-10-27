@@ -1,8 +1,7 @@
 #ifndef HELLOTRIANGLE_APP_CLASS
 #define HELLOTRIANGLE_APP_CLASS
 
-#include <cstdint>
-#include <optional>
+#include "header/SwapChain.h"
 #include <vector>
 #include <vulkan/vk_platform.h>
 #include <vulkan/vulkan_core.h>
@@ -15,18 +14,6 @@ class HelloTriangleApp
 {
     static const int WindowWidth = 960;
     static const int WindowHeight = 540;
-
-    struct QueueFamilyId
-    {
-        std::optional<uint32_t> Graphics;
-        std::optional<uint32_t> Present;
-
-        static bool AreAllQueueAvailable(const QueueFamilyId& queueIds)
-        {
-            return queueIds.Graphics.has_value()
-                && queueIds.Present.has_value();
-        }
-    };
 
     public:
     void Run();
@@ -44,6 +31,7 @@ class HelloTriangleApp
     // implicitly cleaned
     VkQueue _graphicsQueue;
     VkQueue _presentQueue;
+    SwapChain _swapChain;
 
     int ScoreDeviceSuitability(const VkPhysicalDevice& device) const;
 
@@ -58,11 +46,13 @@ class HelloTriangleApp
     // Physical Device
     void PickPhysicalDevice();
 
-    // Queue Utility
-    QueueFamilyId FindQueueFamilies(const VkPhysicalDevice& device) const;
-
     // Utils
     std::vector<const char*> GetRequiredExtensions() const;
+    const std::vector<const char*> _deviceExtensions = {
+        VK_KHR_SWAPCHAIN_EXTENSION_NAME
+    };
+    bool CheckDeviceExtensionSupport(const VkPhysicalDevice& device) const;
+
 
     //Actual logic
     void MainLoop();

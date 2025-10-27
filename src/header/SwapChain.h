@@ -1,0 +1,35 @@
+#ifndef SWAP_CHAIN_CLASS
+#define SWAP_CHAIN_CLASS
+
+#include <vector>
+#include <vulkan/vk_platform.h>
+#include <vulkan/vulkan_core.h>
+#define GLFW_INCLUDE_VULKAN
+#include <GLFW/glfw3.h>
+
+#include "VkDebugLayer.h"
+
+class SwapChain
+{
+    public:
+    void Create(GLFWwindow* pWindow, const VkPhysicalDevice& physicalDevice, const VkDevice& logicalDevice, const VkSurfaceKHR& windowSurface);
+    void Dipose(const VkDevice& logicalDevice);
+
+
+    VkSurfaceFormatKHR SelectSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats) const;
+    VkPresentModeKHR SelectSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes) const;
+    VkExtent2D SelectSwapExtents(GLFWwindow* pWindow, const VkSurfaceCapabilitiesKHR& Capabilities) const;
+
+    private:
+    void CreateImageView(const VkDevice& logicalDevice);
+    GLFWwindow* _pWindow;
+    VkSwapchainKHR _internal;
+    VkFormat _imageFormat;
+    VkExtent2D _extent;
+
+
+    std::vector<VkImage> _images;
+    std::vector<VkImageView> _imageViews;
+};
+
+#endif

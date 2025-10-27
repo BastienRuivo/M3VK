@@ -1,6 +1,7 @@
 #ifndef VKLOGGER_CLASS
 #define VKLOGGER_CLASS
 
+#include <string>
 #include <vulkan/vk_platform.h>
 #include <vulkan/vulkan_core.h>
 #define GLFW_INCLUDE_VULKAN
@@ -43,6 +44,11 @@ class VkDebugLayer
     void Create(VkInstance& instance);
     bool CheckValidationLayerSupport() const;
     void SetupCreateInfo(VkInstanceCreateInfo& instanceCreateInfo, VkDebugUtilsMessengerCreateInfoEXT& debugInfoCreate) const;
+    static void Log(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, const std::string& message);
+    static void LogInfo(const std::string& message);
+    static void LogWarning(const std::string& message);
+    static void LogError(const std::string& message);
+
 
     private:
     VkDebugUtilsMessengerEXT _debugMessenger;

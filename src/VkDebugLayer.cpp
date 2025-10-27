@@ -20,6 +20,55 @@ void M3VK_DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMesseng
     }
 }
 
+void VkDebugLayer::LogInfo(const std::string& message)
+{
+    if(!Enabled) return;
+    Log(VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT, message);
+}
+
+void VkDebugLayer::LogWarning(const std::string& message)
+{
+    if(!Enabled) return;
+    Log(VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT, message);
+}
+
+void VkDebugLayer::LogError(const std::string& message)
+{
+    if(!Enabled) return;
+    Log(VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT, message);
+}
+
+void VkDebugLayer::Log(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, const std::string& message)
+{
+    if(!Enabled) return;
+    #ifndef M3VK_VERBOSE_LOG
+        if(messageSeverity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT) return;
+    #endif
+
+    std::cerr << "[Validation Layer Message] :";
+    switch (messageSeverity)
+    {
+        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
+            std::cerr << "\033[0m" << "[sVERBOSE]";
+            break;
+
+        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
+            std::cerr << "\033[0m" << "[sINFO]";
+            break;
+
+        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
+            std::cerr << "\033[33m" << "[sWARNING]";
+            break;
+        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
+            std::cerr << "\033[31m" << "[sERROR]";
+            break;
+        default:
+            break;
+    }
+
+    std::cerr << "[tManual]" << message << std::endl;
+}
+
 static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(
     VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
     VkDebugUtilsMessageTypeFlagsEXT messageType,

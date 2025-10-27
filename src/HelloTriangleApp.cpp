@@ -1,4 +1,5 @@
 #include "header/HelloTriangleApp.h"
+#include "header/M3VKHelper.h"
 #include <GLFW/glfw3.h>
 #include <cstdint>
 #include <cstring>
@@ -9,9 +10,36 @@
 #include <vector>
 #include <vulkan/vulkan_core.h>
 
-#ifdef M3VK_VERBOSE_LOG
-    #include <iostream>
-#endif
+bool HelloTriangleApp::CheckDeviceExtensionSupport(const VkPhysicalDevice& device) const
+{
+    uint32_t extensionCount = 0;
+    vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
+    std::vector<VkExtensionProperties> properties(extensionCount);
+    vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, properties.data());
+
+    for(const auto& extension : _deviceExtensions)
+    {
+        bool foundExtension = false;
+        for(const VkExtensionProperties& property : properties)
+        {
+            if(strcmp(extension, property.extensionName) == 0)
+            {
+                foundExtension = true;
+                break;
+            }
+        }
+        if(!foundExtension)
+        {
+            if(_vkDebugLayer.Enabled)
+            {
+                _vkDebugLayer.LogError((std::string("Extension not supported : ") + std::string(extension)).c_str());
+            }
+            return false;
+        }
+    }
+
+    return true;
+}
 
 void HelloTriangleApp::CreateWindowSurface()
 {
@@ -19,15 +47,11 @@ void HelloTriangleApp::CreateWindowSurface()
     {
         throw std::runtime_error("Failed to create windows surface !");
     }
-
-
-
-
 }
 
 void HelloTriangleApp::CreateLogicalDevice()
 {
-    QueueFamilyId queueFamilyId = FindQueueFamilies(_physicalDevice);
+    M3VKHelper::QueueFamilyId queueFamilyId = M3VKHelper::QueryQueueFamilies(_physicalDevice, _windowSurface);
 
     std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
     std::set<uint32_t> uniqueQueueIds =
@@ -54,7 +78,8 @@ void HelloTriangleApp::CreateLogicalDevice()
     deviceCreateInfo.pQueueCreateInfos = queueCreateInfos.data();
     deviceCreateInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
     deviceCreateInfo.pEnabledFeatures = &deviceFeatures;
-    deviceCreateInfo.enabledExtensionCount = 0;
+    deviceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(_deviceExtensions.size());
+    deviceCreateInfo.ppEnabledExtensionNames = _deviceExtensions.data();
 
     if(_vkDebugLayer.Enabled)
     {
@@ -76,37 +101,6 @@ void HelloTriangleApp::CreateLogicalDevice()
     vkGetDeviceQueue(_logicalDevice, queueFamilyId.Present.value(), 0, &_presentQueue);
 }
 
-HelloTriangleApp::QueueFamilyId HelloTriangleApp::FindQueueFamilies(const VkPhysicalDevice& device) const
-{
-    QueueFamilyId queueIds;
-
-    uint32_t queueFamiliesCount = 0;
-
-    vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamiliesCount, nullptr);
-    std::vector<VkQueueFamilyProperties> families(queueFamiliesCount);
-    vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamiliesCount, families.data());
-
-    for(int i = 0; i < families.size(); ++i)
-    {
-        if(families[i].queueFlags & VK_QUEUE_GRAPHICS_BIT)
-        {
-            queueIds.Graphics = i;
-        }
-
-        VkBool32 isPresentSupported = false;
-        vkGetPhysicalDeviceSurfaceSupportKHR(device, i, _windowSurface, &isPresentSupported);
-
-        if(isPresentSupported)
-        {
-            queueIds.Present = i;
-        }
-    }
-
-
-
-    return queueIds;
-}
-
 int HelloTriangleApp::ScoreDeviceSuitability(const VkPhysicalDevice& device) const
 {
     VkPhysicalDeviceProperties deviceProperties;
@@ -119,12 +113,18 @@ int HelloTriangleApp::ScoreDeviceSuitability(const VkPhysicalDevice& device) con
     int score = 0;
 
 
-    QueueFamilyId ids = FindQueueFamilies(device);
+    M3VKHelper::QueueFamilyId ids = M3VKHelper::QueryQueueFamilies(device, _windowSurface);
+
+    bool areAllRequiredExtensionsSupported = CheckDeviceExtensionSupport(device);
+
+    M3VKHelper::SwapChainSupportDetails swapChainDetails = M3VKHelper::QuerySwapChainSupportDetail(device, _windowSurface);
 
     // Mandatory feature, if any return 0 and this will be the only way to have 0 score meaning there's no suitable GPU
-    if(!QueueFamilyId::AreAllQueueAvailable(ids))
+    if(!M3VKHelper::QueueFamilyId::AreAllQueueAvailable(ids)
+        || !areAllRequiredExtensionsSupported
+        || !swapChainDetails.CheckSwapChainSupportAdequate())
     {
-        return score;
+        return 0;
     }
 
     // Else we try to find the best available GPU for our criteria
@@ -188,6 +188,7 @@ void HelloTriangleApp::InitVulkan()
     CreateWindowSurface();
     PickPhysicalDevice();
     CreateLogicalDevice();
+    _swapChain.Create(_pWindow, _physicalDevice, _logicalDevice, _windowSurface);
 }
 
 void HelloTriangleApp::CreateVKInstance()
@@ -204,13 +205,15 @@ void HelloTriangleApp::CreateVKInstance()
     std::vector<VkExtensionProperties> supportedExtensions(extensionCount);
     vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, supportedExtensions.data());
 
-#ifdef M3VK_VERBOSE_LOG
-    std::cout << "List of actives VK extensions" << std::endl;
-    for(const VkExtensionProperties& extension : supportedExtensions)
+    if(_vkDebugLayer.Enabled)
     {
-        std::cout << "\t - " << extension.extensionName << std::endl;
+        _vkDebugLayer.LogInfo("List of actives VK Extensions");
+        for(const VkExtensionProperties& extension : supportedExtensions)
+        {
+            _vkDebugLayer.LogInfo(std::string("\t - ") + extension.extensionName);
+        }
     }
-#endif
+
 
     std::vector<const char *> requiredExtensions = GetRequiredExtensions();
     for(int i = 0; i < requiredExtensions.size(); ++i)
@@ -291,6 +294,7 @@ void HelloTriangleApp::DisposeWindow()
 
 void HelloTriangleApp::Dispose()
 {
+    _swapChain.Dipose(_logicalDevice);
     vkDestroyDevice(_logicalDevice, nullptr);
     _vkDebugLayer.Dispose(_instance);
     vkDestroySurfaceKHR(_instance, _windowSurface, nullptr);
