@@ -25,3 +25,41 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 
 # Link libraries
 target_link_libraries(${PROJECT_NAME} PRIVATE Vulkan::Vulkan glfw)
+
+# -------------------------------------------------------------------
+# 🔹 Shader Compilation (outputs to ${CMAKE_BINARY_DIR}/shaders)
+# -------------------------------------------------------------------
+
+# All GLSL shader files under src/shaders
+file(GLOB_RECURSE GLSL_SOURCE_FILES
+    "${CMAKE_SOURCE_DIR}/src/shaders/*.vert"
+    "${CMAKE_SOURCE_DIR}/src/shaders/*.frag"
+    "${CMAKE_SOURCE_DIR}/src/shaders/*.comp"
+    "${CMAKE_SOURCE_DIR}/src/shaders/*.geom"
+    "${CMAKE_SOURCE_DIR}/src/shaders/*.tesc"
+    "${CMAKE_SOURCE_DIR}/src/shaders/*.tese"
+)
+
+# Create a shaders output directory in the build folder
+set(SHADER_OUTPUT_DIR "${CMAKE_BINARY_DIR}/shaders")
+file(MAKE_DIRECTORY ${SHADER_OUTPUT_DIR})
+
+set(SPIRV_BINARY_FILES "")
+foreach(GLSL ${GLSL_SOURCE_FILES})
+    get_filename_component(FILE_NAME ${GLSL} NAME)
+    set(SPIRV "${SHADER_OUTPUT_DIR}/${FILE_NAME}.spv")
+
+    add_custom_command(
+        OUTPUT ${SPIRV}
+        COMMAND ${Vulkan_GLSLC_EXECUTABLE} ${GLSL} -o ${SPIRV}
+        DEPENDS ${GLSL}
+        COMMENT "🌀 Compiling shader: ${FILE_NAME}"
+        VERBATIM
+    )
+
+    list(APPEND SPIRV_BINARY_FILES ${SPIRV})
+endforeach()
+
+# Build all shaders before the main binary
+add_custom_target(Shaders ALL DEPENDS ${SPIRV_BINARY_FILES})
+add_dependencies(${PROJECT_NAME} Shaders)

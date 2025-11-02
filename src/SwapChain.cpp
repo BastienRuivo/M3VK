@@ -2,21 +2,24 @@
 #include "./header/M3VKHelper.h"
 #include <GLFW/glfw3.h>
 #include <algorithm>
+#include <cstddef>
 #include <limits>
 #include <stdexcept>
 #include <vulkan/vulkan_core.h>
 
+
+
 void SwapChain::CreateImageView(const VkDevice& logicalDevice)
 {
-    _imageViews.resize(_images.size());
+    ImageViews.resize(Images.size());
 
-    for(int i = 0; i < _imageViews.size(); i++)
+    for(int i = 0; i < ImageViews.size(); i++)
     {
         VkImageViewCreateInfo createInfo = {};
         createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-        createInfo.image = _images[i];
+        createInfo.image = Images[i];
         createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-        createInfo.format = _imageFormat;
+        createInfo.format = ImageFormat;
 
         // How to deal with components
         createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
@@ -32,7 +35,7 @@ void SwapChain::CreateImageView(const VkDevice& logicalDevice)
         // if VR someday
         createInfo.subresourceRange.layerCount = 1;
 
-        if(vkCreateImageView(logicalDevice, &createInfo, nullptr, &_imageViews[i]) != VK_SUCCESS)
+        if(vkCreateImageView(logicalDevice, &createInfo, nullptr, &ImageViews[i]) != VK_SUCCESS)
         {
             throw std::runtime_error("Failed to create swap chain images !");
         }
@@ -183,18 +186,18 @@ void SwapChain::Create(GLFWwindow* pWindow, const VkPhysicalDevice& physicalDevi
     }
 
     vkGetSwapchainImagesKHR(logicalDevice, _internal, &imageCount, nullptr);
-    _images.resize(imageCount);
-    vkGetSwapchainImagesKHR(logicalDevice, _internal, &imageCount, _images.data());
+    Images.resize(imageCount);
+    vkGetSwapchainImagesKHR(logicalDevice, _internal, &imageCount, Images.data());
 
-    _imageFormat = format.format;
-    _extent = extents;
+    ImageFormat = format.format;
+    Extent = extents;
 
     CreateImageView(logicalDevice);
 }
 
 void SwapChain::Dipose(const VkDevice& logicalDevice)
 {
-    for(const VkImageView& imageView : _imageViews)
+    for(const VkImageView& imageView : ImageViews)
     {
         vkDestroyImageView(logicalDevice, imageView, nullptr);
     }

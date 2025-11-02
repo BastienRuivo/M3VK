@@ -12,6 +12,10 @@
 class SwapChain
 {
     public:
+    VkFormat ImageFormat;
+    VkExtent2D Extent;
+    std::vector<VkImage> Images;
+    std::vector<VkImageView> ImageViews;
     void Create(GLFWwindow* pWindow, const VkPhysicalDevice& physicalDevice, const VkDevice& logicalDevice, const VkSurfaceKHR& windowSurface);
     void Dipose(const VkDevice& logicalDevice);
 
@@ -20,16 +24,11 @@ class SwapChain
     VkPresentModeKHR SelectSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes) const;
     VkExtent2D SelectSwapExtents(GLFWwindow* pWindow, const VkSurfaceCapabilitiesKHR& Capabilities) const;
 
+
     private:
     void CreateImageView(const VkDevice& logicalDevice);
     GLFWwindow* _pWindow;
     VkSwapchainKHR _internal;
-    VkFormat _imageFormat;
-    VkExtent2D _extent;
-
-
-    std::vector<VkImage> _images;
-    std::vector<VkImageView> _imageViews;
 };
 
 #endif

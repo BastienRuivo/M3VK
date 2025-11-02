@@ -1,5 +1,6 @@
 #include "header/HelloTriangleApp.h"
 #include "header/M3VKHelper.h"
+#include "header/Shader.h"
 #include <GLFW/glfw3.h>
 #include <cstdint>
 #include <cstring>
@@ -9,6 +10,234 @@
 #include <string>
 #include <vector>
 #include <vulkan/vulkan_core.h>
+
+void HelloTriangleApp::CreateFrameBuffers()
+{
+    _framebuffers.resize(_swapChain.ImageViews.size());
+
+    for(size_t i = 0; i < _swapChain.ImageViews.size(); ++i)
+    {
+        VkImageView attachments[] = {
+            _swapChain.ImageViews[i]
+        };
+
+        VkFramebufferCreateInfo createInfo = {};
+        createInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+        createInfo.renderPass = _renderPass;
+        createInfo.attachmentCount = 1;
+        createInfo.pAttachments = attachments;
+        createInfo.width = _swapChain.Extent.width;
+        createInfo.height = _swapChain.Extent.height;
+        createInfo.layers = 1;
+
+        if(vkCreateFramebuffer(_logicalDevice, &createInfo, nullptr, &_framebuffers[i]) != VK_SUCCESS)
+        {
+            throw std::runtime_error("failed to create framebuffer !");
+        }
+    }
+}
+
+void HelloTriangleApp::CreateRenderPass()
+{
+    VkAttachmentDescription colorAttachment =  {};
+    colorAttachment.format = _swapChain.ImageFormat;
+    colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+    // clear at new frame, load to keep and dont care to undefined
+    colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    // STORE preserve the data, DONT_CARE otherwise
+    colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    // only rendering a triangle, no use of stencil or depth atm
+    colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    // Images can have layout suitable for different op
+    colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+    VkAttachmentReference colorAttachmentRef = {};
+    // attachment index, only one so 0
+    colorAttachmentRef.attachment = 0;
+    colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+    VkSubpassDescription subpass = {};
+    subpass.pipelineBindPoint =VK_PIPELINE_BIND_POINT_GRAPHICS;
+    subpass.colorAttachmentCount = 1;
+    subpass.pColorAttachments = &colorAttachmentRef;
+
+    VkRenderPassCreateInfo rpCreateInfo = {};
+    rpCreateInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+    rpCreateInfo.attachmentCount = 1;
+    rpCreateInfo.pAttachments = &colorAttachment;
+    rpCreateInfo.subpassCount = 1;
+    rpCreateInfo.pSubpasses = &subpass;
+
+    if(vkCreateRenderPass(_logicalDevice, &rpCreateInfo, nullptr, &_renderPass)  != VK_SUCCESS)
+    {
+        throw std::runtime_error("Failed to create render pass");
+    }
+}
+
+void HelloTriangleApp::CreateGraphicsPipeline()
+{
+    Shader shader;
+    shader.Create(_logicalDevice);
+
+    VkPipelineShaderStageCreateInfo shadersStagesCreateInfo[2] = {
+        {},
+        {}
+    };
+
+    shadersStagesCreateInfo[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    shadersStagesCreateInfo[0].stage = VK_SHADER_STAGE_VERTEX_BIT;
+    shadersStagesCreateInfo[0].module = shader.VertexShader;
+    shadersStagesCreateInfo[0].pName = "main";
+
+    shadersStagesCreateInfo[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    shadersStagesCreateInfo[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+    shadersStagesCreateInfo[1].module = shader.FragmentShader;
+    shadersStagesCreateInfo[1].pName = "main";
+
+    std::vector<VkDynamicState> dynamicStates = {
+        VK_DYNAMIC_STATE_VIEWPORT,
+        VK_DYNAMIC_STATE_SCISSOR
+    };
+
+    VkPipelineDynamicStateCreateInfo pipelineStateCreateInfo = {};
+    pipelineStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+    pipelineStateCreateInfo.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
+    pipelineStateCreateInfo.pDynamicStates = dynamicStates.data();
+
+    VkPipelineVertexInputStateCreateInfo vertexInputCreateInfo = {};
+    vertexInputCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+    vertexInputCreateInfo.vertexBindingDescriptionCount = 0;
+    vertexInputCreateInfo.pVertexBindingDescriptions = nullptr;
+    vertexInputCreateInfo.vertexAttributeDescriptionCount = 0;
+    vertexInputCreateInfo.pVertexAttributeDescriptions = nullptr;
+
+    // Input Assembly
+    VkPipelineInputAssemblyStateCreateInfo inputAssemblyCreateInfo = {};
+    inputAssemblyCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+    // For later use (When i will choose if i still want to make a cube world like thingy) maybe i can try strip ?
+    // like in opengl, this turn 4 index like 1234 into 2 triangle (123, 324) and this can save me some place (bandwith <3)
+    // theres also some element buffer shit to setup here later
+    inputAssemblyCreateInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+    inputAssemblyCreateInfo.primitiveRestartEnable = false;
+
+    VkViewport viewport = {};
+    viewport.x = 0.0f;
+    viewport.y = 0.0f;
+    viewport.width = _swapChain.Extent.width;
+    viewport.height = _swapChain.Extent.height;
+    viewport.minDepth = 0.0f;
+    viewport.maxDepth = 1.0f;
+
+    // Region to rasterize pixels on
+    VkRect2D scissors = {};
+    scissors.extent = _swapChain.Extent;
+    scissors.offset.x = 0;
+    scissors.offset.y = 0;
+
+    VkPipelineViewportStateCreateInfo viewportCreateInfo = {};
+    viewportCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+    viewportCreateInfo.viewportCount = 1;
+    viewportCreateInfo.scissorCount = 1;
+
+    // Rasterizer
+    VkPipelineRasterizationStateCreateInfo rasterizeCreateInfo = {};
+    rasterizeCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+    // if true, clamp near and far object to the planes instead of discarding them
+    rasterizeCreateInfo.depthClampEnable = false;
+    // disable geometry from going to the rasterizer stage ??
+    rasterizeCreateInfo.rasterizerDiscardEnable = false;
+    // VK_POLYGON_MODE_LINE for wireframe later maybe ? or this can be another feature to enable, check later
+    rasterizeCreateInfo.polygonMode = VK_POLYGON_MODE_FILL;
+    rasterizeCreateInfo.cullMode = VK_CULL_MODE_BACK_BIT;
+    rasterizeCreateInfo.frontFace = VK_FRONT_FACE_CLOCKWISE;
+    rasterizeCreateInfo.depthBiasEnable = VK_FALSE;
+    rasterizeCreateInfo.depthBiasConstantFactor = 0.0f;
+    rasterizeCreateInfo.depthBiasClamp = 0.0f;
+    rasterizeCreateInfo.depthBiasSlopeFactor = 0.0f;
+    rasterizeCreateInfo.lineWidth = 1.0f;
+
+    // MSAA, disabled for now
+    VkPipelineMultisampleStateCreateInfo msaaCreateInfo = {};
+    msaaCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+    msaaCreateInfo.sampleShadingEnable = VK_FALSE;
+    msaaCreateInfo.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+    msaaCreateInfo.minSampleShading = 1.0f;
+    msaaCreateInfo.pSampleMask = nullptr;
+    msaaCreateInfo.alphaToCoverageEnable = VK_FALSE;
+    msaaCreateInfo.alphaToOneEnable = VK_FALSE;
+
+    // Here depth later
+
+    // Blending
+    VkPipelineColorBlendAttachmentState colorBlendAttachment = {};
+    colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+    colorBlendAttachment.blendEnable = VK_FALSE;
+    colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE; // Optional
+    colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ZERO; // Optional
+    colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD; // Optional
+    colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE; // Optional
+    colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO; // Optional
+    colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD; // Optional
+
+    VkPipelineColorBlendStateCreateInfo colorBlending{};
+    colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+    colorBlending.logicOpEnable = VK_FALSE;
+    colorBlending.logicOp = VK_LOGIC_OP_COPY; // Optional
+    colorBlending.attachmentCount = 1;
+    colorBlending.pAttachments = &colorBlendAttachment;
+    colorBlending.blendConstants[0] = 0.0f; // Optional
+    colorBlending.blendConstants[1] = 0.0f; // Optional
+    colorBlending.blendConstants[2] = 0.0f; // Optional
+    colorBlending.blendConstants[3] = 0.0f; // Optional
+
+    // Uniforms (empty for now)
+    VkPipelineLayoutCreateInfo layoutCreateInfo = {};
+    layoutCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    layoutCreateInfo.setLayoutCount = 0;
+    layoutCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    layoutCreateInfo.setLayoutCount = 0; // Optional
+    layoutCreateInfo.pSetLayouts = nullptr; // Optional
+    layoutCreateInfo.pushConstantRangeCount = 0; // Optional
+    layoutCreateInfo.pPushConstantRanges = nullptr; // Optional
+
+    if(vkCreatePipelineLayout(_logicalDevice, &layoutCreateInfo, nullptr, &_pipelineLayout) != VK_SUCCESS)
+    {
+        throw std::runtime_error("Failed to create VK Layout !");
+    }
+
+    VkGraphicsPipelineCreateInfo pipelineCreateInfo = {};
+    pipelineCreateInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+    pipelineCreateInfo.stageCount = 2;
+
+    // Graphics pipeline
+    pipelineCreateInfo.pStages = shadersStagesCreateInfo;
+    pipelineCreateInfo.pVertexInputState = &vertexInputCreateInfo;
+    pipelineCreateInfo.pInputAssemblyState = &inputAssemblyCreateInfo;
+    pipelineCreateInfo.pViewportState = &viewportCreateInfo;
+    pipelineCreateInfo.pRasterizationState = &rasterizeCreateInfo;
+    pipelineCreateInfo.pMultisampleState = &msaaCreateInfo;
+    pipelineCreateInfo.pDepthStencilState = nullptr;
+    pipelineCreateInfo.pColorBlendState = &colorBlending;
+    pipelineCreateInfo.pDynamicState = &pipelineStateCreateInfo;
+
+    pipelineCreateInfo.layout = _pipelineLayout;
+    pipelineCreateInfo.renderPass = _renderPass;
+    pipelineCreateInfo.subpass = 0;
+
+    // can be use to switch between parent pipeline (less expensive theorically if simillar)
+    pipelineCreateInfo.basePipelineHandle = VK_NULL_HANDLE;
+    pipelineCreateInfo.basePipelineIndex = -1;
+
+    if(vkCreateGraphicsPipelines(_logicalDevice, VK_NULL_HANDLE, 1, &pipelineCreateInfo, nullptr, &_graphicsPipeline) != VK_SUCCESS)
+    {
+        throw std::runtime_error("Failed to create graphics pipeline !");
+    }
+
+    // Disposal
+    shader.Dispose(_logicalDevice);
+}
 
 bool HelloTriangleApp::CheckDeviceExtensionSupport(const VkPhysicalDevice& device) const
 {
@@ -189,6 +418,8 @@ void HelloTriangleApp::InitVulkan()
     PickPhysicalDevice();
     CreateLogicalDevice();
     _swapChain.Create(_pWindow, _physicalDevice, _logicalDevice, _windowSurface);
+    CreateRenderPass();
+    CreateGraphicsPipeline();
 }
 
 void HelloTriangleApp::CreateVKInstance()
@@ -294,6 +525,12 @@ void HelloTriangleApp::DisposeWindow()
 
 void HelloTriangleApp::Dispose()
 {
+    for (const VkFramebuffer& framebuffer : _framebuffers) {
+        vkDestroyFramebuffer(_logicalDevice, framebuffer, nullptr);
+    }
+    vkDestroyPipeline(_logicalDevice, _graphicsPipeline, nullptr);
+    vkDestroyPipelineLayout(_logicalDevice, _pipelineLayout, nullptr);
+    vkDestroyRenderPass(_logicalDevice, _renderPass, nullptr);
     _swapChain.Dipose(_logicalDevice);
     vkDestroyDevice(_logicalDevice, nullptr);
     _vkDebugLayer.Dispose(_instance);

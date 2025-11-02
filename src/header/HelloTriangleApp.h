@@ -26,12 +26,19 @@ class HelloTriangleApp
     VkDebugLayer _vkDebugLayer;
     // Window API surface
     VkSurfaceKHR _windowSurface;
+    std::vector<VkFramebuffer> _framebuffers;
+
 
     // Queues
     // implicitly cleaned
     VkQueue _graphicsQueue;
     VkQueue _presentQueue;
     SwapChain _swapChain;
+
+    // Uniform container
+    VkRenderPass _renderPass;
+    VkPipelineLayout _pipelineLayout;
+    VkPipeline _graphicsPipeline;
 
     int ScoreDeviceSuitability(const VkPhysicalDevice& device) const;
 
@@ -40,6 +47,9 @@ class HelloTriangleApp
     void InitVulkan();
     void CreateVKInstance();
     void CreateWindowSurface();
+    void CreateGraphicsPipeline();
+    void CreateRenderPass();
+    void CreateFrameBuffers();
 
     // Logical Device
     void CreateLogicalDevice();

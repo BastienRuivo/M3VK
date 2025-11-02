@@ -1,12 +1,38 @@
 #ifndef M3VK_HELPER_CLASS
 #define M3VK_HELPER_CLASS
 
+#include <filesystem>
+#include <fstream>
 #include <optional>
+#include <stdexcept>
 #include <vector>
 #include <vulkan/vulkan_core.h>
+#include "VkDebugLayer.h"
+
 class M3VKHelper
 {
     public:
+
+    static std::vector<char> ReadFile(const std::string& filename)
+    {
+        std::ifstream file(filename, std::ios::ate | std::ios::binary);
+
+        if(!file.is_open())
+        {
+            VkDebugLayer::LogError("Can't open " + std::string(std::filesystem::current_path()) + "/" + filename);
+            throw std::runtime_error("Can't open file " + filename);
+        }
+
+        size_t fileSize = file.tellg();
+        std::vector<char> bytes(fileSize);
+
+        file.seekg(0);
+        file.read(bytes.data(), fileSize);
+        file.close();
+
+        return bytes;
+    }
+
     struct QueueFamilyId
     {
         public:
@@ -82,5 +108,7 @@ class M3VKHelper
         }
         return details;
     }
+
+
 };
 #endif
