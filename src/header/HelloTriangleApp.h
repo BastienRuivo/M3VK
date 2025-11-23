@@ -2,6 +2,7 @@
 #define HELLOTRIANGLE_APP_CLASS
 
 #include "header/SwapChain.h"
+#include <cstdint>
 #include <vector>
 #include <vulkan/vk_platform.h>
 #include <vulkan/vulkan_core.h>
@@ -21,12 +22,13 @@ class HelloTriangleApp
     private:
     GLFWwindow* _pWindow = nullptr;
     VkInstance _instance;
-    VkDevice _logicalDevice;
+    VkDevice _device;
     VkPhysicalDevice _physicalDevice;
     VkDebugLayer _vkDebugLayer;
     // Window API surface
     VkSurfaceKHR _windowSurface;
     std::vector<VkFramebuffer> _framebuffers;
+    VkCommandPool _commandPool;
 
 
     // Queues
@@ -34,6 +36,7 @@ class HelloTriangleApp
     VkQueue _graphicsQueue;
     VkQueue _presentQueue;
     SwapChain _swapChain;
+    VkCommandBuffer _commandBuffer;
 
     // Uniform container
     VkRenderPass _renderPass;
@@ -47,14 +50,15 @@ class HelloTriangleApp
     void InitVulkan();
     void CreateVKInstance();
     void CreateWindowSurface();
+    void PickPhysicalDevice();
+    void CreateLogicalDevice();
     void CreateGraphicsPipeline();
     void CreateRenderPass();
     void CreateFrameBuffers();
+    void CreatCommandPool();
+    void CreateCommandBuffer();
 
-    // Logical Device
-    void CreateLogicalDevice();
-    // Physical Device
-    void PickPhysicalDevice();
+    void RecordCommandBuffer(VkCommandBuffer cmdBuffer, uint32_t imageIndex);
 
     // Utils
     std::vector<const char*> GetRequiredExtensions() const;

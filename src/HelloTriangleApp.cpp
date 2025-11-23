@@ -11,6 +11,93 @@
 #include <vector>
 #include <vulkan/vulkan_core.h>
 
+void HelloTriangleApp::RecordCommandBuffer(VkCommandBuffer cmdBuffer, uint32_t imageIndex)
+{
+    VkCommandBufferBeginInfo beginInfo = {};
+    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    beginInfo.flags = 0; // Tells how we're using command buffer (record each send, buffer used in a render pass...)
+    beginInfo.pInheritanceInfo = nullptr; // state info when called by a primary command buffer when it's a secondary one
+
+    if(vkBeginCommandBuffer(cmdBuffer, &beginInfo) != VK_SUCCESS)
+    {
+        throw std::runtime_error("Failed to begin command buffer !");
+    }
+
+    VkRenderPassBeginInfo rpBeginInfo = {};
+    rpBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    rpBeginInfo.renderPass = _renderPass;
+    rpBeginInfo.framebuffer = _framebuffers[imageIndex];
+    rpBeginInfo.renderArea.offset = {0, 0};
+    rpBeginInfo.renderArea.extent =_swapChain.Extent;
+
+    VkClearValue clearValue = {};
+    clearValue.color = {0.0f, 0.0f, 0.0f, 1.0f};
+
+    rpBeginInfo.clearValueCount = 1;
+    rpBeginInfo.pClearValues = &clearValue;
+
+    // inline tells everything is embedded in the primary cmdBuffer and no secondary will be used
+    vkCmdBeginRenderPass(cmdBuffer, &rpBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+    vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _graphicsPipeline);
+
+    VkViewport viewport = {};
+    viewport.x = 0.0f;
+    viewport.y = 0.0f;
+    viewport.width = _swapChain.Extent.width;
+    viewport.height = _swapChain.Extent.height;
+    viewport.minDepth = 0.0f;
+    viewport.maxDepth = 1.0f;
+
+    vkCmdSetViewport(cmdBuffer, 0, 1, &viewport);
+
+    VkRect2D scissors = {};
+    scissors.offset = {0, 0};
+    scissors.extent = _swapChain.Extent;
+
+    vkCmdSetScissor(cmdBuffer, 0, 1, &scissors);
+
+    vkCmdDraw(cmdBuffer, 3, 1, 0, 0);
+
+    vkCmdEndRenderPass(cmdBuffer);
+
+    if(vkEndCommandBuffer(cmdBuffer) != VK_SUCCESS)
+    {
+        throw std::runtime_error("Failed to record command buffer");
+    }
+}
+
+void HelloTriangleApp::CreateCommandBuffer()
+{
+    VkCommandBufferAllocateInfo allocateInfo = {};
+    allocateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    allocateInfo.commandPool = _commandPool;
+    allocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    allocateInfo.commandBufferCount = 1;
+
+    if(vkAllocateCommandBuffers(_device, &allocateInfo, &_commandBuffer) != VK_SUCCESS)
+    {
+        throw std::runtime_error("Failed to create command buffer !");
+    }
+}
+
+void HelloTriangleApp::CreatCommandPool()
+{
+    M3VKHelper::QueueFamilyId queueFamilyId = M3VKHelper::QueryQueueFamilies(_physicalDevice, _windowSurface);
+
+    VkCommandPoolCreateInfo poolInfo = {};
+    poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+    poolInfo.queueFamilyIndex = queueFamilyId.Graphics.value();
+
+    if(vkCreateCommandPool(_device, &poolInfo, nullptr, &_commandPool) != VK_SUCCESS)
+    {
+        throw std::runtime_error("Failed to create command pool !");
+    }
+
+
+}
+
 void HelloTriangleApp::CreateFrameBuffers()
 {
     _framebuffers.resize(_swapChain.ImageViews.size());
@@ -30,7 +117,7 @@ void HelloTriangleApp::CreateFrameBuffers()
         createInfo.height = _swapChain.Extent.height;
         createInfo.layers = 1;
 
-        if(vkCreateFramebuffer(_logicalDevice, &createInfo, nullptr, &_framebuffers[i]) != VK_SUCCESS)
+        if(vkCreateFramebuffer(_device, &createInfo, nullptr, &_framebuffers[i]) != VK_SUCCESS)
         {
             throw std::runtime_error("failed to create framebuffer !");
         }
@@ -70,7 +157,7 @@ void HelloTriangleApp::CreateRenderPass()
     rpCreateInfo.subpassCount = 1;
     rpCreateInfo.pSubpasses = &subpass;
 
-    if(vkCreateRenderPass(_logicalDevice, &rpCreateInfo, nullptr, &_renderPass)  != VK_SUCCESS)
+    if(vkCreateRenderPass(_device, &rpCreateInfo, nullptr, &_renderPass)  != VK_SUCCESS)
     {
         throw std::runtime_error("Failed to create render pass");
     }
@@ -79,7 +166,7 @@ void HelloTriangleApp::CreateRenderPass()
 void HelloTriangleApp::CreateGraphicsPipeline()
 {
     Shader shader;
-    shader.Create(_logicalDevice);
+    shader.Create(_device);
 
     VkPipelineShaderStageCreateInfo shadersStagesCreateInfo[2] = {
         {},
@@ -202,7 +289,7 @@ void HelloTriangleApp::CreateGraphicsPipeline()
     layoutCreateInfo.pushConstantRangeCount = 0; // Optional
     layoutCreateInfo.pPushConstantRanges = nullptr; // Optional
 
-    if(vkCreatePipelineLayout(_logicalDevice, &layoutCreateInfo, nullptr, &_pipelineLayout) != VK_SUCCESS)
+    if(vkCreatePipelineLayout(_device, &layoutCreateInfo, nullptr, &_pipelineLayout) != VK_SUCCESS)
     {
         throw std::runtime_error("Failed to create VK Layout !");
     }
@@ -230,13 +317,13 @@ void HelloTriangleApp::CreateGraphicsPipeline()
     pipelineCreateInfo.basePipelineHandle = VK_NULL_HANDLE;
     pipelineCreateInfo.basePipelineIndex = -1;
 
-    if(vkCreateGraphicsPipelines(_logicalDevice, VK_NULL_HANDLE, 1, &pipelineCreateInfo, nullptr, &_graphicsPipeline) != VK_SUCCESS)
+    if(vkCreateGraphicsPipelines(_device, VK_NULL_HANDLE, 1, &pipelineCreateInfo, nullptr, &_graphicsPipeline) != VK_SUCCESS)
     {
         throw std::runtime_error("Failed to create graphics pipeline !");
     }
 
     // Disposal
-    shader.Dispose(_logicalDevice);
+    shader.Dispose(_device);
 }
 
 bool HelloTriangleApp::CheckDeviceExtensionSupport(const VkPhysicalDevice& device) const
@@ -320,14 +407,14 @@ void HelloTriangleApp::CreateLogicalDevice()
         deviceCreateInfo.enabledLayerCount = 0;
     }
 
-    VkResult deviceCreation = vkCreateDevice(_physicalDevice, &deviceCreateInfo, nullptr, &_logicalDevice);
+    VkResult deviceCreation = vkCreateDevice(_physicalDevice, &deviceCreateInfo, nullptr, &_device);
     if(deviceCreation != VK_SUCCESS)
     {
         throw std::runtime_error("Failed to create VK Logical Device !");
     }
 
-    vkGetDeviceQueue(_logicalDevice, queueFamilyId.Graphics.value(), 0, &_graphicsQueue);
-    vkGetDeviceQueue(_logicalDevice, queueFamilyId.Present.value(), 0, &_presentQueue);
+    vkGetDeviceQueue(_device, queueFamilyId.Graphics.value(), 0, &_graphicsQueue);
+    vkGetDeviceQueue(_device, queueFamilyId.Present.value(), 0, &_presentQueue);
 }
 
 int HelloTriangleApp::ScoreDeviceSuitability(const VkPhysicalDevice& device) const
@@ -417,9 +504,12 @@ void HelloTriangleApp::InitVulkan()
     CreateWindowSurface();
     PickPhysicalDevice();
     CreateLogicalDevice();
-    _swapChain.Create(_pWindow, _physicalDevice, _logicalDevice, _windowSurface);
+    _swapChain.Create(_pWindow, _physicalDevice, _device, _windowSurface);
     CreateRenderPass();
     CreateGraphicsPipeline();
+    CreateFrameBuffers();
+    CreatCommandPool();
+    CreateCommandBuffer();
 }
 
 void HelloTriangleApp::CreateVKInstance()
@@ -525,14 +615,15 @@ void HelloTriangleApp::DisposeWindow()
 
 void HelloTriangleApp::Dispose()
 {
+    vkDestroyCommandPool(_device, _commandPool, nullptr);
     for (const VkFramebuffer& framebuffer : _framebuffers) {
-        vkDestroyFramebuffer(_logicalDevice, framebuffer, nullptr);
+        vkDestroyFramebuffer(_device, framebuffer, nullptr);
     }
-    vkDestroyPipeline(_logicalDevice, _graphicsPipeline, nullptr);
-    vkDestroyPipelineLayout(_logicalDevice, _pipelineLayout, nullptr);
-    vkDestroyRenderPass(_logicalDevice, _renderPass, nullptr);
-    _swapChain.Dipose(_logicalDevice);
-    vkDestroyDevice(_logicalDevice, nullptr);
+    vkDestroyPipeline(_device, _graphicsPipeline, nullptr);
+    vkDestroyPipelineLayout(_device, _pipelineLayout, nullptr);
+    vkDestroyRenderPass(_device, _renderPass, nullptr);
+    _swapChain.Dipose(_device);
+    vkDestroyDevice(_device, nullptr);
     _vkDebugLayer.Dispose(_instance);
     vkDestroySurfaceKHR(_instance, _windowSurface, nullptr);
     vkDestroyInstance(_instance, nullptr);
