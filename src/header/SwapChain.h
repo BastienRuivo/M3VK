@@ -14,6 +14,8 @@ class SwapChain
     public:
     VkFormat ImageFormat;
     VkExtent2D Extent;
+    VkSwapchainKHR Internal;
+
     std::vector<VkImage> Images;
     std::vector<VkImageView> ImageViews;
     void Create(GLFWwindow* pWindow, const VkPhysicalDevice& physicalDevice, const VkDevice& logicalDevice, const VkSurfaceKHR& windowSurface);
@@ -28,7 +30,6 @@ class SwapChain
     private:
     void CreateImageView(const VkDevice& logicalDevice);
     GLFWwindow* _pWindow;
-    VkSwapchainKHR _internal;
 };
 
 #endif

@@ -2,7 +2,6 @@
 #include "./header/M3VKHelper.h"
 #include <GLFW/glfw3.h>
 #include <algorithm>
-#include <cstddef>
 #include <limits>
 #include <stdexcept>
 #include <vulkan/vulkan_core.h>
@@ -180,14 +179,14 @@ void SwapChain::Create(GLFWwindow* pWindow, const VkPhysicalDevice& physicalDevi
     // When we handle resizing
     createInfo.oldSwapchain = VK_NULL_HANDLE;
 
-    if(vkCreateSwapchainKHR(logicalDevice, &createInfo, nullptr, &_internal) != VK_SUCCESS)
+    if(vkCreateSwapchainKHR(logicalDevice, &createInfo, nullptr, &Internal) != VK_SUCCESS)
     {
         throw std::runtime_error("Failed to create swap chain !");
     }
 
-    vkGetSwapchainImagesKHR(logicalDevice, _internal, &imageCount, nullptr);
+    vkGetSwapchainImagesKHR(logicalDevice, Internal, &imageCount, nullptr);
     Images.resize(imageCount);
-    vkGetSwapchainImagesKHR(logicalDevice, _internal, &imageCount, Images.data());
+    vkGetSwapchainImagesKHR(logicalDevice, Internal, &imageCount, Images.data());
 
     ImageFormat = format.format;
     Extent = extents;
@@ -201,5 +200,5 @@ void SwapChain::Dipose(const VkDevice& logicalDevice)
     {
         vkDestroyImageView(logicalDevice, imageView, nullptr);
     }
-    vkDestroySwapchainKHR(logicalDevice, _internal, nullptr);
+    vkDestroySwapchainKHR(logicalDevice, Internal, nullptr);
 }

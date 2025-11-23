@@ -43,6 +43,12 @@ class HelloTriangleApp
     VkPipelineLayout _pipelineLayout;
     VkPipeline _graphicsPipeline;
 
+    // GPU Sync
+    VkSemaphore _availableImageSemaphore;
+    VkSemaphore _renderFinishedSemaphore;
+    VkFence _waitFence;
+    // CPU Sync
+
     int ScoreDeviceSuitability(const VkPhysicalDevice& device) const;
 
     // Inits
@@ -57,8 +63,10 @@ class HelloTriangleApp
     void CreateFrameBuffers();
     void CreatCommandPool();
     void CreateCommandBuffer();
+    void CreateSyncObject();
 
     void RecordCommandBuffer(VkCommandBuffer cmdBuffer, uint32_t imageIndex);
+    void DrawFrame();
 
     // Utils
     std::vector<const char*> GetRequiredExtensions() const;

@@ -11,6 +11,80 @@
 #include <vector>
 #include <vulkan/vulkan_core.h>
 
+void HelloTriangleApp::CreateSyncObject()
+{
+    VkFenceCreateInfo fenceCreateInfo = {};
+    fenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    // Create the queue in the "Signaled" state to ensure the first frame won't wait eternally for a fence that is not signaled, thus preventing an infinit loop
+    fenceCreateInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+
+    VkSemaphoreCreateInfo semaphoreCreateInfo = {};
+    semaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+    if(vkCreateSemaphore(_device, &semaphoreCreateInfo, nullptr, &_availableImageSemaphore) != VK_SUCCESS)
+    {
+        throw std::runtime_error("Can't create image available semaphore");
+    }
+
+    if(vkCreateSemaphore(_device, &semaphoreCreateInfo, nullptr, &_renderFinishedSemaphore) != VK_SUCCESS)
+    {
+        throw std::runtime_error("Can't create render finished semaphore");
+    }
+
+    if(vkCreateFence(_device, &fenceCreateInfo, nullptr, &_waitFence) != VK_SUCCESS)
+    {
+        throw std::runtime_error("Can't create fence");
+    }
+}
+
+void HelloTriangleApp::DrawFrame()
+{
+    vkWaitForFences(_device, 1, &_waitFence, VK_TRUE, UINT64_MAX);
+    vkResetFences(_device, 1, &_waitFence);
+
+    // Acquire image to draw on
+    uint32_t imageIndex;
+    vkAcquireNextImageKHR(_device, _swapChain.Internal, UINT64_MAX, _availableImageSemaphore, VK_NULL_HANDLE, &imageIndex);
+
+    vkResetCommandBuffer(_commandBuffer, 0);
+    RecordCommandBuffer(_commandBuffer, imageIndex);
+    VkSubmitInfo submitInfo = {};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+
+    // stackallocs that can be cached.
+    VkSemaphore wait[] = {_availableImageSemaphore};
+    VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
+    submitInfo.waitSemaphoreCount = 1;
+    submitInfo.pWaitSemaphores = wait;
+    submitInfo.pWaitDstStageMask = waitStages;
+
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &_commandBuffer;
+
+    VkSemaphore signalSemaphore[] = {_renderFinishedSemaphore};
+    submitInfo.signalSemaphoreCount = 1;
+    submitInfo.pSignalSemaphores = signalSemaphore;
+
+    if(vkQueueSubmit(_graphicsQueue, 1, &submitInfo, _waitFence) != VK_SUCCESS)
+    {
+        throw std::runtime_error("Failed to submit draw command");
+    }
+
+    // actually present the frame
+    VkPresentInfoKHR presentInfo = {};
+    presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+    presentInfo.waitSemaphoreCount = 1;
+    presentInfo.pWaitSemaphores = signalSemaphore;
+
+    VkSwapchainKHR swapChains[] = {_swapChain.Internal};
+    presentInfo.swapchainCount = 1;
+    presentInfo.pSwapchains = swapChains;
+    presentInfo.pImageIndices = &imageIndex;
+    presentInfo.pResults = nullptr;
+
+    vkQueuePresentKHR(_graphicsQueue, &presentInfo);
+}
+
 void HelloTriangleApp::RecordCommandBuffer(VkCommandBuffer cmdBuffer, uint32_t imageIndex)
 {
     VkCommandBufferBeginInfo beginInfo = {};
@@ -156,6 +230,19 @@ void HelloTriangleApp::CreateRenderPass()
     rpCreateInfo.pAttachments = &colorAttachment;
     rpCreateInfo.subpassCount = 1;
     rpCreateInfo.pSubpasses = &subpass;
+
+    VkSubpassDependency dependency = {};
+    dependency.srcSubpass = VK_SUBPASS_EXTERNAL; // the passe before or after depending if it's used in src or dst
+    dependency.dstSubpass = 0; // our pass
+
+    dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dependency.srcAccessMask = 0;
+
+    dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
+    rpCreateInfo.dependencyCount = 1;
+    rpCreateInfo.pDependencies = &dependency;
 
     if(vkCreateRenderPass(_device, &rpCreateInfo, nullptr, &_renderPass)  != VK_SUCCESS)
     {
@@ -510,6 +597,7 @@ void HelloTriangleApp::InitVulkan()
     CreateFrameBuffers();
     CreatCommandPool();
     CreateCommandBuffer();
+    CreateSyncObject();
 }
 
 void HelloTriangleApp::CreateVKInstance()
@@ -604,7 +692,10 @@ void HelloTriangleApp::MainLoop()
     while (!glfwWindowShouldClose(_pWindow))
     {
         glfwPollEvents();
+        DrawFrame();
     }
+
+    vkDeviceWaitIdle(_device);
 }
 
 void HelloTriangleApp::DisposeWindow()
@@ -615,6 +706,9 @@ void HelloTriangleApp::DisposeWindow()
 
 void HelloTriangleApp::Dispose()
 {
+    vkDestroySemaphore(_device, _availableImageSemaphore, nullptr);
+    vkDestroySemaphore(_device, _renderFinishedSemaphore, nullptr);
+    vkDestroyFence(_device, _waitFence, nullptr);
     vkDestroyCommandPool(_device, _commandPool, nullptr);
     for (const VkFramebuffer& framebuffer : _framebuffers) {
         vkDestroyFramebuffer(_device, framebuffer, nullptr);
