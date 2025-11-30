@@ -19,9 +19,11 @@ class HelloTriangleApp
 
     public:
     void Run();
+    void FramebufferResized();
 
     private:
-    uint32_t currentFrame = 0;
+    bool _framebufferResized;
+    uint32_t _currentFrame = 0;
     GLFWwindow* _pWindow = nullptr;
     VkInstance _instance;
     VkDevice _device;
@@ -66,6 +68,9 @@ class HelloTriangleApp
     void CreatCommandPool();
     void CreateCommandBuffers();
     void CreateSyncObject();
+
+    void DisposeSwapChain();
+    void RefreshSwapChain();
 
     void RecordCommandBuffer(VkCommandBuffer cmdBuffer, uint32_t imageIndex);
     void DrawFrame();

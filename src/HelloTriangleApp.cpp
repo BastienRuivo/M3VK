@@ -12,6 +12,37 @@
 #include <vector>
 #include <vulkan/vulkan_core.h>
 
+
+static void FramebufferResizeCallback(GLFWwindow* window, int width, int height)
+{
+    HelloTriangleApp* app = reinterpret_cast<HelloTriangleApp*>(glfwGetWindowUserPointer(window));
+    app->FramebufferResized();
+}
+
+void HelloTriangleApp::FramebufferResized()
+{
+    _framebufferResized = true;
+}
+
+void HelloTriangleApp::DisposeSwapChain()
+{
+    for(size_t i = 0; i < _framebuffers.size(); ++i)
+    {
+        vkDestroyFramebuffer(_device, _framebuffers[i], nullptr);
+    }
+    _swapChain.Dipose(_device);
+}
+
+void HelloTriangleApp::RefreshSwapChain()
+{
+    vkDeviceWaitIdle(_device);
+
+    DisposeSwapChain();
+
+    _swapChain.Create(_pWindow, _physicalDevice, _device, _windowSurface);
+    CreateFrameBuffers();
+}
+
 void HelloTriangleApp::CreateSyncObject()
 {
     _availableImageSemaphores.resize(HelloTriangleApp::MaxFrameInCount);
@@ -51,33 +82,45 @@ void HelloTriangleApp::CreateSyncObject()
 
 void HelloTriangleApp::DrawFrame()
 {
-    vkWaitForFences(_device, 1, &_waitFences[currentFrame], VK_TRUE, UINT64_MAX);
-    vkResetFences(_device, 1, &_waitFences[currentFrame]);
+    vkWaitForFences(_device, 1, &_waitFences[_currentFrame], VK_TRUE, UINT64_MAX);
 
     // Acquire image to draw on
     uint32_t imageIndex;
-    vkAcquireNextImageKHR(_device, _swapChain.Internal, UINT64_MAX, _availableImageSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex);
+    VkResult result = vkAcquireNextImageKHR(_device, _swapChain.Internal, UINT64_MAX, _availableImageSemaphores[_currentFrame], VK_NULL_HANDLE, &imageIndex);
 
-    vkResetCommandBuffer(_commandBuffers[currentFrame], 0);
-    RecordCommandBuffer(_commandBuffers[currentFrame], imageIndex);
+    if(result == VK_ERROR_OUT_OF_DATE_KHR)
+    {
+        RefreshSwapChain();
+        return;
+    }
+    else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
+    {
+        throw std::runtime_error("failed to acquire swap chain image!");
+    }
+
+    // Only reset the fence if we are submitting work
+    vkResetFences(_device, 1, &_waitFences[_currentFrame]);
+
+    vkResetCommandBuffer(_commandBuffers[_currentFrame], 0);
+    RecordCommandBuffer(_commandBuffers[_currentFrame], imageIndex);
     VkSubmitInfo submitInfo = {};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
     // stackallocs that can be cached.
-    VkSemaphore wait[] = {_availableImageSemaphores[currentFrame]};
+    VkSemaphore wait[] = {_availableImageSemaphores[_currentFrame]};
     VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
     submitInfo.waitSemaphoreCount = 1;
     submitInfo.pWaitSemaphores = wait;
     submitInfo.pWaitDstStageMask = waitStages;
 
     submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &_commandBuffers[currentFrame];
+    submitInfo.pCommandBuffers = &_commandBuffers[_currentFrame];
 
     VkSemaphore signalSemaphore[] = {_renderFinishedSemaphores[imageIndex]};
     submitInfo.signalSemaphoreCount = 1;
     submitInfo.pSignalSemaphores = signalSemaphore;
 
-    if(vkQueueSubmit(_graphicsQueue, 1, &submitInfo, _waitFences[currentFrame]) != VK_SUCCESS)
+    if(vkQueueSubmit(_graphicsQueue, 1, &submitInfo, _waitFences[_currentFrame]) != VK_SUCCESS)
     {
         throw std::runtime_error("Failed to submit draw command");
     }
@@ -94,9 +137,19 @@ void HelloTriangleApp::DrawFrame()
     presentInfo.pImageIndices = &imageIndex;
     presentInfo.pResults = nullptr;
 
-    vkQueuePresentKHR(_graphicsQueue, &presentInfo);
+    result = vkQueuePresentKHR(_graphicsQueue, &presentInfo);
 
-    currentFrame = (currentFrame + 1) % HelloTriangleApp::MaxFrameInCount;
+    if(result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || _framebufferResized)
+    {
+        _framebufferResized = false;
+        RefreshSwapChain();
+    }
+    else if(result != VK_SUCCESS)
+    {
+        throw std::runtime_error("failed to present swap chain image!");
+    }
+
+    _currentFrame = (_currentFrame + 1) % HelloTriangleApp::MaxFrameInCount;
 }
 
 void HelloTriangleApp::RecordCommandBuffer(VkCommandBuffer cmdBuffer, uint32_t imageIndex)
@@ -595,9 +648,11 @@ void HelloTriangleApp::InitWindow()
     // GLFW is made for GL (No shit) so create need an empty API for vk
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     // TODO : Handle RESIZABLE window later
-    glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+    glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
 
     _pWindow = glfwCreateWindow(HelloTriangleApp::WindowWidth, HelloTriangleApp::WindowHeight, "H3ll0 Tri4ngl3", nullptr, nullptr);
+    glfwSetWindowUserPointer(_pWindow, this);
+    glfwSetFramebufferSizeCallback(_pWindow, FramebufferResizeCallback);
 }
 
 void HelloTriangleApp::InitVulkan()
@@ -734,13 +789,10 @@ void HelloTriangleApp::Dispose()
     }
 
     vkDestroyCommandPool(_device, _commandPool, nullptr);
-    for (const VkFramebuffer& framebuffer : _framebuffers) {
-        vkDestroyFramebuffer(_device, framebuffer, nullptr);
-    }
+    DisposeSwapChain();
     vkDestroyPipeline(_device, _graphicsPipeline, nullptr);
     vkDestroyPipelineLayout(_device, _pipelineLayout, nullptr);
     vkDestroyRenderPass(_device, _renderPass, nullptr);
-    _swapChain.Dipose(_device);
     vkDestroyDevice(_device, nullptr);
     _vkDebugLayer.Dispose(_instance);
     vkDestroySurfaceKHR(_instance, _windowSurface, nullptr);
