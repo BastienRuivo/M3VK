@@ -2,6 +2,7 @@
 #include "header/M3VKHelper.h"
 #include "header/Shader.h"
 #include <GLFW/glfw3.h>
+#include <cstddef>
 #include <cstdint>
 #include <cstring>
 #include <optional>
@@ -13,6 +14,10 @@
 
 void HelloTriangleApp::CreateSyncObject()
 {
+    _availableImageSemaphores.resize(HelloTriangleApp::MaxFrameInCount);
+    _renderFinishedSemaphores.resize(_swapChain.Images.size());
+    _waitFences.resize(HelloTriangleApp::MaxFrameInCount);
+
     VkFenceCreateInfo fenceCreateInfo = {};
     fenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
     // Create the queue in the "Signaled" state to ensure the first frame won't wait eternally for a fence that is not signaled, thus preventing an infinit loop
@@ -21,51 +26,58 @@ void HelloTriangleApp::CreateSyncObject()
     VkSemaphoreCreateInfo semaphoreCreateInfo = {};
     semaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
-    if(vkCreateSemaphore(_device, &semaphoreCreateInfo, nullptr, &_availableImageSemaphore) != VK_SUCCESS)
+    for(size_t i = 0; i < HelloTriangleApp::MaxFrameInCount; ++i)
     {
-        throw std::runtime_error("Can't create image available semaphore");
+
+        if(vkCreateSemaphore(_device, &semaphoreCreateInfo, nullptr, &_availableImageSemaphores[i]) != VK_SUCCESS)
+        {
+            throw std::runtime_error("Can't create image available semaphore");
+        }
+
+        if(vkCreateFence(_device, &fenceCreateInfo, nullptr, &_waitFences[i]) != VK_SUCCESS)
+        {
+            throw std::runtime_error("Can't create fence");
+        }
     }
 
-    if(vkCreateSemaphore(_device, &semaphoreCreateInfo, nullptr, &_renderFinishedSemaphore) != VK_SUCCESS)
+    for(size_t i = 0; i < _swapChain.Images.size(); ++i)
     {
-        throw std::runtime_error("Can't create render finished semaphore");
-    }
-
-    if(vkCreateFence(_device, &fenceCreateInfo, nullptr, &_waitFence) != VK_SUCCESS)
-    {
-        throw std::runtime_error("Can't create fence");
+        if(vkCreateSemaphore(_device, &semaphoreCreateInfo, nullptr, &_renderFinishedSemaphores[i]) != VK_SUCCESS)
+        {
+            throw std::runtime_error("Can't create render finished semaphore");
+        }
     }
 }
 
 void HelloTriangleApp::DrawFrame()
 {
-    vkWaitForFences(_device, 1, &_waitFence, VK_TRUE, UINT64_MAX);
-    vkResetFences(_device, 1, &_waitFence);
+    vkWaitForFences(_device, 1, &_waitFences[currentFrame], VK_TRUE, UINT64_MAX);
+    vkResetFences(_device, 1, &_waitFences[currentFrame]);
 
     // Acquire image to draw on
     uint32_t imageIndex;
-    vkAcquireNextImageKHR(_device, _swapChain.Internal, UINT64_MAX, _availableImageSemaphore, VK_NULL_HANDLE, &imageIndex);
+    vkAcquireNextImageKHR(_device, _swapChain.Internal, UINT64_MAX, _availableImageSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex);
 
-    vkResetCommandBuffer(_commandBuffer, 0);
-    RecordCommandBuffer(_commandBuffer, imageIndex);
+    vkResetCommandBuffer(_commandBuffers[currentFrame], 0);
+    RecordCommandBuffer(_commandBuffers[currentFrame], imageIndex);
     VkSubmitInfo submitInfo = {};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
     // stackallocs that can be cached.
-    VkSemaphore wait[] = {_availableImageSemaphore};
+    VkSemaphore wait[] = {_availableImageSemaphores[currentFrame]};
     VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
     submitInfo.waitSemaphoreCount = 1;
     submitInfo.pWaitSemaphores = wait;
     submitInfo.pWaitDstStageMask = waitStages;
 
     submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &_commandBuffer;
+    submitInfo.pCommandBuffers = &_commandBuffers[currentFrame];
 
-    VkSemaphore signalSemaphore[] = {_renderFinishedSemaphore};
+    VkSemaphore signalSemaphore[] = {_renderFinishedSemaphores[imageIndex]};
     submitInfo.signalSemaphoreCount = 1;
     submitInfo.pSignalSemaphores = signalSemaphore;
 
-    if(vkQueueSubmit(_graphicsQueue, 1, &submitInfo, _waitFence) != VK_SUCCESS)
+    if(vkQueueSubmit(_graphicsQueue, 1, &submitInfo, _waitFences[currentFrame]) != VK_SUCCESS)
     {
         throw std::runtime_error("Failed to submit draw command");
     }
@@ -83,6 +95,8 @@ void HelloTriangleApp::DrawFrame()
     presentInfo.pResults = nullptr;
 
     vkQueuePresentKHR(_graphicsQueue, &presentInfo);
+
+    currentFrame = (currentFrame + 1) % HelloTriangleApp::MaxFrameInCount;
 }
 
 void HelloTriangleApp::RecordCommandBuffer(VkCommandBuffer cmdBuffer, uint32_t imageIndex)
@@ -141,15 +155,17 @@ void HelloTriangleApp::RecordCommandBuffer(VkCommandBuffer cmdBuffer, uint32_t i
     }
 }
 
-void HelloTriangleApp::CreateCommandBuffer()
+void HelloTriangleApp::CreateCommandBuffers()
 {
+    _commandBuffers.resize(HelloTriangleApp::MaxFrameInCount);
+
     VkCommandBufferAllocateInfo allocateInfo = {};
     allocateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     allocateInfo.commandPool = _commandPool;
     allocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    allocateInfo.commandBufferCount = 1;
+    allocateInfo.commandBufferCount = static_cast<uint32_t>(_commandBuffers.size());
 
-    if(vkAllocateCommandBuffers(_device, &allocateInfo, &_commandBuffer) != VK_SUCCESS)
+    if(vkAllocateCommandBuffers(_device, &allocateInfo, _commandBuffers.data()) != VK_SUCCESS)
     {
         throw std::runtime_error("Failed to create command buffer !");
     }
@@ -581,7 +597,7 @@ void HelloTriangleApp::InitWindow()
     // TODO : Handle RESIZABLE window later
     glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
 
-    _pWindow = glfwCreateWindow(HelloTriangleApp::WindowWidth, HelloTriangleApp::WindowHeight, "M3VK", nullptr, nullptr);
+    _pWindow = glfwCreateWindow(HelloTriangleApp::WindowWidth, HelloTriangleApp::WindowHeight, "H3ll0 Tri4ngl3", nullptr, nullptr);
 }
 
 void HelloTriangleApp::InitVulkan()
@@ -596,7 +612,7 @@ void HelloTriangleApp::InitVulkan()
     CreateGraphicsPipeline();
     CreateFrameBuffers();
     CreatCommandPool();
-    CreateCommandBuffer();
+    CreateCommandBuffers();
     CreateSyncObject();
 }
 
@@ -706,9 +722,17 @@ void HelloTriangleApp::DisposeWindow()
 
 void HelloTriangleApp::Dispose()
 {
-    vkDestroySemaphore(_device, _availableImageSemaphore, nullptr);
-    vkDestroySemaphore(_device, _renderFinishedSemaphore, nullptr);
-    vkDestroyFence(_device, _waitFence, nullptr);
+    for(size_t i = 0; i < HelloTriangleApp::MaxFrameInCount; ++i)
+    {
+        vkDestroySemaphore(_device, _availableImageSemaphores[i], nullptr);
+        vkDestroyFence(_device, _waitFences[i], nullptr);
+    }
+
+    for(size_t i = 0; i < _swapChain.Images.size(); ++i)
+    {
+        vkDestroySemaphore(_device, _renderFinishedSemaphores[i], nullptr);
+    }
+
     vkDestroyCommandPool(_device, _commandPool, nullptr);
     for (const VkFramebuffer& framebuffer : _framebuffers) {
         vkDestroyFramebuffer(_device, framebuffer, nullptr);

@@ -15,11 +15,13 @@ class HelloTriangleApp
 {
     static const int WindowWidth = 960;
     static const int WindowHeight = 540;
+    static const int MaxFrameInCount = 2;
 
     public:
     void Run();
 
     private:
+    uint32_t currentFrame = 0;
     GLFWwindow* _pWindow = nullptr;
     VkInstance _instance;
     VkDevice _device;
@@ -36,7 +38,7 @@ class HelloTriangleApp
     VkQueue _graphicsQueue;
     VkQueue _presentQueue;
     SwapChain _swapChain;
-    VkCommandBuffer _commandBuffer;
+    std::vector<VkCommandBuffer> _commandBuffers;
 
     // Uniform container
     VkRenderPass _renderPass;
@@ -44,9 +46,9 @@ class HelloTriangleApp
     VkPipeline _graphicsPipeline;
 
     // GPU Sync
-    VkSemaphore _availableImageSemaphore;
-    VkSemaphore _renderFinishedSemaphore;
-    VkFence _waitFence;
+    std::vector<VkSemaphore> _availableImageSemaphores;
+    std::vector<VkSemaphore> _renderFinishedSemaphores;
+    std::vector<VkFence>  _waitFences;
     // CPU Sync
 
     int ScoreDeviceSuitability(const VkPhysicalDevice& device) const;
@@ -62,7 +64,7 @@ class HelloTriangleApp
     void CreateRenderPass();
     void CreateFrameBuffers();
     void CreatCommandPool();
-    void CreateCommandBuffer();
+    void CreateCommandBuffers();
     void CreateSyncObject();
 
     void RecordCommandBuffer(VkCommandBuffer cmdBuffer, uint32_t imageIndex);
