@@ -14,7 +14,7 @@ void SwapChain::CreateImageView(const VkDevice& logicalDevice)
 
     for(int i = 0; i < ImageViews.size(); i++)
     {
-        VkImageViewCreateInfo createInfo = {};
+        VkImageViewCreateInfo createInfo{};
         createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
         createInfo.image = Images[i];
         createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
@@ -141,7 +141,7 @@ void SwapChain::Create(GLFWwindow* pWindow, const VkPhysicalDevice& physicalDevi
         imageCount = details.Capabilities.maxImageCount;
     }
 
-    VkSwapchainCreateInfoKHR createInfo = {};
+    VkSwapchainCreateInfoKHR createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
     createInfo.surface = windowSurface;
     createInfo.minImageCount = imageCount;

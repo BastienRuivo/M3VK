@@ -1,6 +1,7 @@
 #ifndef M3VK_HELPER_CLASS
 #define M3VK_HELPER_CLASS
 
+#include <cstdint>
 #include <filesystem>
 #include <fstream>
 #include <optional>
@@ -108,7 +109,5 @@ class M3VKHelper
         }
         return details;
     }
-
-
 };
 #endif

@@ -2,12 +2,18 @@
 #define HELLOTRIANGLE_APP_CLASS
 
 #include "header/SwapChain.h"
+#include <array>
+#include <cstddef>
 #include <cstdint>
+#include <glm/ext/vector_float2.hpp>
+#include <glm/ext/vector_float3.hpp>
 #include <vector>
 #include <vulkan/vk_platform.h>
 #include <vulkan/vulkan_core.h>
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
+
+#include <glm/glm.hpp>
 
 #include "VkDebugLayer.h"
 
@@ -22,6 +28,46 @@ class HelloTriangleApp
     void FramebufferResized();
 
     private:
+    struct Vertex
+    {
+        glm::vec2 pos;
+        glm::vec3 color;
+
+        static VkVertexInputBindingDescription GetBindingDescription()
+        {
+            VkVertexInputBindingDescription description{};
+            description.binding = 0;
+            description.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+            description.stride = sizeof(Vertex);
+            return description;
+        }
+
+        static std::array<VkVertexInputAttributeDescription, 2> GetAttributeDescription()
+        {
+            std::array<VkVertexInputAttributeDescription, 2> attributeDescriptions{};
+
+            // position
+            attributeDescriptions[0].binding = 0;
+            attributeDescriptions[0].location = 0;
+            attributeDescriptions[0].format = VK_FORMAT_R32G32_SFLOAT;
+            attributeDescriptions[0].offset = offsetof(Vertex, pos);
+
+            // color
+            attributeDescriptions[1].binding = 0;
+            attributeDescriptions[1].location = 1;
+            attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
+            attributeDescriptions[1].offset = offsetof(Vertex, color);
+
+            return attributeDescriptions;
+        }
+    };
+
+    const std::vector<Vertex> _vertices = {
+    {{0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}},
+    {{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
+    {{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}
+    };
+
     bool _framebufferResized;
     uint32_t _currentFrame = 0;
     GLFWwindow* _pWindow = nullptr;
@@ -52,8 +98,11 @@ class HelloTriangleApp
     std::vector<VkSemaphore> _renderFinishedSemaphores;
     std::vector<VkFence>  _waitFences;
     // CPU Sync
-
     int ScoreDeviceSuitability(const VkPhysicalDevice& device) const;
+
+    // Datas
+    VkBuffer _vertexBuffer;
+    VkDeviceMemory _vertexBufferMemory;
 
     // Inits
     void InitWindow();
@@ -66,6 +115,7 @@ class HelloTriangleApp
     void CreateRenderPass();
     void CreateFrameBuffers();
     void CreatCommandPool();
+    void CreateVertexBuffer();
     void CreateCommandBuffers();
     void CreateSyncObject();
 
@@ -81,6 +131,8 @@ class HelloTriangleApp
         VK_KHR_SWAPCHAIN_EXTENSION_NAME
     };
     bool CheckDeviceExtensionSupport(const VkPhysicalDevice& device) const;
+
+    uint32_t FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) const;
 
 
     //Actual logic

@@ -12,12 +12,12 @@ void Shader::Dispose(const VkDevice& device)
 
 VkShaderModule Shader::CreateShaderModule(const VkDevice& device, const std::vector<char>& shaderCode)
 {
-    VkShaderModuleCreateInfo createInfo = {};
+    VkShaderModuleCreateInfo createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
     createInfo.codeSize = shaderCode.size();
     createInfo.pCode = reinterpret_cast<const uint32_t*>(shaderCode.data());
 
-    VkShaderModule module = {};
+    VkShaderModule module{};
     if(vkCreateShaderModule(device, &createInfo, nullptr, &module) != VK_SUCCESS)
     {
         throw std::runtime_error("Can't compile shader code");

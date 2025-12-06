@@ -2,6 +2,7 @@
 #include "header/M3VKHelper.h"
 #include "header/Shader.h"
 #include <GLFW/glfw3.h>
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
@@ -12,6 +13,55 @@
 #include <vector>
 #include <vulkan/vulkan_core.h>
 
+uint32_t HelloTriangleApp::FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) const
+{
+    VkPhysicalDeviceMemoryProperties memoryProperties;
+    vkGetPhysicalDeviceMemoryProperties(_physicalDevice, &memoryProperties);
+
+    for (uint32_t memoryType = 0; memoryType < memoryProperties.memoryTypeCount; ++memoryType)
+    {
+        // is suitable for buffer & writable by CPU
+        if((typeFilter & (1 << memoryType)) && ((memoryProperties.memoryTypes[memoryType].propertyFlags & properties) == properties))
+        {
+            return memoryType;
+        }
+    }
+
+    throw std::runtime_error("Can't find suitable memory type for buffer");
+}
+
+void HelloTriangleApp::CreateVertexBuffer()
+{
+    VkBufferCreateInfo vertexBufferCreateInfo{};
+    vertexBufferCreateInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    vertexBufferCreateInfo.size = static_cast<uint32_t>(_vertices.size()) * sizeof(_vertices[0]);
+    vertexBufferCreateInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+    vertexBufferCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+    if(vkCreateBuffer(_device, &vertexBufferCreateInfo, nullptr, &_vertexBuffer) != VK_SUCCESS)
+    {
+        throw std::runtime_error("Failed to create vertex buffer");
+    }
+
+    VkMemoryRequirements memRequirements;
+    vkGetBufferMemoryRequirements(_device, _vertexBuffer, &memRequirements);
+
+    VkMemoryAllocateInfo allocateInfo{};
+    allocateInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    allocateInfo.allocationSize = memRequirements.size;
+    allocateInfo.memoryTypeIndex = FindMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+
+    if(vkAllocateMemory(_device, &allocateInfo, nullptr, &_vertexBufferMemory) != VK_SUCCESS)
+    {
+        throw std::runtime_error("Can't allocate vertex buffer memory");
+    }
+
+    vkBindBufferMemory(_device, _vertexBuffer, _vertexBufferMemory, 0);
+    void* data;
+    vkMapMemory(_device, _vertexBufferMemory, 0, vertexBufferCreateInfo.size, 0, &data);
+    memcpy(data, _vertices.data(), (size_t)vertexBufferCreateInfo.size);
+    vkUnmapMemory(_device, _vertexBufferMemory);
+}
 
 static void FramebufferResizeCallback(GLFWwindow* window, int width, int height)
 {
@@ -49,12 +99,12 @@ void HelloTriangleApp::CreateSyncObject()
     _renderFinishedSemaphores.resize(_swapChain.Images.size());
     _waitFences.resize(HelloTriangleApp::MaxFrameInCount);
 
-    VkFenceCreateInfo fenceCreateInfo = {};
+    VkFenceCreateInfo fenceCreateInfo{};
     fenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
     // Create the queue in the "Signaled" state to ensure the first frame won't wait eternally for a fence that is not signaled, thus preventing an infinit loop
     fenceCreateInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-    VkSemaphoreCreateInfo semaphoreCreateInfo = {};
+    VkSemaphoreCreateInfo semaphoreCreateInfo{};
     semaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
     for(size_t i = 0; i < HelloTriangleApp::MaxFrameInCount; ++i)
@@ -103,7 +153,7 @@ void HelloTriangleApp::DrawFrame()
 
     vkResetCommandBuffer(_commandBuffers[_currentFrame], 0);
     RecordCommandBuffer(_commandBuffers[_currentFrame], imageIndex);
-    VkSubmitInfo submitInfo = {};
+    VkSubmitInfo submitInfo{};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
     // stackallocs that can be cached.
@@ -126,7 +176,7 @@ void HelloTriangleApp::DrawFrame()
     }
 
     // actually present the frame
-    VkPresentInfoKHR presentInfo = {};
+    VkPresentInfoKHR presentInfo{};
     presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
     presentInfo.waitSemaphoreCount = 1;
     presentInfo.pWaitSemaphores = signalSemaphore;
@@ -154,7 +204,7 @@ void HelloTriangleApp::DrawFrame()
 
 void HelloTriangleApp::RecordCommandBuffer(VkCommandBuffer cmdBuffer, uint32_t imageIndex)
 {
-    VkCommandBufferBeginInfo beginInfo = {};
+    VkCommandBufferBeginInfo beginInfo{};
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     beginInfo.flags = 0; // Tells how we're using command buffer (record each send, buffer used in a render pass...)
     beginInfo.pInheritanceInfo = nullptr; // state info when called by a primary command buffer when it's a secondary one
@@ -164,14 +214,14 @@ void HelloTriangleApp::RecordCommandBuffer(VkCommandBuffer cmdBuffer, uint32_t i
         throw std::runtime_error("Failed to begin command buffer !");
     }
 
-    VkRenderPassBeginInfo rpBeginInfo = {};
+    VkRenderPassBeginInfo rpBeginInfo{};
     rpBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
     rpBeginInfo.renderPass = _renderPass;
     rpBeginInfo.framebuffer = _framebuffers[imageIndex];
     rpBeginInfo.renderArea.offset = {0, 0};
     rpBeginInfo.renderArea.extent =_swapChain.Extent;
 
-    VkClearValue clearValue = {};
+    VkClearValue clearValue{};
     clearValue.color = {0.0f, 0.0f, 0.0f, 1.0f};
 
     rpBeginInfo.clearValueCount = 1;
@@ -182,7 +232,7 @@ void HelloTriangleApp::RecordCommandBuffer(VkCommandBuffer cmdBuffer, uint32_t i
 
     vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _graphicsPipeline);
 
-    VkViewport viewport = {};
+    VkViewport viewport{};
     viewport.x = 0.0f;
     viewport.y = 0.0f;
     viewport.width = _swapChain.Extent.width;
@@ -192,13 +242,17 @@ void HelloTriangleApp::RecordCommandBuffer(VkCommandBuffer cmdBuffer, uint32_t i
 
     vkCmdSetViewport(cmdBuffer, 0, 1, &viewport);
 
-    VkRect2D scissors = {};
+    VkRect2D scissors{};
     scissors.offset = {0, 0};
     scissors.extent = _swapChain.Extent;
 
     vkCmdSetScissor(cmdBuffer, 0, 1, &scissors);
 
-    vkCmdDraw(cmdBuffer, 3, 1, 0, 0);
+    VkBuffer vertexBuffers[] = {_vertexBuffer};
+    VkDeviceSize offsets[] = {0};
+    vkCmdBindVertexBuffers(cmdBuffer, 0, 1, vertexBuffers, offsets);
+
+    vkCmdDraw(cmdBuffer, static_cast<uint32_t>(_vertices.size()), 1, 0, 0);
 
     vkCmdEndRenderPass(cmdBuffer);
 
@@ -212,7 +266,7 @@ void HelloTriangleApp::CreateCommandBuffers()
 {
     _commandBuffers.resize(HelloTriangleApp::MaxFrameInCount);
 
-    VkCommandBufferAllocateInfo allocateInfo = {};
+    VkCommandBufferAllocateInfo allocateInfo{};
     allocateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     allocateInfo.commandPool = _commandPool;
     allocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
@@ -228,7 +282,7 @@ void HelloTriangleApp::CreatCommandPool()
 {
     M3VKHelper::QueueFamilyId queueFamilyId = M3VKHelper::QueryQueueFamilies(_physicalDevice, _windowSurface);
 
-    VkCommandPoolCreateInfo poolInfo = {};
+    VkCommandPoolCreateInfo poolInfo{};
     poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
     poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
     poolInfo.queueFamilyIndex = queueFamilyId.Graphics.value();
@@ -251,7 +305,7 @@ void HelloTriangleApp::CreateFrameBuffers()
             _swapChain.ImageViews[i]
         };
 
-        VkFramebufferCreateInfo createInfo = {};
+        VkFramebufferCreateInfo createInfo{};
         createInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
         createInfo.renderPass = _renderPass;
         createInfo.attachmentCount = 1;
@@ -283,24 +337,24 @@ void HelloTriangleApp::CreateRenderPass()
     colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
-    VkAttachmentReference colorAttachmentRef = {};
+    VkAttachmentReference colorAttachmentRef{};
     // attachment index, only one so 0
     colorAttachmentRef.attachment = 0;
     colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
-    VkSubpassDescription subpass = {};
+    VkSubpassDescription subpass{};
     subpass.pipelineBindPoint =VK_PIPELINE_BIND_POINT_GRAPHICS;
     subpass.colorAttachmentCount = 1;
     subpass.pColorAttachments = &colorAttachmentRef;
 
-    VkRenderPassCreateInfo rpCreateInfo = {};
+    VkRenderPassCreateInfo rpCreateInfo{};
     rpCreateInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
     rpCreateInfo.attachmentCount = 1;
     rpCreateInfo.pAttachments = &colorAttachment;
     rpCreateInfo.subpassCount = 1;
     rpCreateInfo.pSubpasses = &subpass;
 
-    VkSubpassDependency dependency = {};
+    VkSubpassDependency dependency{};
     dependency.srcSubpass = VK_SUBPASS_EXTERNAL; // the passe before or after depending if it's used in src or dst
     dependency.dstSubpass = 0; // our pass
 
@@ -344,20 +398,24 @@ void HelloTriangleApp::CreateGraphicsPipeline()
         VK_DYNAMIC_STATE_SCISSOR
     };
 
-    VkPipelineDynamicStateCreateInfo pipelineStateCreateInfo = {};
+    VkPipelineDynamicStateCreateInfo pipelineStateCreateInfo{};
     pipelineStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
     pipelineStateCreateInfo.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
     pipelineStateCreateInfo.pDynamicStates = dynamicStates.data();
 
-    VkPipelineVertexInputStateCreateInfo vertexInputCreateInfo = {};
+    VkVertexInputBindingDescription bindingDescription = Vertex::GetBindingDescription();
+    std::array<VkVertexInputAttributeDescription, 2> attributeDescription = Vertex::GetAttributeDescription();
+
+
+    VkPipelineVertexInputStateCreateInfo vertexInputCreateInfo{};
     vertexInputCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-    vertexInputCreateInfo.vertexBindingDescriptionCount = 0;
-    vertexInputCreateInfo.pVertexBindingDescriptions = nullptr;
-    vertexInputCreateInfo.vertexAttributeDescriptionCount = 0;
-    vertexInputCreateInfo.pVertexAttributeDescriptions = nullptr;
+    vertexInputCreateInfo.vertexBindingDescriptionCount = 1;
+    vertexInputCreateInfo.pVertexBindingDescriptions = &bindingDescription;
+    vertexInputCreateInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescription.size());
+    vertexInputCreateInfo.pVertexAttributeDescriptions = attributeDescription.data();
 
     // Input Assembly
-    VkPipelineInputAssemblyStateCreateInfo inputAssemblyCreateInfo = {};
+    VkPipelineInputAssemblyStateCreateInfo inputAssemblyCreateInfo{};
     inputAssemblyCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
     // For later use (When i will choose if i still want to make a cube world like thingy) maybe i can try strip ?
     // like in opengl, this turn 4 index like 1234 into 2 triangle (123, 324) and this can save me some place (bandwith <3)
@@ -365,7 +423,7 @@ void HelloTriangleApp::CreateGraphicsPipeline()
     inputAssemblyCreateInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
     inputAssemblyCreateInfo.primitiveRestartEnable = false;
 
-    VkViewport viewport = {};
+    VkViewport viewport{};
     viewport.x = 0.0f;
     viewport.y = 0.0f;
     viewport.width = _swapChain.Extent.width;
@@ -374,18 +432,18 @@ void HelloTriangleApp::CreateGraphicsPipeline()
     viewport.maxDepth = 1.0f;
 
     // Region to rasterize pixels on
-    VkRect2D scissors = {};
+    VkRect2D scissors{};
     scissors.extent = _swapChain.Extent;
     scissors.offset.x = 0;
     scissors.offset.y = 0;
 
-    VkPipelineViewportStateCreateInfo viewportCreateInfo = {};
+    VkPipelineViewportStateCreateInfo viewportCreateInfo{};
     viewportCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
     viewportCreateInfo.viewportCount = 1;
     viewportCreateInfo.scissorCount = 1;
 
     // Rasterizer
-    VkPipelineRasterizationStateCreateInfo rasterizeCreateInfo = {};
+    VkPipelineRasterizationStateCreateInfo rasterizeCreateInfo{};
     rasterizeCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
     // if true, clamp near and far object to the planes instead of discarding them
     rasterizeCreateInfo.depthClampEnable = false;
@@ -402,7 +460,7 @@ void HelloTriangleApp::CreateGraphicsPipeline()
     rasterizeCreateInfo.lineWidth = 1.0f;
 
     // MSAA, disabled for now
-    VkPipelineMultisampleStateCreateInfo msaaCreateInfo = {};
+    VkPipelineMultisampleStateCreateInfo msaaCreateInfo{};
     msaaCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
     msaaCreateInfo.sampleShadingEnable = VK_FALSE;
     msaaCreateInfo.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
@@ -414,7 +472,7 @@ void HelloTriangleApp::CreateGraphicsPipeline()
     // Here depth later
 
     // Blending
-    VkPipelineColorBlendAttachmentState colorBlendAttachment = {};
+    VkPipelineColorBlendAttachmentState colorBlendAttachment{};
     colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
     colorBlendAttachment.blendEnable = VK_FALSE;
     colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE; // Optional
@@ -436,7 +494,7 @@ void HelloTriangleApp::CreateGraphicsPipeline()
     colorBlending.blendConstants[3] = 0.0f; // Optional
 
     // Uniforms (empty for now)
-    VkPipelineLayoutCreateInfo layoutCreateInfo = {};
+    VkPipelineLayoutCreateInfo layoutCreateInfo{};
     layoutCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     layoutCreateInfo.setLayoutCount = 0;
     layoutCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
@@ -450,7 +508,7 @@ void HelloTriangleApp::CreateGraphicsPipeline()
         throw std::runtime_error("Failed to create VK Layout !");
     }
 
-    VkGraphicsPipelineCreateInfo pipelineCreateInfo = {};
+    VkGraphicsPipelineCreateInfo pipelineCreateInfo{};
     pipelineCreateInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
     pipelineCreateInfo.stageCount = 2;
 
@@ -535,7 +593,7 @@ void HelloTriangleApp::CreateLogicalDevice()
     float queuePriority = 1.0f;
     for(uint32_t queueId : uniqueQueueIds)
     {
-        VkDeviceQueueCreateInfo queueCreateInfo = {};
+        VkDeviceQueueCreateInfo queueCreateInfo{};
         queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
         queueCreateInfo.queueFamilyIndex = queueId;
         queueCreateInfo.queueCount = 1;
@@ -543,9 +601,9 @@ void HelloTriangleApp::CreateLogicalDevice()
         queueCreateInfos.push_back(queueCreateInfo);
     }
 
-    VkPhysicalDeviceFeatures deviceFeatures = {};
+    VkPhysicalDeviceFeatures deviceFeatures{};
 
-    VkDeviceCreateInfo deviceCreateInfo = {};
+    VkDeviceCreateInfo deviceCreateInfo{};
     deviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
     deviceCreateInfo.pQueueCreateInfos = queueCreateInfos.data();
     deviceCreateInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
@@ -667,6 +725,7 @@ void HelloTriangleApp::InitVulkan()
     CreateGraphicsPipeline();
     CreateFrameBuffers();
     CreatCommandPool();
+    CreateVertexBuffer();
     CreateCommandBuffers();
     CreateSyncObject();
 }
@@ -790,6 +849,8 @@ void HelloTriangleApp::Dispose()
 
     vkDestroyCommandPool(_device, _commandPool, nullptr);
     DisposeSwapChain();
+    vkDestroyBuffer(_device, _vertexBuffer, nullptr);
+    vkFreeMemory(_device, _vertexBufferMemory, nullptr);
     vkDestroyPipeline(_device, _graphicsPipeline, nullptr);
     vkDestroyPipelineLayout(_device, _pipelineLayout, nullptr);
     vkDestroyRenderPass(_device, _renderPass, nullptr);
