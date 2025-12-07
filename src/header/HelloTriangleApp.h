@@ -63,9 +63,14 @@ class HelloTriangleApp
     };
 
     const std::vector<Vertex> _vertices = {
-    {{0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}},
-    {{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
-    {{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}
+    {{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
+    {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
+    {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
+    {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}}
+    };
+
+    const std::vector<int> _indices = {
+        0, 1, 2, 2, 3, 0
     };
 
     bool _framebufferResized;
@@ -103,6 +108,8 @@ class HelloTriangleApp
     // Datas
     VkBuffer _vertexBuffer;
     VkDeviceMemory _vertexBufferMemory;
+    VkBuffer _indexBuffer;
+    VkDeviceMemory _indexBufferMemory;
 
     // Inits
     void InitWindow();
@@ -115,6 +122,7 @@ class HelloTriangleApp
     void CreateRenderPass();
     void CreateFrameBuffers();
     void CreatCommandPool();
+    void CreateIndexBuffer();
     void CreateVertexBuffer();
     void CreateCommandBuffers();
     void CreateSyncObject();

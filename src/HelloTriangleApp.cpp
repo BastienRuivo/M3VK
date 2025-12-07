@@ -13,6 +13,34 @@
 #include <vector>
 #include <vulkan/vulkan_core.h>
 
+void HelloTriangleApp::CreateIndexBuffer()
+{
+    VkDeviceSize size = _indices.size() * sizeof(_indices[0]);
+
+    VkBuffer staggingBuffer;
+    VkDeviceMemory staggingMemory;
+    M3VKHelper::CreateBuffer(_physicalDevice,
+        _device,
+        size,
+        VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+        staggingBuffer, staggingMemory);
+
+    M3VKHelper::CopyToBuffer(_device, (void*)_indices.data(), staggingMemory, 0, size);
+
+    M3VKHelper::CreateBuffer(_physicalDevice,
+        _device,
+        size,
+        VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+        _indexBuffer, _indexBufferMemory);
+
+    M3VKHelper::CopyBufferToBuffer(_device, _graphicsQueue, _graphicsCommandPool, staggingBuffer, 0, _indexBuffer, 0, size);
+
+    vkDestroyBuffer(_device, staggingBuffer, nullptr);
+    vkFreeMemory(_device, staggingMemory, nullptr);
+}
+
 void HelloTriangleApp::CreateVertexBuffer()
 {
     VkDeviceSize size = _vertices.size() * sizeof(_vertices[0]);
@@ -230,7 +258,9 @@ void HelloTriangleApp::RecordCommandBuffer(VkCommandBuffer cmdBuffer, uint32_t i
     VkDeviceSize offsets[] = {0};
     vkCmdBindVertexBuffers(cmdBuffer, 0, 1, vertexBuffers, offsets);
 
-    vkCmdDraw(cmdBuffer, static_cast<uint32_t>(_vertices.size()), 1, 0, 0);
+    vkCmdBindIndexBuffer(cmdBuffer, _indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+
+    vkCmdDrawIndexed(cmdBuffer, static_cast<uint32_t>(_indices.size()), 1, 0, 0, 0);
 
     vkCmdEndRenderPass(cmdBuffer);
 
@@ -706,6 +736,7 @@ void HelloTriangleApp::InitVulkan()
     CreateGraphicsPipeline();
     CreateFrameBuffers();
     CreatCommandPool();
+    CreateIndexBuffer();
     CreateVertexBuffer();
     CreateCommandBuffers();
     CreateSyncObject();
@@ -830,8 +861,13 @@ void HelloTriangleApp::Dispose()
 
     vkDestroyCommandPool(_device, _graphicsCommandPool, nullptr);
     DisposeSwapChain();
+
+    vkDestroyBuffer(_device, _indexBuffer, nullptr);
+    vkFreeMemory(_device, _indexBufferMemory, nullptr);
+
     vkDestroyBuffer(_device, _vertexBuffer, nullptr);
     vkFreeMemory(_device, _vertexBufferMemory, nullptr);
+
     vkDestroyPipeline(_device, _graphicsPipeline, nullptr);
     vkDestroyPipelineLayout(_device, _pipelineLayout, nullptr);
     vkDestroyRenderPass(_device, _renderPass, nullptr);
