@@ -1,4 +1,5 @@
 #include "header/HelloTriangleApp.h"
+#include "header/GraphicsBuffer.h"
 #include "header/M3VKHelper.h"
 #include "header/Shader.h"
 #include <GLFW/glfw3.h>
@@ -16,57 +17,15 @@
 void HelloTriangleApp::CreateIndexBuffer()
 {
     VkDeviceSize size = _indices.size() * sizeof(_indices[0]);
-
-    VkBuffer staggingBuffer;
-    VkDeviceMemory staggingMemory;
-    M3VKHelper::CreateBuffer(_physicalDevice,
-        _device,
-        size,
-        VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-        staggingBuffer, staggingMemory);
-
-    M3VKHelper::CopyToBuffer(_device, (void*)_indices.data(), staggingMemory, 0, size);
-
-    M3VKHelper::CreateBuffer(_physicalDevice,
-        _device,
-        size,
-        VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-        _indexBuffer, _indexBufferMemory);
-
-    M3VKHelper::CopyBufferToBuffer(_device, _graphicsQueue, _graphicsCommandPool, staggingBuffer, 0, _indexBuffer, 0, size);
-
-    vkDestroyBuffer(_device, staggingBuffer, nullptr);
-    vkFreeMemory(_device, staggingMemory, nullptr);
+    _indexBuffer.Create(_physicalDevice, _device, size, GraphicsBuffer::BufferType::INDEX);
+    _indexBuffer.CopyToBuffer(_physicalDevice, _device, _graphicsQueue, _graphicsCommandPool, (void*)_indices.data(), size);
 }
 
 void HelloTriangleApp::CreateVertexBuffer()
 {
     VkDeviceSize size = _vertices.size() * sizeof(_vertices[0]);
-
-    VkBuffer staggingBuffer;
-    VkDeviceMemory staggingMemory;
-    M3VKHelper::CreateBuffer(_physicalDevice,
-        _device,
-        size,
-        VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-        staggingBuffer, staggingMemory);
-
-    M3VKHelper::CopyToBuffer(_device, (void*)_vertices.data(), staggingMemory, 0, size);
-
-    M3VKHelper::CreateBuffer(_physicalDevice,
-        _device,
-        size,
-        VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-        _vertexBuffer, _vertexBufferMemory);
-
-    M3VKHelper::CopyBufferToBuffer(_device, _graphicsQueue, _graphicsCommandPool, staggingBuffer, 0, _vertexBuffer, 0, size);
-
-    vkDestroyBuffer(_device, staggingBuffer, nullptr);
-    vkFreeMemory(_device, staggingMemory, nullptr);
+    _vertexBuffer.Create(_physicalDevice, _device, size, GraphicsBuffer::BufferType::VERTEX);
+    _vertexBuffer.CopyToBuffer(_physicalDevice, _device, _graphicsQueue, _graphicsCommandPool, (void*)_vertices.data(), size);
 }
 
 static void FramebufferResizeCallback(GLFWwindow* window, int width, int height)
@@ -254,11 +213,11 @@ void HelloTriangleApp::RecordCommandBuffer(VkCommandBuffer cmdBuffer, uint32_t i
 
     vkCmdSetScissor(cmdBuffer, 0, 1, &scissors);
 
-    VkBuffer vertexBuffers[] = {_vertexBuffer};
+    VkBuffer vertexBuffers[] = { _vertexBuffer.GetInternal() };
     VkDeviceSize offsets[] = {0};
     vkCmdBindVertexBuffers(cmdBuffer, 0, 1, vertexBuffers, offsets);
 
-    vkCmdBindIndexBuffer(cmdBuffer, _indexBuffer, 0, VK_INDEX_TYPE_UINT32);
+    vkCmdBindIndexBuffer(cmdBuffer, _indexBuffer.GetInternal(), 0, VK_INDEX_TYPE_UINT32);
 
     vkCmdDrawIndexed(cmdBuffer, static_cast<uint32_t>(_indices.size()), 1, 0, 0, 0);
 
@@ -862,11 +821,8 @@ void HelloTriangleApp::Dispose()
     vkDestroyCommandPool(_device, _graphicsCommandPool, nullptr);
     DisposeSwapChain();
 
-    vkDestroyBuffer(_device, _indexBuffer, nullptr);
-    vkFreeMemory(_device, _indexBufferMemory, nullptr);
-
-    vkDestroyBuffer(_device, _vertexBuffer, nullptr);
-    vkFreeMemory(_device, _vertexBufferMemory, nullptr);
+    _vertexBuffer.DisposeBuffer(_device);
+    _indexBuffer.DisposeBuffer(_device);
 
     vkDestroyPipeline(_device, _graphicsPipeline, nullptr);
     vkDestroyPipelineLayout(_device, _pipelineLayout, nullptr);

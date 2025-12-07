@@ -1,6 +1,7 @@
 #ifndef HELLOTRIANGLE_APP_CLASS
 #define HELLOTRIANGLE_APP_CLASS
 
+#include "header/GraphicsBuffer.h"
 #include "header/SwapChain.h"
 #include <array>
 #include <cstddef>
@@ -106,10 +107,8 @@ class HelloTriangleApp
     int ScoreDeviceSuitability(const VkPhysicalDevice& device) const;
 
     // Datas
-    VkBuffer _vertexBuffer;
-    VkDeviceMemory _vertexBufferMemory;
-    VkBuffer _indexBuffer;
-    VkDeviceMemory _indexBufferMemory;
+    GraphicsBuffer _vertexBuffer;
+    GraphicsBuffer _indexBuffer;
 
     // Inits
     void InitWindow();

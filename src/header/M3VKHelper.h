@@ -134,42 +134,6 @@ class M3VKHelper
         throw std::runtime_error("Can't find suitable memory type for buffer");
     }
 
-    static void CreateBuffer(const VkPhysicalDevice& physicalDevice, const VkDevice& device, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory, VkDeviceSize memoryOffset = 0) {
-        VkBufferCreateInfo info{};
-        info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-        info.size = size;
-        info.usage = usage;
-        info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-
-        if(vkCreateBuffer(device, &info, nullptr, &buffer) != VK_SUCCESS)
-        {
-            throw std::runtime_error("Failed to create buffer !");
-        }
-
-        VkMemoryRequirements memRequirements;
-        vkGetBufferMemoryRequirements(device, buffer, &memRequirements);
-
-        VkMemoryAllocateInfo allocateInfo{};
-        allocateInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-        allocateInfo.allocationSize = memRequirements.size;
-        allocateInfo.memoryTypeIndex = FindMemoryType(physicalDevice, memRequirements.memoryTypeBits, properties);
-
-        if(vkAllocateMemory(device, &allocateInfo, nullptr, &bufferMemory) != VK_SUCCESS)
-        {
-            throw std::runtime_error("Failed to allocate buffer memory");
-        }
-
-        vkBindBufferMemory(device, buffer, bufferMemory, memoryOffset);
-    }
-
-    static void CopyToBuffer(const VkDevice& device, void* srcData, const VkDeviceMemory& bufferMemory, VkDeviceSize dstOffset, VkDeviceSize copySize)
-    {
-        void* data;
-        vkMapMemory(device, bufferMemory, dstOffset, copySize, 0, &data);
-        memcpy(data, srcData, (size_t)copySize);
-        vkUnmapMemory(device, bufferMemory);
-    }
-
     static void CopyBufferToBuffer(const VkDevice& device, const VkQueue queue, const VkCommandPool& cmdPool, const VkBuffer& src, VkDeviceSize srcOffset, const VkBuffer& dst, VkDeviceSize dstOffset, VkDeviceSize size)
     {
         VkCommandBufferAllocateInfo allocInfo{};
