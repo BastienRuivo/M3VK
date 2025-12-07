@@ -13,53 +13,13 @@
 #include <vector>
 #include <vulkan/vulkan_core.h>
 
-uint32_t HelloTriangleApp::FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) const
-{
-    VkPhysicalDeviceMemoryProperties memoryProperties;
-    vkGetPhysicalDeviceMemoryProperties(_physicalDevice, &memoryProperties);
-
-    for (uint32_t memoryType = 0; memoryType < memoryProperties.memoryTypeCount; ++memoryType)
-    {
-        // is suitable for buffer & writable by CPU
-        if((typeFilter & (1 << memoryType)) && ((memoryProperties.memoryTypes[memoryType].propertyFlags & properties) == properties))
-        {
-            return memoryType;
-        }
-    }
-
-    throw std::runtime_error("Can't find suitable memory type for buffer");
-}
-
 void HelloTriangleApp::CreateVertexBuffer()
 {
-    VkBufferCreateInfo vertexBufferCreateInfo{};
-    vertexBufferCreateInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    vertexBufferCreateInfo.size = static_cast<uint32_t>(_vertices.size()) * sizeof(_vertices[0]);
-    vertexBufferCreateInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-    vertexBufferCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-
-    if(vkCreateBuffer(_device, &vertexBufferCreateInfo, nullptr, &_vertexBuffer) != VK_SUCCESS)
-    {
-        throw std::runtime_error("Failed to create vertex buffer");
-    }
-
-    VkMemoryRequirements memRequirements;
-    vkGetBufferMemoryRequirements(_device, _vertexBuffer, &memRequirements);
-
-    VkMemoryAllocateInfo allocateInfo{};
-    allocateInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    allocateInfo.allocationSize = memRequirements.size;
-    allocateInfo.memoryTypeIndex = FindMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-
-    if(vkAllocateMemory(_device, &allocateInfo, nullptr, &_vertexBufferMemory) != VK_SUCCESS)
-    {
-        throw std::runtime_error("Can't allocate vertex buffer memory");
-    }
-
-    vkBindBufferMemory(_device, _vertexBuffer, _vertexBufferMemory, 0);
+    VkDeviceSize size = _vertices.size() * sizeof(_vertices[0]);
+    M3VKHelper::CreateBuffer(_physicalDevice, _device, size, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, _vertexBuffer, _vertexBufferMemory);
     void* data;
-    vkMapMemory(_device, _vertexBufferMemory, 0, vertexBufferCreateInfo.size, 0, &data);
-    memcpy(data, _vertices.data(), (size_t)vertexBufferCreateInfo.size);
+    vkMapMemory(_device, _vertexBufferMemory, 0, size, 0, &data);
+    memcpy(data, _vertices.data(), (size_t)size);
     vkUnmapMemory(_device, _vertexBufferMemory);
 }
 
@@ -268,7 +228,7 @@ void HelloTriangleApp::CreateCommandBuffers()
 
     VkCommandBufferAllocateInfo allocateInfo{};
     allocateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    allocateInfo.commandPool = _commandPool;
+    allocateInfo.commandPool = _graphicsCommandPool;
     allocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
     allocateInfo.commandBufferCount = static_cast<uint32_t>(_commandBuffers.size());
 
@@ -287,7 +247,7 @@ void HelloTriangleApp::CreatCommandPool()
     poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
     poolInfo.queueFamilyIndex = queueFamilyId.Graphics.value();
 
-    if(vkCreateCommandPool(_device, &poolInfo, nullptr, &_commandPool) != VK_SUCCESS)
+    if(vkCreateCommandPool(_device, &poolInfo, nullptr, &_graphicsCommandPool) != VK_SUCCESS)
     {
         throw std::runtime_error("Failed to create command pool !");
     }
@@ -587,7 +547,8 @@ void HelloTriangleApp::CreateLogicalDevice()
     std::set<uint32_t> uniqueQueueIds =
     {
         queueFamilyId.Graphics.value(),
-        queueFamilyId.Present.value()
+        queueFamilyId.Present.value(),
+        //queueFamilyId.Copy.value()
     };
 
     float queuePriority = 1.0f;
@@ -629,6 +590,8 @@ void HelloTriangleApp::CreateLogicalDevice()
 
     vkGetDeviceQueue(_device, queueFamilyId.Graphics.value(), 0, &_graphicsQueue);
     vkGetDeviceQueue(_device, queueFamilyId.Present.value(), 0, &_presentQueue);
+    // use it
+    //vkGetDeviceQueue(_device, queueFamilyId.Copy.value(), 0, &_copyQueue);
 }
 
 int HelloTriangleApp::ScoreDeviceSuitability(const VkPhysicalDevice& device) const
@@ -847,7 +810,7 @@ void HelloTriangleApp::Dispose()
         vkDestroySemaphore(_device, _renderFinishedSemaphores[i], nullptr);
     }
 
-    vkDestroyCommandPool(_device, _commandPool, nullptr);
+    vkDestroyCommandPool(_device, _graphicsCommandPool, nullptr);
     DisposeSwapChain();
     vkDestroyBuffer(_device, _vertexBuffer, nullptr);
     vkFreeMemory(_device, _vertexBufferMemory, nullptr);

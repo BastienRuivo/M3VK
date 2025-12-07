@@ -78,13 +78,13 @@ class HelloTriangleApp
     // Window API surface
     VkSurfaceKHR _windowSurface;
     std::vector<VkFramebuffer> _framebuffers;
-    VkCommandPool _commandPool;
-
+    VkCommandPool _graphicsCommandPool;
 
     // Queues
     // implicitly cleaned
     VkQueue _graphicsQueue;
     VkQueue _presentQueue;
+    VkQueue _copyQueue;
     SwapChain _swapChain;
     std::vector<VkCommandBuffer> _commandBuffers;
 

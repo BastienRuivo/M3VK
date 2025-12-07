@@ -39,23 +39,25 @@ class M3VKHelper
         public:
         std::optional<uint32_t> Graphics;
         std::optional<uint32_t> Present;
+       // std::optional<uint32_t> Copy;
 
         static bool AreAllQueueAvailable(const QueueFamilyId& queueIds)
         {
             return queueIds.Graphics.has_value()
                 && queueIds.Present.has_value();
+                //&& queueIds.Copy.has_value();
         }
     };
 
-    static QueueFamilyId QueryQueueFamilies(const VkPhysicalDevice& device, const VkSurfaceKHR& windowSurface)
+    static QueueFamilyId QueryQueueFamilies(const VkPhysicalDevice& physicalDevice, const VkSurfaceKHR& windowSurface)
     {
         QueueFamilyId queueIds;
 
         uint32_t queueFamiliesCount = 0;
 
-        vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamiliesCount, nullptr);
+        vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamiliesCount, nullptr);
         std::vector<VkQueueFamilyProperties> families(queueFamiliesCount);
-        vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamiliesCount, families.data());
+        vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamiliesCount, families.data());
 
         for(int i = 0; i < families.size(); ++i)
         {
@@ -63,9 +65,13 @@ class M3VKHelper
             {
                 queueIds.Graphics = i;
             }
+            // else if(families[i].queueFlags & VK_QUEUE_TRANSFER_BIT)
+            // {
+            //     queueIds.Copy = i;
+            // }
 
             VkBool32 isPresentSupported = false;
-            vkGetPhysicalDeviceSurfaceSupportKHR(device, i, windowSurface, &isPresentSupported);
+            vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, i, windowSurface, &isPresentSupported);
 
             if(isPresentSupported)
             {
@@ -108,6 +114,51 @@ class M3VKHelper
             vkGetPhysicalDeviceSurfacePresentModesKHR(device, windowSurface, &presentModeCount, details.PresentsModes.data());
         }
         return details;
+    }
+
+    static uint32_t FindMemoryType(const VkPhysicalDevice& physicalDevice, uint32_t typeFilter, VkMemoryPropertyFlags properties)
+    {
+        VkPhysicalDeviceMemoryProperties memoryProperties;
+        vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memoryProperties);
+
+        for (uint32_t memoryType = 0; memoryType < memoryProperties.memoryTypeCount; ++memoryType)
+        {
+            // is suitable for buffer & writable by CPU
+            if((typeFilter & (1 << memoryType)) && ((memoryProperties.memoryTypes[memoryType].propertyFlags & properties) == properties))
+            {
+                return memoryType;
+            }
+        }
+
+        throw std::runtime_error("Can't find suitable memory type for buffer");
+    }
+
+    static void CreateBuffer(const VkPhysicalDevice& physicalDevice, const VkDevice& device, VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory, VkDeviceSize memoryOffset = 0) {
+        VkBufferCreateInfo info{};
+        info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+        info.size = size;
+        info.usage = usage;
+        info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+        if(vkCreateBuffer(device, &info, nullptr, &buffer) != VK_SUCCESS)
+        {
+            throw std::runtime_error("Failed to create buffer !");
+        }
+
+        VkMemoryRequirements memRequirements;
+        vkGetBufferMemoryRequirements(device, buffer, &memRequirements);
+
+        VkMemoryAllocateInfo allocateInfo{};
+        allocateInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+        allocateInfo.allocationSize = memRequirements.size;
+        allocateInfo.memoryTypeIndex = FindMemoryType(physicalDevice, memRequirements.memoryTypeBits, properties);
+
+        if(vkAllocateMemory(device, &allocateInfo, nullptr, &bufferMemory) != VK_SUCCESS)
+        {
+            throw std::runtime_error("Failed to allocate buffer memory");
+        }
+
+        vkBindBufferMemory(device, buffer, bufferMemory, memoryOffset);
     }
 };
 #endif
