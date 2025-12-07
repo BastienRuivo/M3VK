@@ -16,11 +16,29 @@
 void HelloTriangleApp::CreateVertexBuffer()
 {
     VkDeviceSize size = _vertices.size() * sizeof(_vertices[0]);
-    M3VKHelper::CreateBuffer(_physicalDevice, _device, size, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, _vertexBuffer, _vertexBufferMemory);
-    void* data;
-    vkMapMemory(_device, _vertexBufferMemory, 0, size, 0, &data);
-    memcpy(data, _vertices.data(), (size_t)size);
-    vkUnmapMemory(_device, _vertexBufferMemory);
+
+    VkBuffer staggingBuffer;
+    VkDeviceMemory staggingMemory;
+    M3VKHelper::CreateBuffer(_physicalDevice,
+        _device,
+        size,
+        VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+        staggingBuffer, staggingMemory);
+
+    M3VKHelper::CopyToBuffer(_device, (void*)_vertices.data(), staggingMemory, 0, size);
+
+    M3VKHelper::CreateBuffer(_physicalDevice,
+        _device,
+        size,
+        VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+        _vertexBuffer, _vertexBufferMemory);
+
+    M3VKHelper::CopyBufferToBuffer(_device, _graphicsQueue, _graphicsCommandPool, staggingBuffer, 0, _vertexBuffer, 0, size);
+
+    vkDestroyBuffer(_device, staggingBuffer, nullptr);
+    vkFreeMemory(_device, staggingMemory, nullptr);
 }
 
 static void FramebufferResizeCallback(GLFWwindow* window, int width, int height)

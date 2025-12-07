@@ -2,6 +2,7 @@
 #define M3VK_HELPER_CLASS
 
 #include <cstdint>
+#include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <optional>
@@ -159,6 +160,51 @@ class M3VKHelper
         }
 
         vkBindBufferMemory(device, buffer, bufferMemory, memoryOffset);
+    }
+
+    static void CopyToBuffer(const VkDevice& device, void* srcData, const VkDeviceMemory& bufferMemory, VkDeviceSize dstOffset, VkDeviceSize copySize)
+    {
+        void* data;
+        vkMapMemory(device, bufferMemory, dstOffset, copySize, 0, &data);
+        memcpy(data, srcData, (size_t)copySize);
+        vkUnmapMemory(device, bufferMemory);
+    }
+
+    static void CopyBufferToBuffer(const VkDevice& device, const VkQueue queue, const VkCommandPool& cmdPool, const VkBuffer& src, VkDeviceSize srcOffset, const VkBuffer& dst, VkDeviceSize dstOffset, VkDeviceSize size)
+    {
+        VkCommandBufferAllocateInfo allocInfo{};
+        allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+        allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+        allocInfo.commandPool = cmdPool;
+        allocInfo.commandBufferCount = 1;
+
+        VkCommandBuffer cmdBuffer;
+        vkAllocateCommandBuffers(device, &allocInfo, &cmdBuffer);
+
+        VkCommandBufferBeginInfo beginInfo{};
+        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+        vkBeginCommandBuffer(cmdBuffer, &beginInfo);
+
+        VkBufferCopy copyRegion{};
+        copyRegion.size = size;
+        copyRegion.srcOffset = srcOffset;
+        copyRegion.dstOffset = dstOffset;
+        vkCmdCopyBuffer(cmdBuffer, src, dst, 1, &copyRegion);
+
+        vkEndCommandBuffer(cmdBuffer);
+
+        VkSubmitInfo submitInfo{};
+        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submitInfo.commandBufferCount = 1;
+        submitInfo.pCommandBuffers = &cmdBuffer;
+
+        // wait for the queue idle, we can use a fence to submit multiple shit later
+        vkQueueSubmit(queue, 1, &submitInfo, VK_NULL_HANDLE);
+        vkQueueWaitIdle(queue);
+
+        vkFreeCommandBuffers(device, cmdPool, 1, &cmdBuffer);
     }
 };
 #endif
