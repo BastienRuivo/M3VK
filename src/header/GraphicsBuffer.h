@@ -31,6 +31,7 @@ class GraphicsBuffer
     void CopyToBuffer(const VkPhysicalDevice& physicalDevice, const VkDevice& device, const VkQueue& queue, const VkCommandPool& cmdPool, void* srcData, VkDeviceSize size);
 
     VkBuffer GetInternal() const { return _buffer; }
+    BufferType GetType() const { return _type; }
 
     private:
     VkBuffer _buffer;

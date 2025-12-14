@@ -1,5 +1,6 @@
 #pragma once
 
+#include "header/CommandBuffer.h"
 #include "header/Window.h"
 #include "header/GraphicsBuffer.h"
 #include "header/SwapChain.h"
@@ -91,7 +92,7 @@ class HelloTriangleApp
     VkQueue _presentQueue;
     VkQueue _copyQueue;
     SwapChain _swapChain;
-    std::vector<VkCommandBuffer> _commandBuffers;
+    std::vector<CommandBuffer> _commandBuffers;
 
     // Uniform container
     VkRenderPass _renderPass;
@@ -124,7 +125,7 @@ class HelloTriangleApp
     void DisposeSwapChain();
     void RefreshSwapChain();
 
-    void RecordCommandBuffer(VkCommandBuffer cmdBuffer, uint32_t imageIndex);
+    void RecordCommandBuffer(CommandBuffer cmdBuffer, uint32_t imageIndex);
     void DrawFrame();
 
     // Utils

@@ -1,7 +1,9 @@
 #include "header/HelloTriangleApp.h"
+#include "header/CommandBuffer.h"
 #include "header/GraphicsBuffer.h"
 #include "header/M3VKHelper.h"
 #include "header/Shader.h"
+#include "header/SwapChain.h"
 #include <GLFW/glfw3.h>
 #include <array>
 #include <cstddef>
@@ -108,29 +110,15 @@ void HelloTriangleApp::DrawFrame()
     // Only reset the fence if we are submitting work
     vkResetFences(_device, 1, &_waitFences[_currentFrame]);
 
-    vkResetCommandBuffer(_commandBuffers[_currentFrame], 0);
+    _commandBuffers[_currentFrame].Reset();
     RecordCommandBuffer(_commandBuffers[_currentFrame], imageIndex);
-    VkSubmitInfo submitInfo{};
-    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
     // stackallocs that can be cached.
     VkSemaphore wait[] = {_availableImageSemaphores[_currentFrame]};
     VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
-    submitInfo.waitSemaphoreCount = 1;
-    submitInfo.pWaitSemaphores = wait;
-    submitInfo.pWaitDstStageMask = waitStages;
-
-    submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &_commandBuffers[_currentFrame];
-
     VkSemaphore signalSemaphore[] = {_renderFinishedSemaphores[imageIndex]};
-    submitInfo.signalSemaphoreCount = 1;
-    submitInfo.pSignalSemaphores = signalSemaphore;
 
-    if(vkQueueSubmit(_graphicsQueue, 1, &submitInfo, _waitFences[_currentFrame]) != VK_SUCCESS)
-    {
-        throw std::runtime_error("Failed to submit draw command");
-    }
+    _commandBuffers[_currentFrame].Submit(wait, 1, waitStages, signalSemaphore, 1, _waitFences[_currentFrame]);
 
     // actually present the frame
     VkPresentInfoKHR presentInfo{};
@@ -159,81 +147,33 @@ void HelloTriangleApp::DrawFrame()
     _currentFrame = (_currentFrame + 1) % HelloTriangleApp::MaxFrameInCount;
 }
 
-void HelloTriangleApp::RecordCommandBuffer(VkCommandBuffer cmdBuffer, uint32_t imageIndex)
+void HelloTriangleApp::RecordCommandBuffer(CommandBuffer cmdBuffer, uint32_t imageIndex)
 {
-    VkCommandBufferBeginInfo beginInfo{};
-    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    beginInfo.flags = 0; // Tells how we're using command buffer (record each send, buffer used in a render pass...)
-    beginInfo.pInheritanceInfo = nullptr; // state info when called by a primary command buffer when it's a secondary one
-
-    if(vkBeginCommandBuffer(cmdBuffer, &beginInfo) != VK_SUCCESS)
+    cmdBuffer.Begin();
     {
-        throw std::runtime_error("Failed to begin command buffer !");
+        cmdBuffer.BeginRenderPass(_renderPass, _framebuffers[imageIndex], {0, 0, 0, 0}, _swapChain.Extent);
+        {
+            cmdBuffer.BindPipeline(_graphicsPipeline, VK_PIPELINE_BIND_POINT_GRAPHICS);
+            cmdBuffer.SetViewport(_swapChain.Extent.width, _swapChain.Extent.height);
+            cmdBuffer.SetScissor(0, 0, _swapChain.Extent.width, _swapChain.Extent.height);
+            cmdBuffer.BindBuffer(_vertexBuffer);
+            cmdBuffer.BindBuffer(_indexBuffer);
+            cmdBuffer.DrawIndexed(static_cast<uint32_t>(_indices.size()));
+        }
+        cmdBuffer.EndRenderPass();
     }
-
-    VkRenderPassBeginInfo rpBeginInfo{};
-    rpBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-    rpBeginInfo.renderPass = _renderPass;
-    rpBeginInfo.framebuffer = _framebuffers[imageIndex];
-    rpBeginInfo.renderArea.offset = {0, 0};
-    rpBeginInfo.renderArea.extent =_swapChain.Extent;
-
-    VkClearValue clearValue{};
-    clearValue.color = {0.0f, 0.0f, 0.0f, 1.0f};
-
-    rpBeginInfo.clearValueCount = 1;
-    rpBeginInfo.pClearValues = &clearValue;
-
-    // inline tells everything is embedded in the primary cmdBuffer and no secondary will be used
-    vkCmdBeginRenderPass(cmdBuffer, &rpBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
-
-    vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _graphicsPipeline);
-
-    VkViewport viewport{};
-    viewport.x = 0.0f;
-    viewport.y = 0.0f;
-    viewport.width = _swapChain.Extent.width;
-    viewport.height = _swapChain.Extent.height;
-    viewport.minDepth = 0.0f;
-    viewport.maxDepth = 1.0f;
-
-    vkCmdSetViewport(cmdBuffer, 0, 1, &viewport);
-
-    VkRect2D scissors{};
-    scissors.offset = {0, 0};
-    scissors.extent = _swapChain.Extent;
-
-    vkCmdSetScissor(cmdBuffer, 0, 1, &scissors);
-
-    VkBuffer vertexBuffers[] = { _vertexBuffer.GetInternal() };
-    VkDeviceSize offsets[] = {0};
-    vkCmdBindVertexBuffers(cmdBuffer, 0, 1, vertexBuffers, offsets);
-
-    vkCmdBindIndexBuffer(cmdBuffer, _indexBuffer.GetInternal(), 0, VK_INDEX_TYPE_UINT32);
-
-    vkCmdDrawIndexed(cmdBuffer, static_cast<uint32_t>(_indices.size()), 1, 0, 0, 0);
-
-    vkCmdEndRenderPass(cmdBuffer);
-
-    if(vkEndCommandBuffer(cmdBuffer) != VK_SUCCESS)
-    {
-        throw std::runtime_error("Failed to record command buffer");
-    }
+    cmdBuffer.End();
 }
 
 void HelloTriangleApp::CreateCommandBuffers()
 {
-    _commandBuffers.resize(HelloTriangleApp::MaxFrameInCount);
+    _commandBuffers.reserve(HelloTriangleApp::MaxFrameInCount);
 
-    VkCommandBufferAllocateInfo allocateInfo{};
-    allocateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    allocateInfo.commandPool = _graphicsCommandPool;
-    allocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    allocateInfo.commandBufferCount = static_cast<uint32_t>(_commandBuffers.size());
-
-    if(vkAllocateCommandBuffers(_device, &allocateInfo, _commandBuffers.data()) != VK_SUCCESS)
+    // Allocate in batch ?
+    for (int i = 0; i < HelloTriangleApp::MaxFrameInCount; ++i)
     {
-        throw std::runtime_error("Failed to create command buffer !");
+        CommandBuffer cmdBuffer(_device, _graphicsCommandPool, _graphicsQueue);
+        _commandBuffers.emplace_back(cmdBuffer);
     }
 }
 
