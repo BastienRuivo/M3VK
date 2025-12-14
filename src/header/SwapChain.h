@@ -1,5 +1,4 @@
-#ifndef SWAP_CHAIN_CLASS
-#define SWAP_CHAIN_CLASS
+#pragma once
 
 #include <vector>
 #include <vulkan/vk_platform.h>
@@ -31,5 +30,3 @@ class SwapChain
     private:
     void CreateImageView(const VkDevice& logicalDevice);
 };
-
-#endif

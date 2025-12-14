@@ -1,6 +1,4 @@
-#ifndef GRAPHICS_BUFFER_APP_CLASS
-#define GRAPHICS_BUFFER_APP_CLASS
-
+#pragma once
 
 #include <vulkan/vulkan_core.h>
 
@@ -39,4 +37,3 @@ class GraphicsBuffer
     VkDeviceMemory _memory;
     BufferType _type;
 };
-#endif

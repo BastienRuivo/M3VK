@@ -1,5 +1,4 @@
-#ifndef SHADER_CLASS
-#define SHADER_CLASS
+#pragma once
 
 #include <vector>
 #include <vulkan/vulkan_core.h>
@@ -12,5 +11,3 @@ class Shader
     VkShaderModule VertexShader;
     VkShaderModule FragmentShader;
 };
-
-#endif

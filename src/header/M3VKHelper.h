@@ -1,5 +1,4 @@
-#ifndef M3VK_HELPER_CLASS
-#define M3VK_HELPER_CLASS
+#pragma once
 
 #include <cstdint>
 #include <cstring>
@@ -171,4 +170,3 @@ class M3VKHelper
         vkFreeCommandBuffers(device, cmdPool, 1, &cmdBuffer);
     }
 };
-#endif

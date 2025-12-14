@@ -1,5 +1,4 @@
-#ifndef HELLOTRIANGLE_APP_CLASS
-#define HELLOTRIANGLE_APP_CLASS
+#pragma once
 
 #include "header/Window.h"
 #include "header/GraphicsBuffer.h"
@@ -144,5 +143,3 @@ class HelloTriangleApp
     // Disposal
     void Dispose();
 };
-
-#endif

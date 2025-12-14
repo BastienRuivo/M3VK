@@ -1,5 +1,4 @@
-#ifndef VKLOGGER_CLASS
-#define VKLOGGER_CLASS
+#pragma once
 
 #include <string>
 #include <vulkan/vk_platform.h>
@@ -53,6 +52,3 @@ class VkDebugLayer
     private:
     VkDebugUtilsMessengerEXT _debugMessenger;
 };
-
-
-#endif
