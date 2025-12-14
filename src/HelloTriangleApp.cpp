@@ -14,20 +14,6 @@
 #include <vector>
 #include <vulkan/vulkan_core.h>
 
-void HelloTriangleApp::CreateIndexBuffer()
-{
-    VkDeviceSize size = _indices.size() * sizeof(_indices[0]);
-    _indexBuffer.Create(_physicalDevice, _device, size, GraphicsBuffer::BufferType::INDEX);
-    _indexBuffer.CopyToBuffer(_physicalDevice, _device, _graphicsQueue, _graphicsCommandPool, (void*)_indices.data(), size);
-}
-
-void HelloTriangleApp::CreateVertexBuffer()
-{
-    VkDeviceSize size = _vertices.size() * sizeof(_vertices[0]);
-    _vertexBuffer.Create(_physicalDevice, _device, size, GraphicsBuffer::BufferType::VERTEX);
-    _vertexBuffer.CopyToBuffer(_physicalDevice, _device, _graphicsQueue, _graphicsCommandPool, (void*)_vertices.data(), size);
-}
-
 static void FramebufferResizeCallback(GLFWwindow* window, int width, int height)
 {
     HelloTriangleApp* app = reinterpret_cast<HelloTriangleApp*>(glfwGetWindowUserPointer(window));
@@ -54,7 +40,7 @@ void HelloTriangleApp::RefreshSwapChain()
 
     DisposeSwapChain();
 
-    _swapChain.Create(_pWindow, _physicalDevice, _device, _windowSurface);
+    _swapChain.Create(_window, _physicalDevice, _device, _windowSurface);
     CreateFrameBuffers();
 }
 
@@ -538,14 +524,6 @@ bool HelloTriangleApp::CheckDeviceExtensionSupport(const VkPhysicalDevice& devic
     return true;
 }
 
-void HelloTriangleApp::CreateWindowSurface()
-{
-    if(glfwCreateWindowSurface(_instance, _pWindow, nullptr, &_windowSurface) != VK_SUCCESS)
-    {
-        throw std::runtime_error("Failed to create windows surface !");
-    }
-}
-
 void HelloTriangleApp::CreateLogicalDevice()
 {
     M3VKHelper::QueueFamilyId queueFamilyId = M3VKHelper::QueryQueueFamilies(_physicalDevice, _windowSurface);
@@ -670,33 +648,28 @@ void HelloTriangleApp::PickPhysicalDevice()
     }
 }
 
-void HelloTriangleApp::InitWindow()
-{
-    glfwInit();
-    // GLFW is made for GL (No shit) so create need an empty API for vk
-    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    // TODO : Handle RESIZABLE window later
-    glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
-
-    _pWindow = glfwCreateWindow(HelloTriangleApp::WindowWidth, HelloTriangleApp::WindowHeight, "H3ll0 Tri4ngl3", nullptr, nullptr);
-    glfwSetWindowUserPointer(_pWindow, this);
-    glfwSetFramebufferSizeCallback(_pWindow, FramebufferResizeCallback);
-}
-
 void HelloTriangleApp::InitVulkan()
 {
     CreateVKInstance();
     _vkDebugLayer.Create(_instance);
-    CreateWindowSurface();
+    _window.CreateWindowSurface(_instance, _windowSurface);
     PickPhysicalDevice();
     CreateLogicalDevice();
-    _swapChain.Create(_pWindow, _physicalDevice, _device, _windowSurface);
+    _swapChain.Create(_window, _physicalDevice, _device, _windowSurface);
     CreateRenderPass();
     CreateGraphicsPipeline();
     CreateFrameBuffers();
     CreatCommandPool();
-    CreateIndexBuffer();
-    CreateVertexBuffer();
+
+    // init data
+    VkDeviceSize size = _indices.size() * sizeof(_indices[0]);
+    _indexBuffer.Create(_physicalDevice, _device, size, GraphicsBuffer::BufferType::INDEX);
+    _indexBuffer.CopyToBuffer(_physicalDevice, _device, _graphicsQueue, _graphicsCommandPool, (void*)_indices.data(), size);
+
+    size = _vertices.size() * sizeof(_vertices[0]);
+    _vertexBuffer.Create(_physicalDevice, _device, size, GraphicsBuffer::BufferType::VERTEX);
+    _vertexBuffer.CopyToBuffer(_physicalDevice, _device, _graphicsQueue, _graphicsCommandPool, (void*)_vertices.data(), size);
+
     CreateCommandBuffers();
     CreateSyncObject();
 }
@@ -790,19 +763,13 @@ std::vector<const char *> HelloTriangleApp::GetRequiredExtensions() const
 
 void HelloTriangleApp::MainLoop()
 {
-    while (!glfwWindowShouldClose(_pWindow))
+    while (!_window.ShouldClose())
     {
-        glfwPollEvents();
+        _window.ProcessEvent();
         DrawFrame();
     }
 
     vkDeviceWaitIdle(_device);
-}
-
-void HelloTriangleApp::DisposeWindow()
-{
-    glfwDestroyWindow(_pWindow);
-    glfwTerminate();
 }
 
 void HelloTriangleApp::Dispose()
@@ -831,12 +798,12 @@ void HelloTriangleApp::Dispose()
     _vkDebugLayer.Dispose(_instance);
     vkDestroySurfaceKHR(_instance, _windowSurface, nullptr);
     vkDestroyInstance(_instance, nullptr);
-    DisposeWindow();
+    _window.Dispose();
 }
 
 void HelloTriangleApp::Run()
 {
-    InitWindow();
+    _window.init(1920, 1080, "H3ll0 Tr14nGl3", this, FramebufferResizeCallback);
     InitVulkan();
 
     MainLoop();

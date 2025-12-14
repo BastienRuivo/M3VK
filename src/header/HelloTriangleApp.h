@@ -3,6 +3,7 @@
 
 #include "header/GraphicsBuffer.h"
 #include "header/SwapChain.h"
+#include "header/Window.h"
 #include <array>
 #include <cstddef>
 #include <cstdint>
@@ -11,8 +12,6 @@
 #include <vector>
 #include <vulkan/vk_platform.h>
 #include <vulkan/vulkan_core.h>
-#define GLFW_INCLUDE_VULKAN
-#include <GLFW/glfw3.h>
 
 #include <glm/glm.hpp>
 
@@ -20,8 +19,6 @@
 
 class HelloTriangleApp
 {
-    static const int WindowWidth = 960;
-    static const int WindowHeight = 540;
     static const int MaxFrameInCount = 2;
 
     public:
@@ -76,7 +73,9 @@ class HelloTriangleApp
 
     bool _framebufferResized;
     uint32_t _currentFrame = 0;
-    GLFWwindow* _pWindow = nullptr;
+
+    Window _window;
+
     VkInstance _instance;
     VkDevice _device;
     VkPhysicalDevice _physicalDevice;
@@ -111,18 +110,14 @@ class HelloTriangleApp
     GraphicsBuffer _indexBuffer;
 
     // Inits
-    void InitWindow();
     void InitVulkan();
     void CreateVKInstance();
-    void CreateWindowSurface();
     void PickPhysicalDevice();
     void CreateLogicalDevice();
     void CreateGraphicsPipeline();
     void CreateRenderPass();
     void CreateFrameBuffers();
     void CreatCommandPool();
-    void CreateIndexBuffer();
-    void CreateVertexBuffer();
     void CreateCommandBuffers();
     void CreateSyncObject();
 
@@ -147,7 +142,6 @@ class HelloTriangleApp
 
     // Disposal
     void Dispose();
-    void DisposeWindow();
 };
 
 #endif

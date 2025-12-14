@@ -41,7 +41,7 @@ void SwapChain::CreateImageView(const VkDevice& logicalDevice)
     }
 }
 
-VkExtent2D SwapChain::SelectSwapExtents(GLFWwindow* pWindow, const VkSurfaceCapabilitiesKHR& Capabilities) const
+VkExtent2D SwapChain::SelectSwapExtents(const Window& window, const VkSurfaceCapabilitiesKHR& Capabilities) const
 {
     if(Capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max())
     {
@@ -50,7 +50,6 @@ VkExtent2D SwapChain::SelectSwapExtents(GLFWwindow* pWindow, const VkSurfaceCapa
     else
     {
         int width, height;
-        glfwGetFramebufferSize(pWindow, &width, &height);
 
         VkExtent2D extent =
         {
@@ -123,14 +122,13 @@ VkSurfaceFormatKHR SwapChain::SelectSwapSurfaceFormat(const std::vector<VkSurfac
     return availableFormats[0];
 }
 
-void SwapChain::Create(GLFWwindow* pWindow, const VkPhysicalDevice& physicalDevice, const VkDevice& logicalDevice, const VkSurfaceKHR& windowSurface)
+void SwapChain::Create(const Window& window, const VkPhysicalDevice& physicalDevice, const VkDevice& logicalDevice, const VkSurfaceKHR& windowSurface)
 {
-    _pWindow = pWindow;
     M3VKHelper::SwapChainSupportDetails details = M3VKHelper::QuerySwapChainSupportDetail(physicalDevice, windowSurface);
 
     VkSurfaceFormatKHR format = SelectSwapSurfaceFormat(details.Formats);
     VkPresentModeKHR presentMode = SelectSwapPresentMode(details.PresentsModes);
-    VkExtent2D extents = SelectSwapExtents(_pWindow, details.Capabilities);
+    VkExtent2D extents = SelectSwapExtents(window, details.Capabilities);
 
     // recommended to avoid wait on driver completion
     uint32_t imageCount = details.Capabilities.minImageCount + 1;
