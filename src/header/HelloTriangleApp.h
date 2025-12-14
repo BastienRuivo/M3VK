@@ -1,9 +1,9 @@
 #ifndef HELLOTRIANGLE_APP_CLASS
 #define HELLOTRIANGLE_APP_CLASS
 
+#include "header/Window.h"
 #include "header/GraphicsBuffer.h"
 #include "header/SwapChain.h"
-#include "header/Window.h"
 #include <array>
 #include <cstddef>
 #include <cstdint>

@@ -12,7 +12,7 @@ void Window::init(int width, int height, const char* title, void* resizeObject, 
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
 
-    _pWindow = glfwCreateWindow(_width, Window::_height, _title, nullptr, nullptr);
+    _pWindow = glfwCreateWindow(_width, _height, _title, nullptr, nullptr);
     glfwSetWindowUserPointer(_pWindow, resizeObject);
     glfwSetFramebufferSizeCallback(_pWindow, resizeCallback);
 }
