@@ -24,6 +24,7 @@ class HelloTriangleApp
     public:
     void Run();
     void FramebufferResized();
+    void UpdateWindowSize(int width, int height);
 
     private:
     struct Vertex

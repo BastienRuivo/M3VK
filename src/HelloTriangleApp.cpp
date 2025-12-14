@@ -18,6 +18,12 @@ static void FramebufferResizeCallback(GLFWwindow* window, int width, int height)
 {
     HelloTriangleApp* app = reinterpret_cast<HelloTriangleApp*>(glfwGetWindowUserPointer(window));
     app->FramebufferResized();
+    app->UpdateWindowSize(width, height);
+}
+
+void HelloTriangleApp::UpdateWindowSize(int width, int height)
+{
+    _window.ResizeWindow(width, height);
 }
 
 void HelloTriangleApp::FramebufferResized()
