@@ -469,7 +469,7 @@ void HelloTriangleApp::CreateGraphicsPipeline()
     // VK_POLYGON_MODE_LINE for wireframe later maybe ? or this can be another feature to enable, check later
     rasterizeCreateInfo.polygonMode = VK_POLYGON_MODE_FILL;
     rasterizeCreateInfo.cullMode = VK_CULL_MODE_BACK_BIT;
-    rasterizeCreateInfo.frontFace = VK_FRONT_FACE_CLOCKWISE;
+    rasterizeCreateInfo.frontFace = VK_FRONT_FACE_CLOCKWISE; // because of y *=
     rasterizeCreateInfo.depthBiasEnable = VK_FALSE;
     rasterizeCreateInfo.depthBiasConstantFactor = 0.0f;
     rasterizeCreateInfo.depthBiasClamp = 0.0f;
