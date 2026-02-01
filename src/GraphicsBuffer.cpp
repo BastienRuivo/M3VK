@@ -54,23 +54,57 @@ void StageBuffer::DisposeBuffer(const VkDevice& device)
     vkFreeMemory(device, _memory, nullptr);
 }
 
-void GraphicsBuffer::Create(const VkPhysicalDevice& physicalDevice, const VkDevice& device, VkDeviceSize size, BufferType type)
+void* GraphicsBuffer::GetDataPtr()
+{
+    return _dataPtr;
+}
+
+VkDeviceSize GraphicsBuffer::GetSize() const
+{
+    return GetCount() * GetStride();
+}
+
+VkDeviceSize GraphicsBuffer::GetCount() const
+{
+    return _count;
+}
+
+VkDeviceSize GraphicsBuffer::GetStride() const
+{
+    return _stride;
+}
+
+void GraphicsBuffer::Create(const VkPhysicalDevice& physicalDevice, const VkDevice& device, VkDeviceSize count, VkDeviceSize stride, BufferType type)
 {
     // mean it's a dst buffer, already in good memory shape but cant be writable directly by cpu
     VkBufferUsageFlags usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 
     // mean it's a GPU buffer
-    VkMemoryPropertyFlags properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+    VkMemoryPropertyFlags properties;
 
     _type = type;
+    _dataPtr = nullptr;
+    _stride = stride;
+    _count = count;
 
+    VkDeviceSize size = _stride * _count;
+
+    // Usage
     switch (_type) {
         case INDEX: usage |= VK_BUFFER_USAGE_INDEX_BUFFER_BIT; break;
         case VERTEX: usage |= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT; break;
+        case UNIFORM: usage |= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT; break;
         default:
         {
             throw std::runtime_error("Achievement get :: How did we get Here ? (Uknown Buffer Type)");
         }
+    }
+
+    // Memory type
+    switch (_type) {
+        case INDEX:
+        case VERTEX: properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT; break; // Memory optimized for GPU access
+        case UNIFORM: properties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT; // Host = CPU so it mean it is visible and writable by it
     }
 
     VkBufferCreateInfo info{};
@@ -98,6 +132,11 @@ void GraphicsBuffer::Create(const VkPhysicalDevice& physicalDevice, const VkDevi
     }
 
     vkBindBufferMemory(device, _buffer, _memory, 0);
+
+    if(_type == UNIFORM)
+    {
+        vkMapMemory(device, _memory, 0, size, 0, &_dataPtr);
+    }
 }
 
 void GraphicsBuffer::CopyToBuffer(const VkPhysicalDevice& physicalDevice, const VkDevice& device, const VkQueue& queue, const VkCommandPool& cmdPool, void* srcData, VkDeviceSize size)

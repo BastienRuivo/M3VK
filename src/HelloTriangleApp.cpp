@@ -6,15 +6,130 @@
 #include "header/SwapChain.h"
 #include <GLFW/glfw3.h>
 #include <array>
+#include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <glm/ext/matrix_clip_space.hpp>
+#include <glm/ext/matrix_transform.hpp>
+#include <glm/ext/vector_float3.hpp>
+#include <glm/fwd.hpp>
+#include <glm/trigonometric.hpp>
 #include <optional>
 #include <set>
 #include <stdexcept>
 #include <string>
 #include <vector>
 #include <vulkan/vulkan_core.h>
+
+#define GLM_FORCE_RADIANS
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+
+void HelloTriangleApp::CreateDescriptorSet()
+{
+    std::vector<VkDescriptorSetLayout> layouts(MaxFrameInCount, _descriptorSetLayout);
+    VkDescriptorSetAllocateInfo allocateInfo{};
+    allocateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    allocateInfo.descriptorPool = _descriptorPool;
+    allocateInfo.descriptorSetCount = static_cast<uint32_t>(MaxFrameInCount);
+    allocateInfo.pSetLayouts = layouts.data();
+
+    _descriptorSets.resize(MaxFrameInCount);
+    if(vkAllocateDescriptorSets(_device, &allocateInfo, _descriptorSets.data()) != VK_SUCCESS)
+    {
+        throw std::runtime_error("Failed to allocate descriptor set");
+    }
+
+    for(int i = 0; i < MaxFrameInCount; ++i)
+    {
+        VkDescriptorBufferInfo bufferInfo{};
+        bufferInfo.buffer = _cameraDataBuffers[i].GetInternal();
+        bufferInfo.offset = 0;
+        bufferInfo.range = sizeof(CameraData);
+
+        VkWriteDescriptorSet descriptorWrite{};
+        descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        descriptorWrite.dstSet = _descriptorSets[i];
+        descriptorWrite.dstBinding = 0;
+        descriptorWrite.dstArrayElement = 0;
+        descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        descriptorWrite.descriptorCount = 1;
+        descriptorWrite.pBufferInfo = &bufferInfo;
+        descriptorWrite.pImageInfo = nullptr;
+        descriptorWrite.pTexelBufferView = nullptr;
+
+        vkUpdateDescriptorSets(_device, 1, &descriptorWrite, 0, nullptr);
+    }
+}
+
+void HelloTriangleApp::CreateDescriptorPool()
+{
+    VkDescriptorPoolSize poolSize{};
+    poolSize.descriptorCount = MaxFrameInCount;
+    poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+
+    VkDescriptorPoolCreateInfo poolCreateInfo{};
+    poolCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    poolCreateInfo.poolSizeCount = 1;
+    poolCreateInfo.pPoolSizes = &poolSize;
+    poolCreateInfo.maxSets = static_cast<uint32_t>(MaxFrameInCount);
+
+    if(vkCreateDescriptorPool(_device, &poolCreateInfo, nullptr, &_descriptorPool) != VK_SUCCESS)
+    {
+        throw std::runtime_error("VK Create Descriptor Pool Failed !");
+    }
+}
+
+void HelloTriangleApp::UpdateCameraData(uint32_t currentFrame)
+{
+    static auto startTime = std::chrono::high_resolution_clock::now();
+
+    auto currentTime = std::chrono::high_resolution_clock::now();
+
+    float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
+
+    CameraData cameraData = {};
+    cameraData.localToWorldMatrix = glm::rotate<float>(glm::mat4(1.0f), time * glm::radians<float>(90), glm::vec3(0, 1, 0));
+    cameraData.worldToCameraMatrix = glm::lookAt(glm::vec3(2, 2, 2), glm::vec3(0, 0, 0), glm::vec3(0, 1.0, 0));
+    cameraData.projectionMatrix = glm::perspective<float>(glm::radians<float>(45),(float)_swapChain.Extent.width / _swapChain.Extent.height, 0.1f,100.0f);
+    // it was designed for opengl so flip it
+    cameraData.projectionMatrix[1][1] *= -1;
+
+    memcpy(_cameraDataBuffers[currentFrame].GetDataPtr(), &cameraData, sizeof(cameraData));
+}
+
+void HelloTriangleApp::CreateCameraDataBuffers()
+{
+    _cameraDataBuffers.reserve(MaxFrameInCount);
+
+    for(int i = 0; i < MaxFrameInCount; ++i)
+    {
+        GraphicsBuffer uniform;
+        uniform.Create(_physicalDevice, _device, 1, sizeof(CameraData), GraphicsBuffer::UNIFORM);
+        _cameraDataBuffers.push_back(uniform);
+    }
+}
+
+void HelloTriangleApp::CreateDescriptorSetLayout()
+{
+    VkDescriptorSetLayoutBinding cameraDataLayoutBindingDescriptor{};
+    cameraDataLayoutBindingDescriptor.binding = 0;
+    cameraDataLayoutBindingDescriptor.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    cameraDataLayoutBindingDescriptor.descriptorCount = 1;
+    cameraDataLayoutBindingDescriptor.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    cameraDataLayoutBindingDescriptor.pImmutableSamplers = nullptr; // image sampling
+
+    VkDescriptorSetLayoutCreateInfo createInfo{};
+    createInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    createInfo.bindingCount = 1;
+    createInfo.pBindings = &cameraDataLayoutBindingDescriptor;
+
+    if(vkCreateDescriptorSetLayout(_device, &createInfo, nullptr, &_descriptorSetLayout) != VK_SUCCESS)
+    {
+        throw std::runtime_error("Failed to create descriptor set layout");
+    }
+}
 
 static void FramebufferResizeCallback(GLFWwindow* window, int width, int height)
 {
@@ -110,8 +225,10 @@ void HelloTriangleApp::DrawFrame()
     // Only reset the fence if we are submitting work
     vkResetFences(_device, 1, &_waitFences[_currentFrame]);
 
+    UpdateCameraData(_currentFrame);
+
     _commandBuffers[_currentFrame].Reset();
-    RecordCommandBuffer(_commandBuffers[_currentFrame], imageIndex);
+    RecordCommandBuffer(_commandBuffers[_currentFrame], _currentFrame, imageIndex);
 
     // stackallocs that can be cached.
     VkSemaphore wait[] = {_availableImageSemaphores[_currentFrame]};
@@ -147,7 +264,7 @@ void HelloTriangleApp::DrawFrame()
     _currentFrame = (_currentFrame + 1) % HelloTriangleApp::MaxFrameInCount;
 }
 
-void HelloTriangleApp::RecordCommandBuffer(CommandBuffer cmdBuffer, uint32_t imageIndex)
+void HelloTriangleApp::RecordCommandBuffer(CommandBuffer cmdBuffer, uint32_t currentFrame, uint32_t imageIndex)
 {
     cmdBuffer.Begin();
     {
@@ -158,6 +275,7 @@ void HelloTriangleApp::RecordCommandBuffer(CommandBuffer cmdBuffer, uint32_t ima
             cmdBuffer.SetScissor(0, 0, _swapChain.Extent.width, _swapChain.Extent.height);
             cmdBuffer.BindBuffer(_vertexBuffer);
             cmdBuffer.BindBuffer(_indexBuffer);
+            cmdBuffer.BindDescriptorSets(VK_PIPELINE_BIND_POINT_GRAPHICS, _pipelineLayout, _descriptorSets[currentFrame]);
             cmdBuffer.DrawIndexed(static_cast<uint32_t>(_indices.size()));
         }
         cmdBuffer.EndRenderPass();
@@ -395,10 +513,8 @@ void HelloTriangleApp::CreateGraphicsPipeline()
     // Uniforms (empty for now)
     VkPipelineLayoutCreateInfo layoutCreateInfo{};
     layoutCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    layoutCreateInfo.setLayoutCount = 0;
-    layoutCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    layoutCreateInfo.setLayoutCount = 0; // Optional
-    layoutCreateInfo.pSetLayouts = nullptr; // Optional
+    layoutCreateInfo.setLayoutCount = 1;
+    layoutCreateInfo.pSetLayouts = &_descriptorSetLayout;
     layoutCreateInfo.pushConstantRangeCount = 0; // Optional
     layoutCreateInfo.pPushConstantRanges = nullptr; // Optional
 
@@ -603,18 +719,20 @@ void HelloTriangleApp::InitVulkan()
     CreateLogicalDevice();
     _swapChain.Create(_window, _physicalDevice, _device, _windowSurface);
     CreateRenderPass();
+    CreateDescriptorSetLayout();
     CreateGraphicsPipeline();
     CreateFrameBuffers();
     CreatCommandPool();
+    CreateCameraDataBuffers();
+    CreateDescriptorPool();
+    CreateDescriptorSet();
 
     // init data
-    VkDeviceSize size = _indices.size() * sizeof(_indices[0]);
-    _indexBuffer.Create(_physicalDevice, _device, size, GraphicsBuffer::BufferType::INDEX);
-    _indexBuffer.CopyToBuffer(_physicalDevice, _device, _graphicsQueue, _graphicsCommandPool, (void*)_indices.data(), size);
+    _indexBuffer.Create(_physicalDevice, _device, _indices.size(), sizeof(_indices[0]), GraphicsBuffer::BufferType::INDEX);
+    _indexBuffer.CopyToBuffer(_physicalDevice, _device, _graphicsQueue, _graphicsCommandPool, (void*)_indices.data(), _indexBuffer.GetSize());
 
-    size = _vertices.size() * sizeof(_vertices[0]);
-    _vertexBuffer.Create(_physicalDevice, _device, size, GraphicsBuffer::BufferType::VERTEX);
-    _vertexBuffer.CopyToBuffer(_physicalDevice, _device, _graphicsQueue, _graphicsCommandPool, (void*)_vertices.data(), size);
+    _vertexBuffer.Create(_physicalDevice, _device, _vertices.size(), sizeof(_vertices[0]), GraphicsBuffer::BufferType::VERTEX);
+    _vertexBuffer.CopyToBuffer(_physicalDevice, _device, _graphicsQueue, _graphicsCommandPool, (void*)_vertices.data(), _vertexBuffer.GetSize());
 
     CreateCommandBuffers();
     CreateSyncObject();
@@ -736,6 +854,14 @@ void HelloTriangleApp::Dispose()
 
     _vertexBuffer.DisposeBuffer(_device);
     _indexBuffer.DisposeBuffer(_device);
+
+    for(int i = 0; i < _cameraDataBuffers.size(); ++i)
+    {
+        _cameraDataBuffers[i].DisposeBuffer(_device);
+    }
+
+    vkDestroyDescriptorPool(_device, _descriptorPool, nullptr);
+    vkDestroyDescriptorSetLayout(_device, _descriptorSetLayout, nullptr);
 
     vkDestroyPipeline(_device, _graphicsPipeline, nullptr);
     vkDestroyPipelineLayout(_device, _pipelineLayout, nullptr);

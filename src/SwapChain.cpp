@@ -50,6 +50,7 @@ VkExtent2D SwapChain::SelectSwapExtents(const Window& window, const VkSurfaceCap
     else
     {
         int width, height;
+        window.GetFramebufferSize(width, height);
 
         VkExtent2D extent =
         {

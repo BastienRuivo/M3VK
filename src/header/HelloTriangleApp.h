@@ -9,7 +9,9 @@
 #include <cstdint>
 #include <glm/ext/vector_float2.hpp>
 #include <glm/ext/vector_float3.hpp>
+#include <glm/fwd.hpp>
 #include <vector>
+
 #include <vulkan/vk_platform.h>
 #include <vulkan/vulkan_core.h>
 
@@ -29,7 +31,7 @@ class HelloTriangleApp
     private:
     struct Vertex
     {
-        glm::vec2 pos;
+        glm::vec3 pos;
         glm::vec3 color;
 
         static VkVertexInputBindingDescription GetBindingDescription()
@@ -48,7 +50,7 @@ class HelloTriangleApp
             // position
             attributeDescriptions[0].binding = 0;
             attributeDescriptions[0].location = 0;
-            attributeDescriptions[0].format = VK_FORMAT_R32G32_SFLOAT;
+            attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
             attributeDescriptions[0].offset = offsetof(Vertex, pos);
 
             // color
@@ -62,10 +64,19 @@ class HelloTriangleApp
     };
 
     const std::vector<Vertex> _vertices = {
-    {{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
-    {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
-    {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
-    {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}}
+    {{-0.5f, 0, -0.5f}, {1.0f, 0.0f, 0.0f}},
+    {{0.5f, 0, -0.5f}, {0.0f, 1.0f, 0.0f}},
+    {{0.5f, 0, 0.5f}, {0.0f, 0.0f, 1.0f}},
+    {{-0.5f, 0, 0.5f}, {1.0f, 1.0f, 1.0f}}
+    };
+
+    struct CameraData
+    {
+        // temp
+        glm::mat4 localToWorldMatrix;
+        glm::mat4 worldToCameraMatrix;
+        glm::mat4 projectionMatrix;
+        glm::mat4 viewProjectionMatrix;
     };
 
     const std::vector<int> _indices = {
@@ -96,7 +107,6 @@ class HelloTriangleApp
 
     // Uniform container
     VkRenderPass _renderPass;
-    VkPipelineLayout _pipelineLayout;
     VkPipeline _graphicsPipeline;
 
     // GPU Sync
@@ -105,6 +115,19 @@ class HelloTriangleApp
     std::vector<VkFence>  _waitFences;
     // CPU Sync
     int ScoreDeviceSuitability(const VkPhysicalDevice& device) const;
+
+    // layout binding
+    // Layout -> General description
+    // Pool -> memory pool to allocate something
+    // Set -> Object allocated on the pool
+    // So, layout and pool are the memory and need to be cleaned, but as we clean layout, we also clean set automatically
+
+    VkDescriptorSetLayout _descriptorSetLayout;
+    VkPipelineLayout _pipelineLayout;
+    VkDescriptorPool _descriptorPool;
+    std::vector<VkDescriptorSet> _descriptorSets;
+
+    std::vector<GraphicsBuffer> _cameraDataBuffers;
 
     // Datas
     GraphicsBuffer _vertexBuffer;
@@ -121,11 +144,16 @@ class HelloTriangleApp
     void CreatCommandPool();
     void CreateCommandBuffers();
     void CreateSyncObject();
+    void CreateDescriptorSetLayout();
+    void CreateCameraDataBuffers();
+    void CreateDescriptorPool();
+    void CreateDescriptorSet();
 
     void DisposeSwapChain();
     void RefreshSwapChain();
 
-    void RecordCommandBuffer(CommandBuffer cmdBuffer, uint32_t imageIndex);
+    void UpdateCameraData(uint32_t currentImage);
+    void RecordCommandBuffer(CommandBuffer cmdBuffer, uint32_t currentFrame, uint32_t imageIndex);
     void DrawFrame();
 
     // Utils

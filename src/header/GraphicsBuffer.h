@@ -22,10 +22,11 @@ class GraphicsBuffer
     public:
     enum BufferType
     {
-        INDEX,
-        VERTEX
+        INDEX = 0,
+        VERTEX = 1,
+        UNIFORM = 2
     };
-    void Create(const VkPhysicalDevice& physicalDevice, const VkDevice& device, VkDeviceSize size, BufferType type);
+    void Create(const VkPhysicalDevice& physicalDevice, const VkDevice& device, VkDeviceSize count, VkDeviceSize stride, BufferType type);
     void DisposeBuffer(const VkDevice& device);
 
     void CopyToBuffer(const VkPhysicalDevice& physicalDevice, const VkDevice& device, const VkQueue& queue, const VkCommandPool& cmdPool, void* srcData, VkDeviceSize size);
@@ -33,8 +34,17 @@ class GraphicsBuffer
     VkBuffer GetInternal() const { return _buffer; }
     BufferType GetType() const { return _type; }
 
+    VkDeviceSize GetSize() const;
+    VkDeviceSize GetCount() const;
+    VkDeviceSize GetStride() const;
+
+    void* GetDataPtr();
+
     private:
     VkBuffer _buffer;
     VkDeviceMemory _memory;
     BufferType _type;
+    void* _dataPtr; // Currently used for persistent mapping for Uniform buffers, we only map it once to avoid the cost of mapping it each time
+    VkDeviceSize _stride;
+    VkDeviceSize _count;
 };

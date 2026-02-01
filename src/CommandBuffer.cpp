@@ -1,4 +1,5 @@
 #include "header/CommandBuffer.h"
+#include "header/GraphicsBuffer.h"
 #include <stdexcept>
 
 CommandBuffer::CommandBuffer(VkDevice device, VkCommandPool pool, VkQueue queue) : _device(device), _pool(pool), _queue(queue)
@@ -78,6 +79,11 @@ void CommandBuffer::BindBuffer(const GraphicsBuffer& buffer) const
         {
             vkCmdBindIndexBuffer(_handle, buffer.GetInternal(), 0, VK_INDEX_TYPE_UINT32);
             break;
+        }
+
+        case GraphicsBuffer::UNIFORM:
+        {
+            throw std::runtime_error("UNIMPLEMENTED");
         }
     }
 }
