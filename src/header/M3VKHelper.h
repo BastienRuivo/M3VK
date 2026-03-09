@@ -20,7 +20,7 @@ class M3VKHelper
 
         if(!file.is_open())
         {
-            VkDebugLayer::LogError("Can't open " + std::string(std::filesystem::current_path()) + "/" + filename);
+            VkDebugLayer::Log(VkDebugLayer::LogType::ERROR, "Can't open " + std::string(std::filesystem::current_path()) + "/" + filename);
             throw std::runtime_error("Can't open file " + filename);
         }
 

@@ -85,26 +85,26 @@ VkPresentModeKHR SwapChain::SelectSwapPresentMode(const std::vector<VkPresentMod
 
     if(hasTripleBuffering)
     {
-        VkDebugLayer::LogInfo("Swap chain mode : Triple buffering");
+        VkDebugLayer::Log(VkDebugLayer::LogType::INFO, "Swap chain mode : Triple buffering");
         return VK_PRESENT_MODE_MAILBOX_KHR;
     }
     else if(hasVBlank)
     {
-        VkDebugLayer::LogInfo("Swap chain mode : VBlank");
+        VkDebugLayer::Log(VkDebugLayer::LogType::INFO, "Swap chain mode : VBlank");
         return VK_PRESENT_MODE_FIFO_KHR;
     }
     else if(hasRelaxedDoubleBuffering)
     {
-        VkDebugLayer::LogInfo("Swap chain mode : Relaxed VBlank");
+        VkDebugLayer::Log(VkDebugLayer::LogType::INFO, "Swap chain mode : Relaxed VBlank");
         return VK_PRESENT_MODE_FIFO_RELAXED_KHR;
     }
     else if(hasImmediateMode)
     {
-        VkDebugLayer::LogInfo("Swap chain mode : Immediate");
+        VkDebugLayer::Log(VkDebugLayer::LogType::INFO, "Swap chain mode : Immediate");
         return VK_PRESENT_MODE_IMMEDIATE_KHR;
     }
 
-    VkDebugLayer::LogError("NO SWAP CHAIN MODE FOUND ! Fallbacked to VBlank");
+    VkDebugLayer::Log(VkDebugLayer::LogType::ERROR, "NO SWAP CHAIN MODE FOUND ! Fallbacked to VBlank");
     return VK_PRESENT_MODE_FIFO_KHR;
 }
 
@@ -118,7 +118,7 @@ VkSurfaceFormatKHR SwapChain::SelectSwapSurfaceFormat(const std::vector<VkSurfac
         }
     }
 
-    VkDebugLayer::LogWarning("Can't find best swap chain format");
+    VkDebugLayer::Log(VkDebugLayer::LogType::WARNING, "Can't find best swap chain format");
 
     return availableFormats[0];
 }

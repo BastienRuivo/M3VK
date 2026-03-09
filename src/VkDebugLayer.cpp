@@ -1,4 +1,5 @@
 #include "./header/VkDebugLayer.h"
+#include <ostream>
 #include <vulkan/vulkan_core.h>
 #include <iostream>
 #include <cstring>
@@ -20,53 +21,66 @@ void M3VK_DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMesseng
     }
 }
 
-void VkDebugLayer::LogInfo(const std::string& message)
-{
-    if(!Enabled) return;
-    Log(VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT, message);
-}
-
-void VkDebugLayer::LogWarning(const std::string& message)
-{
-    if(!Enabled) return;
-    Log(VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT, message);
-}
-
-void VkDebugLayer::LogError(const std::string& message)
-{
-    if(!Enabled) return;
-    Log(VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT, message);
-}
-
 void VkDebugLayer::Log(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, const std::string& message)
+{
+    VkDebugLayer::LogType logType;
+    switch (messageSeverity)
+    {
+        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT: logType = VkDebugLayer::VERBOSE; break;
+        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT: logType = VkDebugLayer::INFO; break;
+        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT: logType = VkDebugLayer::WARNING; break;
+        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT: logType = VkDebugLayer::ERROR; break;
+        default: logType = VkDebugLayer::VERBOSE; break;
+    }
+    Log(logType, message);
+}
+
+void VkDebugLayer::Log(VkDebugLayer::LogType LogType, const std::string& message)
 {
     if(!Enabled) return;
     #ifndef M3VK_VERBOSE_LOG
-        if(messageSeverity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT) return;
+        if(LogType == VkDebugLayer::LogType::INFO || VkDebugLayer::LogType::VERBOSE) return;
     #endif
 
-    std::cerr << "[Validation Layer Message] :";
-    switch (messageSeverity)
+    #ifndef M3VK_MEMORYLOG
+        if(LogType == VkDebugLayer::LogType::CREATE || VkDebugLayer::LogType::DESTROY) return;
+    #endif
+
+
+    const char * color = nullptr;
+    const char * title = nullptr;
+    std::ostream * stream = nullptr;
+
+    // Stream selection
+    switch (LogType)
     {
-        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
-            std::cerr << "\033[0m" << "[sVERBOSE]";
-            break;
-
-        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
-            std::cerr << "\033[0m" << "[sINFO]";
-            break;
-
-        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
-            std::cerr << "\033[33m" << "[sWARNING]";
-            break;
-        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
-            std::cerr << "\033[31m" << "[sERROR]";
-            break;
-        default:
-            break;
+        case VkDebugLayer::LogType::WARNING:
+        case VkDebugLayer::LogType::ERROR: stream = &std::cerr; break;
+        default: stream = &std::clog; break;
     }
 
-    std::cerr << "[tManual]" << message << std::endl;
+    // Color selection
+    switch (LogType)
+    {
+        case VkDebugLayer::LogType::WARNING: color = TextColorYellow; break;
+        case VkDebugLayer::LogType::ERROR: color = TextColorRed; break;
+        default: color = TextColorGrey; break;
+    }
+
+    // Title selection
+
+    switch (LogType)
+    {
+        case VkDebugLayer::LogType::WARNING: title = "Warning"; break;
+        case VkDebugLayer::LogType::ERROR: title = "Error"; break;
+        case VkDebugLayer::LogType::VERBOSE: title = "Verbose"; break;
+        case VkDebugLayer::LogType::INFO: title = "Info"; break;
+        case VkDebugLayer::LogType::CREATE: title = "Create"; break;
+        case VkDebugLayer::LogType::DESTROY: title = "Destroy"; break;
+        default: title = "Unknown"; break;
+    }
+
+    *stream << color << "[Validation Layer Message] - [M3VK] : [" << title << "] " << message << std::endl;
 }
 
 static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(
@@ -80,22 +94,22 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(
         if(messageSeverity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT) return true;
     #endif
 
-    std::cerr << "[Validation Layer Message] :";
+    std::cerr << "[Validation Layer Message] - [Vulkan] : ";
     switch (messageSeverity)
     {
         case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
-            std::cerr << "\033[0m" << "[sVERBOSE]";
+            std::cerr << "\033[0m" << "[Verbose]";
             break;
 
         case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
-            std::cerr << "\033[0m" << "[sINFO]";
+            std::cerr << "\033[0m" << "[Info]";
             break;
 
         case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
-            std::cerr << "\033[33m" << "[sWARNING]";
+            std::cerr << "\033[33m" << "[Warning]";
             break;
         case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
-            std::cerr << "\033[31m" << "[sERROR]";
+            std::cerr << "\033[31m" << "[Error]";
             break;
         default:
             break;
@@ -104,13 +118,13 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(
     switch (messageType)
     {
         case VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT:
-            std::cerr<<"[tGENERAL]";
+            std::cerr<<"[General]";
             break;
         case VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT:
-            std::cerr<<"[tVALIDATION]";
+            std::cerr<<"[Validation]";
             break;
         case VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT:
-            std::cerr<<"[tPerformance]";
+            std::cerr<<"[Performance]";
             break;
     }
 

@@ -4,6 +4,7 @@
 #include "header/M3VKHelper.h"
 #include "header/Shader.h"
 #include "header/SwapChain.h"
+#include "header/VkDebugLayer.h"
 #include <GLFW/glfw3.h>
 #include <array>
 #include <chrono>
@@ -573,7 +574,7 @@ bool HelloTriangleApp::CheckDeviceExtensionSupport(const VkPhysicalDevice& devic
         {
             if(_vkDebugLayer.Enabled)
             {
-                _vkDebugLayer.LogError((std::string("Extension not supported : ") + std::string(extension)).c_str());
+                _vkDebugLayer.Log(VkDebugLayer::LogType::ERROR, (std::string("Extension not supported : ") + std::string(extension)).c_str());
             }
             return false;
         }
@@ -750,10 +751,10 @@ void HelloTriangleApp::CreateVKInstance()
 
     if(_vkDebugLayer.Enabled)
     {
-        _vkDebugLayer.LogInfo("List of actives VK Extensions");
+        _vkDebugLayer.Log(VkDebugLayer::LogType::INFO, "List of actives VK Extensions");
         for(const VkExtensionProperties& extension : supportedExtensions)
         {
-            _vkDebugLayer.LogInfo(std::string("\t - ") + extension.extensionName);
+            _vkDebugLayer.Log(VkDebugLayer::LogType::INFO, std::string("\t - ") + extension.extensionName);
         }
     }
 

@@ -1,5 +1,4 @@
 #pragma once
-
 #include <string>
 #include <vulkan/vk_platform.h>
 #include <vulkan/vulkan_core.h>
@@ -8,7 +7,8 @@
 
 #include <vector>
 
-//#define M3VK_VERBOSE_LOG 1
+#define M3VK_VERBOSE_LOG 1
+#define M3VK_MEMORYLOG 1
 
 static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(
     VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
@@ -38,16 +38,27 @@ class VkDebugLayer
         "VK_LAYER_KHRONOS_validation"
     };
 
+    enum LogType
+    {
+        VERBOSE,
+        INFO,
+        WARNING,
+        ERROR,
+        CREATE,
+        DESTROY
+    };
+
+    static inline const char* TextColorGrey = "\033[0m";
+    static inline const char* TextColorYellow = "\033[33m";
+    static inline const char* TextColorRed = "\033[31m";
+
     void PopulateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo) const;
     void Dispose(VkInstance& instance);
     void Create(VkInstance& instance);
     bool CheckValidationLayerSupport() const;
     void SetupCreateInfo(VkInstanceCreateInfo& instanceCreateInfo, VkDebugUtilsMessengerCreateInfoEXT& debugInfoCreate) const;
     static void Log(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, const std::string& message);
-    static void LogInfo(const std::string& message);
-    static void LogWarning(const std::string& message);
-    static void LogError(const std::string& message);
-
+    static void Log(LogType LogType, const std::string& message);
 
     private:
     VkDebugUtilsMessengerEXT _debugMessenger;
