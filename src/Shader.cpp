@@ -1,7 +1,6 @@
 #include "./header/Shader.h"
 #include "./header/M3VKHelper.h"
 #include "header/VkDebugLayer.h"
-#include <iostream>
 #include <stdexcept>
 #include <vector>
 #include <vulkan/vulkan_core.h>
