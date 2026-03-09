@@ -89,7 +89,9 @@ class HelloTriangleApp
     bool _framebufferResized;
     uint32_t _currentFrame = 0;
 
+    // RAII is first in last out order
     Window _window;
+
 
     VkInstance _instance;
     VkDevice _device;

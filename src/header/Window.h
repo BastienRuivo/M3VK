@@ -6,9 +6,9 @@
 class Window
 {
     public:
-    void init(int width, int height, const char* title, void* resizeObject, GLFWframebuffersizefun resizeCallback);
+    Window(int width, int height, const char* title, void* resizeObject, GLFWframebuffersizefun resizeCallback);
+    ~Window();
     void ResizeWindow(int width, int height);
-    void Dispose();
 
     bool ShouldClose() const;
     void ProcessEvent() const;
