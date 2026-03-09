@@ -392,8 +392,7 @@ void HelloTriangleApp::CreateRenderPass()
 
 void HelloTriangleApp::CreateGraphicsPipeline()
 {
-    Shader shader;
-    shader.Create(_device);
+    Shader shader(_device);
 
     VkPipelineShaderStageCreateInfo shadersStagesCreateInfo[2] = {
         {},
@@ -550,9 +549,6 @@ void HelloTriangleApp::CreateGraphicsPipeline()
     {
         throw std::runtime_error("Failed to create graphics pipeline !");
     }
-
-    // Disposal
-    shader.Dispose(_device);
 }
 
 bool HelloTriangleApp::CheckDeviceExtensionSupport(const VkPhysicalDevice& device) const
