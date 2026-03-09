@@ -708,12 +708,12 @@ void HelloTriangleApp::PickPhysicalDevice()
 }
 
 HelloTriangleApp::HelloTriangleApp() :
+    _vkDebugLayer(_instanceHandler.Get()),
     _instanceHandler(),
     _window(1920, 1080, "Window", this, FramebufferResizeCallback)
 {
     VkDebugLayer::Log(VkDebugLayer::LogType::CREATE, "HelloTriangleApp Creation !");
 
-    _vkDebugLayer.Create(_instanceHandler.Get());
     _window.CreateWindowSurface(_instanceHandler.Get(), _windowSurface);
     PickPhysicalDevice();
     CreateLogicalDevice();
@@ -781,7 +781,6 @@ HelloTriangleApp::~HelloTriangleApp()
     vkDestroyRenderPass(_device, _renderPass, nullptr);
     vkDestroyDevice(_device, nullptr);
 
-    _vkDebugLayer.Dispose(_instanceHandler.Get());
     vkDestroySurfaceKHR(_instanceHandler.Get(), _windowSurface, nullptr);
 
     VkDebugLayer::Log(VkDebugLayer::LogType::DESTROY, "HelloTriangleApp Destroyed !");

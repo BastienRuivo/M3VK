@@ -52,8 +52,8 @@ class VkDebugLayer
     static inline const char* TextColorYellow = "\033[33m";
     static inline const char* TextColorRed = "\033[31m";
 
-    void Dispose(VkInstance instance);
-    void Create(VkInstance instance);
+    VkDebugLayer(VkInstance instance);
+    ~VkDebugLayer();
 
     static void PopulateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
     static void SetupCreateInfo(VkInstanceCreateInfo& instanceCreateInfo, VkDebugUtilsMessengerCreateInfoEXT& debugInfoCreate);
@@ -63,4 +63,6 @@ class VkDebugLayer
 
     private:
     VkDebugUtilsMessengerEXT _debugMessenger;
+    VkInstance _instance;
+
 };

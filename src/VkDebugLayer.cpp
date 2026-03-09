@@ -188,9 +188,11 @@ void VkDebugLayer::PopulateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateI
     debugMessengerCreateInfo.pfnUserCallback = DebugCallback;
 }
 
-void VkDebugLayer::Create(VkInstance instance)
+VkDebugLayer::VkDebugLayer(VkInstance instance)
 {
+    VkDebugLayer::Log(VkDebugLayer::LogType::CREATE, "VkDebugLayer Creation !");
     if(!Enabled) return;
+    _instance = instance;
 
     VkDebugUtilsMessengerCreateInfoEXT createInfo{};
     PopulateDebugMessengerCreateInfo(createInfo);
@@ -201,8 +203,9 @@ void VkDebugLayer::Create(VkInstance instance)
     }
 }
 
-void VkDebugLayer::Dispose(VkInstance instance)
+VkDebugLayer::~VkDebugLayer()
 {
+    VkDebugLayer::Log(VkDebugLayer::LogType::DESTROY, "VkDebugLayer Destroyed !");
     if (!Enabled) return;
-    M3VK_DestroyDebugUtilsMessengerEXT(instance, _debugMessenger, nullptr);
+    M3VK_DestroyDebugUtilsMessengerEXT(_instance, _debugMessenger, nullptr);
 }
