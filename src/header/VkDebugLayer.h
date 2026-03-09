@@ -34,7 +34,7 @@ class VkDebugLayer
     #else
     static const bool Enabled = true;
     #endif
-    const std::vector<const char*> validationLayer{
+    inline static const std::vector<const char*> validationLayer {
         "VK_LAYER_KHRONOS_validation"
     };
 
@@ -52,13 +52,14 @@ class VkDebugLayer
     static inline const char* TextColorYellow = "\033[33m";
     static inline const char* TextColorRed = "\033[31m";
 
-    void PopulateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo) const;
-    void Dispose(VkInstance& instance);
-    void Create(VkInstance& instance);
-    bool CheckValidationLayerSupport() const;
-    void SetupCreateInfo(VkInstanceCreateInfo& instanceCreateInfo, VkDebugUtilsMessengerCreateInfoEXT& debugInfoCreate) const;
+    void Dispose(VkInstance instance);
+    void Create(VkInstance instance);
+
+    static void PopulateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
+    static void SetupCreateInfo(VkInstanceCreateInfo& instanceCreateInfo, VkDebugUtilsMessengerCreateInfoEXT& debugInfoCreate);
     static void Log(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, const std::string& message);
     static void Log(LogType LogType, const std::string& message);
+    static bool CheckValidationLayerSupport();
 
     private:
     VkDebugUtilsMessengerEXT _debugMessenger;

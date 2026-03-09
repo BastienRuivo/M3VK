@@ -133,7 +133,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(
     return messageSeverity != VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
 }
 
-bool VkDebugLayer::CheckValidationLayerSupport() const
+bool VkDebugLayer::CheckValidationLayerSupport()
 {
     uint32_t layerCount = 0;
     vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
@@ -163,7 +163,7 @@ bool VkDebugLayer::CheckValidationLayerSupport() const
     return true;
 }
 
-void VkDebugLayer::SetupCreateInfo(VkInstanceCreateInfo& instanceCreateInfo, VkDebugUtilsMessengerCreateInfoEXT& debugCreateInfo) const
+void VkDebugLayer::SetupCreateInfo(VkInstanceCreateInfo& instanceCreateInfo, VkDebugUtilsMessengerCreateInfoEXT& debugCreateInfo)
 {
     if(Enabled)
     {
@@ -179,7 +179,7 @@ void VkDebugLayer::SetupCreateInfo(VkInstanceCreateInfo& instanceCreateInfo, VkD
     }
 }
 
-void VkDebugLayer::PopulateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& debugMessengerCreateInfo) const
+void VkDebugLayer::PopulateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& debugMessengerCreateInfo)
 {
     debugMessengerCreateInfo = {};
     debugMessengerCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
@@ -188,7 +188,7 @@ void VkDebugLayer::PopulateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateI
     debugMessengerCreateInfo.pfnUserCallback = DebugCallback;
 }
 
-void VkDebugLayer::Create(VkInstance& instance)
+void VkDebugLayer::Create(VkInstance instance)
 {
     if(!Enabled) return;
 
@@ -201,7 +201,7 @@ void VkDebugLayer::Create(VkInstance& instance)
     }
 }
 
-void VkDebugLayer::Dispose(VkInstance& instance)
+void VkDebugLayer::Dispose(VkInstance instance)
 {
     if (!Enabled) return;
     M3VK_DestroyDebugUtilsMessengerEXT(instance, _debugMessenger, nullptr);

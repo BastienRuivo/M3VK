@@ -680,7 +680,7 @@ void HelloTriangleApp::PickPhysicalDevice()
 {
     _physicalDevice = VK_NULL_HANDLE;
     uint32_t deviceCount = 0;
-    vkEnumeratePhysicalDevices(_instance, &deviceCount, nullptr);
+    vkEnumeratePhysicalDevices(_instanceHandler.Get(), &deviceCount, nullptr);
 
     if(deviceCount == 0)
     {
@@ -688,7 +688,7 @@ void HelloTriangleApp::PickPhysicalDevice()
     }
 
     std::vector<VkPhysicalDevice> devices(deviceCount);
-    vkEnumeratePhysicalDevices(_instance, &deviceCount, devices.data());
+    vkEnumeratePhysicalDevices(_instanceHandler.Get(), &deviceCount, devices.data());
 
     int bestScore = 0;
     for(const VkPhysicalDevice& device : devices)
@@ -707,13 +707,14 @@ void HelloTriangleApp::PickPhysicalDevice()
     }
 }
 
-HelloTriangleApp::HelloTriangleApp() : _window(1920, 1080, "Window", this, FramebufferResizeCallback)
+HelloTriangleApp::HelloTriangleApp() :
+    _instanceHandler(),
+    _window(1920, 1080, "Window", this, FramebufferResizeCallback)
 {
     VkDebugLayer::Log(VkDebugLayer::LogType::CREATE, "HelloTriangleApp Creation !");
 
-    CreateVKInstance();
-    _vkDebugLayer.Create(_instance);
-    _window.CreateWindowSurface(_instance, _windowSurface);
+    _vkDebugLayer.Create(_instanceHandler.Get());
+    _window.CreateWindowSurface(_instanceHandler.Get(), _windowSurface);
     PickPhysicalDevice();
     CreateLogicalDevice();
     _swapChain.Create(_window, _physicalDevice, _device, _windowSurface);
@@ -735,93 +736,6 @@ HelloTriangleApp::HelloTriangleApp() : _window(1920, 1080, "Window", this, Frame
 
     CreateCommandBuffers();
     CreateSyncObject();
-}
-
-void HelloTriangleApp::CreateVKInstance()
-{
-    VkApplicationInfo appInfo{};
-    appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-    appInfo.pApplicationName = "M3VK";
-    appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
-    appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
-    appInfo.apiVersion = VK_API_VERSION_1_4;
-
-    uint32_t extensionCount = 0;
-    vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);
-    std::vector<VkExtensionProperties> supportedExtensions(extensionCount);
-    vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, supportedExtensions.data());
-
-    if(_vkDebugLayer.Enabled)
-    {
-        _vkDebugLayer.Log(VkDebugLayer::LogType::INFO, "List of actives VK Extensions");
-        for(const VkExtensionProperties& extension : supportedExtensions)
-        {
-            _vkDebugLayer.Log(VkDebugLayer::LogType::INFO, std::string("\t - ") + extension.extensionName);
-        }
-    }
-
-
-    std::vector<const char *> requiredExtensions = GetRequiredExtensions();
-    for(int i = 0; i < requiredExtensions.size(); ++i)
-    {
-        bool isPresent = false;
-        for(const VkExtensionProperties& extension : supportedExtensions)
-        {
-            if(strcmp(requiredExtensions[i], extension.extensionName) == 0)
-            {
-                isPresent = true;
-                break;
-            }
-        }
-
-        if(!isPresent)
-        {
-            throw std::runtime_error("Vulkan Extension" + std::string(requiredExtensions[i]) + " Is not supported but required for GLFW");
-        }
-    }
-
-    if(!_vkDebugLayer.CheckValidationLayerSupport())
-    {
-        throw std::runtime_error("Validation layer requested but not available !");
-    }
-
-    VkInstanceCreateInfo createInfo{};
-    createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-    createInfo.pApplicationInfo = &appInfo;
-    createInfo.enabledExtensionCount = static_cast<uint32_t>(requiredExtensions.size());
-    createInfo.ppEnabledExtensionNames = requiredExtensions.data();
-
-    // ensure it is not destroyed before vkCreateInstance
-    VkDebugUtilsMessengerCreateInfoEXT debugInfoCreate;
-    _vkDebugLayer.SetupCreateInfo(createInfo, debugInfoCreate);
-
-    VkResult result = vkCreateInstance(&createInfo, nullptr, &_instance);
-    if(result != VK_SUCCESS)
-    {
-        if(result == VK_ERROR_LAYER_NOT_PRESENT)
-        {
-            throw std::runtime_error("Error : A VK Layer is not present on computer");
-        }
-        else
-        {
-            throw std::runtime_error("Failed to create VK_Instance");
-        }
-    }
-}
-
-std::vector<const char *> HelloTriangleApp::GetRequiredExtensions() const
-{
-    uint32_t glfwExtensionCount = 0;
-    const char** glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
-
-    std::vector<const char*> extensions(glfwExtensions, glfwExtensions + glfwExtensionCount);
-
-    if(_vkDebugLayer.Enabled)
-    {
-        extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-    }
-
-    return extensions;
 }
 
 void HelloTriangleApp::MainLoop()
@@ -866,9 +780,9 @@ HelloTriangleApp::~HelloTriangleApp()
     vkDestroyPipelineLayout(_device, _pipelineLayout, nullptr);
     vkDestroyRenderPass(_device, _renderPass, nullptr);
     vkDestroyDevice(_device, nullptr);
-    _vkDebugLayer.Dispose(_instance);
-    vkDestroySurfaceKHR(_instance, _windowSurface, nullptr);
-    vkDestroyInstance(_instance, nullptr);
+
+    _vkDebugLayer.Dispose(_instanceHandler.Get());
+    vkDestroySurfaceKHR(_instanceHandler.Get(), _windowSurface, nullptr);
 
     VkDebugLayer::Log(VkDebugLayer::LogType::DESTROY, "HelloTriangleApp Destroyed !");
 }

@@ -30,7 +30,7 @@ VkShaderModule Shader::CreateShaderModule(const std::vector<char>& shaderCode)
 
 Shader::Shader(const VkDevice& device)
 {
-    VkDebugLayer::Log(VkDebugLayer::LogType::CREATE, "Shader Created !");
+    VkDebugLayer::Log(VkDebugLayer::LogType::CREATE, "Shader Creation !");
     std::vector<char> vertex = M3VKHelper::ReadFile("shaders/helloTriangle.vert.spv");
     std::vector<char> fragment = M3VKHelper::ReadFile("shaders/helloTriangle.frag.spv");
 

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "header/CommandBuffer.h"
+#include "header/VkInstanceHandler.h"
 #include "header/Window.h"
 #include "header/GraphicsBuffer.h"
 #include "header/SwapChain.h"
@@ -91,9 +92,8 @@ class HelloTriangleApp
 
     // RAII is first in last out order
     Window _window;
+    VkInstanceHandler _instanceHandler;
 
-
-    VkInstance _instance;
     VkDevice _device;
     VkPhysicalDevice _physicalDevice;
     VkDebugLayer _vkDebugLayer;
@@ -138,7 +138,6 @@ class HelloTriangleApp
     GraphicsBuffer _vertexBuffer;
     GraphicsBuffer _indexBuffer;
 
-    void CreateVKInstance();
     void PickPhysicalDevice();
     void CreateLogicalDevice();
     void CreateGraphicsPipeline();
@@ -160,7 +159,6 @@ class HelloTriangleApp
     void DrawFrame();
 
     // Utils
-    std::vector<const char*> GetRequiredExtensions() const;
     const std::vector<const char*> _deviceExtensions = {
         VK_KHR_SWAPCHAIN_EXTENSION_NAME
     };
