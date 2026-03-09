@@ -707,8 +707,12 @@ void HelloTriangleApp::PickPhysicalDevice()
     }
 }
 
-void HelloTriangleApp::InitVulkan()
+HelloTriangleApp::HelloTriangleApp()
 {
+    VkDebugLayer::Log(VkDebugLayer::LogType::CREATE, "HelloTriangleApp Creation !");
+
+    _window.init(1920, 1080, "H3ll0 Tr14nGl3", this, FramebufferResizeCallback);
+
     CreateVKInstance();
     _vkDebugLayer.Create(_instance);
     _window.CreateWindowSurface(_instance, _windowSurface);
@@ -833,7 +837,7 @@ void HelloTriangleApp::MainLoop()
     vkDeviceWaitIdle(_device);
 }
 
-void HelloTriangleApp::Dispose()
+HelloTriangleApp::~HelloTriangleApp()
 {
     for(size_t i = 0; i < HelloTriangleApp::MaxFrameInCount; ++i)
     {
@@ -868,13 +872,11 @@ void HelloTriangleApp::Dispose()
     vkDestroySurfaceKHR(_instance, _windowSurface, nullptr);
     vkDestroyInstance(_instance, nullptr);
     _window.Dispose();
+
+    VkDebugLayer::Log(VkDebugLayer::LogType::DESTROY, "HelloTriangleApp Destroyed !");
 }
 
 void HelloTriangleApp::Run()
 {
-    _window.init(1920, 1080, "H3ll0 Tr14nGl3", this, FramebufferResizeCallback);
-    InitVulkan();
-
     MainLoop();
-    Dispose();
 }

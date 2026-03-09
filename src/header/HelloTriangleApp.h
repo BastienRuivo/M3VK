@@ -28,6 +28,9 @@ class HelloTriangleApp
     void FramebufferResized();
     void UpdateWindowSize(int width, int height);
 
+    HelloTriangleApp();
+    ~HelloTriangleApp();
+
     private:
     struct Vertex
     {
@@ -133,8 +136,6 @@ class HelloTriangleApp
     GraphicsBuffer _vertexBuffer;
     GraphicsBuffer _indexBuffer;
 
-    // Inits
-    void InitVulkan();
     void CreateVKInstance();
     void PickPhysicalDevice();
     void CreateLogicalDevice();
@@ -168,7 +169,4 @@ class HelloTriangleApp
 
     //Actual logic
     void MainLoop();
-
-    // Disposal
-    void Dispose();
 };

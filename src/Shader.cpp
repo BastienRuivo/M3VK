@@ -7,9 +7,9 @@
 
 Shader::~Shader()
 {
-    VkDebugLayer::Log(VkDebugLayer::LogType::INFO, "Shader Destroyed !");
     vkDestroyShaderModule(_device, VertexShader, nullptr);
     vkDestroyShaderModule(_device, FragmentShader, nullptr);
+    VkDebugLayer::Log(VkDebugLayer::LogType::DESTROY, "Shader Destroyed !");
 }
 
 VkShaderModule Shader::CreateShaderModule(const std::vector<char>& shaderCode)
@@ -30,7 +30,7 @@ VkShaderModule Shader::CreateShaderModule(const std::vector<char>& shaderCode)
 
 Shader::Shader(const VkDevice& device)
 {
-    VkDebugLayer::Log(VkDebugLayer::LogType::INFO, "Shader Created !");
+    VkDebugLayer::Log(VkDebugLayer::LogType::CREATE, "Shader Created !");
     std::vector<char> vertex = M3VKHelper::ReadFile("shaders/helloTriangle.vert.spv");
     std::vector<char> fragment = M3VKHelper::ReadFile("shaders/helloTriangle.frag.spv");
 
