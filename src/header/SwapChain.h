@@ -6,7 +6,6 @@
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
-//#include "VkDebugLayer.h"
 #include "header/Window.h"
 
 class SwapChain
@@ -14,12 +13,13 @@ class SwapChain
     public:
     VkFormat ImageFormat;
     VkExtent2D Extent;
-    VkSwapchainKHR Internal;
+    VkSwapchainKHR _internal;
+    VkDevice _device;
 
     std::vector<VkImage> Images;
     std::vector<VkImageView> ImageViews;
-    void Create(const Window & window, const VkPhysicalDevice& physicalDevice, const VkDevice& logicalDevice, const VkSurfaceKHR& windowSurface);
-    void Dipose(const VkDevice& logicalDevice);
+    SwapChain(const Window & window, VkPhysicalDevice physicalDevice, VkDevice device, VkSurfaceKHR windowSurface);
+    ~SwapChain();
 
 
     VkSurfaceFormatKHR SelectSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats) const;
@@ -28,5 +28,5 @@ class SwapChain
 
 
     private:
-    void CreateImageView(const VkDevice& logicalDevice);
+    void CreateImageView();
 };

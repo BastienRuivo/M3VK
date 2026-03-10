@@ -1,11 +1,11 @@
 #pragma once
 
 #include "header/CommandBuffer.h"
-#include "header/VkDeviceHandler.h"
-#include "header/VkInstanceHandler.h"
-#include "header/VkPhysicalDeviceHandler.h"
-#include "header/VkQueueHandler.h"
-#include "header/VkSurfaceHandler.h"
+#include "header/VkHandlers/VkDeviceHandler.h"
+#include "header/VkHandlers/VkInstanceHandler.h"
+#include "header/VkHandlers/VkPhysicalDeviceHandler.h"
+#include "header/VkHandlers/VkQueueHandler.h"
+#include "header/VkHandlers/VkSurfaceHandler.h"
 #include "header/Window.h"
 #include "header/GraphicsBuffer.h"
 #include "header/SwapChain.h"
@@ -15,6 +15,7 @@
 #include <glm/ext/vector_float2.hpp>
 #include <glm/ext/vector_float3.hpp>
 #include <glm/fwd.hpp>
+#include <memory>
 #include <vector>
 
 #include <vulkan/vk_platform.h>
@@ -103,6 +104,9 @@ class HelloTriangleApp
     VkPhysicalDeviceHandler _physicalDeviceHandler;
     VkDeviceHandler _deviceHandler;
 
+    // Dynamic lifetime
+    std::unique_ptr<SwapChain> _swapChain;
+
     //Implicitly linked to device, see wtd later
     VkQueueHandler _graphicsQueueHandler;
     VkQueueHandler _presentQueueHandler;
@@ -111,10 +115,11 @@ class HelloTriangleApp
     std::vector<VkFramebuffer> _framebuffers;
     VkCommandPool _graphicsCommandPool;
 
+
     // Queues
     // implicitly cleaned
-    VkQueue _copyQueue;
-    SwapChain _swapChain;
+    //VkQueue _copyQueue;
+
     std::vector<CommandBuffer> _commandBuffers;
 
     // Uniform container
@@ -155,7 +160,7 @@ class HelloTriangleApp
     void CreateDescriptorPool();
     void CreateDescriptorSet();
 
-    void DisposeSwapChain();
+    void DisposeFramebuffers();
     void RefreshSwapChain();
 
     void UpdateCameraData(uint32_t currentImage);

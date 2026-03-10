@@ -15,6 +15,9 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(glfw)
 
+set(SHADER_OUTPUT_DIR "${CMAKE_BINARY_DIR}/shaders")
+add_definitions(-DSHADER_DIRECTORY="${SHADER_OUTPUT_DIR}/")
+
 # Automatically collect all .cpp and .hpp/.h files
 file(GLOB_RECURSE SRC_FILES "${CMAKE_SOURCE_DIR}/src/*.cpp")
 file(GLOB_RECURSE HEADER_FILES "${CMAKE_SOURCE_DIR}/src/headers/*.h" "${CMAKE_SOURCE_DIR}/src/headers/*.hpp")
@@ -51,7 +54,6 @@ file(GLOB_RECURSE GLSL_SOURCE_FILES
 )
 
 # Create a shaders output directory in the build folder
-set(SHADER_OUTPUT_DIR "${CMAKE_BINARY_DIR}/shaders")
 file(MAKE_DIRECTORY ${SHADER_OUTPUT_DIR})
 
 set(SPIRV_BINARY_FILES "")

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "header/VkPhysicalDeviceHandler.h"
+#include "header/VkHandlers/VkPhysicalDeviceHandler.h"
 #include <vulkan/vulkan_core.h>
 
 class VkDeviceHandler

@@ -1,7 +1,7 @@
-#include "header/VkDeviceHandler.h"
+#include "header/VkHandlers/VkDeviceHandler.h"
 #include "header/M3VKHelper.h"
 #include "header/VkDebugLayer.h"
-#include "header/VkPhysicalDeviceHandler.h"
+#include "header/VkHandlers/VkPhysicalDeviceHandler.h"
 #include <set>
 #include <vector>
 #include <vulkan/vulkan_core.h>

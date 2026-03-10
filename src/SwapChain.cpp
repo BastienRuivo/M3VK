@@ -8,7 +8,7 @@
 
 
 
-void SwapChain::CreateImageView(const VkDevice& logicalDevice)
+void SwapChain::CreateImageView()
 {
     ImageViews.resize(Images.size());
 
@@ -34,7 +34,7 @@ void SwapChain::CreateImageView(const VkDevice& logicalDevice)
         // if VR someday
         createInfo.subresourceRange.layerCount = 1;
 
-        if(vkCreateImageView(logicalDevice, &createInfo, nullptr, &ImageViews[i]) != VK_SUCCESS)
+        if(vkCreateImageView(_device, &createInfo, nullptr, &ImageViews[i]) != VK_SUCCESS)
         {
             throw std::runtime_error("Failed to create swap chain images !");
         }
@@ -123,8 +123,11 @@ VkSurfaceFormatKHR SwapChain::SelectSwapSurfaceFormat(const std::vector<VkSurfac
     return availableFormats[0];
 }
 
-void SwapChain::Create(const Window& window, const VkPhysicalDevice& physicalDevice, const VkDevice& logicalDevice, const VkSurfaceKHR& windowSurface)
+SwapChain::SwapChain(const Window& window, VkPhysicalDevice physicalDevice, VkDevice device, VkSurfaceKHR windowSurface)
 {
+    VkDebugLayer::Log(VkDebugLayer::LogType::CREATE, "SwapChain Creation !");
+    _device = device;
+
     M3VKHelper::SwapChainSupportDetails details = M3VKHelper::QuerySwapChainSupportDetail(physicalDevice, windowSurface);
 
     VkSurfaceFormatKHR format = SelectSwapSurfaceFormat(details.Formats);
@@ -178,26 +181,27 @@ void SwapChain::Create(const Window& window, const VkPhysicalDevice& physicalDev
     // When we handle resizing
     createInfo.oldSwapchain = VK_NULL_HANDLE;
 
-    if(vkCreateSwapchainKHR(logicalDevice, &createInfo, nullptr, &Internal) != VK_SUCCESS)
+    if(vkCreateSwapchainKHR(_device, &createInfo, nullptr, &_internal) != VK_SUCCESS)
     {
         throw std::runtime_error("Failed to create swap chain !");
     }
 
-    vkGetSwapchainImagesKHR(logicalDevice, Internal, &imageCount, nullptr);
+    vkGetSwapchainImagesKHR(_device, _internal, &imageCount, nullptr);
     Images.resize(imageCount);
-    vkGetSwapchainImagesKHR(logicalDevice, Internal, &imageCount, Images.data());
+    vkGetSwapchainImagesKHR(_device, _internal, &imageCount, Images.data());
 
     ImageFormat = format.format;
     Extent = extents;
 
-    CreateImageView(logicalDevice);
+    CreateImageView();
 }
 
-void SwapChain::Dipose(const VkDevice& logicalDevice)
+SwapChain::~SwapChain()
 {
     for(const VkImageView& imageView : ImageViews)
     {
-        vkDestroyImageView(logicalDevice, imageView, nullptr);
+        vkDestroyImageView(_device, imageView, nullptr);
     }
-    vkDestroySwapchainKHR(logicalDevice, Internal, nullptr);
+    vkDestroySwapchainKHR(_device, _internal, nullptr);
+    VkDebugLayer::Log(VkDebugLayer::LogType::DESTROY, "SwapChain Destruction !");
 }

@@ -16,6 +16,7 @@
 #include <glm/ext/vector_float3.hpp>
 #include <glm/fwd.hpp>
 #include <glm/trigonometric.hpp>
+#include <memory>
 #include <optional>
 #include <stdexcept>
 #include <string>
@@ -92,7 +93,7 @@ void HelloTriangleApp::UpdateCameraData(uint32_t currentFrame)
     CameraData cameraData = {};
     cameraData.localToWorldMatrix = glm::rotate<float>(glm::mat4(1.0f), time * glm::radians<float>(90), glm::vec3(0, 1, 0));
     cameraData.worldToCameraMatrix = glm::lookAt(glm::vec3(2, 2, 2), glm::vec3(0, 0, 0), glm::vec3(0, 1.0, 0));
-    cameraData.projectionMatrix = glm::perspective<float>(glm::radians<float>(45),(float)_swapChain.Extent.width / _swapChain.Extent.height, 0.1f,100.0f);
+    cameraData.projectionMatrix = glm::perspective<float>(glm::radians<float>(45),(float)_swapChain->Extent.width / _swapChain->Extent.height, 0.1f,100.0f);
     // it was designed for opengl so flip it
     cameraData.projectionMatrix[1][1] *= -1;
 
@@ -148,29 +149,28 @@ void HelloTriangleApp::FramebufferResized()
     _framebufferResized = true;
 }
 
-void HelloTriangleApp::DisposeSwapChain()
+void HelloTriangleApp::DisposeFramebuffers()
 {
     for(size_t i = 0; i < _framebuffers.size(); ++i)
     {
         vkDestroyFramebuffer(_deviceHandler.Get(), _framebuffers[i], nullptr);
     }
-    _swapChain.Dipose(_deviceHandler.Get());
+    _swapChain.reset();
 }
 
 void HelloTriangleApp::RefreshSwapChain()
 {
     vkDeviceWaitIdle(_deviceHandler.Get());
 
-    DisposeSwapChain();
-
-    _swapChain.Create(_window, _physicalDeviceHandler.Get(), _deviceHandler.Get(), _windowSurfaceHandler.Get());
+    DisposeFramebuffers();
+    _swapChain = std::make_unique<SwapChain>(_window, _physicalDeviceHandler.Get(), _deviceHandler.Get(), _windowSurfaceHandler.Get());
     CreateFrameBuffers();
 }
 
 void HelloTriangleApp::CreateSyncObject()
 {
     _availableImageSemaphores.resize(HelloTriangleApp::MaxFrameInCount);
-    _renderFinishedSemaphores.resize(_swapChain.Images.size());
+    _renderFinishedSemaphores.resize(_swapChain->Images.size());
     _waitFences.resize(HelloTriangleApp::MaxFrameInCount);
 
     VkFenceCreateInfo fenceCreateInfo{};
@@ -195,7 +195,7 @@ void HelloTriangleApp::CreateSyncObject()
         }
     }
 
-    for(size_t i = 0; i < _swapChain.Images.size(); ++i)
+    for(size_t i = 0; i < _swapChain->Images.size(); ++i)
     {
         if(vkCreateSemaphore(_deviceHandler.Get(), &semaphoreCreateInfo, nullptr, &_renderFinishedSemaphores[i]) != VK_SUCCESS)
         {
@@ -210,7 +210,7 @@ void HelloTriangleApp::DrawFrame()
 
     // Acquire image to draw on
     uint32_t imageIndex;
-    VkResult result = vkAcquireNextImageKHR(_deviceHandler.Get(), _swapChain.Internal, UINT64_MAX, _availableImageSemaphores[_currentFrame], VK_NULL_HANDLE, &imageIndex);
+    VkResult result = vkAcquireNextImageKHR(_deviceHandler.Get(), _swapChain->_internal, UINT64_MAX, _availableImageSemaphores[_currentFrame], VK_NULL_HANDLE, &imageIndex);
 
     if(result == VK_ERROR_OUT_OF_DATE_KHR)
     {
@@ -243,7 +243,7 @@ void HelloTriangleApp::DrawFrame()
     presentInfo.waitSemaphoreCount = 1;
     presentInfo.pWaitSemaphores = signalSemaphore;
 
-    VkSwapchainKHR swapChains[] = {_swapChain.Internal};
+    VkSwapchainKHR swapChains[] = {_swapChain->_internal};
     presentInfo.swapchainCount = 1;
     presentInfo.pSwapchains = swapChains;
     presentInfo.pImageIndices = &imageIndex;
@@ -268,11 +268,11 @@ void HelloTriangleApp::RecordCommandBuffer(CommandBuffer cmdBuffer, uint32_t cur
 {
     cmdBuffer.Begin();
     {
-        cmdBuffer.BeginRenderPass(_renderPass, _framebuffers[imageIndex], {0, 0, 0, 0}, _swapChain.Extent);
+        cmdBuffer.BeginRenderPass(_renderPass, _framebuffers[imageIndex], {0, 0, 0, 0}, _swapChain->Extent);
         {
             cmdBuffer.BindPipeline(_graphicsPipeline, VK_PIPELINE_BIND_POINT_GRAPHICS);
-            cmdBuffer.SetViewport(_swapChain.Extent.width, _swapChain.Extent.height);
-            cmdBuffer.SetScissor(0, 0, _swapChain.Extent.width, _swapChain.Extent.height);
+            cmdBuffer.SetViewport(_swapChain->Extent.width, _swapChain->Extent.height);
+            cmdBuffer.SetScissor(0, 0, _swapChain->Extent.width, _swapChain->Extent.height);
             cmdBuffer.BindBuffer(_vertexBuffer);
             cmdBuffer.BindBuffer(_indexBuffer);
             cmdBuffer.BindDescriptorSets(VK_PIPELINE_BIND_POINT_GRAPHICS, _pipelineLayout, _descriptorSets[currentFrame]);
@@ -314,12 +314,12 @@ void HelloTriangleApp::CreatCommandPool()
 
 void HelloTriangleApp::CreateFrameBuffers()
 {
-    _framebuffers.resize(_swapChain.ImageViews.size());
+    _framebuffers.resize(_swapChain->ImageViews.size());
 
-    for(size_t i = 0; i < _swapChain.ImageViews.size(); ++i)
+    for(size_t i = 0; i < _swapChain->ImageViews.size(); ++i)
     {
         VkImageView attachments[] = {
-            _swapChain.ImageViews[i]
+            _swapChain->ImageViews[i]
         };
 
         VkFramebufferCreateInfo createInfo{};
@@ -327,8 +327,8 @@ void HelloTriangleApp::CreateFrameBuffers()
         createInfo.renderPass = _renderPass;
         createInfo.attachmentCount = 1;
         createInfo.pAttachments = attachments;
-        createInfo.width = _swapChain.Extent.width;
-        createInfo.height = _swapChain.Extent.height;
+        createInfo.width = _swapChain->Extent.width;
+        createInfo.height = _swapChain->Extent.height;
         createInfo.layers = 1;
 
         if(vkCreateFramebuffer(_deviceHandler.Get(), &createInfo, nullptr, &_framebuffers[i]) != VK_SUCCESS)
@@ -341,7 +341,7 @@ void HelloTriangleApp::CreateFrameBuffers()
 void HelloTriangleApp::CreateRenderPass()
 {
     VkAttachmentDescription colorAttachment =  {};
-    colorAttachment.format = _swapChain.ImageFormat;
+    colorAttachment.format = _swapChain->ImageFormat;
     colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
     // clear at new frame, load to keep and dont care to undefined
     colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
@@ -442,14 +442,14 @@ void HelloTriangleApp::CreateGraphicsPipeline()
     VkViewport viewport{};
     viewport.x = 0.0f;
     viewport.y = 0.0f;
-    viewport.width = _swapChain.Extent.width;
-    viewport.height = _swapChain.Extent.height;
+    viewport.width = _swapChain->Extent.width;
+    viewport.height = _swapChain->Extent.height;
     viewport.minDepth = 0.0f;
     viewport.maxDepth = 1.0f;
 
     // Region to rasterize pixels on
     VkRect2D scissors{};
-    scissors.extent = _swapChain.Extent;
+    scissors.extent = _swapChain->Extent;
     scissors.offset.x = 0;
     scissors.offset.y = 0;
 
@@ -552,6 +552,7 @@ void HelloTriangleApp::CreateGraphicsPipeline()
 }
 
 HelloTriangleApp::HelloTriangleApp() :
+    _swapChain(std::make_unique<SwapChain>(_window, _physicalDeviceHandler.Get(), _deviceHandler.Get(), _windowSurfaceHandler.Get())),
     _presentQueueHandler(_deviceHandler.Get(), _physicalDeviceHandler.QueueFamilyIds, VkQueueHandler::Present),
     _graphicsQueueHandler(_deviceHandler.Get(), _physicalDeviceHandler.QueueFamilyIds, VkQueueHandler::Graphics),
     _deviceHandler(_physicalDeviceHandler, _windowSurfaceHandler.Get(), _deviceExtensions),
@@ -563,7 +564,6 @@ HelloTriangleApp::HelloTriangleApp() :
 {
     VkDebugLayer::Log(VkDebugLayer::LogType::CREATE, "HelloTriangleApp Creation !");
 
-    _swapChain.Create(_window, _physicalDeviceHandler.Get(), _deviceHandler.Get(), _windowSurfaceHandler.Get());
     CreateRenderPass();
     CreateDescriptorSetLayout();
     CreateGraphicsPipeline();
@@ -603,13 +603,13 @@ HelloTriangleApp::~HelloTriangleApp()
         vkDestroyFence(_deviceHandler.Get(), _waitFences[i], nullptr);
     }
 
-    for(size_t i = 0; i < _swapChain.Images.size(); ++i)
+    for(size_t i = 0; i < _swapChain->Images.size(); ++i)
     {
         vkDestroySemaphore(_deviceHandler.Get(), _renderFinishedSemaphores[i], nullptr);
     }
 
     vkDestroyCommandPool(_deviceHandler.Get(), _graphicsCommandPool, nullptr);
-    DisposeSwapChain();
+    DisposeFramebuffers();
 
     _vertexBuffer.DisposeBuffer(_deviceHandler.Get());
     _indexBuffer.DisposeBuffer(_deviceHandler.Get());
