@@ -1,11 +1,11 @@
 #include "header/VkHandlers/VkQueueHandler.h"
-#include "header/M3VKHelper.h"
+#include "header/ProjectHelper.h"
 #include "header/DebugLayer.h"
 #include <cstdint>
 #include <stdexcept>
 #include <vulkan/vulkan_core.h>
 
-VkQueueHandler::VkQueueHandler(VkDevice device, const M3VKHelper::QueueFamilyIds& queueFamilyIds, VkQueueHandler::QueueTypeEnum queueType)
+VkQueueHandler::VkQueueHandler(VkDevice device, const ProjectHelper::QueueFamilyIds& queueFamilyIds, VkQueueHandler::QueueTypeEnum queueType)
 {
     DebugLayer::Log(DebugLayer::LogType::CREATE, "VkQueueHandler Creation !");
 

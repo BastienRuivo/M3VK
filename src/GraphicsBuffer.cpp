@@ -1,5 +1,5 @@
 #include "header/GraphicsBuffer.h"
-#include "header/M3VKHelper.h"
+#include "header/ProjectHelper.h"
 #include <stdexcept>
 #include <vulkan/vulkan_core.h>
 
@@ -27,7 +27,7 @@ void StageBuffer::Create(const VkPhysicalDevice& physicalDevice, const VkDevice&
     VkMemoryAllocateInfo allocateInfo{};
     allocateInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     allocateInfo.allocationSize = memRequirements.size;
-    allocateInfo.memoryTypeIndex = M3VKHelper::FindMemoryType(physicalDevice, memRequirements.memoryTypeBits, properties);
+    allocateInfo.memoryTypeIndex = ProjectHelper::FindMemoryType(physicalDevice, memRequirements.memoryTypeBits, properties);
 
     if(vkAllocateMemory(device, &allocateInfo, nullptr, &_memory) != VK_SUCCESS)
     {
@@ -124,7 +124,7 @@ void GraphicsBuffer::Create(const VkPhysicalDevice& physicalDevice, const VkDevi
     VkMemoryAllocateInfo allocateInfo{};
     allocateInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     allocateInfo.allocationSize = memRequirements.size;
-    allocateInfo.memoryTypeIndex = M3VKHelper::FindMemoryType(physicalDevice, memRequirements.memoryTypeBits, properties);
+    allocateInfo.memoryTypeIndex = ProjectHelper::FindMemoryType(physicalDevice, memRequirements.memoryTypeBits, properties);
 
     if(vkAllocateMemory(device, &allocateInfo, nullptr, &_memory) != VK_SUCCESS)
     {

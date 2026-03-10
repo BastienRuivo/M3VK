@@ -1,7 +1,7 @@
 #include "header/HelloTriangleApp.h"
 #include "header/CommandBuffer.h"
 #include "header/GraphicsBuffer.h"
-#include "header/M3VKHelper.h"
+#include "header/ProjectHelper.h"
 #include "header/Shader.h"
 #include "header/SwapChain.h"
 #include "header/DebugLayer.h"
@@ -299,7 +299,7 @@ void HelloTriangleApp::CreateCommandBuffers()
 
 void HelloTriangleApp::CreatCommandPool()
 {
-    M3VKHelper::QueueFamilyIds queueFamilyId = M3VKHelper::QueryQueueFamilies(_physicalDeviceHandler.Get(), _windowSurfaceHandler.Get());
+    ProjectHelper::QueueFamilyIds queueFamilyId = ProjectHelper::QueryQueueFamilies(_physicalDeviceHandler.Get(), _windowSurfaceHandler.Get());
 
     VkCommandPoolCreateInfo poolInfo{};
     poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;

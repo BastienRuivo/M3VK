@@ -1,5 +1,5 @@
 #include "./header/SwapChain.h"
-#include "./header/M3VKHelper.h"
+#include "./header/ProjectHelper.h"
 #include <GLFW/glfw3.h>
 #include <algorithm>
 #include <limits>
@@ -128,7 +128,7 @@ SwapChain::SwapChain(const Window& window, VkPhysicalDevice physicalDevice, VkDe
     DebugLayer::Log(DebugLayer::LogType::CREATE, "SwapChain Creation !");
     _device = device;
 
-    M3VKHelper::SwapChainSupportDetails details = M3VKHelper::QuerySwapChainSupportDetail(physicalDevice, windowSurface);
+    ProjectHelper::SwapChainSupportDetails details = ProjectHelper::QuerySwapChainSupportDetail(physicalDevice, windowSurface);
 
     VkSurfaceFormatKHR format = SelectSwapSurfaceFormat(details.Formats);
     VkPresentModeKHR presentMode = SelectSwapPresentMode(details.PresentsModes);
@@ -153,7 +153,7 @@ SwapChain::SwapChain(const Window& window, VkPhysicalDevice physicalDevice, VkDe
     createInfo.imageArrayLayers = 1;
     createInfo.imageUsage =VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
-    M3VKHelper::QueueFamilyIds queueIds = M3VKHelper::QueryQueueFamilies(physicalDevice, windowSurface);
+    ProjectHelper::QueueFamilyIds queueIds = ProjectHelper::QueryQueueFamilies(physicalDevice, windowSurface);
 
     uint32_t queueFamilyIndices[] = {queueIds.Graphics.value(), queueIds.Present.value()};
 

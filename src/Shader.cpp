@@ -1,5 +1,5 @@
 #include "./header/Shader.h"
-#include "./header/M3VKHelper.h"
+#include "./header/ProjectHelper.h"
 #include "header/DebugLayer.h"
 #include <stdexcept>
 #include <vector>
@@ -32,8 +32,8 @@ Shader::Shader(const VkDevice& device)
 {
     DebugLayer::Log(DebugLayer::LogType::CREATE, "Shader Creation !");
 
-    std::vector<char> vertex = M3VKHelper::ReadFile(std::string(SHADER_DIRECTORY) + "helloTriangle.vert.spv");
-    std::vector<char> fragment = M3VKHelper::ReadFile(std::string(SHADER_DIRECTORY) + "helloTriangle.frag.spv");
+    std::vector<char> vertex = ProjectHelper::ReadFile(std::string(SHADER_DIRECTORY) + "helloTriangle.vert.spv");
+    std::vector<char> fragment = ProjectHelper::ReadFile(std::string(SHADER_DIRECTORY) + "helloTriangle.frag.spv");
 
     _device = device;
 

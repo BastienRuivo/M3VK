@@ -1,6 +1,6 @@
 #pragma once
 
-#include "header/M3VKHelper.h"
+#include "header/ProjectHelper.h"
 #include <cstdint>
 #include <vulkan/vulkan_core.h>
 
@@ -14,7 +14,7 @@ class VkQueueHandler
         Copy
     };
 
-    VkQueueHandler(VkDevice device, const M3VKHelper::QueueFamilyIds& queueFamilyIds, QueueTypeEnum queueType);
+    VkQueueHandler(VkDevice device, const ProjectHelper::QueueFamilyIds& queueFamilyIds, QueueTypeEnum queueType);
     ~VkQueueHandler();
 
     VkQueue Get() const;

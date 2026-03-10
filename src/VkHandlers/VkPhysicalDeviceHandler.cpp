@@ -1,5 +1,5 @@
 #include "header/VkHandlers/VkPhysicalDeviceHandler.h"
-#include "header/M3VKHelper.h"
+#include "header/ProjectHelper.h"
 #include "header/DebugLayer.h"
 #include <stdexcept>
 #include <vulkan/vulkan_core.h>
@@ -48,14 +48,14 @@ int VkPhysicalDeviceHandler::ScoreDeviceSuitability(VkPhysicalDevice physicalDev
     int score = 0;
 
 
-    M3VKHelper::QueueFamilyIds ids = M3VKHelper::QueryQueueFamilies(physicalDevice, windowSurface);
+    ProjectHelper::QueueFamilyIds ids = ProjectHelper::QueryQueueFamilies(physicalDevice, windowSurface);
 
     bool areAllRequiredExtensionsSupported = CheckDeviceExtensionSupport(physicalDevice, deviceExtensions);
 
-    M3VKHelper::SwapChainSupportDetails swapChainDetails = M3VKHelper::QuerySwapChainSupportDetail(physicalDevice, windowSurface);
+    ProjectHelper::SwapChainSupportDetails swapChainDetails = ProjectHelper::QuerySwapChainSupportDetail(physicalDevice, windowSurface);
 
     // Mandatory feature, if any return 0 and this will be the only way to have 0 score meaning there's no suitable GPU
-    if(!M3VKHelper::QueueFamilyIds::AreAllQueueAvailable(ids)
+    if(!ProjectHelper::QueueFamilyIds::AreAllQueueAvailable(ids)
         || !areAllRequiredExtensionsSupported
         || !swapChainDetails.CheckSwapChainSupportAdequate())
     {
@@ -107,7 +107,7 @@ VkPhysicalDeviceHandler::VkPhysicalDeviceHandler(VkInstance instance, VkSurfaceK
     }
 
 
-    QueueFamilyIds = M3VKHelper::QueryQueueFamilies(_internal, windowSurface);
+    QueueFamilyIds = ProjectHelper::QueryQueueFamilies(_internal, windowSurface);
 }
 
 VkPhysicalDevice VkPhysicalDeviceHandler::Get() const

@@ -10,7 +10,7 @@
 #include <vulkan/vulkan_core.h>
 #include "DebugLayer.h"
 
-class M3VKHelper
+class ProjectHelper
 {
     public:
 
