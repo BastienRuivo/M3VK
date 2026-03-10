@@ -13,7 +13,8 @@ class Window
     bool ShouldClose() const;
     void ProcessEvent() const;
     void GetFramebufferSize(int& width, int& height) const;
-    void CreateWindowSurface(const VkInstance & _instance, VkSurfaceKHR& surface) const;
+
+    GLFWwindow* Get() const;
 
 
     private:

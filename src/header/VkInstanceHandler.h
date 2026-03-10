@@ -12,6 +12,6 @@ class VkInstanceHandler
     VkInstance Get() const;
 
     private:
-    VkInstance _instanceInternal = VK_NULL_HANDLE;
+    VkInstance _internal = VK_NULL_HANDLE;
     std::vector<const char*> GetRequiredExtensions() const;
 };

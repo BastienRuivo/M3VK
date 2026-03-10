@@ -164,7 +164,7 @@ void HelloTriangleApp::RefreshSwapChain()
 
     DisposeSwapChain();
 
-    _swapChain.Create(_window, _physicalDevice, _device, _windowSurface);
+    _swapChain.Create(_window, _physicalDevice, _device, _windowSurfaceHandler.Get());
     CreateFrameBuffers();
 }
 
@@ -298,7 +298,7 @@ void HelloTriangleApp::CreateCommandBuffers()
 
 void HelloTriangleApp::CreatCommandPool()
 {
-    M3VKHelper::QueueFamilyId queueFamilyId = M3VKHelper::QueryQueueFamilies(_physicalDevice, _windowSurface);
+    M3VKHelper::QueueFamilyId queueFamilyId = M3VKHelper::QueryQueueFamilies(_physicalDevice, _windowSurfaceHandler.Get());
 
     VkCommandPoolCreateInfo poolInfo{};
     poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
@@ -585,7 +585,7 @@ bool HelloTriangleApp::CheckDeviceExtensionSupport(const VkPhysicalDevice& devic
 
 void HelloTriangleApp::CreateLogicalDevice()
 {
-    M3VKHelper::QueueFamilyId queueFamilyId = M3VKHelper::QueryQueueFamilies(_physicalDevice, _windowSurface);
+    M3VKHelper::QueueFamilyId queueFamilyId = M3VKHelper::QueryQueueFamilies(_physicalDevice, _windowSurfaceHandler.Get());
 
     std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
     std::set<uint32_t> uniqueQueueIds =
@@ -650,11 +650,11 @@ int HelloTriangleApp::ScoreDeviceSuitability(const VkPhysicalDevice& device) con
     int score = 0;
 
 
-    M3VKHelper::QueueFamilyId ids = M3VKHelper::QueryQueueFamilies(device, _windowSurface);
+    M3VKHelper::QueueFamilyId ids = M3VKHelper::QueryQueueFamilies(device, _windowSurfaceHandler.Get());
 
     bool areAllRequiredExtensionsSupported = CheckDeviceExtensionSupport(device);
 
-    M3VKHelper::SwapChainSupportDetails swapChainDetails = M3VKHelper::QuerySwapChainSupportDetail(device, _windowSurface);
+    M3VKHelper::SwapChainSupportDetails swapChainDetails = M3VKHelper::QuerySwapChainSupportDetail(device, _windowSurfaceHandler.Get());
 
     // Mandatory feature, if any return 0 and this will be the only way to have 0 score meaning there's no suitable GPU
     if(!M3VKHelper::QueueFamilyId::AreAllQueueAvailable(ids)
@@ -708,16 +708,16 @@ void HelloTriangleApp::PickPhysicalDevice()
 }
 
 HelloTriangleApp::HelloTriangleApp() :
+    _windowSurfaceHandler(_instanceHandler.Get(), _window.Get()),
     _vkDebugLayer(_instanceHandler.Get()),
     _instanceHandler(),
     _window(1920, 1080, "Window", this, FramebufferResizeCallback)
 {
     VkDebugLayer::Log(VkDebugLayer::LogType::CREATE, "HelloTriangleApp Creation !");
 
-    _window.CreateWindowSurface(_instanceHandler.Get(), _windowSurface);
     PickPhysicalDevice();
     CreateLogicalDevice();
-    _swapChain.Create(_window, _physicalDevice, _device, _windowSurface);
+    _swapChain.Create(_window, _physicalDevice, _device, _windowSurfaceHandler.Get());
     CreateRenderPass();
     CreateDescriptorSetLayout();
     CreateGraphicsPipeline();
@@ -780,9 +780,6 @@ HelloTriangleApp::~HelloTriangleApp()
     vkDestroyPipelineLayout(_device, _pipelineLayout, nullptr);
     vkDestroyRenderPass(_device, _renderPass, nullptr);
     vkDestroyDevice(_device, nullptr);
-
-    vkDestroySurfaceKHR(_instanceHandler.Get(), _windowSurface, nullptr);
-
     VkDebugLayer::Log(VkDebugLayer::LogType::DESTROY, "HelloTriangleApp Destroyed !");
 }
 

@@ -1,6 +1,5 @@
 #include "header/Window.h"
 #include "header/VkDebugLayer.h"
-#include <stdexcept>
 
 Window::Window(int width, int height, const char* title, void* resizeObject, GLFWframebuffersizefun resizeCallback)
 {
@@ -18,14 +17,6 @@ Window::Window(int width, int height, const char* title, void* resizeObject, GLF
     _pWindow = glfwCreateWindow(_width, _height, _title, nullptr, nullptr);
     glfwSetWindowUserPointer(_pWindow, resizeObject);
     glfwSetFramebufferSizeCallback(_pWindow, resizeCallback);
-}
-
-void Window::CreateWindowSurface(const VkInstance & _instance, VkSurfaceKHR& surface) const
-{
-    if(glfwCreateWindowSurface(_instance, _pWindow, nullptr, &surface) != VK_SUCCESS)
-    {
-        throw std::runtime_error("Failed to create windows surface !");
-    }
 }
 
 void Window::GetFramebufferSize(int& width, int& height) const
@@ -47,6 +38,11 @@ void Window::ResizeWindow(int width, int height)
 {
     _width = width;
     _height = height;
+}
+
+GLFWwindow* Window::Get() const
+{
+    return _pWindow;
 }
 
 Window::~Window()

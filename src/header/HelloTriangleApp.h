@@ -2,6 +2,7 @@
 
 #include "header/CommandBuffer.h"
 #include "header/VkInstanceHandler.h"
+#include "header/VkSurfaceHandler.h"
 #include "header/Window.h"
 #include "header/GraphicsBuffer.h"
 #include "header/SwapChain.h"
@@ -93,12 +94,12 @@ class HelloTriangleApp
     // RAII is first in last out order
     Window _window;
     VkInstanceHandler _instanceHandler;
+    VkDebugLayer _vkDebugLayer;
+    VkSurfaceHandler _windowSurfaceHandler;
 
     VkDevice _device;
     VkPhysicalDevice _physicalDevice;
-    VkDebugLayer _vkDebugLayer;
     // Window API surface
-    VkSurfaceKHR _windowSurface;
     std::vector<VkFramebuffer> _framebuffers;
     VkCommandPool _graphicsCommandPool;
 

@@ -63,7 +63,7 @@ VkInstanceHandler::VkInstanceHandler()
     VkDebugUtilsMessengerCreateInfoEXT debugInfoCreate;
     VkDebugLayer::SetupCreateInfo(createInfo, debugInfoCreate);
 
-    VkResult result = vkCreateInstance(&createInfo, nullptr, &_instanceInternal);
+    VkResult result = vkCreateInstance(&createInfo, nullptr, &_internal);
     if(result != VK_SUCCESS)
     {
         if(result == VK_ERROR_LAYER_NOT_PRESENT)
@@ -94,11 +94,11 @@ std::vector<const char *> VkInstanceHandler::GetRequiredExtensions() const
 
 VkInstance VkInstanceHandler::Get() const
 {
-    return _instanceInternal;
+    return _internal;
 }
 
 VkInstanceHandler::~VkInstanceHandler()
 {
-    vkDestroyInstance(_instanceInternal, nullptr);
+    vkDestroyInstance(_internal, nullptr);
     VkDebugLayer::Log(VkDebugLayer::LogType::DESTROY, "VkInstanceHandler Destroyed !");
 }
