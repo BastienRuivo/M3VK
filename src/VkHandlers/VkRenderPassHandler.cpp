@@ -1,5 +1,4 @@
 #include "header/VkHandlers/VkRenderPassHandler.h"
-#include "header/SwapChain.h"
 #include "header/VkDebugLayer.h"
 #include <stdexcept>
 #include <vulkan/vulkan_core.h>
