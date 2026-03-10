@@ -107,7 +107,7 @@ void HelloTriangleApp::CreateCameraDataBuffers()
     for(int i = 0; i < MaxFrameInCount; ++i)
     {
         GraphicsBuffer uniform;
-        uniform.Create(_physicalDevice, _device, 1, sizeof(CameraData), GraphicsBuffer::UNIFORM);
+        uniform.Create(_physicalDeviceHandler.Get(), _device, 1, sizeof(CameraData), GraphicsBuffer::UNIFORM);
         _cameraDataBuffers.push_back(uniform);
     }
 }
@@ -164,7 +164,7 @@ void HelloTriangleApp::RefreshSwapChain()
 
     DisposeSwapChain();
 
-    _swapChain.Create(_window, _physicalDevice, _device, _windowSurfaceHandler.Get());
+    _swapChain.Create(_window, _physicalDeviceHandler.Get(), _device, _windowSurfaceHandler.Get());
     CreateFrameBuffers();
 }
 
@@ -298,7 +298,7 @@ void HelloTriangleApp::CreateCommandBuffers()
 
 void HelloTriangleApp::CreatCommandPool()
 {
-    M3VKHelper::QueueFamilyId queueFamilyId = M3VKHelper::QueryQueueFamilies(_physicalDevice, _windowSurfaceHandler.Get());
+    M3VKHelper::QueueFamilyId queueFamilyId = M3VKHelper::QueryQueueFamilies(_physicalDeviceHandler.Get(), _windowSurfaceHandler.Get());
 
     VkCommandPoolCreateInfo poolInfo{};
     poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
@@ -552,40 +552,9 @@ void HelloTriangleApp::CreateGraphicsPipeline()
     }
 }
 
-bool HelloTriangleApp::CheckDeviceExtensionSupport(const VkPhysicalDevice& device) const
-{
-    uint32_t extensionCount = 0;
-    vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
-    std::vector<VkExtensionProperties> properties(extensionCount);
-    vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, properties.data());
-
-    for(const auto& extension : _deviceExtensions)
-    {
-        bool foundExtension = false;
-        for(const VkExtensionProperties& property : properties)
-        {
-            if(strcmp(extension, property.extensionName) == 0)
-            {
-                foundExtension = true;
-                break;
-            }
-        }
-        if(!foundExtension)
-        {
-            if(_vkDebugLayer.Enabled)
-            {
-                _vkDebugLayer.Log(VkDebugLayer::LogType::ERROR, (std::string("Extension not supported : ") + std::string(extension)).c_str());
-            }
-            return false;
-        }
-    }
-
-    return true;
-}
-
 void HelloTriangleApp::CreateLogicalDevice()
 {
-    M3VKHelper::QueueFamilyId queueFamilyId = M3VKHelper::QueryQueueFamilies(_physicalDevice, _windowSurfaceHandler.Get());
+    M3VKHelper::QueueFamilyId queueFamilyId = M3VKHelper::QueryQueueFamilies(_physicalDeviceHandler.Get(), _windowSurfaceHandler.Get());
 
     std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
     std::set<uint32_t> uniqueQueueIds =
@@ -626,7 +595,7 @@ void HelloTriangleApp::CreateLogicalDevice()
         deviceCreateInfo.enabledLayerCount = 0;
     }
 
-    VkResult deviceCreation = vkCreateDevice(_physicalDevice, &deviceCreateInfo, nullptr, &_device);
+    VkResult deviceCreation = vkCreateDevice(_physicalDeviceHandler.Get(), &deviceCreateInfo, nullptr, &_device);
     if(deviceCreation != VK_SUCCESS)
     {
         throw std::runtime_error("Failed to create VK Logical Device !");
@@ -638,76 +607,8 @@ void HelloTriangleApp::CreateLogicalDevice()
     //vkGetDeviceQueue(_device, queueFamilyId.Copy.value(), 0, &_copyQueue);
 }
 
-int HelloTriangleApp::ScoreDeviceSuitability(const VkPhysicalDevice& device) const
-{
-    VkPhysicalDeviceProperties deviceProperties;
-    vkGetPhysicalDeviceProperties(device, &deviceProperties);
-
-    // support of addtionnal feature (texture compression, 64bit double, multi viewport rendering)
-    VkPhysicalDeviceFeatures deviceFeatures;
-    vkGetPhysicalDeviceFeatures(device, &deviceFeatures);
-
-    int score = 0;
-
-
-    M3VKHelper::QueueFamilyId ids = M3VKHelper::QueryQueueFamilies(device, _windowSurfaceHandler.Get());
-
-    bool areAllRequiredExtensionsSupported = CheckDeviceExtensionSupport(device);
-
-    M3VKHelper::SwapChainSupportDetails swapChainDetails = M3VKHelper::QuerySwapChainSupportDetail(device, _windowSurfaceHandler.Get());
-
-    // Mandatory feature, if any return 0 and this will be the only way to have 0 score meaning there's no suitable GPU
-    if(!M3VKHelper::QueueFamilyId::AreAllQueueAvailable(ids)
-        || !areAllRequiredExtensionsSupported
-        || !swapChainDetails.CheckSwapChainSupportAdequate())
-    {
-        return 0;
-    }
-
-    // Else we try to find the best available GPU for our criteria
-    switch (deviceProperties.deviceType)
-    {
-        case VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU: score += 600; break;
-        case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU: score += 800; break;
-        case VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU: score += 1000; break;
-        default: break;
-    }
-
-    return score;
-}
-
-void HelloTriangleApp::PickPhysicalDevice()
-{
-    _physicalDevice = VK_NULL_HANDLE;
-    uint32_t deviceCount = 0;
-    vkEnumeratePhysicalDevices(_instanceHandler.Get(), &deviceCount, nullptr);
-
-    if(deviceCount == 0)
-    {
-        throw std::runtime_error("Failed to find a Vulkan compatible GPU on this device");
-    }
-
-    std::vector<VkPhysicalDevice> devices(deviceCount);
-    vkEnumeratePhysicalDevices(_instanceHandler.Get(), &deviceCount, devices.data());
-
-    int bestScore = 0;
-    for(const VkPhysicalDevice& device : devices)
-    {
-        int score = ScoreDeviceSuitability(device);
-        if(score > bestScore)
-        {
-            bestScore = score;
-            _physicalDevice = device;
-        }
-    }
-
-    if(_physicalDevice == VK_NULL_HANDLE)
-    {
-        throw std::runtime_error("Failed to find a suitable GPU on this device");
-    }
-}
-
 HelloTriangleApp::HelloTriangleApp() :
+    _physicalDeviceHandler(_instanceHandler.Get(), _windowSurfaceHandler.Get(), _deviceExtensions),
     _windowSurfaceHandler(_instanceHandler.Get(), _window.Get()),
     _vkDebugLayer(_instanceHandler.Get()),
     _instanceHandler(),
@@ -715,9 +616,8 @@ HelloTriangleApp::HelloTriangleApp() :
 {
     VkDebugLayer::Log(VkDebugLayer::LogType::CREATE, "HelloTriangleApp Creation !");
 
-    PickPhysicalDevice();
     CreateLogicalDevice();
-    _swapChain.Create(_window, _physicalDevice, _device, _windowSurfaceHandler.Get());
+    _swapChain.Create(_window, _physicalDeviceHandler.Get(), _device, _windowSurfaceHandler.Get());
     CreateRenderPass();
     CreateDescriptorSetLayout();
     CreateGraphicsPipeline();
@@ -728,11 +628,11 @@ HelloTriangleApp::HelloTriangleApp() :
     CreateDescriptorSet();
 
     // init data
-    _indexBuffer.Create(_physicalDevice, _device, _indices.size(), sizeof(_indices[0]), GraphicsBuffer::BufferType::INDEX);
-    _indexBuffer.CopyToBuffer(_physicalDevice, _device, _graphicsQueue, _graphicsCommandPool, (void*)_indices.data(), _indexBuffer.GetSize());
+    _indexBuffer.Create(_physicalDeviceHandler.Get(), _device, _indices.size(), sizeof(_indices[0]), GraphicsBuffer::BufferType::INDEX);
+    _indexBuffer.CopyToBuffer(_physicalDeviceHandler.Get(), _device, _graphicsQueue, _graphicsCommandPool, (void*)_indices.data(), _indexBuffer.GetSize());
 
-    _vertexBuffer.Create(_physicalDevice, _device, _vertices.size(), sizeof(_vertices[0]), GraphicsBuffer::BufferType::VERTEX);
-    _vertexBuffer.CopyToBuffer(_physicalDevice, _device, _graphicsQueue, _graphicsCommandPool, (void*)_vertices.data(), _vertexBuffer.GetSize());
+    _vertexBuffer.Create(_physicalDeviceHandler.Get(), _device, _vertices.size(), sizeof(_vertices[0]), GraphicsBuffer::BufferType::VERTEX);
+    _vertexBuffer.CopyToBuffer(_physicalDeviceHandler.Get(), _device, _graphicsQueue, _graphicsCommandPool, (void*)_vertices.data(), _vertexBuffer.GetSize());
 
     CreateCommandBuffers();
     CreateSyncObject();

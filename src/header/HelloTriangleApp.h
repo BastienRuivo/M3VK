@@ -2,6 +2,7 @@
 
 #include "header/CommandBuffer.h"
 #include "header/VkInstanceHandler.h"
+#include "header/VkPhysicalDeviceHandler.h"
 #include "header/VkSurfaceHandler.h"
 #include "header/Window.h"
 #include "header/GraphicsBuffer.h"
@@ -96,9 +97,9 @@ class HelloTriangleApp
     VkInstanceHandler _instanceHandler;
     VkDebugLayer _vkDebugLayer;
     VkSurfaceHandler _windowSurfaceHandler;
+    VkPhysicalDeviceHandler _physicalDeviceHandler;
 
     VkDevice _device;
-    VkPhysicalDevice _physicalDevice;
     // Window API surface
     std::vector<VkFramebuffer> _framebuffers;
     VkCommandPool _graphicsCommandPool;
@@ -119,8 +120,6 @@ class HelloTriangleApp
     std::vector<VkSemaphore> _availableImageSemaphores;
     std::vector<VkSemaphore> _renderFinishedSemaphores;
     std::vector<VkFence>  _waitFences;
-    // CPU Sync
-    int ScoreDeviceSuitability(const VkPhysicalDevice& device) const;
 
     // layout binding
     // Layout -> General description
@@ -139,7 +138,6 @@ class HelloTriangleApp
     GraphicsBuffer _vertexBuffer;
     GraphicsBuffer _indexBuffer;
 
-    void PickPhysicalDevice();
     void CreateLogicalDevice();
     void CreateGraphicsPipeline();
     void CreateRenderPass();
@@ -160,10 +158,9 @@ class HelloTriangleApp
     void DrawFrame();
 
     // Utils
-    const std::vector<const char*> _deviceExtensions = {
+    static inline const std::vector<const char*> _deviceExtensions = {
         VK_KHR_SWAPCHAIN_EXTENSION_NAME
     };
-    bool CheckDeviceExtensionSupport(const VkPhysicalDevice& device) const;
 
     uint32_t FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) const;
 
