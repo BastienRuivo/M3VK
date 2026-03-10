@@ -1,5 +1,5 @@
 #include "header/VkHandlers/VkInstanceHandler.h"
-#include "header/VkDebugLayer.h"
+#include "header/DebugLayer.h"
 #include <cstring>
 #include <stdexcept>
 #include <vector>
@@ -7,7 +7,7 @@
 
 VkInstanceHandler::VkInstanceHandler()
 {
-    VkDebugLayer::Log(VkDebugLayer::LogType::CREATE, "VkInstanceHandler creation !");
+    DebugLayer::Log(DebugLayer::LogType::CREATE, "VkInstanceHandler creation !");
     VkApplicationInfo appInfo{};
     appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
     appInfo.pApplicationName = "M3VK";
@@ -20,12 +20,12 @@ VkInstanceHandler::VkInstanceHandler()
     std::vector<VkExtensionProperties> supportedExtensions(extensionCount);
     vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, supportedExtensions.data());
 
-    if(VkDebugLayer::Enabled)
+    if(DebugLayer::Enabled)
     {
-        VkDebugLayer::Log(VkDebugLayer::LogType::INFO, "List of actives VK Extensions");
+        DebugLayer::Log(DebugLayer::LogType::INFO, "List of actives VK Extensions");
         for(const VkExtensionProperties& extension : supportedExtensions)
         {
-            VkDebugLayer::Log(VkDebugLayer::LogType::INFO, std::string("\t - ") + extension.extensionName);
+            DebugLayer::Log(DebugLayer::LogType::INFO, std::string("\t - ") + extension.extensionName);
         }
     }
 
@@ -48,7 +48,7 @@ VkInstanceHandler::VkInstanceHandler()
         }
     }
 
-    if(!VkDebugLayer::CheckValidationLayerSupport())
+    if(!DebugLayer::CheckValidationLayerSupport())
     {
         throw std::runtime_error("Validation layer requested but not available !");
     }
@@ -61,7 +61,7 @@ VkInstanceHandler::VkInstanceHandler()
 
     // ensure it is not destroyed before vkCreateInstance
     VkDebugUtilsMessengerCreateInfoEXT debugInfoCreate;
-    VkDebugLayer::SetupCreateInfo(createInfo, debugInfoCreate);
+    DebugLayer::SetupCreateInfo(createInfo, debugInfoCreate);
 
     VkResult result = vkCreateInstance(&createInfo, nullptr, &_internal);
     if(result != VK_SUCCESS)
@@ -84,7 +84,7 @@ std::vector<const char *> VkInstanceHandler::GetRequiredExtensions() const
 
     std::vector<const char*> extensions(glfwExtensions, glfwExtensions + glfwExtensionCount);
 
-    if(VkDebugLayer::Enabled)
+    if(DebugLayer::Enabled)
     {
         extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
     }
@@ -100,5 +100,5 @@ VkInstance VkInstanceHandler::Get() const
 VkInstanceHandler::~VkInstanceHandler()
 {
     vkDestroyInstance(_internal, nullptr);
-    VkDebugLayer::Log(VkDebugLayer::LogType::DESTROY, "VkInstanceHandler Destroyed !");
+    DebugLayer::Log(DebugLayer::LogType::DESTROY, "VkInstanceHandler Destroyed !");
 }

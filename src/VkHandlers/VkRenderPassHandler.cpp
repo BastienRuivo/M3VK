@@ -1,5 +1,5 @@
 #include "header/VkHandlers/VkRenderPassHandler.h"
-#include "header/VkDebugLayer.h"
+#include "header/DebugLayer.h"
 #include <stdexcept>
 #include <vulkan/vulkan_core.h>
 
@@ -56,7 +56,7 @@ VkRenderPassHandler::VkRenderPassHandler(VkDevice device, VkFormat imageFormat)
         throw std::runtime_error("Failed to create render pass");
     }
 
-    VkDebugLayer::Log(VkDebugLayer::LogType::CREATE, "VkRenderPassHandler Creation !");
+    DebugLayer::Log(DebugLayer::LogType::CREATE, "VkRenderPassHandler Creation !");
 }
 
 VkRenderPass VkRenderPassHandler::Get() const
@@ -67,5 +67,5 @@ VkRenderPass VkRenderPassHandler::Get() const
 VkRenderPassHandler::~VkRenderPassHandler()
 {
     vkDestroyRenderPass(_device, _internal, nullptr);
-    VkDebugLayer::Log(VkDebugLayer::LogType::DESTROY, "VkRenderPassHandler Destroyed !");
+    DebugLayer::Log(DebugLayer::LogType::DESTROY, "VkRenderPassHandler Destroyed !");
 }

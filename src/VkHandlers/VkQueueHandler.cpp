@@ -1,13 +1,13 @@
 #include "header/VkHandlers/VkQueueHandler.h"
 #include "header/M3VKHelper.h"
-#include "header/VkDebugLayer.h"
+#include "header/DebugLayer.h"
 #include <cstdint>
 #include <stdexcept>
 #include <vulkan/vulkan_core.h>
 
 VkQueueHandler::VkQueueHandler(VkDevice device, const M3VKHelper::QueueFamilyIds& queueFamilyIds, VkQueueHandler::QueueTypeEnum queueType)
 {
-    VkDebugLayer::Log(VkDebugLayer::LogType::CREATE, "VkQueueHandler Creation !");
+    DebugLayer::Log(DebugLayer::LogType::CREATE, "VkQueueHandler Creation !");
 
     uint32_t family;
 
@@ -41,5 +41,5 @@ VkQueueHandler::QueueTypeEnum VkQueueHandler::QueueType() const
 
 VkQueueHandler::~VkQueueHandler()
 {
-    VkDebugLayer::Log(VkDebugLayer::LogType::DESTROY, "VkQueueHandler Destroyed !");
+    DebugLayer::Log(DebugLayer::LogType::DESTROY, "VkQueueHandler Destroyed !");
 }

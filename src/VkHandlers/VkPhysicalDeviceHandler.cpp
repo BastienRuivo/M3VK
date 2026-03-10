@@ -1,6 +1,6 @@
 #include "header/VkHandlers/VkPhysicalDeviceHandler.h"
 #include "header/M3VKHelper.h"
-#include "header/VkDebugLayer.h"
+#include "header/DebugLayer.h"
 #include <stdexcept>
 #include <vulkan/vulkan_core.h>
 #include <vector>
@@ -25,9 +25,9 @@ bool VkPhysicalDeviceHandler::CheckDeviceExtensionSupport(VkPhysicalDevice devic
         }
         if(!foundExtension)
         {
-            if(VkDebugLayer::Enabled)
+            if(DebugLayer::Enabled)
             {
-                VkDebugLayer::Log(VkDebugLayer::LogType::ERROR, (std::string("Extension not supported : ") + std::string(extension)).c_str());
+                DebugLayer::Log(DebugLayer::LogType::ERROR, (std::string("Extension not supported : ") + std::string(extension)).c_str());
             }
             return false;
         }
@@ -76,7 +76,7 @@ int VkPhysicalDeviceHandler::ScoreDeviceSuitability(VkPhysicalDevice physicalDev
 
 VkPhysicalDeviceHandler::VkPhysicalDeviceHandler(VkInstance instance, VkSurfaceKHR windowSurface, const std::vector<const char *>& deviceExtensions)
 {
-    VkDebugLayer::Log(VkDebugLayer::LogType::CREATE, "VkPhysicalDeviceHandler Creation !");
+    DebugLayer::Log(DebugLayer::LogType::CREATE, "VkPhysicalDeviceHandler Creation !");
 
     _internal = VK_NULL_HANDLE;
     uint32_t deviceCount = 0;
@@ -117,5 +117,5 @@ VkPhysicalDevice VkPhysicalDeviceHandler::Get() const
 
 VkPhysicalDeviceHandler::~VkPhysicalDeviceHandler()
 {
-    VkDebugLayer::Log(VkDebugLayer::LogType::DESTROY, "VkPhysicalDeviceHandler Destroyed !");
+    DebugLayer::Log(DebugLayer::LogType::DESTROY, "VkPhysicalDeviceHandler Destroyed !");
 }

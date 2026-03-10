@@ -1,6 +1,6 @@
 #include "header/VkHandlers/VkDeviceHandler.h"
 #include "header/M3VKHelper.h"
-#include "header/VkDebugLayer.h"
+#include "header/DebugLayer.h"
 #include "header/VkHandlers/VkPhysicalDeviceHandler.h"
 #include <set>
 #include <vector>
@@ -8,7 +8,7 @@
 
 VkDeviceHandler::VkDeviceHandler(const VkPhysicalDeviceHandler& physicalDeviceHandler, VkSurfaceKHR windowSurface, const std::vector<const char*>& deviceExtensions)
 {
-    VkDebugLayer::Log(VkDebugLayer::LogType::CREATE, "VkDeviceHandler Creation !");
+    DebugLayer::Log(DebugLayer::LogType::CREATE, "VkDeviceHandler Creation !");
 
     std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
     std::set<uint32_t> uniqueQueueIds =
@@ -39,10 +39,10 @@ VkDeviceHandler::VkDeviceHandler(const VkPhysicalDeviceHandler& physicalDeviceHa
     deviceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(deviceExtensions.size());
     deviceCreateInfo.ppEnabledExtensionNames = deviceExtensions.data();
 
-    if(VkDebugLayer::Enabled)
+    if(DebugLayer::Enabled)
     {
-        deviceCreateInfo.enabledLayerCount = static_cast<uint32_t>(VkDebugLayer::ValidationLayer.size());
-        deviceCreateInfo.ppEnabledLayerNames = VkDebugLayer::ValidationLayer.data();
+        deviceCreateInfo.enabledLayerCount = static_cast<uint32_t>(DebugLayer::ValidationLayer.size());
+        deviceCreateInfo.ppEnabledLayerNames = DebugLayer::ValidationLayer.data();
     }
     else
     {
@@ -69,5 +69,5 @@ VkDevice VkDeviceHandler::Get() const
 VkDeviceHandler::~VkDeviceHandler()
 {
     vkDestroyDevice(_internal, nullptr);
-    VkDebugLayer::Log(VkDebugLayer::LogType::DESTROY, "VkDeviceHandler Destroyed !");
+    DebugLayer::Log(DebugLayer::LogType::DESTROY, "VkDeviceHandler Destroyed !");
 }

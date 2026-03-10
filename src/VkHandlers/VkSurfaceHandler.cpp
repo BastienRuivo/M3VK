@@ -1,11 +1,11 @@
 #include "header/VkHandlers/VkSurfaceHandler.h"
-#include "header/VkDebugLayer.h"
+#include "header/DebugLayer.h"
 #include <stdexcept>
 #include <vulkan/vulkan_core.h>
 
 VkSurfaceHandler::VkSurfaceHandler(VkInstance instance, GLFWwindow* pWindow)
 {
-    VkDebugLayer::Log(VkDebugLayer::LogType::CREATE, "VkSurfaceHandler creation !");
+    DebugLayer::Log(DebugLayer::LogType::CREATE, "VkSurfaceHandler creation !");
     _instance = instance;
     if(glfwCreateWindowSurface(_instance, pWindow, nullptr, &_internal) != VK_SUCCESS)
     {
@@ -21,5 +21,5 @@ VkSurfaceKHR VkSurfaceHandler::Get() const
 VkSurfaceHandler::~VkSurfaceHandler()
 {
     vkDestroySurfaceKHR(_instance, _internal, nullptr);
-    VkDebugLayer::Log(VkDebugLayer::LogType::DESTROY, "VkSurfaceHandler Destroyed !");
+    DebugLayer::Log(DebugLayer::LogType::DESTROY, "VkSurfaceHandler Destroyed !");
 }

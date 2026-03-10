@@ -85,26 +85,26 @@ VkPresentModeKHR SwapChain::SelectSwapPresentMode(const std::vector<VkPresentMod
 
     if(hasTripleBuffering)
     {
-        VkDebugLayer::Log(VkDebugLayer::LogType::INFO, "Swap chain mode : Triple buffering");
+        DebugLayer::Log(DebugLayer::LogType::INFO, "Swap chain mode : Triple buffering");
         return VK_PRESENT_MODE_MAILBOX_KHR;
     }
     else if(hasVBlank)
     {
-        VkDebugLayer::Log(VkDebugLayer::LogType::INFO, "Swap chain mode : VBlank");
+        DebugLayer::Log(DebugLayer::LogType::INFO, "Swap chain mode : VBlank");
         return VK_PRESENT_MODE_FIFO_KHR;
     }
     else if(hasRelaxedDoubleBuffering)
     {
-        VkDebugLayer::Log(VkDebugLayer::LogType::INFO, "Swap chain mode : Relaxed VBlank");
+        DebugLayer::Log(DebugLayer::LogType::INFO, "Swap chain mode : Relaxed VBlank");
         return VK_PRESENT_MODE_FIFO_RELAXED_KHR;
     }
     else if(hasImmediateMode)
     {
-        VkDebugLayer::Log(VkDebugLayer::LogType::INFO, "Swap chain mode : Immediate");
+        DebugLayer::Log(DebugLayer::LogType::INFO, "Swap chain mode : Immediate");
         return VK_PRESENT_MODE_IMMEDIATE_KHR;
     }
 
-    VkDebugLayer::Log(VkDebugLayer::LogType::ERROR, "NO SWAP CHAIN MODE FOUND ! Fallbacked to VBlank");
+    DebugLayer::Log(DebugLayer::LogType::ERROR, "NO SWAP CHAIN MODE FOUND ! Fallbacked to VBlank");
     return VK_PRESENT_MODE_FIFO_KHR;
 }
 
@@ -118,14 +118,14 @@ VkSurfaceFormatKHR SwapChain::SelectSwapSurfaceFormat(const std::vector<VkSurfac
         }
     }
 
-    VkDebugLayer::Log(VkDebugLayer::LogType::WARNING, "Can't find best swap chain format");
+    DebugLayer::Log(DebugLayer::LogType::WARNING, "Can't find best swap chain format");
 
     return availableFormats[0];
 }
 
 SwapChain::SwapChain(const Window& window, VkPhysicalDevice physicalDevice, VkDevice device, VkSurfaceKHR windowSurface)
 {
-    VkDebugLayer::Log(VkDebugLayer::LogType::CREATE, "SwapChain Creation !");
+    DebugLayer::Log(DebugLayer::LogType::CREATE, "SwapChain Creation !");
     _device = device;
 
     M3VKHelper::SwapChainSupportDetails details = M3VKHelper::QuerySwapChainSupportDetail(physicalDevice, windowSurface);
@@ -203,5 +203,5 @@ SwapChain::~SwapChain()
         vkDestroyImageView(_device, imageView, nullptr);
     }
     vkDestroySwapchainKHR(_device, _internal, nullptr);
-    VkDebugLayer::Log(VkDebugLayer::LogType::DESTROY, "SwapChain Destruction !");
+    DebugLayer::Log(DebugLayer::LogType::DESTROY, "SwapChain Destruction !");
 }

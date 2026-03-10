@@ -24,7 +24,7 @@
 
 #include <glm/glm.hpp>
 
-#include "VkDebugLayer.h"
+#include "DebugLayer.h"
 
 class HelloTriangleApp
 {
@@ -99,7 +99,7 @@ class HelloTriangleApp
     // RAII is first in last out order
     Window _window;
     VkInstanceHandler _instanceHandler;
-    VkDebugLayer _vkDebugLayer;
+    DebugLayer _vkDebugLayer;
     VkSurfaceHandler _windowSurfaceHandler;
     // Implicitly linked to instance, see wtd later
     VkPhysicalDeviceHandler _physicalDeviceHandler;

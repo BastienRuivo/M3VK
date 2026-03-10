@@ -1,9 +1,9 @@
 #include "header/Window.h"
-#include "header/VkDebugLayer.h"
+#include "header/DebugLayer.h"
 
 Window::Window(int width, int height, const char* title, void* resizeObject, GLFWframebuffersizefun resizeCallback)
 {
-    VkDebugLayer::Log(VkDebugLayer::LogType::CREATE, "Window Creation !");
+    DebugLayer::Log(DebugLayer::LogType::CREATE, "Window Creation !");
 
     _width = width;
     _height = height;
@@ -50,5 +50,5 @@ Window::~Window()
     glfwDestroyWindow(_pWindow);
     glfwTerminate();
 
-    VkDebugLayer::Log(VkDebugLayer::LogType::DESTROY, "Window Destroyed !");
+    DebugLayer::Log(DebugLayer::LogType::DESTROY, "Window Destroyed !");
 }

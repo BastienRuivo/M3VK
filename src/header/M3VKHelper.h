@@ -8,7 +8,7 @@
 #include <stdexcept>
 #include <vector>
 #include <vulkan/vulkan_core.h>
-#include "VkDebugLayer.h"
+#include "DebugLayer.h"
 
 class M3VKHelper
 {
@@ -20,7 +20,7 @@ class M3VKHelper
 
         if(!file.is_open())
         {
-            VkDebugLayer::Log(VkDebugLayer::LogType::ERROR, "Can't open " + std::string(std::filesystem::current_path()) + "/" + filename);
+            DebugLayer::Log(DebugLayer::LogType::ERROR, "Can't open " + std::string(std::filesystem::current_path()) + "/" + filename);
             throw std::runtime_error("Can't open file " + filename);
         }
 

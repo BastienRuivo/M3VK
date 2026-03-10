@@ -1,4 +1,4 @@
-#include "./header/VkDebugLayer.h"
+#include "./header/DebugLayer.h"
 #include <ostream>
 #include <vulkan/vulkan_core.h>
 #include <iostream>
@@ -21,29 +21,29 @@ void M3VK_DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMesseng
     }
 }
 
-void VkDebugLayer::Log(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, const std::string& message)
+void DebugLayer::Log(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, const std::string& message)
 {
-    VkDebugLayer::LogType logType;
+    DebugLayer::LogType logType;
     switch (messageSeverity)
     {
-        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT: logType = VkDebugLayer::VERBOSE; break;
-        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT: logType = VkDebugLayer::INFO; break;
-        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT: logType = VkDebugLayer::WARNING; break;
-        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT: logType = VkDebugLayer::ERROR; break;
-        default: logType = VkDebugLayer::VERBOSE; break;
+        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT: logType = DebugLayer::VERBOSE; break;
+        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT: logType = DebugLayer::INFO; break;
+        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT: logType = DebugLayer::WARNING; break;
+        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT: logType = DebugLayer::ERROR; break;
+        default: logType = DebugLayer::VERBOSE; break;
     }
     Log(logType, message);
 }
 
-void VkDebugLayer::Log(VkDebugLayer::LogType LogType, const std::string& message)
+void DebugLayer::Log(DebugLayer::LogType LogType, const std::string& message)
 {
     if(!Enabled) return;
     #ifndef M3VK_VERBOSE_LOG
-        if(LogType == VkDebugLayer::LogType::INFO || VkDebugLayer::LogType::VERBOSE) return;
+        if(LogType == DebugLayer::LogType::INFO || DebugLayer::LogType::VERBOSE) return;
     #endif
 
     #ifndef M3VK_MEMORYLOG
-        if(LogType == VkDebugLayer::LogType::CREATE || VkDebugLayer::LogType::DESTROY) return;
+        if(LogType == DebugLayer::LogType::CREATE || DebugLayer::LogType::DESTROY) return;
     #endif
 
 
@@ -54,16 +54,16 @@ void VkDebugLayer::Log(VkDebugLayer::LogType LogType, const std::string& message
     // Stream selection
     switch (LogType)
     {
-        case VkDebugLayer::LogType::WARNING:
-        case VkDebugLayer::LogType::ERROR: stream = &std::cerr; break;
+        case DebugLayer::LogType::WARNING:
+        case DebugLayer::LogType::ERROR: stream = &std::cerr; break;
         default: stream = &std::clog; break;
     }
 
     // Color selection
     switch (LogType)
     {
-        case VkDebugLayer::LogType::WARNING: color = TextColorYellow; break;
-        case VkDebugLayer::LogType::ERROR: color = TextColorRed; break;
+        case DebugLayer::LogType::WARNING: color = TextColorYellow; break;
+        case DebugLayer::LogType::ERROR: color = TextColorRed; break;
         default: color = TextColorGrey; break;
     }
 
@@ -71,12 +71,12 @@ void VkDebugLayer::Log(VkDebugLayer::LogType LogType, const std::string& message
 
     switch (LogType)
     {
-        case VkDebugLayer::LogType::WARNING: title = "Warning"; break;
-        case VkDebugLayer::LogType::ERROR: title = "Error"; break;
-        case VkDebugLayer::LogType::VERBOSE: title = "Verbose"; break;
-        case VkDebugLayer::LogType::INFO: title = "Info"; break;
-        case VkDebugLayer::LogType::CREATE: title = "Create"; break;
-        case VkDebugLayer::LogType::DESTROY: title = "Destroy"; break;
+        case DebugLayer::LogType::WARNING: title = "Warning"; break;
+        case DebugLayer::LogType::ERROR: title = "Error"; break;
+        case DebugLayer::LogType::VERBOSE: title = "Verbose"; break;
+        case DebugLayer::LogType::INFO: title = "Info"; break;
+        case DebugLayer::LogType::CREATE: title = "Create"; break;
+        case DebugLayer::LogType::DESTROY: title = "Destroy"; break;
         default: title = "Unknown"; break;
     }
 
@@ -133,7 +133,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(
     return messageSeverity != VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
 }
 
-bool VkDebugLayer::CheckValidationLayerSupport()
+bool DebugLayer::CheckValidationLayerSupport()
 {
     uint32_t layerCount = 0;
     vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
@@ -163,7 +163,7 @@ bool VkDebugLayer::CheckValidationLayerSupport()
     return true;
 }
 
-void VkDebugLayer::SetupCreateInfo(VkInstanceCreateInfo& instanceCreateInfo, VkDebugUtilsMessengerCreateInfoEXT& debugCreateInfo)
+void DebugLayer::SetupCreateInfo(VkInstanceCreateInfo& instanceCreateInfo, VkDebugUtilsMessengerCreateInfoEXT& debugCreateInfo)
 {
     if(Enabled)
     {
@@ -179,7 +179,7 @@ void VkDebugLayer::SetupCreateInfo(VkInstanceCreateInfo& instanceCreateInfo, VkD
     }
 }
 
-void VkDebugLayer::PopulateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& debugMessengerCreateInfo)
+void DebugLayer::PopulateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& debugMessengerCreateInfo)
 {
     debugMessengerCreateInfo = {};
     debugMessengerCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
@@ -188,9 +188,9 @@ void VkDebugLayer::PopulateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateI
     debugMessengerCreateInfo.pfnUserCallback = DebugCallback;
 }
 
-VkDebugLayer::VkDebugLayer(VkInstance instance)
+DebugLayer::DebugLayer(VkInstance instance)
 {
-    VkDebugLayer::Log(VkDebugLayer::LogType::CREATE, "VkDebugLayer Creation !");
+    DebugLayer::Log(DebugLayer::LogType::CREATE, "DebugLayer Creation !");
     if(!Enabled) return;
     _instance = instance;
 
@@ -203,9 +203,9 @@ VkDebugLayer::VkDebugLayer(VkInstance instance)
     }
 }
 
-VkDebugLayer::~VkDebugLayer()
+DebugLayer::~DebugLayer()
 {
-    VkDebugLayer::Log(VkDebugLayer::LogType::DESTROY, "VkDebugLayer Destroyed !");
+    DebugLayer::Log(DebugLayer::LogType::DESTROY, "DebugLayer Destroyed !");
     if (!Enabled) return;
     M3VK_DestroyDebugUtilsMessengerEXT(_instance, _debugMessenger, nullptr);
 }

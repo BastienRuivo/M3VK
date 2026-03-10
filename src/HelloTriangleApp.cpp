@@ -4,7 +4,7 @@
 #include "header/M3VKHelper.h"
 #include "header/Shader.h"
 #include "header/SwapChain.h"
-#include "header/VkDebugLayer.h"
+#include "header/DebugLayer.h"
 #include <GLFW/glfw3.h>
 #include <array>
 #include <chrono>
@@ -513,7 +513,7 @@ HelloTriangleApp::HelloTriangleApp() :
     _instanceHandler(),
     _window(1920, 1080, "Window", this, FramebufferResizeCallback)
 {
-    VkDebugLayer::Log(VkDebugLayer::LogType::CREATE, "HelloTriangleApp Creation !");
+    DebugLayer::Log(DebugLayer::LogType::CREATE, "HelloTriangleApp Creation !");
 
     CreateDescriptorSetLayout();
     CreateGraphicsPipeline();
@@ -574,7 +574,7 @@ HelloTriangleApp::~HelloTriangleApp()
 
     vkDestroyPipeline(_deviceHandler.Get(), _graphicsPipeline, nullptr);
     vkDestroyPipelineLayout(_deviceHandler.Get(), _pipelineLayout, nullptr);
-    VkDebugLayer::Log(VkDebugLayer::LogType::DESTROY, "HelloTriangleApp Destroyed !");
+    DebugLayer::Log(DebugLayer::LogType::DESTROY, "HelloTriangleApp Destroyed !");
 }
 
 void HelloTriangleApp::Run()

@@ -26,7 +26,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(
     void* pUserData);
 
 
-class VkDebugLayer
+class DebugLayer
 {
     public:
     #ifdef NDEBUG
@@ -52,8 +52,8 @@ class VkDebugLayer
     static inline const char* TextColorYellow = "\033[33m";
     static inline const char* TextColorRed = "\033[31m";
 
-    VkDebugLayer(VkInstance instance);
-    ~VkDebugLayer();
+    DebugLayer(VkInstance instance);
+    ~DebugLayer();
 
     static void PopulateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
     static void SetupCreateInfo(VkInstanceCreateInfo& instanceCreateInfo, VkDebugUtilsMessengerCreateInfoEXT& debugInfoCreate);

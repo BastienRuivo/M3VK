@@ -1,6 +1,6 @@
 #include "./header/Shader.h"
 #include "./header/M3VKHelper.h"
-#include "header/VkDebugLayer.h"
+#include "header/DebugLayer.h"
 #include <stdexcept>
 #include <vector>
 #include <vulkan/vulkan_core.h>
@@ -9,7 +9,7 @@ Shader::~Shader()
 {
     vkDestroyShaderModule(_device, VertexShader, nullptr);
     vkDestroyShaderModule(_device, FragmentShader, nullptr);
-    VkDebugLayer::Log(VkDebugLayer::LogType::DESTROY, "Shader Destroyed !");
+    DebugLayer::Log(DebugLayer::LogType::DESTROY, "Shader Destroyed !");
 }
 
 VkShaderModule Shader::CreateShaderModule(const std::vector<char>& shaderCode)
@@ -30,7 +30,7 @@ VkShaderModule Shader::CreateShaderModule(const std::vector<char>& shaderCode)
 
 Shader::Shader(const VkDevice& device)
 {
-    VkDebugLayer::Log(VkDebugLayer::LogType::CREATE, "Shader Creation !");
+    DebugLayer::Log(DebugLayer::LogType::CREATE, "Shader Creation !");
 
     std::vector<char> vertex = M3VKHelper::ReadFile(std::string(SHADER_DIRECTORY) + "helloTriangle.vert.spv");
     std::vector<char> fragment = M3VKHelper::ReadFile(std::string(SHADER_DIRECTORY) + "helloTriangle.frag.spv");
