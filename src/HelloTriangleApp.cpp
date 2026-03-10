@@ -155,7 +155,6 @@ void HelloTriangleApp::DisposeFramebuffers()
     {
         vkDestroyFramebuffer(_deviceHandler.Get(), _framebuffers[i], nullptr);
     }
-    _swapChain.reset();
 }
 
 void HelloTriangleApp::RefreshSwapChain()
@@ -163,6 +162,9 @@ void HelloTriangleApp::RefreshSwapChain()
     vkDeviceWaitIdle(_deviceHandler.Get());
 
     DisposeFramebuffers();
+
+    // TODO : Swap chain is currently resetted the first frame beacause it is out of date
+    _swapChain.reset();
     _swapChain = std::make_unique<SwapChain>(_window, _physicalDeviceHandler.Get(), _deviceHandler.Get(), _windowSurfaceHandler.Get());
     CreateFrameBuffers();
 }
@@ -268,7 +270,7 @@ void HelloTriangleApp::RecordCommandBuffer(CommandBuffer cmdBuffer, uint32_t cur
 {
     cmdBuffer.Begin();
     {
-        cmdBuffer.BeginRenderPass(_renderPass, _framebuffers[imageIndex], {0, 0, 0, 0}, _swapChain->Extent);
+        cmdBuffer.BeginRenderPass(_renderPassHandler.Get(), _framebuffers[imageIndex], {0, 0, 0, 0}, _swapChain->Extent);
         {
             cmdBuffer.BindPipeline(_graphicsPipeline, VK_PIPELINE_BIND_POINT_GRAPHICS);
             cmdBuffer.SetViewport(_swapChain->Extent.width, _swapChain->Extent.height);
@@ -324,7 +326,7 @@ void HelloTriangleApp::CreateFrameBuffers()
 
         VkFramebufferCreateInfo createInfo{};
         createInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-        createInfo.renderPass = _renderPass;
+        createInfo.renderPass = _renderPassHandler.Get();
         createInfo.attachmentCount = 1;
         createInfo.pAttachments = attachments;
         createInfo.width = _swapChain->Extent.width;
@@ -335,58 +337,6 @@ void HelloTriangleApp::CreateFrameBuffers()
         {
             throw std::runtime_error("failed to create framebuffer !");
         }
-    }
-}
-
-void HelloTriangleApp::CreateRenderPass()
-{
-    VkAttachmentDescription colorAttachment =  {};
-    colorAttachment.format = _swapChain->ImageFormat;
-    colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-    // clear at new frame, load to keep and dont care to undefined
-    colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    // STORE preserve the data, DONT_CARE otherwise
-    colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-    // only rendering a triangle, no use of stencil or depth atm
-    colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-    colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    // Images can have layout suitable for different op
-    colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-
-    VkAttachmentReference colorAttachmentRef{};
-    // attachment index, only one so 0
-    colorAttachmentRef.attachment = 0;
-    colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-    VkSubpassDescription subpass{};
-    subpass.pipelineBindPoint =VK_PIPELINE_BIND_POINT_GRAPHICS;
-    subpass.colorAttachmentCount = 1;
-    subpass.pColorAttachments = &colorAttachmentRef;
-
-    VkRenderPassCreateInfo rpCreateInfo{};
-    rpCreateInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-    rpCreateInfo.attachmentCount = 1;
-    rpCreateInfo.pAttachments = &colorAttachment;
-    rpCreateInfo.subpassCount = 1;
-    rpCreateInfo.pSubpasses = &subpass;
-
-    VkSubpassDependency dependency{};
-    dependency.srcSubpass = VK_SUBPASS_EXTERNAL; // the passe before or after depending if it's used in src or dst
-    dependency.dstSubpass = 0; // our pass
-
-    dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    dependency.srcAccessMask = 0;
-
-    dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-
-    rpCreateInfo.dependencyCount = 1;
-    rpCreateInfo.pDependencies = &dependency;
-
-    if(vkCreateRenderPass(_deviceHandler.Get(), &rpCreateInfo, nullptr, &_renderPass)  != VK_SUCCESS)
-    {
-        throw std::runtime_error("Failed to create render pass");
     }
 }
 
@@ -538,7 +488,7 @@ void HelloTriangleApp::CreateGraphicsPipeline()
     pipelineCreateInfo.pDynamicState = &pipelineStateCreateInfo;
 
     pipelineCreateInfo.layout = _pipelineLayout;
-    pipelineCreateInfo.renderPass = _renderPass;
+    pipelineCreateInfo.renderPass = _renderPassHandler.Get();
     pipelineCreateInfo.subpass = 0;
 
     // can be use to switch between parent pipeline (less expensive theorically if simillar)
@@ -552,6 +502,7 @@ void HelloTriangleApp::CreateGraphicsPipeline()
 }
 
 HelloTriangleApp::HelloTriangleApp() :
+    _renderPassHandler(_deviceHandler.Get(), _swapChain->ImageFormat),
     _swapChain(std::make_unique<SwapChain>(_window, _physicalDeviceHandler.Get(), _deviceHandler.Get(), _windowSurfaceHandler.Get())),
     _presentQueueHandler(_deviceHandler.Get(), _physicalDeviceHandler.QueueFamilyIds, VkQueueHandler::Present),
     _graphicsQueueHandler(_deviceHandler.Get(), _physicalDeviceHandler.QueueFamilyIds, VkQueueHandler::Graphics),
@@ -564,7 +515,6 @@ HelloTriangleApp::HelloTriangleApp() :
 {
     VkDebugLayer::Log(VkDebugLayer::LogType::CREATE, "HelloTriangleApp Creation !");
 
-    CreateRenderPass();
     CreateDescriptorSetLayout();
     CreateGraphicsPipeline();
     CreateFrameBuffers();
@@ -624,7 +574,6 @@ HelloTriangleApp::~HelloTriangleApp()
 
     vkDestroyPipeline(_deviceHandler.Get(), _graphicsPipeline, nullptr);
     vkDestroyPipelineLayout(_deviceHandler.Get(), _pipelineLayout, nullptr);
-    vkDestroyRenderPass(_deviceHandler.Get(), _renderPass, nullptr);
     VkDebugLayer::Log(VkDebugLayer::LogType::DESTROY, "HelloTriangleApp Destroyed !");
 }
 

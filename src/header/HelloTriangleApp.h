@@ -5,6 +5,7 @@
 #include "header/VkHandlers/VkInstanceHandler.h"
 #include "header/VkHandlers/VkPhysicalDeviceHandler.h"
 #include "header/VkHandlers/VkQueueHandler.h"
+#include "header/VkHandlers/VkRenderPassHandler.h"
 #include "header/VkHandlers/VkSurfaceHandler.h"
 #include "header/Window.h"
 #include "header/GraphicsBuffer.h"
@@ -103,13 +104,14 @@ class HelloTriangleApp
     // Implicitly linked to instance, see wtd later
     VkPhysicalDeviceHandler _physicalDeviceHandler;
     VkDeviceHandler _deviceHandler;
-
-    // Dynamic lifetime
-    std::unique_ptr<SwapChain> _swapChain;
-
     //Implicitly linked to device, see wtd later
     VkQueueHandler _graphicsQueueHandler;
     VkQueueHandler _presentQueueHandler;
+
+    // Dynamic lifetime
+    std::unique_ptr<SwapChain> _swapChain;
+    VkRenderPassHandler _renderPassHandler;
+
 
     // Window API surface
     std::vector<VkFramebuffer> _framebuffers;
@@ -123,7 +125,6 @@ class HelloTriangleApp
     std::vector<CommandBuffer> _commandBuffers;
 
     // Uniform container
-    VkRenderPass _renderPass;
     VkPipeline _graphicsPipeline;
 
     // GPU Sync
@@ -148,9 +149,7 @@ class HelloTriangleApp
     GraphicsBuffer _vertexBuffer;
     GraphicsBuffer _indexBuffer;
 
-    void CreateLogicalDevice();
     void CreateGraphicsPipeline();
-    void CreateRenderPass();
     void CreateFrameBuffers();
     void CreatCommandPool();
     void CreateCommandBuffers();
