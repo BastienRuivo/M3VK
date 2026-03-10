@@ -1,8 +1,10 @@
 #pragma once
 
 #include "header/CommandBuffer.h"
+#include "header/VkDeviceHandler.h"
 #include "header/VkInstanceHandler.h"
 #include "header/VkPhysicalDeviceHandler.h"
+#include "header/VkQueueHandler.h"
 #include "header/VkSurfaceHandler.h"
 #include "header/Window.h"
 #include "header/GraphicsBuffer.h"
@@ -97,17 +99,20 @@ class HelloTriangleApp
     VkInstanceHandler _instanceHandler;
     VkDebugLayer _vkDebugLayer;
     VkSurfaceHandler _windowSurfaceHandler;
+    // Implicitly linked to instance, see wtd later
     VkPhysicalDeviceHandler _physicalDeviceHandler;
+    VkDeviceHandler _deviceHandler;
 
-    VkDevice _device;
+    //Implicitly linked to device, see wtd later
+    VkQueueHandler _graphicsQueueHandler;
+    VkQueueHandler _presentQueueHandler;
+
     // Window API surface
     std::vector<VkFramebuffer> _framebuffers;
     VkCommandPool _graphicsCommandPool;
 
     // Queues
     // implicitly cleaned
-    VkQueue _graphicsQueue;
-    VkQueue _presentQueue;
     VkQueue _copyQueue;
     SwapChain _swapChain;
     std::vector<CommandBuffer> _commandBuffers;

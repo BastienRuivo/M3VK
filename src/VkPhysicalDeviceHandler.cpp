@@ -48,14 +48,14 @@ int VkPhysicalDeviceHandler::ScoreDeviceSuitability(VkPhysicalDevice physicalDev
     int score = 0;
 
 
-    M3VKHelper::QueueFamilyId ids = M3VKHelper::QueryQueueFamilies(physicalDevice, windowSurface);
+    M3VKHelper::QueueFamilyIds ids = M3VKHelper::QueryQueueFamilies(physicalDevice, windowSurface);
 
     bool areAllRequiredExtensionsSupported = CheckDeviceExtensionSupport(physicalDevice, deviceExtensions);
 
     M3VKHelper::SwapChainSupportDetails swapChainDetails = M3VKHelper::QuerySwapChainSupportDetail(physicalDevice, windowSurface);
 
     // Mandatory feature, if any return 0 and this will be the only way to have 0 score meaning there's no suitable GPU
-    if(!M3VKHelper::QueueFamilyId::AreAllQueueAvailable(ids)
+    if(!M3VKHelper::QueueFamilyIds::AreAllQueueAvailable(ids)
         || !areAllRequiredExtensionsSupported
         || !swapChainDetails.CheckSwapChainSupportAdequate())
     {
@@ -105,6 +105,9 @@ VkPhysicalDeviceHandler::VkPhysicalDeviceHandler(VkInstance instance, VkSurfaceK
     {
         throw std::runtime_error("Failed to find a suitable GPU on this device");
     }
+
+
+    QueueFamilyIds = M3VKHelper::QueryQueueFamilies(_internal, windowSurface);
 }
 
 VkPhysicalDevice VkPhysicalDeviceHandler::Get() const

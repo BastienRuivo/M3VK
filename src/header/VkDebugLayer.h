@@ -34,7 +34,7 @@ class VkDebugLayer
     #else
     static const bool Enabled = true;
     #endif
-    inline static const std::vector<const char*> validationLayer {
+    inline static const std::vector<const char*> ValidationLayer {
         "VK_LAYER_KHRONOS_validation"
     };
 

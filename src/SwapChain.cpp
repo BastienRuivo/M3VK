@@ -150,7 +150,7 @@ void SwapChain::Create(const Window& window, const VkPhysicalDevice& physicalDev
     createInfo.imageArrayLayers = 1;
     createInfo.imageUsage =VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
-    M3VKHelper::QueueFamilyId queueIds = M3VKHelper::QueryQueueFamilies(physicalDevice, windowSurface);
+    M3VKHelper::QueueFamilyIds queueIds = M3VKHelper::QueryQueueFamilies(physicalDevice, windowSurface);
 
     uint32_t queueFamilyIndices[] = {queueIds.Graphics.value(), queueIds.Present.value()};
 

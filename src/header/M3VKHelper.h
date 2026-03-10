@@ -34,14 +34,14 @@ class M3VKHelper
         return bytes;
     }
 
-    struct QueueFamilyId
+    struct QueueFamilyIds
     {
         public:
         std::optional<uint32_t> Graphics;
         std::optional<uint32_t> Present;
        // std::optional<uint32_t> Copy;
 
-        static bool AreAllQueueAvailable(const QueueFamilyId& queueIds)
+        static bool AreAllQueueAvailable(const QueueFamilyIds& queueIds)
         {
             return queueIds.Graphics.has_value()
                 && queueIds.Present.has_value();
@@ -49,9 +49,9 @@ class M3VKHelper
         }
     };
 
-    static QueueFamilyId QueryQueueFamilies(const VkPhysicalDevice& physicalDevice, const VkSurfaceKHR& windowSurface)
+    static QueueFamilyIds QueryQueueFamilies(const VkPhysicalDevice& physicalDevice, const VkSurfaceKHR& windowSurface)
     {
-        QueueFamilyId queueIds;
+        QueueFamilyIds queueIds;
 
         uint32_t queueFamiliesCount = 0;
 

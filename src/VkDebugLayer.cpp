@@ -141,7 +141,7 @@ bool VkDebugLayer::CheckValidationLayerSupport()
     std::vector<VkLayerProperties> availableLayers(layerCount);
     vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
 
-    for(const char* layerName : validationLayer)
+    for(const char* layerName : ValidationLayer)
     {
         bool find = false;
         for(const VkLayerProperties& property : availableLayers)
@@ -167,8 +167,8 @@ void VkDebugLayer::SetupCreateInfo(VkInstanceCreateInfo& instanceCreateInfo, VkD
 {
     if(Enabled)
     {
-        instanceCreateInfo.enabledLayerCount = static_cast<uint32_t>(validationLayer.size());
-        instanceCreateInfo.ppEnabledLayerNames = validationLayer.data();
+        instanceCreateInfo.enabledLayerCount = static_cast<uint32_t>(ValidationLayer.size());
+        instanceCreateInfo.ppEnabledLayerNames = ValidationLayer.data();
         PopulateDebugMessengerCreateInfo(debugCreateInfo);
         instanceCreateInfo.pNext = &debugCreateInfo;
     }

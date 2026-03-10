@@ -17,7 +17,6 @@
 #include <glm/fwd.hpp>
 #include <glm/trigonometric.hpp>
 #include <optional>
-#include <set>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -37,7 +36,7 @@ void HelloTriangleApp::CreateDescriptorSet()
     allocateInfo.pSetLayouts = layouts.data();
 
     _descriptorSets.resize(MaxFrameInCount);
-    if(vkAllocateDescriptorSets(_device, &allocateInfo, _descriptorSets.data()) != VK_SUCCESS)
+    if(vkAllocateDescriptorSets(_deviceHandler.Get(), &allocateInfo, _descriptorSets.data()) != VK_SUCCESS)
     {
         throw std::runtime_error("Failed to allocate descriptor set");
     }
@@ -60,7 +59,7 @@ void HelloTriangleApp::CreateDescriptorSet()
         descriptorWrite.pImageInfo = nullptr;
         descriptorWrite.pTexelBufferView = nullptr;
 
-        vkUpdateDescriptorSets(_device, 1, &descriptorWrite, 0, nullptr);
+        vkUpdateDescriptorSets(_deviceHandler.Get(), 1, &descriptorWrite, 0, nullptr);
     }
 }
 
@@ -76,7 +75,7 @@ void HelloTriangleApp::CreateDescriptorPool()
     poolCreateInfo.pPoolSizes = &poolSize;
     poolCreateInfo.maxSets = static_cast<uint32_t>(MaxFrameInCount);
 
-    if(vkCreateDescriptorPool(_device, &poolCreateInfo, nullptr, &_descriptorPool) != VK_SUCCESS)
+    if(vkCreateDescriptorPool(_deviceHandler.Get(), &poolCreateInfo, nullptr, &_descriptorPool) != VK_SUCCESS)
     {
         throw std::runtime_error("VK Create Descriptor Pool Failed !");
     }
@@ -107,7 +106,7 @@ void HelloTriangleApp::CreateCameraDataBuffers()
     for(int i = 0; i < MaxFrameInCount; ++i)
     {
         GraphicsBuffer uniform;
-        uniform.Create(_physicalDeviceHandler.Get(), _device, 1, sizeof(CameraData), GraphicsBuffer::UNIFORM);
+        uniform.Create(_physicalDeviceHandler.Get(), _deviceHandler.Get(), 1, sizeof(CameraData), GraphicsBuffer::UNIFORM);
         _cameraDataBuffers.push_back(uniform);
     }
 }
@@ -126,7 +125,7 @@ void HelloTriangleApp::CreateDescriptorSetLayout()
     createInfo.bindingCount = 1;
     createInfo.pBindings = &cameraDataLayoutBindingDescriptor;
 
-    if(vkCreateDescriptorSetLayout(_device, &createInfo, nullptr, &_descriptorSetLayout) != VK_SUCCESS)
+    if(vkCreateDescriptorSetLayout(_deviceHandler.Get(), &createInfo, nullptr, &_descriptorSetLayout) != VK_SUCCESS)
     {
         throw std::runtime_error("Failed to create descriptor set layout");
     }
@@ -153,18 +152,18 @@ void HelloTriangleApp::DisposeSwapChain()
 {
     for(size_t i = 0; i < _framebuffers.size(); ++i)
     {
-        vkDestroyFramebuffer(_device, _framebuffers[i], nullptr);
+        vkDestroyFramebuffer(_deviceHandler.Get(), _framebuffers[i], nullptr);
     }
-    _swapChain.Dipose(_device);
+    _swapChain.Dipose(_deviceHandler.Get());
 }
 
 void HelloTriangleApp::RefreshSwapChain()
 {
-    vkDeviceWaitIdle(_device);
+    vkDeviceWaitIdle(_deviceHandler.Get());
 
     DisposeSwapChain();
 
-    _swapChain.Create(_window, _physicalDeviceHandler.Get(), _device, _windowSurfaceHandler.Get());
+    _swapChain.Create(_window, _physicalDeviceHandler.Get(), _deviceHandler.Get(), _windowSurfaceHandler.Get());
     CreateFrameBuffers();
 }
 
@@ -185,12 +184,12 @@ void HelloTriangleApp::CreateSyncObject()
     for(size_t i = 0; i < HelloTriangleApp::MaxFrameInCount; ++i)
     {
 
-        if(vkCreateSemaphore(_device, &semaphoreCreateInfo, nullptr, &_availableImageSemaphores[i]) != VK_SUCCESS)
+        if(vkCreateSemaphore(_deviceHandler.Get(), &semaphoreCreateInfo, nullptr, &_availableImageSemaphores[i]) != VK_SUCCESS)
         {
             throw std::runtime_error("Can't create image available semaphore");
         }
 
-        if(vkCreateFence(_device, &fenceCreateInfo, nullptr, &_waitFences[i]) != VK_SUCCESS)
+        if(vkCreateFence(_deviceHandler.Get(), &fenceCreateInfo, nullptr, &_waitFences[i]) != VK_SUCCESS)
         {
             throw std::runtime_error("Can't create fence");
         }
@@ -198,7 +197,7 @@ void HelloTriangleApp::CreateSyncObject()
 
     for(size_t i = 0; i < _swapChain.Images.size(); ++i)
     {
-        if(vkCreateSemaphore(_device, &semaphoreCreateInfo, nullptr, &_renderFinishedSemaphores[i]) != VK_SUCCESS)
+        if(vkCreateSemaphore(_deviceHandler.Get(), &semaphoreCreateInfo, nullptr, &_renderFinishedSemaphores[i]) != VK_SUCCESS)
         {
             throw std::runtime_error("Can't create render finished semaphore");
         }
@@ -207,11 +206,11 @@ void HelloTriangleApp::CreateSyncObject()
 
 void HelloTriangleApp::DrawFrame()
 {
-    vkWaitForFences(_device, 1, &_waitFences[_currentFrame], VK_TRUE, UINT64_MAX);
+    vkWaitForFences(_deviceHandler.Get(), 1, &_waitFences[_currentFrame], VK_TRUE, UINT64_MAX);
 
     // Acquire image to draw on
     uint32_t imageIndex;
-    VkResult result = vkAcquireNextImageKHR(_device, _swapChain.Internal, UINT64_MAX, _availableImageSemaphores[_currentFrame], VK_NULL_HANDLE, &imageIndex);
+    VkResult result = vkAcquireNextImageKHR(_deviceHandler.Get(), _swapChain.Internal, UINT64_MAX, _availableImageSemaphores[_currentFrame], VK_NULL_HANDLE, &imageIndex);
 
     if(result == VK_ERROR_OUT_OF_DATE_KHR)
     {
@@ -224,7 +223,7 @@ void HelloTriangleApp::DrawFrame()
     }
 
     // Only reset the fence if we are submitting work
-    vkResetFences(_device, 1, &_waitFences[_currentFrame]);
+    vkResetFences(_deviceHandler.Get(), 1, &_waitFences[_currentFrame]);
 
     UpdateCameraData(_currentFrame);
 
@@ -250,7 +249,7 @@ void HelloTriangleApp::DrawFrame()
     presentInfo.pImageIndices = &imageIndex;
     presentInfo.pResults = nullptr;
 
-    result = vkQueuePresentKHR(_graphicsQueue, &presentInfo);
+    result = vkQueuePresentKHR(_graphicsQueueHandler.Get(), &presentInfo);
 
     if(result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || _framebufferResized)
     {
@@ -291,21 +290,21 @@ void HelloTriangleApp::CreateCommandBuffers()
     // Allocate in batch ?
     for (int i = 0; i < HelloTriangleApp::MaxFrameInCount; ++i)
     {
-        CommandBuffer cmdBuffer(_device, _graphicsCommandPool, _graphicsQueue);
+        CommandBuffer cmdBuffer(_deviceHandler.Get(), _graphicsCommandPool, _graphicsQueueHandler.Get());
         _commandBuffers.emplace_back(cmdBuffer);
     }
 }
 
 void HelloTriangleApp::CreatCommandPool()
 {
-    M3VKHelper::QueueFamilyId queueFamilyId = M3VKHelper::QueryQueueFamilies(_physicalDeviceHandler.Get(), _windowSurfaceHandler.Get());
+    M3VKHelper::QueueFamilyIds queueFamilyId = M3VKHelper::QueryQueueFamilies(_physicalDeviceHandler.Get(), _windowSurfaceHandler.Get());
 
     VkCommandPoolCreateInfo poolInfo{};
     poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
     poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
     poolInfo.queueFamilyIndex = queueFamilyId.Graphics.value();
 
-    if(vkCreateCommandPool(_device, &poolInfo, nullptr, &_graphicsCommandPool) != VK_SUCCESS)
+    if(vkCreateCommandPool(_deviceHandler.Get(), &poolInfo, nullptr, &_graphicsCommandPool) != VK_SUCCESS)
     {
         throw std::runtime_error("Failed to create command pool !");
     }
@@ -332,7 +331,7 @@ void HelloTriangleApp::CreateFrameBuffers()
         createInfo.height = _swapChain.Extent.height;
         createInfo.layers = 1;
 
-        if(vkCreateFramebuffer(_device, &createInfo, nullptr, &_framebuffers[i]) != VK_SUCCESS)
+        if(vkCreateFramebuffer(_deviceHandler.Get(), &createInfo, nullptr, &_framebuffers[i]) != VK_SUCCESS)
         {
             throw std::runtime_error("failed to create framebuffer !");
         }
@@ -385,7 +384,7 @@ void HelloTriangleApp::CreateRenderPass()
     rpCreateInfo.dependencyCount = 1;
     rpCreateInfo.pDependencies = &dependency;
 
-    if(vkCreateRenderPass(_device, &rpCreateInfo, nullptr, &_renderPass)  != VK_SUCCESS)
+    if(vkCreateRenderPass(_deviceHandler.Get(), &rpCreateInfo, nullptr, &_renderPass)  != VK_SUCCESS)
     {
         throw std::runtime_error("Failed to create render pass");
     }
@@ -393,7 +392,7 @@ void HelloTriangleApp::CreateRenderPass()
 
 void HelloTriangleApp::CreateGraphicsPipeline()
 {
-    Shader shader(_device);
+    Shader shader(_deviceHandler.Get());
 
     VkPipelineShaderStageCreateInfo shadersStagesCreateInfo[2] = {
         {},
@@ -518,7 +517,7 @@ void HelloTriangleApp::CreateGraphicsPipeline()
     layoutCreateInfo.pushConstantRangeCount = 0; // Optional
     layoutCreateInfo.pPushConstantRanges = nullptr; // Optional
 
-    if(vkCreatePipelineLayout(_device, &layoutCreateInfo, nullptr, &_pipelineLayout) != VK_SUCCESS)
+    if(vkCreatePipelineLayout(_deviceHandler.Get(), &layoutCreateInfo, nullptr, &_pipelineLayout) != VK_SUCCESS)
     {
         throw std::runtime_error("Failed to create VK Layout !");
     }
@@ -546,68 +545,16 @@ void HelloTriangleApp::CreateGraphicsPipeline()
     pipelineCreateInfo.basePipelineHandle = VK_NULL_HANDLE;
     pipelineCreateInfo.basePipelineIndex = -1;
 
-    if(vkCreateGraphicsPipelines(_device, VK_NULL_HANDLE, 1, &pipelineCreateInfo, nullptr, &_graphicsPipeline) != VK_SUCCESS)
+    if(vkCreateGraphicsPipelines(_deviceHandler.Get(), VK_NULL_HANDLE, 1, &pipelineCreateInfo, nullptr, &_graphicsPipeline) != VK_SUCCESS)
     {
         throw std::runtime_error("Failed to create graphics pipeline !");
     }
 }
 
-void HelloTriangleApp::CreateLogicalDevice()
-{
-    M3VKHelper::QueueFamilyId queueFamilyId = M3VKHelper::QueryQueueFamilies(_physicalDeviceHandler.Get(), _windowSurfaceHandler.Get());
-
-    std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
-    std::set<uint32_t> uniqueQueueIds =
-    {
-        queueFamilyId.Graphics.value(),
-        queueFamilyId.Present.value(),
-        //queueFamilyId.Copy.value()
-    };
-
-    float queuePriority = 1.0f;
-    for(uint32_t queueId : uniqueQueueIds)
-    {
-        VkDeviceQueueCreateInfo queueCreateInfo{};
-        queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-        queueCreateInfo.queueFamilyIndex = queueId;
-        queueCreateInfo.queueCount = 1;
-        queueCreateInfo.pQueuePriorities = &queuePriority;
-        queueCreateInfos.push_back(queueCreateInfo);
-    }
-
-    VkPhysicalDeviceFeatures deviceFeatures{};
-
-    VkDeviceCreateInfo deviceCreateInfo{};
-    deviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-    deviceCreateInfo.pQueueCreateInfos = queueCreateInfos.data();
-    deviceCreateInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
-    deviceCreateInfo.pEnabledFeatures = &deviceFeatures;
-    deviceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(_deviceExtensions.size());
-    deviceCreateInfo.ppEnabledExtensionNames = _deviceExtensions.data();
-
-    if(_vkDebugLayer.Enabled)
-    {
-        deviceCreateInfo.enabledLayerCount = static_cast<uint32_t>(_vkDebugLayer.validationLayer.size());
-        deviceCreateInfo.ppEnabledLayerNames = _vkDebugLayer.validationLayer.data();
-    }
-    else
-    {
-        deviceCreateInfo.enabledLayerCount = 0;
-    }
-
-    VkResult deviceCreation = vkCreateDevice(_physicalDeviceHandler.Get(), &deviceCreateInfo, nullptr, &_device);
-    if(deviceCreation != VK_SUCCESS)
-    {
-        throw std::runtime_error("Failed to create VK Logical Device !");
-    }
-
-    vkGetDeviceQueue(_device, queueFamilyId.Graphics.value(), 0, &_graphicsQueue);
-    vkGetDeviceQueue(_device, queueFamilyId.Present.value(), 0, &_presentQueue);
-    // use it
-    //vkGetDeviceQueue(_device, queueFamilyId.Copy.value(), 0, &_copyQueue);
-}
-
 HelloTriangleApp::HelloTriangleApp() :
+    _presentQueueHandler(_deviceHandler.Get(), _physicalDeviceHandler.QueueFamilyIds, VkQueueHandler::Present),
+    _graphicsQueueHandler(_deviceHandler.Get(), _physicalDeviceHandler.QueueFamilyIds, VkQueueHandler::Graphics),
+    _deviceHandler(_physicalDeviceHandler, _windowSurfaceHandler.Get(), _deviceExtensions),
     _physicalDeviceHandler(_instanceHandler.Get(), _windowSurfaceHandler.Get(), _deviceExtensions),
     _windowSurfaceHandler(_instanceHandler.Get(), _window.Get()),
     _vkDebugLayer(_instanceHandler.Get()),
@@ -616,8 +563,7 @@ HelloTriangleApp::HelloTriangleApp() :
 {
     VkDebugLayer::Log(VkDebugLayer::LogType::CREATE, "HelloTriangleApp Creation !");
 
-    CreateLogicalDevice();
-    _swapChain.Create(_window, _physicalDeviceHandler.Get(), _device, _windowSurfaceHandler.Get());
+    _swapChain.Create(_window, _physicalDeviceHandler.Get(), _deviceHandler.Get(), _windowSurfaceHandler.Get());
     CreateRenderPass();
     CreateDescriptorSetLayout();
     CreateGraphicsPipeline();
@@ -628,11 +574,11 @@ HelloTriangleApp::HelloTriangleApp() :
     CreateDescriptorSet();
 
     // init data
-    _indexBuffer.Create(_physicalDeviceHandler.Get(), _device, _indices.size(), sizeof(_indices[0]), GraphicsBuffer::BufferType::INDEX);
-    _indexBuffer.CopyToBuffer(_physicalDeviceHandler.Get(), _device, _graphicsQueue, _graphicsCommandPool, (void*)_indices.data(), _indexBuffer.GetSize());
+    _indexBuffer.Create(_physicalDeviceHandler.Get(), _deviceHandler.Get(), _indices.size(), sizeof(_indices[0]), GraphicsBuffer::BufferType::INDEX);
+    _indexBuffer.CopyToBuffer(_physicalDeviceHandler.Get(), _deviceHandler.Get(), _graphicsQueueHandler.Get(), _graphicsCommandPool, (void*)_indices.data(), _indexBuffer.GetSize());
 
-    _vertexBuffer.Create(_physicalDeviceHandler.Get(), _device, _vertices.size(), sizeof(_vertices[0]), GraphicsBuffer::BufferType::VERTEX);
-    _vertexBuffer.CopyToBuffer(_physicalDeviceHandler.Get(), _device, _graphicsQueue, _graphicsCommandPool, (void*)_vertices.data(), _vertexBuffer.GetSize());
+    _vertexBuffer.Create(_physicalDeviceHandler.Get(), _deviceHandler.Get(), _vertices.size(), sizeof(_vertices[0]), GraphicsBuffer::BufferType::VERTEX);
+    _vertexBuffer.CopyToBuffer(_physicalDeviceHandler.Get(), _deviceHandler.Get(), _graphicsQueueHandler.Get(), _graphicsCommandPool, (void*)_vertices.data(), _vertexBuffer.GetSize());
 
     CreateCommandBuffers();
     CreateSyncObject();
@@ -646,40 +592,39 @@ void HelloTriangleApp::MainLoop()
         DrawFrame();
     }
 
-    vkDeviceWaitIdle(_device);
+    vkDeviceWaitIdle(_deviceHandler.Get());
 }
 
 HelloTriangleApp::~HelloTriangleApp()
 {
     for(size_t i = 0; i < HelloTriangleApp::MaxFrameInCount; ++i)
     {
-        vkDestroySemaphore(_device, _availableImageSemaphores[i], nullptr);
-        vkDestroyFence(_device, _waitFences[i], nullptr);
+        vkDestroySemaphore(_deviceHandler.Get(), _availableImageSemaphores[i], nullptr);
+        vkDestroyFence(_deviceHandler.Get(), _waitFences[i], nullptr);
     }
 
     for(size_t i = 0; i < _swapChain.Images.size(); ++i)
     {
-        vkDestroySemaphore(_device, _renderFinishedSemaphores[i], nullptr);
+        vkDestroySemaphore(_deviceHandler.Get(), _renderFinishedSemaphores[i], nullptr);
     }
 
-    vkDestroyCommandPool(_device, _graphicsCommandPool, nullptr);
+    vkDestroyCommandPool(_deviceHandler.Get(), _graphicsCommandPool, nullptr);
     DisposeSwapChain();
 
-    _vertexBuffer.DisposeBuffer(_device);
-    _indexBuffer.DisposeBuffer(_device);
+    _vertexBuffer.DisposeBuffer(_deviceHandler.Get());
+    _indexBuffer.DisposeBuffer(_deviceHandler.Get());
 
     for(int i = 0; i < _cameraDataBuffers.size(); ++i)
     {
-        _cameraDataBuffers[i].DisposeBuffer(_device);
+        _cameraDataBuffers[i].DisposeBuffer(_deviceHandler.Get());
     }
 
-    vkDestroyDescriptorPool(_device, _descriptorPool, nullptr);
-    vkDestroyDescriptorSetLayout(_device, _descriptorSetLayout, nullptr);
+    vkDestroyDescriptorPool(_deviceHandler.Get(), _descriptorPool, nullptr);
+    vkDestroyDescriptorSetLayout(_deviceHandler.Get(), _descriptorSetLayout, nullptr);
 
-    vkDestroyPipeline(_device, _graphicsPipeline, nullptr);
-    vkDestroyPipelineLayout(_device, _pipelineLayout, nullptr);
-    vkDestroyRenderPass(_device, _renderPass, nullptr);
-    vkDestroyDevice(_device, nullptr);
+    vkDestroyPipeline(_deviceHandler.Get(), _graphicsPipeline, nullptr);
+    vkDestroyPipelineLayout(_deviceHandler.Get(), _pipelineLayout, nullptr);
+    vkDestroyRenderPass(_deviceHandler.Get(), _renderPass, nullptr);
     VkDebugLayer::Log(VkDebugLayer::LogType::DESTROY, "HelloTriangleApp Destroyed !");
 }
 
