@@ -1,6 +1,7 @@
 #pragma once
 
 #include "header/CommandBuffer.h"
+#include "header/VkHandlers/VkDescriptorSetLayoutHandler.h"
 #include "header/VkHandlers/VkDeviceHandler.h"
 #include "header/VkHandlers/VkInstanceHandler.h"
 #include "header/VkHandlers/VkPhysicalDeviceHandler.h"
@@ -112,6 +113,14 @@ class HelloTriangleApp
     std::unique_ptr<SwapChain> _swapChain;
     VkRenderPassHandler _renderPassHandler;
 
+    // layout binding
+    // Layout -> General description
+    // Pool -> memory pool to allocate something
+    // Set -> Object allocated on the pool
+    // So, layout and pool are the memory and need to be cleaned, but as we clean layout, we also clean set automatically
+
+    VkDescriptorSetLayoutHandler _descriptorSetLayoutHandler;
+
 
     // Window API surface
     std::vector<VkFramebuffer> _framebuffers;
@@ -132,13 +141,7 @@ class HelloTriangleApp
     std::vector<VkSemaphore> _renderFinishedSemaphores;
     std::vector<VkFence>  _waitFences;
 
-    // layout binding
-    // Layout -> General description
-    // Pool -> memory pool to allocate something
-    // Set -> Object allocated on the pool
-    // So, layout and pool are the memory and need to be cleaned, but as we clean layout, we also clean set automatically
 
-    VkDescriptorSetLayout _descriptorSetLayout;
     VkPipelineLayout _pipelineLayout;
     VkDescriptorPool _descriptorPool;
     std::vector<VkDescriptorSet> _descriptorSets;
@@ -154,7 +157,6 @@ class HelloTriangleApp
     void CreatCommandPool();
     void CreateCommandBuffers();
     void CreateSyncObject();
-    void CreateDescriptorSetLayout();
     void CreateCameraDataBuffers();
     void CreateDescriptorPool();
     void CreateDescriptorSet();

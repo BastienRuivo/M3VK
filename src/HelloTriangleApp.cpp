@@ -29,7 +29,7 @@
 
 void HelloTriangleApp::CreateDescriptorSet()
 {
-    std::vector<VkDescriptorSetLayout> layouts(MaxFrameInCount, _descriptorSetLayout);
+    std::vector<VkDescriptorSetLayout> layouts(MaxFrameInCount, _descriptorSetLayoutHandler.Get());
     VkDescriptorSetAllocateInfo allocateInfo{};
     allocateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
     allocateInfo.descriptorPool = _descriptorPool;
@@ -109,26 +109,6 @@ void HelloTriangleApp::CreateCameraDataBuffers()
         GraphicsBuffer uniform;
         uniform.Create(_physicalDeviceHandler.Get(), _deviceHandler.Get(), 1, sizeof(CameraData), GraphicsBuffer::UNIFORM);
         _cameraDataBuffers.push_back(uniform);
-    }
-}
-
-void HelloTriangleApp::CreateDescriptorSetLayout()
-{
-    VkDescriptorSetLayoutBinding cameraDataLayoutBindingDescriptor{};
-    cameraDataLayoutBindingDescriptor.binding = 0;
-    cameraDataLayoutBindingDescriptor.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    cameraDataLayoutBindingDescriptor.descriptorCount = 1;
-    cameraDataLayoutBindingDescriptor.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-    cameraDataLayoutBindingDescriptor.pImmutableSamplers = nullptr; // image sampling
-
-    VkDescriptorSetLayoutCreateInfo createInfo{};
-    createInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    createInfo.bindingCount = 1;
-    createInfo.pBindings = &cameraDataLayoutBindingDescriptor;
-
-    if(vkCreateDescriptorSetLayout(_deviceHandler.Get(), &createInfo, nullptr, &_descriptorSetLayout) != VK_SUCCESS)
-    {
-        throw std::runtime_error("Failed to create descriptor set layout");
     }
 }
 
@@ -459,11 +439,13 @@ void HelloTriangleApp::CreateGraphicsPipeline()
     colorBlending.blendConstants[2] = 0.0f; // Optional
     colorBlending.blendConstants[3] = 0.0f; // Optional
 
+    VkDescriptorSetLayout descriptorSetLayout = _descriptorSetLayoutHandler.Get();
+
     // Uniforms (empty for now)
     VkPipelineLayoutCreateInfo layoutCreateInfo{};
     layoutCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     layoutCreateInfo.setLayoutCount = 1;
-    layoutCreateInfo.pSetLayouts = &_descriptorSetLayout;
+    layoutCreateInfo.pSetLayouts = &descriptorSetLayout;
     layoutCreateInfo.pushConstantRangeCount = 0; // Optional
     layoutCreateInfo.pPushConstantRanges = nullptr; // Optional
 
@@ -502,6 +484,7 @@ void HelloTriangleApp::CreateGraphicsPipeline()
 }
 
 HelloTriangleApp::HelloTriangleApp() :
+    _descriptorSetLayoutHandler(_deviceHandler.Get()),
     _renderPassHandler(_deviceHandler.Get(), _swapChain->ImageFormat),
     _swapChain(std::make_unique<SwapChain>(_window, _physicalDeviceHandler.Get(), _deviceHandler.Get(), _windowSurfaceHandler.Get())),
     _presentQueueHandler(_deviceHandler.Get(), _physicalDeviceHandler.QueueFamilyIds, VkQueueHandler::Present),
@@ -515,7 +498,6 @@ HelloTriangleApp::HelloTriangleApp() :
 {
     DebugLayer::Log(DebugLayer::LogType::CREATE, "HelloTriangleApp Creation !");
 
-    CreateDescriptorSetLayout();
     CreateGraphicsPipeline();
     CreateFrameBuffers();
     CreatCommandPool();
@@ -570,7 +552,6 @@ HelloTriangleApp::~HelloTriangleApp()
     }
 
     vkDestroyDescriptorPool(_deviceHandler.Get(), _descriptorPool, nullptr);
-    vkDestroyDescriptorSetLayout(_deviceHandler.Get(), _descriptorSetLayout, nullptr);
 
     vkDestroyPipeline(_deviceHandler.Get(), _graphicsPipeline, nullptr);
     vkDestroyPipelineLayout(_deviceHandler.Get(), _pipelineLayout, nullptr);
