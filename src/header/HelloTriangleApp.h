@@ -5,6 +5,7 @@
 #include "header/VkHandlers/VkDeviceHandler.h"
 #include "header/VkHandlers/VkInstanceHandler.h"
 #include "header/VkHandlers/VkPhysicalDeviceHandler.h"
+#include "header/VkHandlers/VkPipelineLayoutHandler.h"
 #include "header/VkHandlers/VkQueueHandler.h"
 #include "header/VkHandlers/VkRenderPassHandler.h"
 #include "header/VkHandlers/VkSurfaceHandler.h"
@@ -121,6 +122,8 @@ class HelloTriangleApp
 
     VkDescriptorSetLayoutHandler _descriptorSetLayoutHandler;
 
+    VkPipelineLayoutHandler _pipelineLayoutHandler;
+
 
     // Window API surface
     std::vector<VkFramebuffer> _framebuffers;
@@ -142,7 +145,6 @@ class HelloTriangleApp
     std::vector<VkFence>  _waitFences;
 
 
-    VkPipelineLayout _pipelineLayout;
     VkDescriptorPool _descriptorPool;
     std::vector<VkDescriptorSet> _descriptorSets;
 

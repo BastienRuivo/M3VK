@@ -257,7 +257,7 @@ void HelloTriangleApp::RecordCommandBuffer(CommandBuffer cmdBuffer, uint32_t cur
             cmdBuffer.SetScissor(0, 0, _swapChain->Extent.width, _swapChain->Extent.height);
             cmdBuffer.BindBuffer(_vertexBuffer);
             cmdBuffer.BindBuffer(_indexBuffer);
-            cmdBuffer.BindDescriptorSets(VK_PIPELINE_BIND_POINT_GRAPHICS, _pipelineLayout, _descriptorSets[currentFrame]);
+            cmdBuffer.BindDescriptorSets(VK_PIPELINE_BIND_POINT_GRAPHICS, _pipelineLayoutHandler.Get(), _descriptorSets[currentFrame]);
             cmdBuffer.DrawIndexed(static_cast<uint32_t>(_indices.size()));
         }
         cmdBuffer.EndRenderPass();
@@ -439,21 +439,6 @@ void HelloTriangleApp::CreateGraphicsPipeline()
     colorBlending.blendConstants[2] = 0.0f; // Optional
     colorBlending.blendConstants[3] = 0.0f; // Optional
 
-    VkDescriptorSetLayout descriptorSetLayout = _descriptorSetLayoutHandler.Get();
-
-    // Uniforms (empty for now)
-    VkPipelineLayoutCreateInfo layoutCreateInfo{};
-    layoutCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    layoutCreateInfo.setLayoutCount = 1;
-    layoutCreateInfo.pSetLayouts = &descriptorSetLayout;
-    layoutCreateInfo.pushConstantRangeCount = 0; // Optional
-    layoutCreateInfo.pPushConstantRanges = nullptr; // Optional
-
-    if(vkCreatePipelineLayout(_deviceHandler.Get(), &layoutCreateInfo, nullptr, &_pipelineLayout) != VK_SUCCESS)
-    {
-        throw std::runtime_error("Failed to create VK Layout !");
-    }
-
     VkGraphicsPipelineCreateInfo pipelineCreateInfo{};
     pipelineCreateInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
     pipelineCreateInfo.stageCount = 2;
@@ -469,7 +454,7 @@ void HelloTriangleApp::CreateGraphicsPipeline()
     pipelineCreateInfo.pColorBlendState = &colorBlending;
     pipelineCreateInfo.pDynamicState = &pipelineStateCreateInfo;
 
-    pipelineCreateInfo.layout = _pipelineLayout;
+    pipelineCreateInfo.layout = _pipelineLayoutHandler.Get();
     pipelineCreateInfo.renderPass = _renderPassHandler.Get();
     pipelineCreateInfo.subpass = 0;
 
@@ -484,6 +469,7 @@ void HelloTriangleApp::CreateGraphicsPipeline()
 }
 
 HelloTriangleApp::HelloTriangleApp() :
+    _pipelineLayoutHandler(_deviceHandler.Get(), _descriptorSetLayoutHandler.Get()),
     _descriptorSetLayoutHandler(_deviceHandler.Get()),
     _renderPassHandler(_deviceHandler.Get(), _swapChain->ImageFormat),
     _swapChain(std::make_unique<SwapChain>(_window, _physicalDeviceHandler.Get(), _deviceHandler.Get(), _windowSurfaceHandler.Get())),
@@ -554,7 +540,6 @@ HelloTriangleApp::~HelloTriangleApp()
     vkDestroyDescriptorPool(_deviceHandler.Get(), _descriptorPool, nullptr);
 
     vkDestroyPipeline(_deviceHandler.Get(), _graphicsPipeline, nullptr);
-    vkDestroyPipelineLayout(_deviceHandler.Get(), _pipelineLayout, nullptr);
     DebugLayer::Log(DebugLayer::LogType::DESTROY, "HelloTriangleApp Destroyed !");
 }
 
