@@ -1,10 +1,12 @@
 #pragma once
 
 #include "header/CommandBuffer.h"
+#include "header/Vertex.h"
 #include "header/VkHandlers/VkDescriptorSetLayoutHandler.h"
 #include "header/VkHandlers/VkDeviceHandler.h"
 #include "header/VkHandlers/VkInstanceHandler.h"
 #include "header/VkHandlers/VkPhysicalDeviceHandler.h"
+#include "header/VkHandlers/VkPipelineHandler.h"
 #include "header/VkHandlers/VkPipelineLayoutHandler.h"
 #include "header/VkHandlers/VkQueueHandler.h"
 #include "header/VkHandlers/VkRenderPassHandler.h"
@@ -12,8 +14,6 @@
 #include "header/Window.h"
 #include "header/GraphicsBuffer.h"
 #include "header/SwapChain.h"
-#include <array>
-#include <cstddef>
 #include <cstdint>
 #include <glm/ext/vector_float2.hpp>
 #include <glm/ext/vector_float3.hpp>
@@ -41,45 +41,12 @@ class HelloTriangleApp
     ~HelloTriangleApp();
 
     private:
-    struct Vertex
-    {
-        glm::vec3 pos;
-        glm::vec3 color;
-
-        static VkVertexInputBindingDescription GetBindingDescription()
-        {
-            VkVertexInputBindingDescription description{};
-            description.binding = 0;
-            description.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-            description.stride = sizeof(Vertex);
-            return description;
-        }
-
-        static std::array<VkVertexInputAttributeDescription, 2> GetAttributeDescription()
-        {
-            std::array<VkVertexInputAttributeDescription, 2> attributeDescriptions{};
-
-            // position
-            attributeDescriptions[0].binding = 0;
-            attributeDescriptions[0].location = 0;
-            attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
-            attributeDescriptions[0].offset = offsetof(Vertex, pos);
-
-            // color
-            attributeDescriptions[1].binding = 0;
-            attributeDescriptions[1].location = 1;
-            attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
-            attributeDescriptions[1].offset = offsetof(Vertex, color);
-
-            return attributeDescriptions;
-        }
-    };
 
     const std::vector<Vertex> _vertices = {
-    {{-0.5f, 0, -0.5f}, {1.0f, 0.0f, 0.0f}},
-    {{0.5f, 0, -0.5f}, {0.0f, 1.0f, 0.0f}},
-    {{0.5f, 0, 0.5f}, {0.0f, 0.0f, 1.0f}},
-    {{-0.5f, 0, 0.5f}, {1.0f, 1.0f, 1.0f}}
+        {{-0.5f, 0, -0.5f}, {1.0f, 0.0f, 0.0f}},
+        {{0.5f, 0, -0.5f}, {0.0f, 1.0f, 0.0f}},
+        {{0.5f, 0, 0.5f}, {0.0f, 0.0f, 1.0f}},
+        {{-0.5f, 0, 0.5f}, {1.0f, 1.0f, 1.0f}}
     };
 
     struct CameraData
@@ -112,6 +79,7 @@ class HelloTriangleApp
 
     // Dynamic lifetime
     std::unique_ptr<SwapChain> _swapChain;
+
     VkRenderPassHandler _renderPassHandler;
 
     // layout binding
@@ -123,6 +91,7 @@ class HelloTriangleApp
     VkDescriptorSetLayoutHandler _descriptorSetLayoutHandler;
 
     VkPipelineLayoutHandler _pipelineLayoutHandler;
+    VkPipelineHandler _graphicsPipelineHandler;
 
 
     // Window API surface
@@ -135,9 +104,6 @@ class HelloTriangleApp
     //VkQueue _copyQueue;
 
     std::vector<CommandBuffer> _commandBuffers;
-
-    // Uniform container
-    VkPipeline _graphicsPipeline;
 
     // GPU Sync
     std::vector<VkSemaphore> _availableImageSemaphores;
@@ -154,7 +120,6 @@ class HelloTriangleApp
     GraphicsBuffer _vertexBuffer;
     GraphicsBuffer _indexBuffer;
 
-    void CreateGraphicsPipeline();
     void CreateFrameBuffers();
     void CreatCommandPool();
     void CreateCommandBuffers();
