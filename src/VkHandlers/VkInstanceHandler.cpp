@@ -7,7 +7,10 @@
 
 VkInstanceHandler::VkInstanceHandler()
 {
+#ifdef M3VK_MEMORYLOG
     DebugLayer::Log(DebugLayer::LogType::CREATE, "VkInstanceHandler creation !");
+#endif
+
     VkApplicationInfo appInfo{};
     appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
     appInfo.pApplicationName = "M3VK";
@@ -22,10 +25,14 @@ VkInstanceHandler::VkInstanceHandler()
 
     if(DebugLayer::Enabled)
     {
+#ifdef M3VK_VERBOSE_LOG
         DebugLayer::Log(DebugLayer::LogType::INFO, "List of actives VK Extensions");
+#endif
         for(const VkExtensionProperties& extension : supportedExtensions)
         {
+#ifdef M3VK_VERBOSE_LOG
             DebugLayer::Log(DebugLayer::LogType::INFO, std::string("\t - ") + extension.extensionName);
+#endif
         }
     }
 
@@ -99,6 +106,32 @@ VkInstance VkInstanceHandler::Get() const
 
 VkInstanceHandler::~VkInstanceHandler()
 {
+    if(_internal == VK_NULL_HANDLE) return;
+
     vkDestroyInstance(_internal, nullptr);
+
+#ifdef M3VK_MEMORYLOG
     DebugLayer::Log(DebugLayer::LogType::DESTROY, "VkInstanceHandler Destroyed !");
+#endif
+}
+
+VkInstanceHandler::VkInstanceHandler(VkInstanceHandler && other) noexcept
+{
+#ifdef M3VK_MEMORYLOG
+    DebugLayer::Log(DebugLayer::LogType::CREATE, "VkInstanceHandler Move Creation !");
+#endif
+
+    _internal = other._internal;
+    other._internal = VK_NULL_HANDLE;
+}
+
+VkInstanceHandler& VkInstanceHandler::operator=(VkInstanceHandler&& other) noexcept
+{
+    if(this != &other)
+    {
+        _internal = other._internal;
+        other._internal = VK_NULL_HANDLE;
+    }
+
+    return *this;
 }

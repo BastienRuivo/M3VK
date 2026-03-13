@@ -8,7 +8,9 @@
 
 VkDeviceHandler::VkDeviceHandler(const VkPhysicalDeviceHandler& physicalDeviceHandler, VkSurfaceKHR windowSurface, const std::vector<const char*>& deviceExtensions)
 {
+#ifdef M3VK_MEMORYLOG
     DebugLayer::Log(DebugLayer::LogType::CREATE, "VkDeviceHandler Creation !");
+#endif
 
     std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
     std::set<uint32_t> uniqueQueueIds =
@@ -68,6 +70,32 @@ VkDevice VkDeviceHandler::Get() const
 
 VkDeviceHandler::~VkDeviceHandler()
 {
+    if(_internal == VK_NULL_HANDLE) return;
+
     vkDestroyDevice(_internal, nullptr);
+
+#ifdef M3VK_MEMORYLOG
     DebugLayer::Log(DebugLayer::LogType::DESTROY, "VkDeviceHandler Destroyed !");
+#endif
+}
+
+VkDeviceHandler::VkDeviceHandler(VkDeviceHandler && other) noexcept
+{
+#ifdef M3VK_MEMORYLOG
+    DebugLayer::Log(DebugLayer::LogType::CREATE, "VkDeviceHandler Move Creation !");
+#endif
+
+    _internal = other._internal;
+    other._internal = VK_NULL_HANDLE;
+}
+
+VkDeviceHandler& VkDeviceHandler::operator=(VkDeviceHandler&& other) noexcept
+{
+    if(this != &other)
+    {
+        _internal = other._internal;
+        other._internal = VK_NULL_HANDLE;
+    }
+
+    return *this;
 }

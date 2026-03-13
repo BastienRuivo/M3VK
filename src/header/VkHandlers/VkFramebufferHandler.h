@@ -10,8 +10,8 @@ class VkFramebufferHandler
 
     // VkHandles can be destroyed by one of the two object when copying, so we enable moving and disable copying.
     // technically *for now* you can vk call directly to drestroy the VK thingy inside with the Get, honestly don't care for now, if the user want to explicitly do that it's his business, not mine.
-    VkFramebufferHandler(VkFramebufferHandler&& other);
-    VkFramebufferHandler& operator=(VkFramebufferHandler&& other);
+    VkFramebufferHandler(VkFramebufferHandler&& other) noexcept;
+    VkFramebufferHandler& operator=(VkFramebufferHandler&& other) noexcept;
 
     VkFramebufferHandler(const VkFramebufferHandler&) = delete;
     VkFramebufferHandler& operator=(const VkFramebufferHandler&) = delete;

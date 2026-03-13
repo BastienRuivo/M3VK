@@ -76,7 +76,9 @@ int VkPhysicalDeviceHandler::ScoreDeviceSuitability(VkPhysicalDevice physicalDev
 
 VkPhysicalDeviceHandler::VkPhysicalDeviceHandler(VkInstance instance, VkSurfaceKHR windowSurface, const std::vector<const char *>& deviceExtensions)
 {
+#ifdef M3VK_MEMORYLOG
     DebugLayer::Log(DebugLayer::LogType::CREATE, "VkPhysicalDeviceHandler Creation !");
+#endif
 
     _internal = VK_NULL_HANDLE;
     uint32_t deviceCount = 0;
@@ -106,7 +108,6 @@ VkPhysicalDeviceHandler::VkPhysicalDeviceHandler(VkInstance instance, VkSurfaceK
         throw std::runtime_error("Failed to find a suitable GPU on this device");
     }
 
-
     QueueFamilyIds = ProjectHelper::QueryQueueFamilies(_internal, windowSurface);
 }
 
@@ -117,5 +118,27 @@ VkPhysicalDevice VkPhysicalDeviceHandler::Get() const
 
 VkPhysicalDeviceHandler::~VkPhysicalDeviceHandler()
 {
+#ifdef M3VK_MEMORYLOG
     DebugLayer::Log(DebugLayer::LogType::DESTROY, "VkPhysicalDeviceHandler Destroyed !");
+#endif
+}
+
+VkPhysicalDeviceHandler::VkPhysicalDeviceHandler(VkPhysicalDeviceHandler && other) noexcept
+{
+#ifdef M3VK_MEMORYLOG
+    DebugLayer::Log(DebugLayer::LogType::CREATE, "VkPhysicalDeviceHandler Move Creation !");
+#endif
+
+    // Note : Since this is not allocated memory, no need to release the previous one
+    _internal = other._internal;
+}
+
+VkPhysicalDeviceHandler& VkPhysicalDeviceHandler::operator=(VkPhysicalDeviceHandler&& other) noexcept
+{
+    if(this != &other)
+    {
+        _internal = other._internal;
+    }
+
+    return *this;
 }

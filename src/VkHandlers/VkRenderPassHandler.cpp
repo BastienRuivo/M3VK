@@ -56,7 +56,9 @@ VkRenderPassHandler::VkRenderPassHandler(VkDevice device, VkFormat imageFormat)
         throw std::runtime_error("Failed to create render pass");
     }
 
+#ifdef M3VK_MEMORYLOG
     DebugLayer::Log(DebugLayer::LogType::CREATE, "VkRenderPassHandler Creation !");
+#endif
 }
 
 VkRenderPass VkRenderPassHandler::Get() const
@@ -66,6 +68,34 @@ VkRenderPass VkRenderPassHandler::Get() const
 
 VkRenderPassHandler::~VkRenderPassHandler()
 {
+    if(_internal == VK_NULL_HANDLE) return;
+
     vkDestroyRenderPass(_device, _internal, nullptr);
+
+#ifdef M3VK_MEMORYLOG
     DebugLayer::Log(DebugLayer::LogType::DESTROY, "VkRenderPassHandler Destroyed !");
+#endif
+}
+
+VkRenderPassHandler::VkRenderPassHandler(VkRenderPassHandler && other) noexcept
+{
+#ifdef M3VK_MEMORYLOG
+    DebugLayer::Log(DebugLayer::LogType::CREATE, "VkRenderPassHandler Move Creation !");
+#endif
+
+    _internal = other._internal;
+    _device = other._device;
+    other._internal = VK_NULL_HANDLE;
+}
+
+VkRenderPassHandler& VkRenderPassHandler::operator=(VkRenderPassHandler&& other) noexcept
+{
+    if(this != &other)
+    {
+        _internal = other._internal;
+        _device = other._device;
+        other._internal = VK_NULL_HANDLE;
+    }
+
+    return *this;
 }

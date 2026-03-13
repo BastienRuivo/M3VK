@@ -85,26 +85,34 @@ VkPresentModeKHR SwapChain::SelectSwapPresentMode(const std::vector<VkPresentMod
 
     if(hasTripleBuffering)
     {
+#ifdef M3VK_VERBOSE_LOG
         DebugLayer::Log(DebugLayer::LogType::INFO, "Swap chain mode : Triple buffering");
+#endif
         return VK_PRESENT_MODE_MAILBOX_KHR;
     }
     else if(hasVBlank)
     {
+#ifdef M3VK_VERBOSE_LOG
         DebugLayer::Log(DebugLayer::LogType::INFO, "Swap chain mode : VBlank");
+#endif
         return VK_PRESENT_MODE_FIFO_KHR;
     }
     else if(hasRelaxedDoubleBuffering)
     {
+#ifdef M3VK_VERBOSE_LOG
         DebugLayer::Log(DebugLayer::LogType::INFO, "Swap chain mode : Relaxed VBlank");
+#endif
         return VK_PRESENT_MODE_FIFO_RELAXED_KHR;
     }
     else if(hasImmediateMode)
     {
+#ifdef M3VK_VERBOSE_LOG
         DebugLayer::Log(DebugLayer::LogType::INFO, "Swap chain mode : Immediate");
+#endif
         return VK_PRESENT_MODE_IMMEDIATE_KHR;
     }
 
-    DebugLayer::Log(DebugLayer::LogType::ERROR, "NO SWAP CHAIN MODE FOUND ! Fallbacked to VBlank");
+    DebugLayer::Log(DebugLayer::LogType::WARNING, "NO SWAP CHAIN MODE FOUND ! Fallbacked to VBlank");
     return VK_PRESENT_MODE_FIFO_KHR;
 }
 
@@ -125,7 +133,10 @@ VkSurfaceFormatKHR SwapChain::SelectSwapSurfaceFormat(const std::vector<VkSurfac
 
 SwapChain::SwapChain(const Window& window, VkPhysicalDevice physicalDevice, VkDevice device, VkSurfaceKHR windowSurface)
 {
+#ifdef M3VK_MEMORYLOG
     DebugLayer::Log(DebugLayer::LogType::CREATE, "SwapChain Creation !");
+#endif
+
     _device = device;
 
     ProjectHelper::SwapChainSupportDetails details = ProjectHelper::QuerySwapChainSupportDetail(physicalDevice, windowSurface);
@@ -203,5 +214,8 @@ SwapChain::~SwapChain()
         vkDestroyImageView(_device, imageView, nullptr);
     }
     vkDestroySwapchainKHR(_device, _internal, nullptr);
+
+#ifdef M3VK_MEMORYLOG
     DebugLayer::Log(DebugLayer::LogType::DESTROY, "SwapChain Destruction !");
+#endif
 }

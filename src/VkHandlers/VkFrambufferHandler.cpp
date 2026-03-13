@@ -6,7 +6,9 @@
 
 VkFramebufferHandler::VkFramebufferHandler(VkDevice device, VkRenderPass renderPass, VkExtent2D imageExtent, std::vector<VkImageView> imageViews)
 {
+#ifdef M3VK_MEMORYLOG
     DebugLayer::Log(DebugLayer::LogType::CREATE, "VkFramebufferHandler Creation !");
+#endif
 
     _device = device;
 
@@ -25,14 +27,6 @@ VkFramebufferHandler::VkFramebufferHandler(VkDevice device, VkRenderPass renderP
     }
 }
 
-VkFramebufferHandler::VkFramebufferHandler(VkFramebufferHandler&& other)
-{
-    DebugLayer::Log(DebugLayer::LogType::CREATE, "VkFramebufferHandler Copy Creation !");
-    _device = other._device;
-    _internal = other._internal;
-    other._internal = VK_NULL_HANDLE;
-}
-
 VkFramebuffer VkFramebufferHandler::Get() const
 {
     return _internal;
@@ -40,9 +34,34 @@ VkFramebuffer VkFramebufferHandler::Get() const
 
 VkFramebufferHandler::~VkFramebufferHandler()
 {
-    if(_internal != VK_NULL_HANDLE)
-    {
-        vkDestroyFramebuffer(_device, _internal, nullptr);
-    }
+    if(_internal == VK_NULL_HANDLE) return;
+
+    vkDestroyFramebuffer(_device, _internal, nullptr);
+
+#ifdef M3VK_MEMORYLOG
     DebugLayer::Log(DebugLayer::LogType::DESTROY, "VkFramebufferHandler Destroyed !");
+#endif
+}
+
+VkFramebufferHandler::VkFramebufferHandler(VkFramebufferHandler && other) noexcept
+{
+#ifdef M3VK_MEMORYLOG
+    DebugLayer::Log(DebugLayer::LogType::CREATE, "VkFramebufferHandler Move Creation !");
+#endif
+
+    _internal = other._internal;
+    _device = other._device;
+    other._internal = VK_NULL_HANDLE;
+}
+
+VkFramebufferHandler& VkFramebufferHandler::operator=(VkFramebufferHandler&& other) noexcept
+{
+    if(this != &other)
+    {
+        _internal = other._internal;
+        _device = other._device;
+        other._internal = VK_NULL_HANDLE;
+    }
+
+    return *this;
 }

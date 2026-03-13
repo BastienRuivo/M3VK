@@ -5,7 +5,9 @@
 
 VkDescriptorSetLayoutHandler::VkDescriptorSetLayoutHandler(VkDevice device)
 {
+#ifdef M3VK_MEMORYLOG
     DebugLayer::Log(DebugLayer::LogType::CREATE, "VkDescriptorSetLayoutHandler Creation !");
+#endif
 
     _device = device;
 
@@ -34,6 +36,34 @@ VkDescriptorSetLayout VkDescriptorSetLayoutHandler::Get() const
 
 VkDescriptorSetLayoutHandler::~VkDescriptorSetLayoutHandler()
 {
+    if(_internal == VK_NULL_HANDLE) return;
+
     vkDestroyDescriptorSetLayout(_device, _internal, nullptr);
+
+#ifdef M3VK_MEMORYLOG
     DebugLayer::Log(DebugLayer::LogType::DESTROY, "VkDescriptorSetLayoutHandler Destroyed !");
+#endif
+}
+
+VkDescriptorSetLayoutHandler::VkDescriptorSetLayoutHandler(VkDescriptorSetLayoutHandler && other) noexcept
+{
+#ifdef M3VK_MEMORYLOG
+    DebugLayer::Log(DebugLayer::LogType::CREATE, "VkDescriptorSetLayoutHandler Move Creation !");
+#endif
+
+    _internal = other._internal;
+    _device = other._device;
+    other._internal = VK_NULL_HANDLE;
+}
+
+VkDescriptorSetLayoutHandler& VkDescriptorSetLayoutHandler::operator=(VkDescriptorSetLayoutHandler&& other) noexcept
+{
+    if(this != &other)
+    {
+        _internal = other._internal;
+        _device = other._device;
+        other._internal = VK_NULL_HANDLE;
+    }
+
+    return *this;
 }

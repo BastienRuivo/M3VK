@@ -7,7 +7,9 @@
 
 VkPipelineHandler::VkPipelineHandler(const VkExtent2D& appExtent, VkDevice device, VkPipelineLayout pipelineLayout, VkRenderPass renderPass)
 {
+#ifdef M3VK_MEMORYLOG
     DebugLayer::Log(DebugLayer::LogType::CREATE, "VkPipelineHandler Creation !");
+#endif
 
     _device = device;
 
@@ -164,6 +166,33 @@ VkPipeline VkPipelineHandler::Get() const
 
 VkPipelineHandler::~VkPipelineHandler()
 {
+    if(_internal == VK_NULL_HANDLE) return;
     vkDestroyPipeline(_device, _internal, nullptr);
+
+#ifdef M3VK_MEMORYLOG
     DebugLayer::Log(DebugLayer::LogType::DESTROY, "VkPipelineHandler Destroyed !");
+#endif
+}
+
+VkPipelineHandler::VkPipelineHandler(VkPipelineHandler && other) noexcept
+{
+#ifdef M3VK_MEMORYLOG
+    DebugLayer::Log(DebugLayer::LogType::CREATE, "VkPipelineHandler Move Creation !");
+#endif
+
+    _internal = other._internal;
+    _device = other._device;
+    other._internal = VK_NULL_HANDLE;
+}
+
+VkPipelineHandler& VkPipelineHandler::operator=(VkPipelineHandler&& other) noexcept
+{
+    if(this != &other)
+    {
+        _internal = other._internal;
+        _device = other._device;
+        other._internal = VK_NULL_HANDLE;
+    }
+
+    return *this;
 }

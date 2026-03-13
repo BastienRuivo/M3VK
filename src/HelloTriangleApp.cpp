@@ -317,7 +317,9 @@ HelloTriangleApp::HelloTriangleApp() :
     _instanceHandler(),
     _window(1920, 1080, "Window", this, FramebufferResizeCallback)
 {
+#ifdef M3VK_MEMORYLOG
     DebugLayer::Log(DebugLayer::LogType::CREATE, "HelloTriangleApp Creation !");
+#endif
 
     CreatCommandPool();
     CreateCameraDataBuffers();
@@ -370,7 +372,10 @@ HelloTriangleApp::~HelloTriangleApp()
     }
 
     vkDestroyDescriptorPool(_deviceHandler.Get(), _descriptorPool, nullptr);
+
+#ifdef M3VK_MEMORYLOG
     DebugLayer::Log(DebugLayer::LogType::DESTROY, "HelloTriangleApp Destroyed !");
+#endif
 }
 
 void HelloTriangleApp::Run()

@@ -38,14 +38,6 @@ void DebugLayer::Log(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, con
 void DebugLayer::Log(DebugLayer::LogType LogType, const std::string& message)
 {
     if(!Enabled) return;
-    #ifndef M3VK_VERBOSE_LOG
-        if(LogType == DebugLayer::LogType::INFO || DebugLayer::LogType::VERBOSE) return;
-    #endif
-
-    #ifndef M3VK_MEMORYLOG
-        if(LogType == DebugLayer::LogType::CREATE || DebugLayer::LogType::DESTROY) return;
-    #endif
-
 
     const char * color = nullptr;
     const char * title = nullptr;
@@ -190,7 +182,10 @@ void DebugLayer::PopulateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInf
 
 DebugLayer::DebugLayer(VkInstance instance)
 {
+#ifdef M3VK_MEMORYLOG
     DebugLayer::Log(DebugLayer::LogType::CREATE, "DebugLayer Creation !");
+#endif
+
     if(!Enabled) return;
     _instance = instance;
 
@@ -205,7 +200,10 @@ DebugLayer::DebugLayer(VkInstance instance)
 
 DebugLayer::~DebugLayer()
 {
+#ifdef M3VK_MEMORYLOG
     DebugLayer::Log(DebugLayer::LogType::DESTROY, "DebugLayer Destroyed !");
+#endif
+
     if (!Enabled) return;
     M3VK_DestroyDebugUtilsMessengerEXT(_instance, _debugMessenger, nullptr);
 }

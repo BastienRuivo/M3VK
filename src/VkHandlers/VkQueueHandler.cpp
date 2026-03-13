@@ -7,7 +7,9 @@
 
 VkQueueHandler::VkQueueHandler(VkDevice device, const ProjectHelper::QueueFamilyIds& queueFamilyIds, VkQueueHandler::QueueTypeEnum queueType)
 {
+#ifdef M3VK_MEMORYLOG
     DebugLayer::Log(DebugLayer::LogType::CREATE, "VkQueueHandler Creation !");
+#endif
 
     uint32_t family;
 
@@ -17,7 +19,6 @@ VkQueueHandler::VkQueueHandler(VkDevice device, const ProjectHelper::QueueFamily
         case Graphics: family = queueFamilyIds.Graphics.value(); break;
         default: throw std::runtime_error("Unimplemented graphics queue type");
     }
-
 
     vkGetDeviceQueue(device, family, 0, &_internal);
     _queueFamilyIndex = family;
@@ -41,5 +42,27 @@ VkQueueHandler::QueueTypeEnum VkQueueHandler::QueueType() const
 
 VkQueueHandler::~VkQueueHandler()
 {
+#ifdef M3VK_MEMORYLOG
     DebugLayer::Log(DebugLayer::LogType::DESTROY, "VkQueueHandler Destroyed !");
+#endif
+}
+
+VkQueueHandler::VkQueueHandler(VkQueueHandler && other) noexcept
+{
+#ifdef M3VK_MEMORYLOG
+    DebugLayer::Log(DebugLayer::LogType::CREATE, "VkQueueHandler Move Creation !");
+#endif
+
+    // No allocation done on this class, so no need to release the other
+    _internal = other._internal;
+}
+
+VkQueueHandler& VkQueueHandler::operator=(VkQueueHandler&& other) noexcept
+{
+    if(this != &other)
+    {
+        _internal = other._internal;
+    }
+
+    return *this;
 }

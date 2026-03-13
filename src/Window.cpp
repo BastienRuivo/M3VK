@@ -3,7 +3,9 @@
 
 Window::Window(int width, int height, const char* title, void* resizeObject, GLFWframebuffersizefun resizeCallback)
 {
+#ifdef M3VK_MEMORYLOG
     DebugLayer::Log(DebugLayer::LogType::CREATE, "Window Creation !");
+#endif
 
     _width = width;
     _height = height;
@@ -50,5 +52,7 @@ Window::~Window()
     glfwDestroyWindow(_pWindow);
     glfwTerminate();
 
+#ifdef M3VK_MEMORYLOG
     DebugLayer::Log(DebugLayer::LogType::DESTROY, "Window Destroyed !");
+#endif
 }
