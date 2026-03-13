@@ -1,7 +1,6 @@
 #include "header/HelloTriangleApp.h"
 #include "header/CommandBuffer.h"
 #include "header/GraphicsBuffer.h"
-#include "header/ProjectHelper.h"
 #include "header/SwapChain.h"
 #include "header/DebugLayer.h"
 #include "header/VkHandlers/VkFramebufferHandler.h"
@@ -16,7 +15,6 @@
 #include <glm/fwd.hpp>
 #include <glm/trigonometric.hpp>
 #include <memory>
-#include <optional>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -136,8 +134,8 @@ void HelloTriangleApp::RefreshSwapChain()
     _swapChain.reset();
     _swapChain = std::make_unique<SwapChain>(_window, _physicalDeviceHandler.Get(), _deviceHandler.Get(), _windowSurfaceHandler.Get());
 
-    _framebuffers.clear();
-    _framebuffers = CreateFrameBuffers();
+    _framebuffersHandler.clear();
+    _framebuffersHandler = CreateFrameBuffers();
 }
 
 void HelloTriangleApp::CreateSyncObject()
@@ -241,7 +239,7 @@ void HelloTriangleApp::RecordCommandBuffer(CommandBuffer cmdBuffer, uint32_t cur
 {
     cmdBuffer.Begin();
     {
-        cmdBuffer.BeginRenderPass(_renderPassHandler.Get(), _framebuffers[imageIndex].Get(), {0, 0, 0, 0}, _swapChain->Extent);
+        cmdBuffer.BeginRenderPass(_renderPassHandler.Get(), _framebuffersHandler[imageIndex].Get(), {0, 0, 0, 0}, _swapChain->Extent);
         {
             cmdBuffer.BindPipeline(_graphicsPipelineHandler.Get(), VK_PIPELINE_BIND_POINT_GRAPHICS);
             cmdBuffer.SetViewport(_swapChain->Extent.width, _swapChain->Extent.height);
@@ -263,26 +261,9 @@ void HelloTriangleApp::CreateCommandBuffers()
     // Allocate in batch ?
     for (int i = 0; i < HelloTriangleApp::MaxFrameInCount; ++i)
     {
-        CommandBuffer cmdBuffer(_deviceHandler.Get(), _graphicsCommandPool, _graphicsQueueHandler.Get());
+        CommandBuffer cmdBuffer(_deviceHandler.Get(), _graphicsCommandPoolHandler.Get(), _graphicsQueueHandler.Get());
         _commandBuffers.emplace_back(cmdBuffer);
     }
-}
-
-void HelloTriangleApp::CreatCommandPool()
-{
-    ProjectHelper::QueueFamilyIds queueFamilyId = ProjectHelper::QueryQueueFamilies(_physicalDeviceHandler.Get(), _windowSurfaceHandler.Get());
-
-    VkCommandPoolCreateInfo poolInfo{};
-    poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-    poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-    poolInfo.queueFamilyIndex = queueFamilyId.Graphics.value();
-
-    if(vkCreateCommandPool(_deviceHandler.Get(), &poolInfo, nullptr, &_graphicsCommandPool) != VK_SUCCESS)
-    {
-        throw std::runtime_error("Failed to create command pool !");
-    }
-
-
 }
 
 std::vector<VkFramebufferHandler> HelloTriangleApp::CreateFrameBuffers()
@@ -302,7 +283,8 @@ std::vector<VkFramebufferHandler> HelloTriangleApp::CreateFrameBuffers()
 }
 
 HelloTriangleApp::HelloTriangleApp() :
-    _framebuffers(CreateFrameBuffers()),
+    _graphicsCommandPoolHandler(_deviceHandler.Get(), _physicalDeviceHandler.QueueFamilyIds),
+    _framebuffersHandler(CreateFrameBuffers()),
     _graphicsPipelineHandler(_swapChain->Extent, _deviceHandler.Get(), _pipelineLayoutHandler.Get(), _renderPassHandler.Get()),
     _pipelineLayoutHandler(_deviceHandler.Get(), _descriptorSetLayoutHandler.Get()),
     _descriptorSetLayoutHandler(_deviceHandler.Get()),
@@ -321,17 +303,16 @@ HelloTriangleApp::HelloTriangleApp() :
     DebugLayer::Log(DebugLayer::LogType::CREATE, "HelloTriangleApp Creation !");
 #endif
 
-    CreatCommandPool();
     CreateCameraDataBuffers();
     CreateDescriptorPool();
     CreateDescriptorSet();
 
     // init data
     _indexBuffer.Create(_physicalDeviceHandler.Get(), _deviceHandler.Get(), _indices.size(), sizeof(_indices[0]), GraphicsBuffer::BufferType::INDEX);
-    _indexBuffer.CopyToBuffer(_physicalDeviceHandler.Get(), _deviceHandler.Get(), _graphicsQueueHandler.Get(), _graphicsCommandPool, (void*)_indices.data(), _indexBuffer.GetSize());
+    _indexBuffer.CopyToBuffer(_physicalDeviceHandler.Get(), _deviceHandler.Get(), _graphicsQueueHandler.Get(), _graphicsCommandPoolHandler.Get(), (void*)_indices.data(), _indexBuffer.GetSize());
 
     _vertexBuffer.Create(_physicalDeviceHandler.Get(), _deviceHandler.Get(), _vertices.size(), sizeof(_vertices[0]), GraphicsBuffer::BufferType::VERTEX);
-    _vertexBuffer.CopyToBuffer(_physicalDeviceHandler.Get(), _deviceHandler.Get(), _graphicsQueueHandler.Get(), _graphicsCommandPool, (void*)_vertices.data(), _vertexBuffer.GetSize());
+    _vertexBuffer.CopyToBuffer(_physicalDeviceHandler.Get(), _deviceHandler.Get(), _graphicsQueueHandler.Get(), _graphicsCommandPoolHandler.Get(), (void*)_vertices.data(), _vertexBuffer.GetSize());
 
     CreateCommandBuffers();
     CreateSyncObject();
@@ -360,8 +341,6 @@ HelloTriangleApp::~HelloTriangleApp()
     {
         vkDestroySemaphore(_deviceHandler.Get(), _renderFinishedSemaphores[i], nullptr);
     }
-
-    vkDestroyCommandPool(_deviceHandler.Get(), _graphicsCommandPool, nullptr);
 
     _vertexBuffer.DisposeBuffer(_deviceHandler.Get());
     _indexBuffer.DisposeBuffer(_deviceHandler.Get());

@@ -2,6 +2,7 @@
 
 #include "header/CommandBuffer.h"
 #include "header/Vertex.h"
+#include "header/VkHandlers/VkCommandPoolHandler.h"
 #include "header/VkHandlers/VkDescriptorSetLayoutHandler.h"
 #include "header/VkHandlers/VkDeviceHandler.h"
 #include "header/VkHandlers/VkFramebufferHandler.h"
@@ -94,10 +95,11 @@ class HelloTriangleApp
     VkPipelineLayoutHandler _pipelineLayoutHandler;
     VkPipelineHandler _graphicsPipelineHandler;
 
-    std::vector<VkFramebufferHandler> _framebuffers;
+    std::vector<VkFramebufferHandler> _framebuffersHandler;
+
+    VkCommandPoolHandler _graphicsCommandPoolHandler;
 
     // Window API surface
-    VkCommandPool _graphicsCommandPool;
 
 
     // Queues
