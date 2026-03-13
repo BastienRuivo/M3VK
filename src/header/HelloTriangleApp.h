@@ -4,6 +4,7 @@
 #include "header/Vertex.h"
 #include "header/VkHandlers/VkDescriptorSetLayoutHandler.h"
 #include "header/VkHandlers/VkDeviceHandler.h"
+#include "header/VkHandlers/VkFramebufferHandler.h"
 #include "header/VkHandlers/VkInstanceHandler.h"
 #include "header/VkHandlers/VkPhysicalDeviceHandler.h"
 #include "header/VkHandlers/VkPipelineHandler.h"
@@ -93,9 +94,9 @@ class HelloTriangleApp
     VkPipelineLayoutHandler _pipelineLayoutHandler;
     VkPipelineHandler _graphicsPipelineHandler;
 
+    std::vector<VkFramebufferHandler> _framebuffers;
 
     // Window API surface
-    std::vector<VkFramebuffer> _framebuffers;
     VkCommandPool _graphicsCommandPool;
 
 
@@ -120,7 +121,7 @@ class HelloTriangleApp
     GraphicsBuffer _vertexBuffer;
     GraphicsBuffer _indexBuffer;
 
-    void CreateFrameBuffers();
+    std::vector<VkFramebufferHandler> CreateFrameBuffers();
     void CreatCommandPool();
     void CreateCommandBuffers();
     void CreateSyncObject();
@@ -128,7 +129,6 @@ class HelloTriangleApp
     void CreateDescriptorPool();
     void CreateDescriptorSet();
 
-    void DisposeFramebuffers();
     void RefreshSwapChain();
 
     void UpdateCameraData(uint32_t currentImage);

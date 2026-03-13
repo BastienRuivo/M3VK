@@ -4,6 +4,7 @@
 #include "header/ProjectHelper.h"
 #include "header/SwapChain.h"
 #include "header/DebugLayer.h"
+#include "header/VkHandlers/VkFramebufferHandler.h"
 #include <GLFW/glfw3.h>
 #include <chrono>
 #include <cstddef>
@@ -127,24 +128,16 @@ void HelloTriangleApp::FramebufferResized()
     _framebufferResized = true;
 }
 
-void HelloTriangleApp::DisposeFramebuffers()
-{
-    for(size_t i = 0; i < _framebuffers.size(); ++i)
-    {
-        vkDestroyFramebuffer(_deviceHandler.Get(), _framebuffers[i], nullptr);
-    }
-}
-
 void HelloTriangleApp::RefreshSwapChain()
 {
     vkDeviceWaitIdle(_deviceHandler.Get());
 
-    DisposeFramebuffers();
-
     // TODO : Swap chain is currently resetted the first frame beacause it is out of date
     _swapChain.reset();
     _swapChain = std::make_unique<SwapChain>(_window, _physicalDeviceHandler.Get(), _deviceHandler.Get(), _windowSurfaceHandler.Get());
-    CreateFrameBuffers();
+
+    _framebuffers.clear();
+    _framebuffers = CreateFrameBuffers();
 }
 
 void HelloTriangleApp::CreateSyncObject()
@@ -248,7 +241,7 @@ void HelloTriangleApp::RecordCommandBuffer(CommandBuffer cmdBuffer, uint32_t cur
 {
     cmdBuffer.Begin();
     {
-        cmdBuffer.BeginRenderPass(_renderPassHandler.Get(), _framebuffers[imageIndex], {0, 0, 0, 0}, _swapChain->Extent);
+        cmdBuffer.BeginRenderPass(_renderPassHandler.Get(), _framebuffers[imageIndex].Get(), {0, 0, 0, 0}, _swapChain->Extent);
         {
             cmdBuffer.BindPipeline(_graphicsPipelineHandler.Get(), VK_PIPELINE_BIND_POINT_GRAPHICS);
             cmdBuffer.SetViewport(_swapChain->Extent.width, _swapChain->Extent.height);
@@ -292,33 +285,24 @@ void HelloTriangleApp::CreatCommandPool()
 
 }
 
-void HelloTriangleApp::CreateFrameBuffers()
+std::vector<VkFramebufferHandler> HelloTriangleApp::CreateFrameBuffers()
 {
-    _framebuffers.resize(_swapChain->ImageViews.size());
+    std::vector<VkFramebufferHandler> framebuffers;
+    framebuffers.reserve(_swapChain->ImageViews.size());
 
     for(size_t i = 0; i < _swapChain->ImageViews.size(); ++i)
     {
-        VkImageView attachments[] = {
+        std::vector<VkImageView> attachments = {
             _swapChain->ImageViews[i]
         };
-
-        VkFramebufferCreateInfo createInfo{};
-        createInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-        createInfo.renderPass = _renderPassHandler.Get();
-        createInfo.attachmentCount = 1;
-        createInfo.pAttachments = attachments;
-        createInfo.width = _swapChain->Extent.width;
-        createInfo.height = _swapChain->Extent.height;
-        createInfo.layers = 1;
-
-        if(vkCreateFramebuffer(_deviceHandler.Get(), &createInfo, nullptr, &_framebuffers[i]) != VK_SUCCESS)
-        {
-            throw std::runtime_error("failed to create framebuffer !");
-        }
+        // emplace back to avoid a temp obejct
+        framebuffers.emplace_back(_deviceHandler.Get(), _renderPassHandler.Get(), _swapChain->Extent, attachments);
     }
+    return framebuffers;
 }
 
 HelloTriangleApp::HelloTriangleApp() :
+    _framebuffers(CreateFrameBuffers()),
     _graphicsPipelineHandler(_swapChain->Extent, _deviceHandler.Get(), _pipelineLayoutHandler.Get(), _renderPassHandler.Get()),
     _pipelineLayoutHandler(_deviceHandler.Get(), _descriptorSetLayoutHandler.Get()),
     _descriptorSetLayoutHandler(_deviceHandler.Get()),
@@ -335,7 +319,6 @@ HelloTriangleApp::HelloTriangleApp() :
 {
     DebugLayer::Log(DebugLayer::LogType::CREATE, "HelloTriangleApp Creation !");
 
-    CreateFrameBuffers();
     CreatCommandPool();
     CreateCameraDataBuffers();
     CreateDescriptorPool();
@@ -377,7 +360,6 @@ HelloTriangleApp::~HelloTriangleApp()
     }
 
     vkDestroyCommandPool(_deviceHandler.Get(), _graphicsCommandPool, nullptr);
-    DisposeFramebuffers();
 
     _vertexBuffer.DisposeBuffer(_deviceHandler.Get());
     _indexBuffer.DisposeBuffer(_deviceHandler.Get());
