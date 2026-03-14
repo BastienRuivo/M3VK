@@ -6,14 +6,21 @@ class StageBuffer
 {
     friend class GraphicsBuffer;
     public:
-    void Create(const VkPhysicalDevice& physicalDevice, const VkDevice& device, VkDeviceSize size);
-    void DisposeBuffer(const VkDevice& device);
+    StageBuffer(VkPhysicalDevice physicalDevice, VkDevice device, VkDeviceSize size);
+    ~StageBuffer();
+
+    StageBuffer(StageBuffer&& other) noexcept;
+    StageBuffer& operator=(StageBuffer&& other) noexcept;
+
+    StageBuffer(const StageBuffer&) = delete;
+    StageBuffer& operator=(const StageBuffer&) = delete;
 
     void CopyToBuffer(const VkDevice& device, void* srcData, VkDeviceSize copySize);
 
     private:
-    VkBuffer _buffer;
-    VkDeviceMemory _memory;
+    VkBuffer _internal;
+    VkDeviceMemory _memoryInternal;
+    VkDevice _device;
 };
 
 
