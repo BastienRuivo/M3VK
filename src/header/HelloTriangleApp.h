@@ -3,6 +3,7 @@
 #include "header/CommandBuffer.h"
 #include "header/Vertex.h"
 #include "header/VkHandlers/VkCommandPoolHandler.h"
+#include "header/VkHandlers/VkDescriptorPoolHandler.h"
 #include "header/VkHandlers/VkDescriptorSetLayoutHandler.h"
 #include "header/VkHandlers/VkDeviceHandler.h"
 #include "header/VkHandlers/VkFramebufferHandler.h"
@@ -104,6 +105,7 @@ class HelloTriangleApp
     GraphicsBuffer _indexBuffer;
 
     std::vector<CommandBuffer> _commandBuffers;
+    VkDescriptorPoolHandler _descriptorPoolHandler;
 
     // GPU Sync
     std::vector<VkSemaphore> _availableImageSemaphores;
@@ -111,7 +113,6 @@ class HelloTriangleApp
     std::vector<VkFence>  _waitFences;
 
 
-    VkDescriptorPool _descriptorPool;
     std::vector<VkDescriptorSet> _descriptorSets;
 
     std::vector<GraphicsBuffer> _cameraDataBuffers;
@@ -120,7 +121,7 @@ class HelloTriangleApp
     void CreatCommandPool();
     void CreateCommandBuffers();
     void CreateSyncObject();
-    void CreateCameraDataBuffers();
+    std::vector<GraphicsBuffer> CreateCameraDataBuffers();
     void CreateDescriptorPool();
     void CreateDescriptorSet();
 

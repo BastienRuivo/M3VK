@@ -113,6 +113,9 @@ VkDeviceSize GraphicsBuffer::GetStride() const
 
 GraphicsBuffer::GraphicsBuffer(const VkPhysicalDeviceHandler& physicalDevice, VkDevice device, VkDeviceSize count, VkDeviceSize stride, BufferType type)
 {
+#ifdef M3VK_MEMORYLOG
+    DebugLayer::Log(DebugLayer::LogType::CREATE, "GraphicsBuffer Creation !");
+#endif
     _device = device;
     // mean it's a dst buffer, already in good memory shape but cant be writable directly by cpu
     VkBufferUsageFlags usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT;
@@ -179,10 +182,6 @@ GraphicsBuffer::GraphicsBuffer(const VkPhysicalDeviceHandler& physicalDevice, Vk
 
 void GraphicsBuffer::CopyToBuffer(const VkPhysicalDeviceHandler& physicalDevice, const VkDevice& device, const VkQueue& queue, const VkCommandPool& cmdPool, void* srcData, VkDeviceSize size)
 {
-#ifdef M3VK_MEMORYLOG
-    DebugLayer::Log(DebugLayer::LogType::CREATE, "GraphicsBuffer Creation !");
-#endif
-
     StageBuffer copyBuffer(physicalDevice, device, size);
     copyBuffer.CopyToBuffer(device, srcData, size);
 

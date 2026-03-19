@@ -16,7 +16,15 @@
 #include <glm/trigonometric.hpp>
 #include <memory>
 #include <stdexcept>
+
+#ifdef M3VK_VERBOSE_LOG
 #include <string>
+#endif
+
+#ifdef M3VK_MEMORYLOG
+#include <string>
+#endif
+
 #include <vector>
 #include <vulkan/vulkan_core.h>
 
@@ -29,7 +37,7 @@ void HelloTriangleApp::CreateDescriptorSet()
     std::vector<VkDescriptorSetLayout> layouts(MaxFrameInCount, _descriptorSetLayoutHandler.Get());
     VkDescriptorSetAllocateInfo allocateInfo{};
     allocateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    allocateInfo.descriptorPool = _descriptorPool;
+    allocateInfo.descriptorPool = _descriptorPoolHandler.Get();
     allocateInfo.descriptorSetCount = static_cast<uint32_t>(MaxFrameInCount);
     allocateInfo.pSetLayouts = layouts.data();
 
@@ -61,24 +69,6 @@ void HelloTriangleApp::CreateDescriptorSet()
     }
 }
 
-void HelloTriangleApp::CreateDescriptorPool()
-{
-    VkDescriptorPoolSize poolSize{};
-    poolSize.descriptorCount = MaxFrameInCount;
-    poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-
-    VkDescriptorPoolCreateInfo poolCreateInfo{};
-    poolCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-    poolCreateInfo.poolSizeCount = 1;
-    poolCreateInfo.pPoolSizes = &poolSize;
-    poolCreateInfo.maxSets = static_cast<uint32_t>(MaxFrameInCount);
-
-    if(vkCreateDescriptorPool(_deviceHandler.Get(), &poolCreateInfo, nullptr, &_descriptorPool) != VK_SUCCESS)
-    {
-        throw std::runtime_error("VK Create Descriptor Pool Failed !");
-    }
-}
-
 void HelloTriangleApp::UpdateCameraData(uint32_t currentFrame)
 {
     static auto startTime = std::chrono::high_resolution_clock::now();
@@ -97,14 +87,17 @@ void HelloTriangleApp::UpdateCameraData(uint32_t currentFrame)
     memcpy(_cameraDataBuffers[currentFrame].GetDataPtr(), &cameraData, sizeof(cameraData));
 }
 
-void HelloTriangleApp::CreateCameraDataBuffers()
+std::vector<GraphicsBuffer> HelloTriangleApp::CreateCameraDataBuffers()
 {
-    _cameraDataBuffers.reserve(MaxFrameInCount);
+    std::vector<GraphicsBuffer> cameraDataBuffers;
+    cameraDataBuffers.reserve(MaxFrameInCount);
 
     for(int i = 0; i < MaxFrameInCount; ++i)
     {
-        _cameraDataBuffers.emplace_back(_physicalDeviceHandler, _deviceHandler.Get(), 1, sizeof(CameraData), GraphicsBuffer::UNIFORM);
+        cameraDataBuffers.emplace_back(_physicalDeviceHandler, _deviceHandler.Get(), 1, sizeof(CameraData), GraphicsBuffer::UNIFORM);
     }
+
+    return cameraDataBuffers;
 }
 
 static void FramebufferResizeCallback(GLFWwindow* window, int width, int height)
@@ -281,6 +274,8 @@ std::vector<VkFramebufferHandler> HelloTriangleApp::CreateFrameBuffers()
 }
 
 HelloTriangleApp::HelloTriangleApp() :
+    _descriptorPoolHandler(_deviceHandler.Get(), static_cast<uint32_t>(MaxFrameInCount)),
+    _cameraDataBuffers(CreateCameraDataBuffers()),
     _vertexBuffer(_physicalDeviceHandler, _deviceHandler.Get(), _vertices.size(), sizeof(_vertices[0]), GraphicsBuffer::BufferType::VERTEX),
     _indexBuffer(_physicalDeviceHandler, _deviceHandler.Get(), _indices.size(), sizeof(_indices[0]), GraphicsBuffer::BufferType::INDEX),
     _graphicsCommandPoolHandler(_deviceHandler.Get(), _physicalDeviceHandler.QueueFamilyIds),
@@ -303,8 +298,6 @@ HelloTriangleApp::HelloTriangleApp() :
     DebugLayer::Log(DebugLayer::LogType::CREATE, "HelloTriangleApp Creation !");
 #endif
 
-    CreateCameraDataBuffers();
-    CreateDescriptorPool();
     CreateDescriptorSet();
 
     // init data
@@ -338,8 +331,6 @@ HelloTriangleApp::~HelloTriangleApp()
     {
         vkDestroySemaphore(_deviceHandler.Get(), _renderFinishedSemaphores[i], nullptr);
     }
-
-    vkDestroyDescriptorPool(_deviceHandler.Get(), _descriptorPool, nullptr);
 
 #ifdef M3VK_MEMORYLOG
     DebugLayer::Log(DebugLayer::LogType::DESTROY, "HelloTriangleApp Destroyed !");
