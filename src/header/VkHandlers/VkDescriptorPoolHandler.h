@@ -1,6 +1,5 @@
 #pragma once
 
-#include "header/ProjectHelper.h"
 #include <cstdint>
 #include <vulkan/vulkan_core.h>
 
