@@ -122,8 +122,6 @@ void HelloTriangleApp::RefreshSwapChain()
 
 void HelloTriangleApp::CreateSyncObject()
 {
-    _availableImageSemaphores.resize(HelloTriangleApp::MaxFrameInCount);
-    _renderFinishedSemaphores.resize(_swapChain->Images.size());
     _waitFences.resize(HelloTriangleApp::MaxFrameInCount);
 
     VkFenceCreateInfo fenceCreateInfo{};
@@ -136,23 +134,9 @@ void HelloTriangleApp::CreateSyncObject()
 
     for(size_t i = 0; i < HelloTriangleApp::MaxFrameInCount; ++i)
     {
-
-        if(vkCreateSemaphore(_deviceHandler.Get(), &semaphoreCreateInfo, nullptr, &_availableImageSemaphores[i]) != VK_SUCCESS)
-        {
-            throw std::runtime_error("Can't create image available semaphore");
-        }
-
         if(vkCreateFence(_deviceHandler.Get(), &fenceCreateInfo, nullptr, &_waitFences[i]) != VK_SUCCESS)
         {
             throw std::runtime_error("Can't create fence");
-        }
-    }
-
-    for(size_t i = 0; i < _swapChain->Images.size(); ++i)
-    {
-        if(vkCreateSemaphore(_deviceHandler.Get(), &semaphoreCreateInfo, nullptr, &_renderFinishedSemaphores[i]) != VK_SUCCESS)
-        {
-            throw std::runtime_error("Can't create render finished semaphore");
         }
     }
 }
@@ -163,7 +147,7 @@ void HelloTriangleApp::DrawFrame()
 
     // Acquire image to draw on
     uint32_t imageIndex;
-    VkResult result = vkAcquireNextImageKHR(_deviceHandler.Get(), _swapChain->_internal, UINT64_MAX, _availableImageSemaphores[_currentFrame], VK_NULL_HANDLE, &imageIndex);
+    VkResult result = vkAcquireNextImageKHR(_deviceHandler.Get(), _swapChain->_internal, UINT64_MAX, _availableImageSemaphore.GetInternal(_currentFrame), VK_NULL_HANDLE, &imageIndex);
 
     if(result == VK_ERROR_OUT_OF_DATE_KHR)
     {
@@ -184,9 +168,9 @@ void HelloTriangleApp::DrawFrame()
     RecordCommandBuffer(_commandBuffer.Get(_currentFrame), _currentFrame, imageIndex);
 
     // stackallocs that can be cached.
-    VkSemaphore wait[] = {_availableImageSemaphores[_currentFrame]};
+    VkSemaphore wait[] = {_availableImageSemaphore.GetInternal(_currentFrame)};
     VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
-    VkSemaphore signalSemaphore[] = {_renderFinishedSemaphores[imageIndex]};
+    VkSemaphore signalSemaphore[] = {_renderFinishedSemaphores.GetInternal(imageIndex)};
 
     _commandBuffer.Get(_currentFrame).Submit(wait, 1, waitStages, signalSemaphore, 1, _waitFences[_currentFrame]);
 
@@ -258,6 +242,8 @@ void HelloTriangleApp::InitFramebuffer(MultiFrameHandler<VkFramebufferHandler>& 
 }
 
 HelloTriangleApp::HelloTriangleApp() :
+    _availableImageSemaphore(MaxFrameInCount, _deviceHandler.Get()),
+    _renderFinishedSemaphores(_swapChain->Images.size(), _deviceHandler.Get()),
     _commandBuffer(static_cast<uint32_t>(MaxFrameInCount), _deviceHandler.Get(), _graphicsCommandPoolHandler.Get(), _graphicsQueueHandler.Get()),
     _descriptorSet(CreateDescriptorSet()),
     _descriptorPoolHandler(_deviceHandler.Get(), static_cast<uint32_t>(MaxFrameInCount)),
@@ -306,13 +292,7 @@ HelloTriangleApp::~HelloTriangleApp()
 {
     for(size_t i = 0; i < HelloTriangleApp::MaxFrameInCount; ++i)
     {
-        vkDestroySemaphore(_deviceHandler.Get(), _availableImageSemaphores[i], nullptr);
         vkDestroyFence(_deviceHandler.Get(), _waitFences[i], nullptr);
-    }
-
-    for(size_t i = 0; i < _swapChain->Images.size(); ++i)
-    {
-        vkDestroySemaphore(_deviceHandler.Get(), _renderFinishedSemaphores[i], nullptr);
     }
 
 #ifdef M3VK_MEMORYLOG

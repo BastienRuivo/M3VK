@@ -14,6 +14,7 @@
 #include "header/VkHandlers/VkPipelineLayoutHandler.h"
 #include "header/VkHandlers/VkQueueHandler.h"
 #include "header/VkHandlers/VkRenderPassHandler.h"
+#include "header/VkHandlers/VkSemaphoreHandler.h"
 #include "header/VkHandlers/VkSurfaceHandler.h"
 #include "header/Window.h"
 #include "header/GraphicsBuffer.h"
@@ -115,8 +116,8 @@ class HelloTriangleApp
     MultiFrameObject<CommandBuffer> _commandBuffer;
 
     // GPU Sync
-    std::vector<VkSemaphore> _availableImageSemaphores;
-    std::vector<VkSemaphore> _renderFinishedSemaphores;
+    MultiFrameHandler<VkSemaphoreHandler> _availableImageSemaphore;
+    MultiFrameHandler<VkSemaphoreHandler> _renderFinishedSemaphores;
     std::vector<VkFence>  _waitFences;
 
     void CreatCommandPool();
