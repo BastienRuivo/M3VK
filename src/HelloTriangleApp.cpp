@@ -180,15 +180,15 @@ void HelloTriangleApp::DrawFrame()
 
     UpdateCameraData(_currentFrame);
 
-    _commandBuffers[_currentFrame].Reset();
-    RecordCommandBuffer(_commandBuffers[_currentFrame], _currentFrame, imageIndex);
+    _commandBuffer.Get(_currentFrame).Reset();
+    RecordCommandBuffer(_commandBuffer.Get(_currentFrame), _currentFrame, imageIndex);
 
     // stackallocs that can be cached.
     VkSemaphore wait[] = {_availableImageSemaphores[_currentFrame]};
     VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
     VkSemaphore signalSemaphore[] = {_renderFinishedSemaphores[imageIndex]};
 
-    _commandBuffers[_currentFrame].Submit(wait, 1, waitStages, signalSemaphore, 1, _waitFences[_currentFrame]);
+    _commandBuffer.Get(_currentFrame).Submit(wait, 1, waitStages, signalSemaphore, 1, _waitFences[_currentFrame]);
 
     // actually present the frame
     VkPresentInfoKHR presentInfo{};
@@ -236,18 +236,6 @@ void HelloTriangleApp::RecordCommandBuffer(CommandBuffer cmdBuffer, uint32_t cur
     cmdBuffer.End();
 }
 
-void HelloTriangleApp::CreateCommandBuffers()
-{
-    _commandBuffers.reserve(HelloTriangleApp::MaxFrameInCount);
-
-    // Allocate in batch ?
-    for (int i = 0; i < HelloTriangleApp::MaxFrameInCount; ++i)
-    {
-        CommandBuffer cmdBuffer(_deviceHandler.Get(), _graphicsCommandPoolHandler.Get(), _graphicsQueueHandler.Get());
-        _commandBuffers.emplace_back(cmdBuffer);
-    }
-}
-
 MultiFrameHandler<VkFramebufferHandler> HelloTriangleApp::CreateFramebuffer()
 {
     MultiFrameHandler<VkFramebufferHandler> framebuffer(_swapChain->ImageViews.size());
@@ -270,6 +258,7 @@ void HelloTriangleApp::InitFramebuffer(MultiFrameHandler<VkFramebufferHandler>& 
 }
 
 HelloTriangleApp::HelloTriangleApp() :
+    _commandBuffer(static_cast<uint32_t>(MaxFrameInCount), _deviceHandler.Get(), _graphicsCommandPoolHandler.Get(), _graphicsQueueHandler.Get()),
     _descriptorSet(CreateDescriptorSet()),
     _descriptorPoolHandler(_deviceHandler.Get(), static_cast<uint32_t>(MaxFrameInCount)),
     _cameraDataBuffer(MaxFrameInCount, _physicalDeviceHandler, _deviceHandler.Get(), 1, sizeof(CameraData), GraphicsBuffer::UNIFORM),
@@ -299,7 +288,6 @@ HelloTriangleApp::HelloTriangleApp() :
     _indexBuffer.CopyToBuffer(_physicalDeviceHandler, _deviceHandler.Get(), _graphicsQueueHandler.Get(), _graphicsCommandPoolHandler.Get(), (void*)_indices.data(), _indexBuffer.GetSize());
     _vertexBuffer.CopyToBuffer(_physicalDeviceHandler, _deviceHandler.Get(), _graphicsQueueHandler.Get(), _graphicsCommandPoolHandler.Get(), (void*)_vertices.data(), _vertexBuffer.GetSize());
 
-    CreateCommandBuffers();
     CreateSyncObject();
 }
 

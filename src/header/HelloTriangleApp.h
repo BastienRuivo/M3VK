@@ -112,8 +112,7 @@ class HelloTriangleApp
 
     MultiFrameObject<VkDescriptorSet> _descriptorSet;
     MultiFrameObject<VkDescriptorSet> CreateDescriptorSet();
-
-    std::vector<CommandBuffer> _commandBuffers;
+    MultiFrameObject<CommandBuffer> _commandBuffer;
 
     // GPU Sync
     std::vector<VkSemaphore> _availableImageSemaphores;
@@ -121,7 +120,6 @@ class HelloTriangleApp
     std::vector<VkFence>  _waitFences;
 
     void CreatCommandPool();
-    void CreateCommandBuffers();
     void CreateSyncObject();
     void CreateDescriptorPool();
 
@@ -137,7 +135,6 @@ class HelloTriangleApp
     };
 
     uint32_t FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) const;
-
 
     //Actual logic
     void MainLoop();
