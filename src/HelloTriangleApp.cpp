@@ -33,7 +33,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-void HelloTriangleApp::CreateDescriptorSet()
+MultiFrameObject<VkDescriptorSet> HelloTriangleApp::CreateDescriptorSet()
 {
     std::vector<VkDescriptorSetLayout> layouts(MaxFrameInCount, _descriptorSetLayoutHandler.Get());
     VkDescriptorSetAllocateInfo allocateInfo{};
@@ -42,8 +42,9 @@ void HelloTriangleApp::CreateDescriptorSet()
     allocateInfo.descriptorSetCount = static_cast<uint32_t>(MaxFrameInCount);
     allocateInfo.pSetLayouts = layouts.data();
 
-    _descriptorSets.resize(MaxFrameInCount);
-    if(vkAllocateDescriptorSets(_deviceHandler.Get(), &allocateInfo, _descriptorSets.data()) != VK_SUCCESS)
+    MultiFrameObject<VkDescriptorSet> descriptorSet(static_cast<uint32_t>(MaxFrameInCount));
+    descriptorSet.Resize(MaxFrameInCount);
+    if(vkAllocateDescriptorSets(_deviceHandler.Get(), &allocateInfo, descriptorSet.Data()) != VK_SUCCESS)
     {
         throw std::runtime_error("Failed to allocate descriptor set");
     }
@@ -57,7 +58,7 @@ void HelloTriangleApp::CreateDescriptorSet()
 
         VkWriteDescriptorSet descriptorWrite{};
         descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        descriptorWrite.dstSet = _descriptorSets[i];
+        descriptorWrite.dstSet = descriptorSet.Get(i);
         descriptorWrite.dstBinding = 0;
         descriptorWrite.dstArrayElement = 0;
         descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -68,6 +69,8 @@ void HelloTriangleApp::CreateDescriptorSet()
 
         vkUpdateDescriptorSets(_deviceHandler.Get(), 1, &descriptorWrite, 0, nullptr);
     }
+
+    return descriptorSet;
 }
 
 void HelloTriangleApp::UpdateCameraData(uint32_t currentFrame)
@@ -225,7 +228,7 @@ void HelloTriangleApp::RecordCommandBuffer(CommandBuffer cmdBuffer, uint32_t cur
             cmdBuffer.SetScissor(0, 0, _swapChain->Extent.width, _swapChain->Extent.height);
             cmdBuffer.BindBuffer(_vertexBuffer);
             cmdBuffer.BindBuffer(_indexBuffer);
-            cmdBuffer.BindDescriptorSets(VK_PIPELINE_BIND_POINT_GRAPHICS, _pipelineLayoutHandler.Get(), _descriptorSets[currentFrame]);
+            cmdBuffer.BindDescriptorSets(VK_PIPELINE_BIND_POINT_GRAPHICS, _pipelineLayoutHandler.Get(), _descriptorSet.Get(currentFrame));
             cmdBuffer.DrawIndexed(static_cast<uint32_t>(_indices.size()));
         }
         cmdBuffer.EndRenderPass();
@@ -247,7 +250,7 @@ void HelloTriangleApp::CreateCommandBuffers()
 
 MultiFrameHandler<VkFramebufferHandler> HelloTriangleApp::CreateFramebuffer()
 {
-    MultiFrameHandler<VkFramebufferHandler> framebuffer(MaxFrameInCount);
+    MultiFrameHandler<VkFramebufferHandler> framebuffer(_swapChain->ImageViews.size());
 
     InitFramebuffer(framebuffer);
 
@@ -267,6 +270,7 @@ void HelloTriangleApp::InitFramebuffer(MultiFrameHandler<VkFramebufferHandler>& 
 }
 
 HelloTriangleApp::HelloTriangleApp() :
+    _descriptorSet(CreateDescriptorSet()),
     _descriptorPoolHandler(_deviceHandler.Get(), static_cast<uint32_t>(MaxFrameInCount)),
     _cameraDataBuffer(MaxFrameInCount, _physicalDeviceHandler, _deviceHandler.Get(), 1, sizeof(CameraData), GraphicsBuffer::UNIFORM),
     _vertexBuffer(_physicalDeviceHandler, _deviceHandler.Get(), _vertices.size(), sizeof(_vertices[0]), GraphicsBuffer::BufferType::VERTEX),
@@ -290,8 +294,6 @@ HelloTriangleApp::HelloTriangleApp() :
 #ifdef M3VK_MEMORYLOG
     DebugLayer::Log(DebugLayer::LogType::CREATE, "HelloTriangleApp Creation !");
 #endif
-
-    CreateDescriptorSet();
 
     // init data
     _indexBuffer.CopyToBuffer(_physicalDeviceHandler, _deviceHandler.Get(), _graphicsQueueHandler.Get(), _graphicsCommandPoolHandler.Get(), (void*)_indices.data(), _indexBuffer.GetSize());

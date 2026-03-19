@@ -38,6 +38,11 @@ class MultiFrameObject
         _internals.reserve(size);
     }
 
+    inline void Resize(size_t size)
+    {
+        _internals.resize(size);
+    }
+
     // VkHandles can be destroyed by one of the two object when copying, so we enable moving and disable copying.
     // technically *for now* you can vk call directly to drestroy the VK thingy inside with the Get, honestly don't care for now, if the user want to explicitly do that it's his business, not mine.
     MultiFrameObject(MultiFrameObject&& other) noexcept:
@@ -62,6 +67,7 @@ class MultiFrameObject
     }
 
     inline size_t Size() const { return _internals.size(); }
+    inline T* Data() { return _internals.data(); }
 
     protected:
     std::vector<T> _internals;

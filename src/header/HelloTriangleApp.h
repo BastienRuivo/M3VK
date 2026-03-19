@@ -108,6 +108,11 @@ class HelloTriangleApp
     GraphicsBuffer _indexBuffer;
     VkDescriptorPoolHandler _descriptorPoolHandler;
 
+    MultiFrameHandler<GraphicsBuffer> _cameraDataBuffer;
+
+    MultiFrameObject<VkDescriptorSet> _descriptorSet;
+    MultiFrameObject<VkDescriptorSet> CreateDescriptorSet();
+
     std::vector<CommandBuffer> _commandBuffers;
 
     // GPU Sync
@@ -115,16 +120,10 @@ class HelloTriangleApp
     std::vector<VkSemaphore> _renderFinishedSemaphores;
     std::vector<VkFence>  _waitFences;
 
-
-    std::vector<VkDescriptorSet> _descriptorSets;
-
-    MultiFrameHandler<GraphicsBuffer> _cameraDataBuffer;
-
     void CreatCommandPool();
     void CreateCommandBuffers();
     void CreateSyncObject();
     void CreateDescriptorPool();
-    void CreateDescriptorSet();
 
     void RefreshSwapChain();
 
