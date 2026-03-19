@@ -17,7 +17,10 @@ class VkCommandPoolHandler
     VkCommandPoolHandler(const VkCommandPoolHandler&) = delete;
     VkCommandPoolHandler& operator=(const VkCommandPoolHandler&) = delete;
 
-    VkCommandPool Get() const;
+    inline VkCommandPool Get() const
+    {
+        return _internal;
+    }
 
     private:
     VkCommandPool _internal = VK_NULL_HANDLE;

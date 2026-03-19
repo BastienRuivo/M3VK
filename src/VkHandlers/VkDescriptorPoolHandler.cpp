@@ -26,11 +26,6 @@ VkDescriptorPoolHandler::VkDescriptorPoolHandler(VkDevice device, uint32_t frame
     }
 }
 
-VkDescriptorPool VkDescriptorPoolHandler::Get() const
-{
-    return _internal;
-}
-
 VkDescriptorPoolHandler::~VkDescriptorPoolHandler()
 {
     if(_internal == VK_NULL_HANDLE) return;

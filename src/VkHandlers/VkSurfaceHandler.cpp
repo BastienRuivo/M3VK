@@ -16,11 +16,6 @@ VkSurfaceHandler::VkSurfaceHandler(VkInstance instance, GLFWwindow* pWindow)
     }
 }
 
-VkSurfaceKHR VkSurfaceHandler::Get() const
-{
-    return _internal;
-}
-
 VkSurfaceHandler::~VkSurfaceHandler()
 {
     if(_internal == VK_NULL_HANDLE) return;

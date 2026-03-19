@@ -63,11 +63,6 @@ VkDeviceHandler::VkDeviceHandler(const VkPhysicalDeviceHandler& physicalDeviceHa
     //vkGetDeviceQueue(_device, queueFamilyId.Copy.value(), 0, &_copyQueue);
 }
 
-VkDevice VkDeviceHandler::Get() const
-{
-    return _internal;
-}
-
 VkDeviceHandler::~VkDeviceHandler()
 {
     if(_internal == VK_NULL_HANDLE) return;

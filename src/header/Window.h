@@ -14,11 +14,14 @@ class Window
     void ProcessEvent() const;
     void GetFramebufferSize(int& width, int& height) const;
 
-    GLFWwindow* Get() const;
+    inline GLFWwindow* Get() const
+    {
+        return _internal;
+    }
 
 
     private:
-    GLFWwindow* _pWindow = nullptr;
+    GLFWwindow* _internal = nullptr;
     int _width;
     int _height;
     const char * _title;

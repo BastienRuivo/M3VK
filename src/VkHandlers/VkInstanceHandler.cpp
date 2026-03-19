@@ -98,12 +98,6 @@ std::vector<const char *> VkInstanceHandler::GetRequiredExtensions() const
 
     return extensions;
 }
-
-VkInstance VkInstanceHandler::Get() const
-{
-    return _internal;
-}
-
 VkInstanceHandler::~VkInstanceHandler()
 {
     if(_internal == VK_NULL_HANDLE) return;

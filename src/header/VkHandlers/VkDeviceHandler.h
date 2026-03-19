@@ -17,7 +17,10 @@ class VkDeviceHandler
     VkDeviceHandler(const VkDeviceHandler&) = delete;
     VkDeviceHandler& operator=(const VkDeviceHandler&) = delete;
 
-    VkDevice Get() const;
+    inline VkDevice Get() const
+    {
+        return _internal;
+    }
 
     public:
 

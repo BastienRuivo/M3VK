@@ -25,7 +25,10 @@ class VkQueueHandler
     VkQueueHandler(const VkQueueHandler&) = delete;
     VkQueueHandler& operator=(const VkQueueHandler&) = delete;
 
-    VkQueue Get() const;
+    inline VkQueue Get() const
+    {
+        return _internal;
+    }
     uint32_t QueueFamilyId() const;
     QueueTypeEnum QueueType() const;
 

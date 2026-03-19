@@ -25,12 +25,6 @@ VkPipelineLayoutHandler::VkPipelineLayoutHandler(VkDevice device, VkDescriptorSe
         throw std::runtime_error("Failed to create VK Layout !");
     }
 }
-
-VkPipelineLayout VkPipelineLayoutHandler::Get() const
-{
-    return _internal;
-}
-
 VkPipelineLayoutHandler::~VkPipelineLayoutHandler()
 {
     if(_internal == VK_NULL_HANDLE) return;

@@ -10,7 +10,11 @@ class VkPhysicalDeviceHandler
     VkPhysicalDeviceHandler(VkInstance instance, VkSurfaceKHR windowSurface, const std::vector<const char *>& deviceExtensions);
     ~VkPhysicalDeviceHandler();
 
-    VkPhysicalDevice Get() const;
+    inline VkPhysicalDevice Get() const
+    {
+        return _internal;
+    }
+
     int ScoreDeviceSuitability(VkPhysicalDevice physicalDevice, VkSurfaceKHR windowSurface, const std::vector<const char *>& deviceExtensions) const;
     bool CheckDeviceExtensionSupport(VkPhysicalDevice physicalDevice, const std::vector<const char *>& deviceExtensions) const;
     uint32_t FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) const;

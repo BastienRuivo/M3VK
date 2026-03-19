@@ -27,11 +27,6 @@ VkFramebufferHandler::VkFramebufferHandler(VkDevice device, VkRenderPass renderP
     }
 }
 
-VkFramebuffer VkFramebufferHandler::Get() const
-{
-    return _internal;
-}
-
 VkFramebufferHandler::~VkFramebufferHandler()
 {
     if(_internal == VK_NULL_HANDLE) return;

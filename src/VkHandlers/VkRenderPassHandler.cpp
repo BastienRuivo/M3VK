@@ -61,11 +61,6 @@ VkRenderPassHandler::VkRenderPassHandler(VkDevice device, VkFormat imageFormat)
 #endif
 }
 
-VkRenderPass VkRenderPassHandler::Get() const
-{
-    return _internal;
-}
-
 VkRenderPassHandler::~VkRenderPassHandler()
 {
     if(_internal == VK_NULL_HANDLE) return;

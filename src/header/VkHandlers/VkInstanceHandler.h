@@ -17,7 +17,10 @@ class VkInstanceHandler
     VkInstanceHandler(const VkInstanceHandler&) = delete;
     VkInstanceHandler& operator=(const VkInstanceHandler&) = delete;
 
-    VkInstance Get() const;
+    inline VkInstance Get() const
+    {
+        return _internal;
+    }
 
     private:
     VkInstance _internal = VK_NULL_HANDLE;

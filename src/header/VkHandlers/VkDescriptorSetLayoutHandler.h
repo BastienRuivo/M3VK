@@ -16,7 +16,10 @@ class VkDescriptorSetLayoutHandler
     VkDescriptorSetLayoutHandler(const VkDescriptorSetLayoutHandler&) = delete;
     VkDescriptorSetLayoutHandler& operator=(const VkDescriptorSetLayoutHandler&) = delete;
 
-    VkDescriptorSetLayout Get() const;
+    inline VkDescriptorSetLayout Get() const
+    {
+        return _internal;
+    }
 
     private:
     VkDescriptorSetLayout _internal = VK_NULL_HANDLE;

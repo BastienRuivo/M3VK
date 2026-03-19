@@ -129,11 +129,6 @@ VkPhysicalDeviceHandler::VkPhysicalDeviceHandler(VkInstance instance, VkSurfaceK
     QueueFamilyIds = ProjectHelper::QueryQueueFamilies(_internal, windowSurface);
 }
 
-VkPhysicalDevice VkPhysicalDeviceHandler::Get() const
-{
-    return _internal;
-}
-
 VkPhysicalDeviceHandler::~VkPhysicalDeviceHandler()
 {
 #ifdef M3VK_MEMORYLOG

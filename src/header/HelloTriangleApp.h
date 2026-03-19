@@ -1,6 +1,7 @@
 #pragma once
 
 #include "header/CommandBuffer.h"
+#include "header/MultiFrame.h"
 #include "header/Vertex.h"
 #include "header/VkHandlers/VkCommandPoolHandler.h"
 #include "header/VkHandlers/VkDescriptorPoolHandler.h"
@@ -96,16 +97,16 @@ class HelloTriangleApp
     VkPipelineLayoutHandler _pipelineLayoutHandler;
     VkPipelineHandler _graphicsPipelineHandler;
 
-    std::vector<VkFramebufferHandler> _framebuffersHandler;
+    MultiFrameHandler<VkFramebufferHandler> _framebuffer;
 
     VkCommandPoolHandler _graphicsCommandPoolHandler;
 
     // Datas
     GraphicsBuffer _vertexBuffer;
     GraphicsBuffer _indexBuffer;
+    VkDescriptorPoolHandler _descriptorPoolHandler;
 
     std::vector<CommandBuffer> _commandBuffers;
-    VkDescriptorPoolHandler _descriptorPoolHandler;
 
     // GPU Sync
     std::vector<VkSemaphore> _availableImageSemaphores;
@@ -117,7 +118,9 @@ class HelloTriangleApp
 
     std::vector<GraphicsBuffer> _cameraDataBuffers;
 
-    std::vector<VkFramebufferHandler> CreateFrameBuffers();
+    MultiFrameHandler<VkFramebufferHandler> CreateFramebuffer();
+    void InitFramebuffer(MultiFrameHandler<VkFramebufferHandler>& framebuffer);
+
     void CreatCommandPool();
     void CreateCommandBuffers();
     void CreateSyncObject();

@@ -16,7 +16,10 @@ class VkPipelineHandler
     VkPipelineHandler(const VkPipelineHandler&) = delete;
     VkPipelineHandler& operator=(const VkPipelineHandler&) = delete;
 
-    VkPipeline Get() const;
+    inline VkPipeline Get() const
+    {
+        return _internal;
+    }
 
     private:
     VkPipeline _internal = VK_NULL_HANDLE;

@@ -16,7 +16,10 @@ class VkPipelineLayoutHandler
     VkPipelineLayoutHandler(const VkPipelineLayoutHandler&) = delete;
     VkPipelineLayoutHandler& operator=(const VkPipelineLayoutHandler&) = delete;
 
-    VkPipelineLayout Get() const;
+    inline VkPipelineLayout Get() const
+    {
+        return _internal;
+    }
 
     public:
 

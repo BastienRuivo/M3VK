@@ -1,6 +1,7 @@
 #include "header/HelloTriangleApp.h"
 #include "header/CommandBuffer.h"
 #include "header/GraphicsBuffer.h"
+#include "header/MultiFrame.h"
 #include "header/SwapChain.h"
 #include "header/DebugLayer.h"
 #include "header/VkHandlers/VkFramebufferHandler.h"
@@ -125,8 +126,8 @@ void HelloTriangleApp::RefreshSwapChain()
     _swapChain.reset();
     _swapChain = std::make_unique<SwapChain>(_window, _physicalDeviceHandler.Get(), _deviceHandler.Get(), _windowSurfaceHandler.Get());
 
-    _framebuffersHandler.clear();
-    _framebuffersHandler = CreateFrameBuffers();
+    _framebuffer.Clear();
+    InitFramebuffer(_framebuffer);
 }
 
 void HelloTriangleApp::CreateSyncObject()
@@ -230,7 +231,7 @@ void HelloTriangleApp::RecordCommandBuffer(CommandBuffer cmdBuffer, uint32_t cur
 {
     cmdBuffer.Begin();
     {
-        cmdBuffer.BeginRenderPass(_renderPassHandler.Get(), _framebuffersHandler[imageIndex].Get(), {0, 0, 0, 0}, _swapChain->Extent);
+        cmdBuffer.BeginRenderPass(_renderPassHandler.Get(), _framebuffer.GetInternal(imageIndex), {0, 0, 0, 0}, _swapChain->Extent);
         {
             cmdBuffer.BindPipeline(_graphicsPipelineHandler.Get(), VK_PIPELINE_BIND_POINT_GRAPHICS);
             cmdBuffer.SetViewport(_swapChain->Extent.width, _swapChain->Extent.height);
@@ -257,20 +258,25 @@ void HelloTriangleApp::CreateCommandBuffers()
     }
 }
 
-std::vector<VkFramebufferHandler> HelloTriangleApp::CreateFrameBuffers()
+MultiFrameHandler<VkFramebufferHandler> HelloTriangleApp::CreateFramebuffer()
 {
-    std::vector<VkFramebufferHandler> framebuffers;
-    framebuffers.reserve(_swapChain->ImageViews.size());
+    MultiFrameHandler<VkFramebufferHandler> framebuffer(MaxFrameInCount);
 
+    InitFramebuffer(framebuffer);
+
+    return framebuffer;
+}
+
+void HelloTriangleApp::InitFramebuffer(MultiFrameHandler<VkFramebufferHandler>& framebuffer)
+{
     for(size_t i = 0; i < _swapChain->ImageViews.size(); ++i)
     {
         std::vector<VkImageView> attachments = {
             _swapChain->ImageViews[i]
         };
         // emplace back to avoid a temp obejct
-        framebuffers.emplace_back(_deviceHandler.Get(), _renderPassHandler.Get(), _swapChain->Extent, attachments);
+        framebuffer.EmplaceBack(_deviceHandler.Get(), _renderPassHandler.Get(), _swapChain->Extent, attachments);
     }
-    return framebuffers;
 }
 
 HelloTriangleApp::HelloTriangleApp() :
@@ -279,7 +285,7 @@ HelloTriangleApp::HelloTriangleApp() :
     _vertexBuffer(_physicalDeviceHandler, _deviceHandler.Get(), _vertices.size(), sizeof(_vertices[0]), GraphicsBuffer::BufferType::VERTEX),
     _indexBuffer(_physicalDeviceHandler, _deviceHandler.Get(), _indices.size(), sizeof(_indices[0]), GraphicsBuffer::BufferType::INDEX),
     _graphicsCommandPoolHandler(_deviceHandler.Get(), _physicalDeviceHandler.QueueFamilyIds),
-    _framebuffersHandler(CreateFrameBuffers()),
+    _framebuffer(CreateFramebuffer()),
     _graphicsPipelineHandler(_swapChain->Extent, _deviceHandler.Get(), _pipelineLayoutHandler.Get(), _renderPassHandler.Get()),
     _pipelineLayoutHandler(_deviceHandler.Get(), _descriptorSetLayoutHandler.Get()),
     _descriptorSetLayoutHandler(_deviceHandler.Get()),

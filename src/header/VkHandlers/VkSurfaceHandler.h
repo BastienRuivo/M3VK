@@ -18,7 +18,10 @@ class VkSurfaceHandler
     VkSurfaceHandler(const VkSurfaceHandler&) = delete;
     VkSurfaceHandler& operator=(const VkSurfaceHandler&) = delete;
 
-    VkSurfaceKHR Get() const;
+    inline VkSurfaceKHR Get() const
+    {
+        return _internal;
+    }
 
     private:
     VkSurfaceKHR _internal = VK_NULL_HANDLE;

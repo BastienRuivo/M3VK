@@ -23,11 +23,6 @@ VkCommandPoolHandler::VkCommandPoolHandler(VkDevice device, const ProjectHelper:
     }
 }
 
-VkCommandPool VkCommandPoolHandler::Get() const
-{
-    return _internal;
-}
-
 VkCommandPoolHandler::~VkCommandPoolHandler()
 {
     if(_internal == VK_NULL_HANDLE) return;

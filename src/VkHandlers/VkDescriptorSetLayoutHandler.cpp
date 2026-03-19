@@ -29,11 +29,6 @@ VkDescriptorSetLayoutHandler::VkDescriptorSetLayoutHandler(VkDevice device)
     }
 }
 
-VkDescriptorSetLayout VkDescriptorSetLayoutHandler::Get() const
-{
-    return _internal;
-}
-
 VkDescriptorSetLayoutHandler::~VkDescriptorSetLayoutHandler()
 {
     if(_internal == VK_NULL_HANDLE) return;

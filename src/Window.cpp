@@ -16,19 +16,19 @@ Window::Window(int width, int height, const char* title, void* resizeObject, GLF
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
 
-    _pWindow = glfwCreateWindow(_width, _height, _title, nullptr, nullptr);
-    glfwSetWindowUserPointer(_pWindow, resizeObject);
-    glfwSetFramebufferSizeCallback(_pWindow, resizeCallback);
+    _internal = glfwCreateWindow(_width, _height, _title, nullptr, nullptr);
+    glfwSetWindowUserPointer(_internal, resizeObject);
+    glfwSetFramebufferSizeCallback(_internal, resizeCallback);
 }
 
 void Window::GetFramebufferSize(int& width, int& height) const
 {
-    glfwGetFramebufferSize(_pWindow, &width, &height);
+    glfwGetFramebufferSize(_internal, &width, &height);
 }
 
 bool Window::ShouldClose() const
 {
-    return glfwWindowShouldClose(_pWindow);
+    return glfwWindowShouldClose(_internal);
 }
 
 void Window::ProcessEvent() const
@@ -42,14 +42,9 @@ void Window::ResizeWindow(int width, int height)
     _height = height;
 }
 
-GLFWwindow* Window::Get() const
-{
-    return _pWindow;
-}
-
 Window::~Window()
 {
-    glfwDestroyWindow(_pWindow);
+    glfwDestroyWindow(_internal);
     glfwTerminate();
 
 #ifdef M3VK_MEMORYLOG

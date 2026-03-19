@@ -25,11 +25,6 @@ VkQueueHandler::VkQueueHandler(VkDevice device, const ProjectHelper::QueueFamily
     _type = queueType;
 }
 
-VkQueue VkQueueHandler::Get() const
-{
-    return _internal;
-}
-
 uint32_t VkQueueHandler::QueueFamilyId() const
 {
     return _queueFamilyIndex;

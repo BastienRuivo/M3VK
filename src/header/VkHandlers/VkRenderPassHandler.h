@@ -16,7 +16,10 @@ class VkRenderPassHandler
     VkRenderPassHandler(const VkRenderPassHandler&) = delete;
     VkRenderPassHandler& operator=(const VkRenderPassHandler&) = delete;
 
-    VkRenderPass Get() const;
+    inline VkRenderPass Get() const
+    {
+        return _internal;
+    }
 
     public:
 

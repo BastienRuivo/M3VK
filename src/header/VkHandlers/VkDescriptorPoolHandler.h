@@ -17,7 +17,10 @@ class VkDescriptorPoolHandler
     VkDescriptorPoolHandler(const VkDescriptorPoolHandler&) = delete;
     VkDescriptorPoolHandler& operator=(const VkDescriptorPoolHandler&) = delete;
 
-    VkDescriptorPool Get() const;
+    inline VkDescriptorPool Get() const
+    {
+        return _internal;
+    }
 
     private:
     VkDescriptorPool _internal = VK_NULL_HANDLE;

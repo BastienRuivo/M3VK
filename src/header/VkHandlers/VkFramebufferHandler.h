@@ -18,7 +18,10 @@ class VkFramebufferHandler
 
     ~VkFramebufferHandler();
 
-    VkFramebuffer Get() const;
+    inline VkFramebuffer Get() const
+    {
+        return _internal;
+    }
 
     public:
 

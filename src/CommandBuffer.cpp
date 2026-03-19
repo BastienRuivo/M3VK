@@ -135,7 +135,6 @@ void CommandBuffer::BeginRenderPass(VkRenderPass renderPass, VkFramebuffer frame
     rpBeginInfo.clearValueCount = 1;
     rpBeginInfo.pClearValues = &clearValue;
 
-    // inline tells everything is embedded in the primary cmdBuffer and no secondary will be used
     vkCmdBeginRenderPass(_handle, &rpBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 }
 
