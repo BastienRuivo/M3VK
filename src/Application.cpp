@@ -221,30 +221,43 @@ void Application::InitFramebuffer(MultiFrameHandler<VkFramebufferHandler>& frame
 }
 
 Application::Application() :
-    _waitFence(MaxFrameInCount, _deviceHandler.Get()),
-    _availableImageSemaphore(MaxFrameInCount, _deviceHandler.Get()),
-    _renderFinishedSemaphores(_swapChain->Images.size(), _deviceHandler.Get()),
-    _commandBuffer(static_cast<uint32_t>(MaxFrameInCount), _deviceHandler.Get(), _graphicsCommandPoolHandler.Get(), _graphicsQueueHandler.Get()),
-    _descriptorSet(CreateDescriptorSet()),
-    _descriptorPoolHandler(_deviceHandler.Get(), static_cast<uint32_t>(MaxFrameInCount)),
-    _cameraDataBuffer(MaxFrameInCount, _physicalDeviceHandler, _deviceHandler.Get(), 1, sizeof(CameraData), GraphicsBuffer::UNIFORM),
+    // Core Window & Instance (The Foundation)
+    _window(1920, 1080, "Window", this, FramebufferResizeCallback),
+    _instanceHandler(),
+    _vkDebugLayer(_instanceHandler.Get()),
+    _windowSurfaceHandler(_instanceHandler.Get(), _window.Get()),
+    _physicalDeviceHandler(_instanceHandler.Get(), _windowSurfaceHandler.Get(), _deviceExtensions),
+    _deviceHandler(_physicalDeviceHandler, _windowSurfaceHandler.Get(), _deviceExtensions),
+
+    // Queues & Swapchain
+    _graphicsQueueHandler(_deviceHandler.Get(), _physicalDeviceHandler.QueueFamilyIds, VkQueueHandler::Graphics),
+    _presentQueueHandler(_deviceHandler.Get(), _physicalDeviceHandler.QueueFamilyIds, VkQueueHandler::Present),
+    _swapChain(std::make_unique<SwapChain>(_window, _physicalDeviceHandler.Get(), _deviceHandler.Get(), _windowSurfaceHandler.Get())),
+
+    // Render Layouts & Pipelines
+    _renderPassHandler(_deviceHandler.Get(), _swapChain->ImageFormat),
+    _descriptorSetLayoutHandler(_deviceHandler.Get()),
+    _pipelineLayoutHandler(_deviceHandler.Get(), _descriptorSetLayoutHandler.Get()),
+    _graphicsPipelineHandler(_swapChain->Extent, _deviceHandler.Get(), _pipelineLayoutHandler.Get(), _renderPassHandler.Get()),
+
+    // Framebuffers & Command Pools
+    _framebuffer(CreateFramebuffer()),
+    _graphicsCommandPoolHandler(_deviceHandler.Get(), _physicalDeviceHandler.QueueFamilyIds),
+
+    // Geometry & Data Buffers
     _vertexBuffer(_physicalDeviceHandler, _deviceHandler.Get(), _vertices.size(), sizeof(_vertices[0]), GraphicsBuffer::BufferType::VERTEX),
     _indexBuffer(_physicalDeviceHandler, _deviceHandler.Get(), _indices.size(), sizeof(_indices[0]), GraphicsBuffer::BufferType::INDEX),
-    _graphicsCommandPoolHandler(_deviceHandler.Get(), _physicalDeviceHandler.QueueFamilyIds),
-    _framebuffer(CreateFramebuffer()),
-    _graphicsPipelineHandler(_swapChain->Extent, _deviceHandler.Get(), _pipelineLayoutHandler.Get(), _renderPassHandler.Get()),
-    _pipelineLayoutHandler(_deviceHandler.Get(), _descriptorSetLayoutHandler.Get()),
-    _descriptorSetLayoutHandler(_deviceHandler.Get()),
-    _renderPassHandler(_deviceHandler.Get(), _swapChain->ImageFormat),
-    _swapChain(std::make_unique<SwapChain>(_window, _physicalDeviceHandler.Get(), _deviceHandler.Get(), _windowSurfaceHandler.Get())),
-    _presentQueueHandler(_deviceHandler.Get(), _physicalDeviceHandler.QueueFamilyIds, VkQueueHandler::Present),
-    _graphicsQueueHandler(_deviceHandler.Get(), _physicalDeviceHandler.QueueFamilyIds, VkQueueHandler::Graphics),
-    _deviceHandler(_physicalDeviceHandler, _windowSurfaceHandler.Get(), _deviceExtensions),
-    _physicalDeviceHandler(_instanceHandler.Get(), _windowSurfaceHandler.Get(), _deviceExtensions),
-    _windowSurfaceHandler(_instanceHandler.Get(), _window.Get()),
-    _vkDebugLayer(_instanceHandler.Get()),
-    _instanceHandler(),
-    _window(1920, 1080, "Window", this, FramebufferResizeCallback)
+    _descriptorPoolHandler(_deviceHandler.Get(), static_cast<uint32_t>(MaxFrameInCount)),
+    _cameraDataBuffer(MaxFrameInCount, _physicalDeviceHandler, _deviceHandler.Get(), 1, sizeof(CameraData), GraphicsBuffer::UNIFORM),
+
+    // Descriptor Sets & Execution
+    _descriptorSet(CreateDescriptorSet()),
+    _commandBuffer(static_cast<uint32_t>(MaxFrameInCount), _deviceHandler.Get(), _graphicsCommandPoolHandler.Get(), _graphicsQueueHandler.Get()),
+
+    // Synchronization
+    _availableImageSemaphore(MaxFrameInCount, _deviceHandler.Get()),
+    _renderFinishedSemaphores(_swapChain->Images.size(), _deviceHandler.Get()),
+    _waitFence(MaxFrameInCount, _deviceHandler.Get())
 {
 #ifdef M3VK_MEMORYLOG
     DebugLayer::Log(DebugLayer::LogType::CREATE, "Application Creation !");
