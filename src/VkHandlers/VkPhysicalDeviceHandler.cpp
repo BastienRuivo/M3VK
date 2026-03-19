@@ -1,6 +1,7 @@
 #include "header/VkHandlers/VkPhysicalDeviceHandler.h"
 #include "header/ProjectHelper.h"
 #include "header/DebugLayer.h"
+#include <cstdint>
 #include <stdexcept>
 #include <vulkan/vulkan_core.h>
 #include <vector>
@@ -34,6 +35,23 @@ bool VkPhysicalDeviceHandler::CheckDeviceExtensionSupport(VkPhysicalDevice devic
     }
 
     return true;
+}
+
+uint32_t VkPhysicalDeviceHandler::FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) const
+{
+    VkPhysicalDeviceMemoryProperties memoryProperties;
+    vkGetPhysicalDeviceMemoryProperties(_internal, &memoryProperties);
+
+    for (uint32_t memoryType = 0; memoryType < memoryProperties.memoryTypeCount; ++memoryType)
+    {
+        // is suitable for buffer & writable by CPU
+        if((typeFilter & (1 << memoryType)) && ((memoryProperties.memoryTypes[memoryType].propertyFlags & properties) == properties))
+        {
+            return memoryType;
+        }
+    }
+
+    throw std::runtime_error("Can't find suitable memory type for buffer");
 }
 
 int VkPhysicalDeviceHandler::ScoreDeviceSuitability(VkPhysicalDevice physicalDevice, VkSurfaceKHR windowSurface, const std::vector<const char *>& deviceExtensions) const

@@ -99,12 +99,9 @@ class HelloTriangleApp
 
     VkCommandPoolHandler _graphicsCommandPoolHandler;
 
-    // Window API surface
-
-
-    // Queues
-    // implicitly cleaned
-    //VkQueue _copyQueue;
+    // Datas
+    GraphicsBuffer _vertexBuffer;
+    GraphicsBuffer _indexBuffer;
 
     std::vector<CommandBuffer> _commandBuffers;
 
@@ -118,10 +115,6 @@ class HelloTriangleApp
     std::vector<VkDescriptorSet> _descriptorSets;
 
     std::vector<GraphicsBuffer> _cameraDataBuffers;
-
-    // Datas
-    GraphicsBuffer _vertexBuffer;
-    GraphicsBuffer _indexBuffer;
 
     std::vector<VkFramebufferHandler> CreateFrameBuffers();
     void CreatCommandPool();

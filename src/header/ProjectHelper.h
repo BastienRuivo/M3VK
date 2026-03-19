@@ -116,23 +116,6 @@ class ProjectHelper
         return details;
     }
 
-    static uint32_t FindMemoryType(const VkPhysicalDevice& physicalDevice, uint32_t typeFilter, VkMemoryPropertyFlags properties)
-    {
-        VkPhysicalDeviceMemoryProperties memoryProperties;
-        vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memoryProperties);
-
-        for (uint32_t memoryType = 0; memoryType < memoryProperties.memoryTypeCount; ++memoryType)
-        {
-            // is suitable for buffer & writable by CPU
-            if((typeFilter & (1 << memoryType)) && ((memoryProperties.memoryTypes[memoryType].propertyFlags & properties) == properties))
-            {
-                return memoryType;
-            }
-        }
-
-        throw std::runtime_error("Can't find suitable memory type for buffer");
-    }
-
     static void CopyBufferToBuffer(const VkDevice& device, const VkQueue queue, const VkCommandPool& cmdPool, const VkBuffer& src, VkDeviceSize srcOffset, const VkBuffer& dst, VkDeviceSize dstOffset, VkDeviceSize size)
     {
         VkCommandBufferAllocateInfo allocInfo{};

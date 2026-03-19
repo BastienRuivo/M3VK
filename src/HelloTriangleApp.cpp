@@ -103,9 +103,7 @@ void HelloTriangleApp::CreateCameraDataBuffers()
 
     for(int i = 0; i < MaxFrameInCount; ++i)
     {
-        GraphicsBuffer uniform;
-        uniform.Create(_physicalDeviceHandler.Get(), _deviceHandler.Get(), 1, sizeof(CameraData), GraphicsBuffer::UNIFORM);
-        _cameraDataBuffers.push_back(uniform);
+        _cameraDataBuffers.emplace_back(_physicalDeviceHandler, _deviceHandler.Get(), 1, sizeof(CameraData), GraphicsBuffer::UNIFORM);
     }
 }
 
@@ -283,6 +281,8 @@ std::vector<VkFramebufferHandler> HelloTriangleApp::CreateFrameBuffers()
 }
 
 HelloTriangleApp::HelloTriangleApp() :
+    _vertexBuffer(_physicalDeviceHandler, _deviceHandler.Get(), _vertices.size(), sizeof(_vertices[0]), GraphicsBuffer::BufferType::VERTEX),
+    _indexBuffer(_physicalDeviceHandler, _deviceHandler.Get(), _indices.size(), sizeof(_indices[0]), GraphicsBuffer::BufferType::INDEX),
     _graphicsCommandPoolHandler(_deviceHandler.Get(), _physicalDeviceHandler.QueueFamilyIds),
     _framebuffersHandler(CreateFrameBuffers()),
     _graphicsPipelineHandler(_swapChain->Extent, _deviceHandler.Get(), _pipelineLayoutHandler.Get(), _renderPassHandler.Get()),
@@ -308,11 +308,8 @@ HelloTriangleApp::HelloTriangleApp() :
     CreateDescriptorSet();
 
     // init data
-    _indexBuffer.Create(_physicalDeviceHandler.Get(), _deviceHandler.Get(), _indices.size(), sizeof(_indices[0]), GraphicsBuffer::BufferType::INDEX);
-    _indexBuffer.CopyToBuffer(_physicalDeviceHandler.Get(), _deviceHandler.Get(), _graphicsQueueHandler.Get(), _graphicsCommandPoolHandler.Get(), (void*)_indices.data(), _indexBuffer.GetSize());
-
-    _vertexBuffer.Create(_physicalDeviceHandler.Get(), _deviceHandler.Get(), _vertices.size(), sizeof(_vertices[0]), GraphicsBuffer::BufferType::VERTEX);
-    _vertexBuffer.CopyToBuffer(_physicalDeviceHandler.Get(), _deviceHandler.Get(), _graphicsQueueHandler.Get(), _graphicsCommandPoolHandler.Get(), (void*)_vertices.data(), _vertexBuffer.GetSize());
+    _indexBuffer.CopyToBuffer(_physicalDeviceHandler, _deviceHandler.Get(), _graphicsQueueHandler.Get(), _graphicsCommandPoolHandler.Get(), (void*)_indices.data(), _indexBuffer.GetSize());
+    _vertexBuffer.CopyToBuffer(_physicalDeviceHandler, _deviceHandler.Get(), _graphicsQueueHandler.Get(), _graphicsCommandPoolHandler.Get(), (void*)_vertices.data(), _vertexBuffer.GetSize());
 
     CreateCommandBuffers();
     CreateSyncObject();
@@ -340,14 +337,6 @@ HelloTriangleApp::~HelloTriangleApp()
     for(size_t i = 0; i < _swapChain->Images.size(); ++i)
     {
         vkDestroySemaphore(_deviceHandler.Get(), _renderFinishedSemaphores[i], nullptr);
-    }
-
-    _vertexBuffer.DisposeBuffer(_deviceHandler.Get());
-    _indexBuffer.DisposeBuffer(_deviceHandler.Get());
-
-    for(int i = 0; i < _cameraDataBuffers.size(); ++i)
-    {
-        _cameraDataBuffers[i].DisposeBuffer(_deviceHandler.Get());
     }
 
     vkDestroyDescriptorPool(_deviceHandler.Get(), _descriptorPool, nullptr);
