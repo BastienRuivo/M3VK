@@ -51,7 +51,7 @@ void HelloTriangleApp::CreateDescriptorSet()
     for(int i = 0; i < MaxFrameInCount; ++i)
     {
         VkDescriptorBufferInfo bufferInfo{};
-        bufferInfo.buffer = _cameraDataBuffers[i].GetInternal();
+        bufferInfo.buffer = _cameraDataBuffer.GetInternal(i);
         bufferInfo.offset = 0;
         bufferInfo.range = sizeof(CameraData);
 
@@ -85,20 +85,7 @@ void HelloTriangleApp::UpdateCameraData(uint32_t currentFrame)
     // it was designed for opengl so flip it
     cameraData.projectionMatrix[1][1] *= -1;
 
-    memcpy(_cameraDataBuffers[currentFrame].GetDataPtr(), &cameraData, sizeof(cameraData));
-}
-
-std::vector<GraphicsBuffer> HelloTriangleApp::CreateCameraDataBuffers()
-{
-    std::vector<GraphicsBuffer> cameraDataBuffers;
-    cameraDataBuffers.reserve(MaxFrameInCount);
-
-    for(int i = 0; i < MaxFrameInCount; ++i)
-    {
-        cameraDataBuffers.emplace_back(_physicalDeviceHandler, _deviceHandler.Get(), 1, sizeof(CameraData), GraphicsBuffer::UNIFORM);
-    }
-
-    return cameraDataBuffers;
+    memcpy(_cameraDataBuffer.Get(currentFrame).GetDataPtr(), &cameraData, sizeof(cameraData));
 }
 
 static void FramebufferResizeCallback(GLFWwindow* window, int width, int height)
@@ -281,7 +268,7 @@ void HelloTriangleApp::InitFramebuffer(MultiFrameHandler<VkFramebufferHandler>& 
 
 HelloTriangleApp::HelloTriangleApp() :
     _descriptorPoolHandler(_deviceHandler.Get(), static_cast<uint32_t>(MaxFrameInCount)),
-    _cameraDataBuffers(CreateCameraDataBuffers()),
+    _cameraDataBuffer(MaxFrameInCount, _physicalDeviceHandler, _deviceHandler.Get(), 1, sizeof(CameraData), GraphicsBuffer::UNIFORM),
     _vertexBuffer(_physicalDeviceHandler, _deviceHandler.Get(), _vertices.size(), sizeof(_vertices[0]), GraphicsBuffer::BufferType::VERTEX),
     _indexBuffer(_physicalDeviceHandler, _deviceHandler.Get(), _indices.size(), sizeof(_indices[0]), GraphicsBuffer::BufferType::INDEX),
     _graphicsCommandPoolHandler(_deviceHandler.Get(), _physicalDeviceHandler.QueueFamilyIds),

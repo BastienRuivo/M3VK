@@ -58,7 +58,7 @@ class MultiFrameObject
 
     inline T& Get(size_t frameIndex)
     {
-        return _internals[frameIndex].Get();
+        return _internals[frameIndex];
     }
 
     inline size_t Size() const { return _internals.size(); }

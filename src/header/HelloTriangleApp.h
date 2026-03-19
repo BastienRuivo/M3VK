@@ -98,6 +98,8 @@ class HelloTriangleApp
     VkPipelineHandler _graphicsPipelineHandler;
 
     MultiFrameHandler<VkFramebufferHandler> _framebuffer;
+    MultiFrameHandler<VkFramebufferHandler> CreateFramebuffer();
+    void InitFramebuffer(MultiFrameHandler<VkFramebufferHandler>& framebuffer);
 
     VkCommandPoolHandler _graphicsCommandPoolHandler;
 
@@ -116,15 +118,11 @@ class HelloTriangleApp
 
     std::vector<VkDescriptorSet> _descriptorSets;
 
-    std::vector<GraphicsBuffer> _cameraDataBuffers;
-
-    MultiFrameHandler<VkFramebufferHandler> CreateFramebuffer();
-    void InitFramebuffer(MultiFrameHandler<VkFramebufferHandler>& framebuffer);
+    MultiFrameHandler<GraphicsBuffer> _cameraDataBuffer;
 
     void CreatCommandPool();
     void CreateCommandBuffers();
     void CreateSyncObject();
-    std::vector<GraphicsBuffer> CreateCameraDataBuffers();
     void CreateDescriptorPool();
     void CreateDescriptorSet();
 

@@ -70,14 +70,14 @@ void CommandBuffer::BindBuffer(const GraphicsBuffer& buffer) const
     {
         case GraphicsBuffer::VERTEX:
         {
-            VkBuffer vertexBuffers[] = { buffer.GetInternal() };
+            VkBuffer vertexBuffers[] = { buffer.Get() };
             vkCmdBindVertexBuffers(_handle, 0, 1, vertexBuffers, offsets);
             break;
         }
 
         case GraphicsBuffer::INDEX:
         {
-            vkCmdBindIndexBuffer(_handle, buffer.GetInternal(), 0, VK_INDEX_TYPE_UINT32);
+            vkCmdBindIndexBuffer(_handle, buffer.Get(), 0, VK_INDEX_TYPE_UINT32);
             break;
         }
 
