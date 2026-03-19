@@ -120,30 +120,9 @@ void Application::RefreshSwapChain()
     InitFramebuffer(_framebuffer);
 }
 
-void Application::CreateSyncObject()
-{
-    _waitFences.resize(Application::MaxFrameInCount);
-
-    VkFenceCreateInfo fenceCreateInfo{};
-    fenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-    // Create the queue in the "Signaled" state to ensure the first frame won't wait eternally for a fence that is not signaled, thus preventing an infinit loop
-    fenceCreateInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-
-    VkSemaphoreCreateInfo semaphoreCreateInfo{};
-    semaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-
-    for(size_t i = 0; i < Application::MaxFrameInCount; ++i)
-    {
-        if(vkCreateFence(_deviceHandler.Get(), &fenceCreateInfo, nullptr, &_waitFences[i]) != VK_SUCCESS)
-        {
-            throw std::runtime_error("Can't create fence");
-        }
-    }
-}
-
 void Application::DrawFrame()
 {
-    vkWaitForFences(_deviceHandler.Get(), 1, &_waitFences[_currentFrame], VK_TRUE, UINT64_MAX);
+    _waitFence.Get(_currentFrame).Wait(UINT64_MAX);
 
     // Acquire image to draw on
     uint32_t imageIndex;
@@ -160,7 +139,7 @@ void Application::DrawFrame()
     }
 
     // Only reset the fence if we are submitting work
-    vkResetFences(_deviceHandler.Get(), 1, &_waitFences[_currentFrame]);
+    _waitFence.Get(_currentFrame).Reset();
 
     UpdateCameraData(_currentFrame);
 
@@ -172,7 +151,7 @@ void Application::DrawFrame()
     VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
     VkSemaphore signalSemaphore[] = {_renderFinishedSemaphores.GetInternal(imageIndex)};
 
-    _commandBuffer.Get(_currentFrame).Submit(wait, 1, waitStages, signalSemaphore, 1, _waitFences[_currentFrame]);
+    _commandBuffer.Get(_currentFrame).Submit(wait, 1, waitStages, signalSemaphore, 1, _waitFence.GetInternal(_currentFrame));
 
     // actually present the frame
     VkPresentInfoKHR presentInfo{};
@@ -242,6 +221,7 @@ void Application::InitFramebuffer(MultiFrameHandler<VkFramebufferHandler>& frame
 }
 
 Application::Application() :
+    _waitFence(MaxFrameInCount, _deviceHandler.Get()),
     _availableImageSemaphore(MaxFrameInCount, _deviceHandler.Get()),
     _renderFinishedSemaphores(_swapChain->Images.size(), _deviceHandler.Get()),
     _commandBuffer(static_cast<uint32_t>(MaxFrameInCount), _deviceHandler.Get(), _graphicsCommandPoolHandler.Get(), _graphicsQueueHandler.Get()),
@@ -273,8 +253,6 @@ Application::Application() :
     // init data
     _indexBuffer.CopyToBuffer(_physicalDeviceHandler, _deviceHandler.Get(), _graphicsQueueHandler.Get(), _graphicsCommandPoolHandler.Get(), (void*)_indices.data(), _indexBuffer.GetSize());
     _vertexBuffer.CopyToBuffer(_physicalDeviceHandler, _deviceHandler.Get(), _graphicsQueueHandler.Get(), _graphicsCommandPoolHandler.Get(), (void*)_vertices.data(), _vertexBuffer.GetSize());
-
-    CreateSyncObject();
 }
 
 void Application::MainLoop()
@@ -290,11 +268,6 @@ void Application::MainLoop()
 
 Application::~Application()
 {
-    for(size_t i = 0; i < Application::MaxFrameInCount; ++i)
-    {
-        vkDestroyFence(_deviceHandler.Get(), _waitFences[i], nullptr);
-    }
-
 #ifdef M3VK_MEMORYLOG
     DebugLayer::Log(DebugLayer::LogType::DESTROY, "Application Destroyed !");
 #endif

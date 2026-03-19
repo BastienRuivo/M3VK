@@ -7,6 +7,7 @@
 #include "header/VkHandlers/VkDescriptorPoolHandler.h"
 #include "header/VkHandlers/VkDescriptorSetLayoutHandler.h"
 #include "header/VkHandlers/VkDeviceHandler.h"
+#include "header/VkHandlers/VkFenceHandler.h"
 #include "header/VkHandlers/VkFramebufferHandler.h"
 #include "header/VkHandlers/VkInstanceHandler.h"
 #include "header/VkHandlers/VkPhysicalDeviceHandler.h"
@@ -118,11 +119,7 @@ class Application
     // GPU Sync
     MultiFrameHandler<VkSemaphoreHandler> _availableImageSemaphore;
     MultiFrameHandler<VkSemaphoreHandler> _renderFinishedSemaphores;
-    std::vector<VkFence>  _waitFences;
-
-    void CreatCommandPool();
-    void CreateSyncObject();
-    void CreateDescriptorPool();
+    MultiFrameHandler<VkFenceHandler>  _waitFence;
 
     void RefreshSwapChain();
 
