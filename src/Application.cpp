@@ -1,4 +1,4 @@
-#include "header/HelloTriangleApp.h"
+#include "header/Application.h"
 #include "header/CommandBuffer.h"
 #include "header/GraphicsBuffer.h"
 #include "header/MultiFrame.h"
@@ -33,7 +33,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-MultiFrameObject<VkDescriptorSet> HelloTriangleApp::CreateDescriptorSet()
+MultiFrameObject<VkDescriptorSet> Application::CreateDescriptorSet()
 {
     std::vector<VkDescriptorSetLayout> layouts(MaxFrameInCount, _descriptorSetLayoutHandler.Get());
     VkDescriptorSetAllocateInfo allocateInfo{};
@@ -73,7 +73,7 @@ MultiFrameObject<VkDescriptorSet> HelloTriangleApp::CreateDescriptorSet()
     return descriptorSet;
 }
 
-void HelloTriangleApp::UpdateCameraData(uint32_t currentFrame)
+void Application::UpdateCameraData(uint32_t currentFrame)
 {
     static auto startTime = std::chrono::high_resolution_clock::now();
 
@@ -93,22 +93,22 @@ void HelloTriangleApp::UpdateCameraData(uint32_t currentFrame)
 
 static void FramebufferResizeCallback(GLFWwindow* window, int width, int height)
 {
-    HelloTriangleApp* app = reinterpret_cast<HelloTriangleApp*>(glfwGetWindowUserPointer(window));
+    Application* app = reinterpret_cast<Application*>(glfwGetWindowUserPointer(window));
     app->FramebufferResized();
     app->UpdateWindowSize(width, height);
 }
 
-void HelloTriangleApp::UpdateWindowSize(int width, int height)
+void Application::UpdateWindowSize(int width, int height)
 {
     _window.ResizeWindow(width, height);
 }
 
-void HelloTriangleApp::FramebufferResized()
+void Application::FramebufferResized()
 {
     _framebufferResized = true;
 }
 
-void HelloTriangleApp::RefreshSwapChain()
+void Application::RefreshSwapChain()
 {
     vkDeviceWaitIdle(_deviceHandler.Get());
 
@@ -120,9 +120,9 @@ void HelloTriangleApp::RefreshSwapChain()
     InitFramebuffer(_framebuffer);
 }
 
-void HelloTriangleApp::CreateSyncObject()
+void Application::CreateSyncObject()
 {
-    _waitFences.resize(HelloTriangleApp::MaxFrameInCount);
+    _waitFences.resize(Application::MaxFrameInCount);
 
     VkFenceCreateInfo fenceCreateInfo{};
     fenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
@@ -132,7 +132,7 @@ void HelloTriangleApp::CreateSyncObject()
     VkSemaphoreCreateInfo semaphoreCreateInfo{};
     semaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
-    for(size_t i = 0; i < HelloTriangleApp::MaxFrameInCount; ++i)
+    for(size_t i = 0; i < Application::MaxFrameInCount; ++i)
     {
         if(vkCreateFence(_deviceHandler.Get(), &fenceCreateInfo, nullptr, &_waitFences[i]) != VK_SUCCESS)
         {
@@ -141,7 +141,7 @@ void HelloTriangleApp::CreateSyncObject()
     }
 }
 
-void HelloTriangleApp::DrawFrame()
+void Application::DrawFrame()
 {
     vkWaitForFences(_deviceHandler.Get(), 1, &_waitFences[_currentFrame], VK_TRUE, UINT64_MAX);
 
@@ -198,10 +198,10 @@ void HelloTriangleApp::DrawFrame()
         throw std::runtime_error("failed to present swap chain image!");
     }
 
-    _currentFrame = (_currentFrame + 1) % HelloTriangleApp::MaxFrameInCount;
+    _currentFrame = (_currentFrame + 1) % Application::MaxFrameInCount;
 }
 
-void HelloTriangleApp::RecordCommandBuffer(CommandBuffer cmdBuffer, uint32_t currentFrame, uint32_t imageIndex)
+void Application::RecordCommandBuffer(CommandBuffer cmdBuffer, uint32_t currentFrame, uint32_t imageIndex)
 {
     cmdBuffer.Begin();
     {
@@ -220,7 +220,7 @@ void HelloTriangleApp::RecordCommandBuffer(CommandBuffer cmdBuffer, uint32_t cur
     cmdBuffer.End();
 }
 
-MultiFrameHandler<VkFramebufferHandler> HelloTriangleApp::CreateFramebuffer()
+MultiFrameHandler<VkFramebufferHandler> Application::CreateFramebuffer()
 {
     MultiFrameHandler<VkFramebufferHandler> framebuffer(_swapChain->ImageViews.size());
 
@@ -229,7 +229,7 @@ MultiFrameHandler<VkFramebufferHandler> HelloTriangleApp::CreateFramebuffer()
     return framebuffer;
 }
 
-void HelloTriangleApp::InitFramebuffer(MultiFrameHandler<VkFramebufferHandler>& framebuffer)
+void Application::InitFramebuffer(MultiFrameHandler<VkFramebufferHandler>& framebuffer)
 {
     for(size_t i = 0; i < _swapChain->ImageViews.size(); ++i)
     {
@@ -241,7 +241,7 @@ void HelloTriangleApp::InitFramebuffer(MultiFrameHandler<VkFramebufferHandler>& 
     }
 }
 
-HelloTriangleApp::HelloTriangleApp() :
+Application::Application() :
     _availableImageSemaphore(MaxFrameInCount, _deviceHandler.Get()),
     _renderFinishedSemaphores(_swapChain->Images.size(), _deviceHandler.Get()),
     _commandBuffer(static_cast<uint32_t>(MaxFrameInCount), _deviceHandler.Get(), _graphicsCommandPoolHandler.Get(), _graphicsQueueHandler.Get()),
@@ -267,7 +267,7 @@ HelloTriangleApp::HelloTriangleApp() :
     _window(1920, 1080, "Window", this, FramebufferResizeCallback)
 {
 #ifdef M3VK_MEMORYLOG
-    DebugLayer::Log(DebugLayer::LogType::CREATE, "HelloTriangleApp Creation !");
+    DebugLayer::Log(DebugLayer::LogType::CREATE, "Application Creation !");
 #endif
 
     // init data
@@ -277,7 +277,7 @@ HelloTriangleApp::HelloTriangleApp() :
     CreateSyncObject();
 }
 
-void HelloTriangleApp::MainLoop()
+void Application::MainLoop()
 {
     while (!_window.ShouldClose())
     {
@@ -288,19 +288,19 @@ void HelloTriangleApp::MainLoop()
     vkDeviceWaitIdle(_deviceHandler.Get());
 }
 
-HelloTriangleApp::~HelloTriangleApp()
+Application::~Application()
 {
-    for(size_t i = 0; i < HelloTriangleApp::MaxFrameInCount; ++i)
+    for(size_t i = 0; i < Application::MaxFrameInCount; ++i)
     {
         vkDestroyFence(_deviceHandler.Get(), _waitFences[i], nullptr);
     }
 
 #ifdef M3VK_MEMORYLOG
-    DebugLayer::Log(DebugLayer::LogType::DESTROY, "HelloTriangleApp Destroyed !");
+    DebugLayer::Log(DebugLayer::LogType::DESTROY, "Application Destroyed !");
 #endif
 }
 
-void HelloTriangleApp::Run()
+void Application::Run()
 {
     MainLoop();
 }

@@ -33,7 +33,7 @@
 
 #include "DebugLayer.h"
 
-class HelloTriangleApp
+class Application
 {
     static const int MaxFrameInCount = 2;
 
@@ -42,8 +42,8 @@ class HelloTriangleApp
     void FramebufferResized();
     void UpdateWindowSize(int width, int height);
 
-    HelloTriangleApp();
-    ~HelloTriangleApp();
+    Application();
+    ~Application();
 
     private:
 

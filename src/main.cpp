@@ -2,11 +2,11 @@
 #include <iostream>
 #include <cstdlib>
 
-#include "header/HelloTriangleApp.h"
+#include "header/Application.h"
 
 int main()
 {
-    HelloTriangleApp application;
+    Application application;
 
     try
     {
