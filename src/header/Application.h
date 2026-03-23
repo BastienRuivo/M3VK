@@ -1,5 +1,8 @@
 #pragma once
 
+#define GLM_FORCE_RADIANS
+//#define STB_IMAGE_IMPLEMENTATION
+
 #include "header/CommandBuffer.h"
 #include "header/MultiFrame.h"
 #include "header/Vertex.h"
@@ -31,6 +34,7 @@
 #include <vulkan/vulkan_core.h>
 
 #include <glm/glm.hpp>
+#include <stb_image.h>
 
 #include "DebugLayer.h"
 
@@ -58,10 +62,10 @@ class Application
     struct CameraData
     {
         // temp
-        glm::mat4 localToWorldMatrix;
-        glm::mat4 worldToCameraMatrix;
-        glm::mat4 projectionMatrix;
-        glm::mat4 viewProjectionMatrix;
+        alignas(16) glm::mat4 localToWorldMatrix;
+        alignas(16) glm::mat4 worldToCameraMatrix;
+        alignas(16) glm::mat4 projectionMatrix;
+        alignas(16) glm::mat4 viewProjectionMatrix;
     };
 
     const std::vector<int> _indices = {
@@ -122,6 +126,8 @@ class Application
     MultiFrameHandler<VkFenceHandler>  _waitFence;
 
     void RefreshSwapChain();
+
+    void CreateImage();
 
     void UpdateCameraData(uint32_t currentImage);
     void RecordCommandBuffer(CommandBuffer cmdBuffer, uint32_t currentFrame, uint32_t imageIndex);

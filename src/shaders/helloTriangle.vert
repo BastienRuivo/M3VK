@@ -7,7 +7,7 @@ layout(location = 1) in vec3 vertexColor;
 
 
 // don't forget alignement the day you will have vec2 or nested
-layout(binding = 0) uniform CameraData
+layout(set = 0, binding = 0) uniform CameraData
 {
     mat4 localToWorldMatrix;
     mat4 worldToCameraMatrix;

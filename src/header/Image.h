@@ -1,0 +1,57 @@
+#pragma once
+
+#include "header/Application.h"
+#include "header/VkHandlers/VkPhysicalDeviceHandler.h"
+#include <string>
+#include <vulkan/vulkan_core.h>
+class CPUImage
+{
+    public:
+    CPUImage(const std::string& path, int channelFormat);
+    ~CPUImage();
+
+    CPUImage(CPUImage&& other) noexcept;
+    CPUImage& operator=(CPUImage&& other) noexcept;
+
+    CPUImage(const CPUImage&) = delete;
+    CPUImage& operator=(const CPUImage&) = delete;
+
+    VkFormat GetGPUFormat() const;
+
+    inline VkDeviceSize Size() const { return _width * _height* _channels * 4; }
+    inline int Width() const { return _width; };
+    inline int Height() const { return _height; };
+    inline int Channels() const { return _channels; };
+    inline stbi_uc* Data() const { return _data; };
+
+    private:
+    int _width = 0;
+    int _height = 0;
+    int _channels = 0;
+
+    stbi_uc* _data = nullptr;
+};
+
+class GPUImage
+{
+    public:
+    GPUImage(VkDevice device, const VkPhysicalDeviceHandler & physicalDevice,  VkFormat format, uint32_t width, uint32_t height);
+    ~GPUImage();
+
+    GPUImage(GPUImage&& other) noexcept;
+    GPUImage& operator=(GPUImage&& other) noexcept;
+
+    GPUImage(const GPUImage&) = delete;
+    GPUImage& operator=(const GPUImage&) = delete;
+
+    void CopyCPUtoGPUImage(const CPUImage & cpuImg, const VkPhysicalDeviceHandler& physicalDevice, VkCommandPool pool, VkQueue queue);
+    void TransitionImageLayout(VkCommandPool pool, VkQueue queue, VkImageLayout oldLayout, VkImageLayout newLayout);
+
+    inline VkImage Get() { return _internal; }
+
+    private:
+    VkImage _internal;
+    VkDeviceMemory _memoryInternal;
+    VkDevice _device;
+    VkFormat _format;
+};

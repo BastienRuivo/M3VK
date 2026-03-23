@@ -25,6 +25,11 @@ class VkQueueHandler
     VkQueueHandler(const VkQueueHandler&) = delete;
     VkQueueHandler& operator=(const VkQueueHandler&) = delete;
 
+    inline void WaitForIdle()
+    {
+        vkQueueWaitIdle(_internal);
+    }
+
     inline VkQueue Get() const
     {
         return _internal;
