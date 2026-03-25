@@ -1,5 +1,4 @@
 #include "header/Image.h"
-#include "header/Application.h"
 #include "header/CommandBuffer.h"
 #include "header/DebugLayer.h"
 #include "header/GraphicsBuffer.h"
@@ -9,9 +8,16 @@
 #include <string>
 #include <vulkan/vulkan_core.h>
 
+
+#define STB_IMAGE_IMPLEMENTATION
+#include <stb_image.h>
+
 CPUImage::CPUImage(const std::string& path, int channelFormat)
 {
     _data = stbi_load(path.c_str(), &_width, &_height, &_channels, channelFormat);
+
+    _channels = channelFormat;
+
 
     if(_data == nullptr)
     {
@@ -59,6 +65,11 @@ VkFormat CPUImage::GetGPUFormat() const
         case STBI_rgb_alpha: return VK_FORMAT_R8G8B8A8_SRGB;
         default: throw std::runtime_error("Unimplemented Color Format");
     }
+}
+
+GPUImage::GPUImage(VkDevice device,  const VkPhysicalDeviceHandler & physicalDevice,  const CPUImage& cpuImg)
+    : GPUImage(device, physicalDevice, cpuImg.GetGPUFormat(), cpuImg.Width(), cpuImg.Height())
+{
 }
 
 GPUImage::GPUImage(VkDevice device,  const VkPhysicalDeviceHandler & physicalDevice,  VkFormat format, uint32_t width, uint32_t height)

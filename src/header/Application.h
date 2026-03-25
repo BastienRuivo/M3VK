@@ -1,7 +1,6 @@
 #pragma once
 
 #define GLM_FORCE_RADIANS
-//#define STB_IMAGE_IMPLEMENTATION
 
 #include "header/CommandBuffer.h"
 #include "header/MultiFrame.h"
@@ -34,9 +33,10 @@
 #include <vulkan/vulkan_core.h>
 
 #include <glm/glm.hpp>
-#include <stb_image.h>
 
 #include "DebugLayer.h"
+
+#include "header/Image.h"
 
 class Application
 {
@@ -124,6 +124,8 @@ class Application
     MultiFrameHandler<VkSemaphoreHandler> _availableImageSemaphore;
     MultiFrameHandler<VkSemaphoreHandler> _renderFinishedSemaphores;
     MultiFrameHandler<VkFenceHandler>  _waitFence;
+
+    GPUImage _img;
 
     void RefreshSwapChain();
 

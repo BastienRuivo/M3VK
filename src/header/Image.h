@@ -1,6 +1,6 @@
 #pragma once
 
-#include "header/Application.h"
+#include <stb_image.h>
 #include "header/VkHandlers/VkPhysicalDeviceHandler.h"
 #include <string>
 #include <vulkan/vulkan_core.h>
@@ -35,6 +35,7 @@ class CPUImage
 class GPUImage
 {
     public:
+    GPUImage(VkDevice device, const VkPhysicalDeviceHandler & physicalDevice,  const CPUImage& cpuImg);
     GPUImage(VkDevice device, const VkPhysicalDeviceHandler & physicalDevice,  VkFormat format, uint32_t width, uint32_t height);
     ~GPUImage();
 

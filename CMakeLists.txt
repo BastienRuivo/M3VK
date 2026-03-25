@@ -45,3 +45,21 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE Vulkan::Vulkan glfw stb)
+
+# -------------------------------------------------------------------
+#  Data Assets Sync (outputs to ${CMAKE_BINARY_DIR}/data)
+# -------------------------------------------------------------------
+
+set(DATA_SOURCE_DIR "${CMAKE_SOURCE_DIR}/data")
+set(DATA_OUTPUT_DIR "${CMAKE_BINARY_DIR}/data")
+
+# Create the destination directory if it doesn't exist
+file(MAKE_DIRECTORY ${DATA_OUTPUT_DIR})
+
+add_custom_command(
+    TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+            ${DATA_SOURCE_DIR}
+            ${DATA_OUTPUT_DIR}
+    COMMENT "Syncing data assets to build directory..."
+)
