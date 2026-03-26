@@ -15,6 +15,12 @@ class CommandBuffer
     CommandBuffer(VkDevice device, VkCommandPool pool, VkQueue queue);
     ~CommandBuffer();
 
+    CommandBuffer(CommandBuffer&& other) noexcept;
+    CommandBuffer& operator=(CommandBuffer&& other) noexcept;
+
+    CommandBuffer(const CommandBuffer&) = delete;
+    CommandBuffer& operator=(const CommandBuffer&) = delete;
+
     void Begin(VkCommandBufferUsageFlags flags = 0) const;
 
     void End() const;
@@ -35,7 +41,7 @@ class CommandBuffer
     void BindBuffer(const GraphicsBuffer& buffer) const;
     void SetScissor(uint32_t x, uint32_t y, uint32_t width, uint32_t height) const;
     void SetViewport(uint32_t width, uint32_t height, uint32_t x = 0, uint32_t y = 0, float minDepth = 1.0f, float maxDepth = 0.0f) const;
-    void BindDescriptorSets(VkPipelineBindPoint bindPoint, const VkPipelineLayout& pipelineLayout, const VkDescriptorSet& set)
+    void BindDescriptorSets(VkPipelineBindPoint bindPoint, const VkPipelineLayout& pipelineLayout, const VkDescriptorSet& set) const
     {
         vkCmdBindDescriptorSets(_internal, bindPoint, pipelineLayout, 0, 1, &set, 0, nullptr);;
     }

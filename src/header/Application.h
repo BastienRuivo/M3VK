@@ -132,7 +132,7 @@ class Application
     void CreateImage();
 
     void UpdateCameraData(uint32_t currentImage);
-    void RecordCommandBuffer(CommandBuffer cmdBuffer, uint32_t currentFrame, uint32_t imageIndex);
+    void RecordCommandBuffer(const CommandBuffer& cmdBuffer, uint32_t currentFrame, uint32_t imageIndex);
     void DrawFrame();
 
     // Utils

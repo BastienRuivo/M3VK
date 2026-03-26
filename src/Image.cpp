@@ -185,6 +185,7 @@ GPUImage::~GPUImage()
      if(_internal == VK_NULL_HANDLE) return;
 
     vkDestroyImage(_device, _internal, nullptr);
+    vkFreeMemory(_device, _memoryInternal, nullptr);
 
 #ifdef M3VK_MEMORYLOG
     DebugLayer::Log(DebugLayer::LogType::DESTROY, "GPUImage Destroyed !");

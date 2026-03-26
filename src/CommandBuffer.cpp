@@ -153,3 +153,22 @@ void CommandBuffer::WaitCompletion()
     vkQueueSubmit(_queue, 1, &submitInfo, VK_NULL_HANDLE);
     vkQueueWaitIdle(_queue);
 }
+
+CommandBuffer::CommandBuffer(CommandBuffer&& other) noexcept
+: _device(other._device), _pool(other._pool), _queue(other._queue), _internal(other._internal)
+{
+    other._internal = VK_NULL_HANDLE;
+}
+
+CommandBuffer& CommandBuffer::operator=(CommandBuffer&& other) noexcept
+{
+    if(this != &other)
+    {
+        _device = other._device;
+        _internal = other._internal;
+        _pool = other._pool;
+        _queue = other._queue;
+        other._internal = VK_NULL_HANDLE;
+    }
+    return *this;
+}

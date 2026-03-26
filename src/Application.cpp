@@ -185,7 +185,7 @@ void Application::DrawFrame()
     _currentFrame = (_currentFrame + 1) % Application::MaxFrameInCount;
 }
 
-void Application::RecordCommandBuffer(CommandBuffer cmdBuffer, uint32_t currentFrame, uint32_t imageIndex)
+void Application::RecordCommandBuffer(const CommandBuffer& cmdBuffer, uint32_t currentFrame, uint32_t imageIndex)
 {
     cmdBuffer.Begin();
     {
