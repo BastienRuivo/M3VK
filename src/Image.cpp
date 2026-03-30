@@ -2,6 +2,7 @@
 #include "header/CommandBuffer.h"
 #include "header/DebugLayer.h"
 #include "header/GraphicsBuffer.h"
+#include "header/VkHandlers/VkImageViewHandler.h"
 #include "header/VkHandlers/VkPhysicalDeviceHandler.h"
 #include <cstdint>
 #include <stdexcept>
@@ -80,6 +81,7 @@ GPUImage::GPUImage(VkDevice device,  const VkPhysicalDeviceHandler & physicalDev
 }
 
 GPUImage::GPUImage(VkDevice device,  const VkPhysicalDeviceHandler & physicalDevice,  VkFormat format, uint32_t width, uint32_t height)
+: _view()
 {
 #ifdef M3VK_MEMORYLOG
     DebugLayer::Log(DebugLayer::LogType::CREATE, "GPUImage Create !");
@@ -127,6 +129,7 @@ GPUImage::GPUImage(VkDevice device,  const VkPhysicalDeviceHandler & physicalDev
     }
 
     vkBindImageMemory(_device, _internal, _memoryInternal, 0);
+    _view = VkImageViewHandler(_device, _internal, _format);
 }
 
 void GPUImage::TransitionLayoutCommand(const CommandBuffer& cmdBuffer, VkImageLayout oldLayout, VkImageLayout newLayout)

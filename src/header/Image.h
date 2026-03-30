@@ -2,6 +2,7 @@
 
 #include <stb_image.h>
 #include "header/CommandBuffer.h"
+#include "header/VkHandlers/VkImageViewHandler.h"
 #include "header/VkHandlers/VkPhysicalDeviceHandler.h"
 #include <string>
 #include <vulkan/vulkan_core.h>
@@ -57,4 +58,5 @@ class GPUImage
     VkDeviceMemory _memoryInternal;
     VkDevice _device;
     VkFormat _format;
+    VkImageViewHandler _view;
 };

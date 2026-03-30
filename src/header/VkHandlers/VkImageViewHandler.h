@@ -5,6 +5,7 @@
 class VkImageViewHandler
 {
     public:
+    VkImageViewHandler() {};
     VkImageViewHandler(VkDevice device, VkImage image, VkFormat format);
     ~VkImageViewHandler();
 
