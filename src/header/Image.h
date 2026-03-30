@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stb_image.h>
+#include "header/CommandBuffer.h"
 #include "header/VkHandlers/VkPhysicalDeviceHandler.h"
 #include <string>
 #include <vulkan/vulkan_core.h>
@@ -46,7 +47,8 @@ class GPUImage
     GPUImage& operator=(const GPUImage&) = delete;
 
     void CopyCPUtoGPUImage(const CPUImage & cpuImg, const VkPhysicalDeviceHandler& physicalDevice, VkCommandPool pool, VkQueue queue);
-    void TransitionImageLayout(VkCommandPool pool, VkQueue queue, VkImageLayout oldLayout, VkImageLayout newLayout);
+    void TransitionLayout(VkCommandPool pool, VkQueue queue, VkImageLayout oldLayout, VkImageLayout newLayout);
+    void TransitionLayoutCommand(const CommandBuffer& cmdBuffer, VkImageLayout oldLayout, VkImageLayout newLayout);
 
     inline VkImage Get() { return _internal; }
 
