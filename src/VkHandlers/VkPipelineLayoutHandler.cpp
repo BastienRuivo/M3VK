@@ -1,7 +1,10 @@
 #include "header/VkHandlers/VkPipelineLayoutHandler.h"
-#include "header/DebugLayer.h"
 #include <stdexcept>
 #include <vulkan/vulkan_core.h>
+
+#ifdef M3VK_MEMORYLOG
+#include "header/DebugLayer.h"
+#endif
 
 VkPipelineLayoutHandler::VkPipelineLayoutHandler(VkDevice device, VkDescriptorSetLayout descriptorLayout)
 {

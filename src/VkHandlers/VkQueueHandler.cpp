@@ -1,9 +1,12 @@
 #include "header/VkHandlers/VkQueueHandler.h"
 #include "header/ProjectHelper.h"
-#include "header/DebugLayer.h"
 #include <cstdint>
 #include <stdexcept>
 #include <vulkan/vulkan_core.h>
+
+#ifdef M3VK_MEMORYLOG
+#include "header/DebugLayer.h"
+#endif
 
 VkQueueHandler::VkQueueHandler(VkDevice device, const ProjectHelper::QueueFamilyIds& queueFamilyIds, VkQueueHandler::QueueTypeEnum queueType)
 {

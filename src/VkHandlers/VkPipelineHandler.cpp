@@ -1,9 +1,12 @@
 #include "header/VkHandlers/VkPipelineHandler.h"
-#include "header/DebugLayer.h"
 #include "header/Shader.h"
 #include "header/Vertex.h"
 #include <stdexcept>
 #include <vulkan/vulkan_core.h>
+
+#ifdef M3VK_MEMORYLOG
+#include "header/DebugLayer.h"
+#endif
 
 VkPipelineHandler::VkPipelineHandler(const VkExtent2D& appExtent, VkDevice device, VkPipelineLayout pipelineLayout, VkRenderPass renderPass)
 {

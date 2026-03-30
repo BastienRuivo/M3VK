@@ -187,7 +187,7 @@ void GPUImage::CopyCPUtoGPUImage(const CPUImage & cpuImg, const VkPhysicalDevice
 {
     StageBuffer stage(physicalDevice, _device, cpuImg.Size());
     stage.CopyToBuffer(_device, (void*)cpuImg.Data(), cpuImg.Size());
-    // can probably be merged
+
     TransitionLayout(pool, queue, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
     CommandBuffer cmdBuffer(_device, pool, queue);
     cmdBuffer.BeginSingleTime();
@@ -216,7 +216,6 @@ void GPUImage::CopyCPUtoGPUImage(const CPUImage & cpuImg, const VkPhysicalDevice
     }
     cmdBuffer.End();
     cmdBuffer.WaitCompletion();
-    //TransitionLayout(pool, queue, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 }
 
 

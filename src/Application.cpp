@@ -86,10 +86,12 @@ void Application::UpdateCameraData(uint32_t currentFrame)
 
     float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
 
+    VkExtent2D extent = _swapChain->GetExtent();
+
     CameraData cameraData = {};
     cameraData.localToWorldMatrix = glm::rotate<float>(glm::mat4(1.0f), time * glm::radians<float>(90), glm::vec3(0, 1, 0));
     cameraData.worldToCameraMatrix = glm::lookAt(glm::vec3(2, 2, 2), glm::vec3(0, 0, 0), glm::vec3(0, 1.0, 0));
-    cameraData.projectionMatrix = glm::perspective<float>(glm::radians<float>(45),(float)_swapChain->Extent.width / _swapChain->Extent.height, 0.1f,100.0f);
+    cameraData.projectionMatrix = glm::perspective<float>(glm::radians<float>(45),(float)extent.width / extent.height, 0.1f,100.0f);
     // it was designed for opengl so flip it
     cameraData.projectionMatrix[1][1] *= -1;
 
@@ -131,7 +133,7 @@ void Application::DrawFrame()
 
     // Acquire image to draw on
     uint32_t imageIndex;
-    VkResult result = vkAcquireNextImageKHR(_deviceHandler.Get(), _swapChain->_internal, UINT64_MAX, _availableImageSemaphore.GetInternal(_currentFrame), VK_NULL_HANDLE, &imageIndex);
+    VkResult result = vkAcquireNextImageKHR(_deviceHandler.Get(), _swapChain->Get(), UINT64_MAX, _availableImageSemaphore.GetInternal(_currentFrame), VK_NULL_HANDLE, &imageIndex);
 
     if(result == VK_ERROR_OUT_OF_DATE_KHR)
     {
@@ -164,7 +166,7 @@ void Application::DrawFrame()
     presentInfo.waitSemaphoreCount = 1;
     presentInfo.pWaitSemaphores = signalSemaphore;
 
-    VkSwapchainKHR swapChains[] = {_swapChain->_internal};
+    VkSwapchainKHR swapChains[] = {_swapChain->Get()};
     presentInfo.swapchainCount = 1;
     presentInfo.pSwapchains = swapChains;
     presentInfo.pImageIndices = &imageIndex;
@@ -187,13 +189,14 @@ void Application::DrawFrame()
 
 void Application::RecordCommandBuffer(const CommandBuffer& cmdBuffer, uint32_t currentFrame, uint32_t imageIndex)
 {
+    VkExtent2D renderExtent = _swapChain->GetExtent();
     cmdBuffer.Begin();
     {
-        cmdBuffer.BeginRenderPass(_renderPassHandler.Get(), _framebuffer.GetInternal(imageIndex), {0, 0, 0, 0}, _swapChain->Extent);
+        cmdBuffer.BeginRenderPass(_renderPassHandler.Get(), _framebuffer.GetInternal(imageIndex), {0, 0, 0, 0}, renderExtent);
         {
             cmdBuffer.BindPipeline(_graphicsPipelineHandler.Get(), VK_PIPELINE_BIND_POINT_GRAPHICS);
-            cmdBuffer.SetViewport(_swapChain->Extent.width, _swapChain->Extent.height);
-            cmdBuffer.SetScissor(0, 0, _swapChain->Extent.width, _swapChain->Extent.height);
+            cmdBuffer.SetViewport(renderExtent.width, renderExtent.height);
+            cmdBuffer.SetScissor(0, 0, renderExtent.width, renderExtent.height);
             cmdBuffer.BindBuffer(_vertexBuffer);
             cmdBuffer.BindBuffer(_indexBuffer);
             cmdBuffer.BindDescriptorSets(VK_PIPELINE_BIND_POINT_GRAPHICS, _pipelineLayoutHandler.Get(), _descriptorSet.Get(currentFrame));
@@ -206,7 +209,7 @@ void Application::RecordCommandBuffer(const CommandBuffer& cmdBuffer, uint32_t c
 
 MultiFrameHandler<VkFramebufferHandler> Application::CreateFramebuffer()
 {
-    MultiFrameHandler<VkFramebufferHandler> framebuffer(_swapChain->ImageViews.size());
+    MultiFrameHandler<VkFramebufferHandler> framebuffer(_swapChain->ImageViews.Size());
 
     InitFramebuffer(framebuffer);
 
@@ -215,13 +218,13 @@ MultiFrameHandler<VkFramebufferHandler> Application::CreateFramebuffer()
 
 void Application::InitFramebuffer(MultiFrameHandler<VkFramebufferHandler>& framebuffer)
 {
-    for(size_t i = 0; i < _swapChain->ImageViews.size(); ++i)
+    for(size_t i = 0; i < _swapChain->ImageViews.Size(); ++i)
     {
         std::vector<VkImageView> attachments = {
-            _swapChain->ImageViews[i]
+            _swapChain->ImageViews.GetInternal(i)
         };
         // emplace back to avoid a temp obejct
-        framebuffer.EmplaceBack(_deviceHandler.Get(), _renderPassHandler.Get(), _swapChain->Extent, attachments);
+        framebuffer.EmplaceBack(_deviceHandler.Get(), _renderPassHandler.Get(), _swapChain->GetExtent(), attachments);
     }
 }
 
@@ -240,10 +243,10 @@ Application::Application() :
     _swapChain(std::make_unique<SwapChain>(_window, _physicalDeviceHandler.Get(), _deviceHandler.Get(), _windowSurfaceHandler.Get())),
 
     // Render Layouts & Pipelines
-    _renderPassHandler(_deviceHandler.Get(), _swapChain->ImageFormat),
+    _renderPassHandler(_deviceHandler.Get(), _swapChain->GetImageFormat()),
     _descriptorSetLayoutHandler(_deviceHandler.Get()),
     _pipelineLayoutHandler(_deviceHandler.Get(), _descriptorSetLayoutHandler.Get()),
-    _graphicsPipelineHandler(_swapChain->Extent, _deviceHandler.Get(), _pipelineLayoutHandler.Get(), _renderPassHandler.Get()),
+    _graphicsPipelineHandler(_swapChain->GetExtent(), _deviceHandler.Get(), _pipelineLayoutHandler.Get(), _renderPassHandler.Get()),
 
     // Framebuffers & Command Pools
     _framebuffer(CreateFramebuffer()),

@@ -1,5 +1,6 @@
 #include "./header/SwapChain.h"
 #include "./header/ProjectHelper.h"
+#include "header/MultiFrame.h"
 #include <GLFW/glfw3.h>
 #include <algorithm>
 #include <limits>
@@ -8,36 +9,13 @@
 
 
 
-void SwapChain::CreateImageView()
+void SwapChain::CreateImageViews()
 {
-    ImageViews.resize(Images.size());
+    ImageViews.Reserve(Images.size());
 
-    for(int i = 0; i < ImageViews.size(); i++)
+    for(int i = 0; i < Images.size(); i++)
     {
-        VkImageViewCreateInfo createInfo{};
-        createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-        createInfo.image = Images[i];
-        createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-        createInfo.format = ImageFormat;
-
-        // How to deal with components
-        createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-        createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-        createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-        createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-
-        // Image info
-        createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        createInfo.subresourceRange.baseMipLevel = 0;
-        createInfo.subresourceRange.levelCount = 1;
-        createInfo.subresourceRange.baseArrayLayer = 0;
-        // if VR someday
-        createInfo.subresourceRange.layerCount = 1;
-
-        if(vkCreateImageView(_device, &createInfo, nullptr, &ImageViews[i]) != VK_SUCCESS)
-        {
-            throw std::runtime_error("Failed to create swap chain images !");
-        }
+        ImageViews.EmplaceBack(_device, Images[i], _imageFormat);
     }
 }
 
@@ -132,6 +110,7 @@ VkSurfaceFormatKHR SwapChain::SelectSwapSurfaceFormat(const std::vector<VkSurfac
 }
 
 SwapChain::SwapChain(const Window& window, VkPhysicalDevice physicalDevice, VkDevice device, VkSurfaceKHR windowSurface)
+: ImageViews(0)
 {
 #ifdef M3VK_MEMORYLOG
     DebugLayer::Log(DebugLayer::LogType::CREATE, "SwapChain Creation !");
@@ -201,18 +180,14 @@ SwapChain::SwapChain(const Window& window, VkPhysicalDevice physicalDevice, VkDe
     Images.resize(imageCount);
     vkGetSwapchainImagesKHR(_device, _internal, &imageCount, Images.data());
 
-    ImageFormat = format.format;
-    Extent = extents;
+    _imageFormat = format.format;
+    _extent = extents;
 
-    CreateImageView();
+    CreateImageViews();
 }
 
 SwapChain::~SwapChain()
 {
-    for(const VkImageView& imageView : ImageViews)
-    {
-        vkDestroyImageView(_device, imageView, nullptr);
-    }
     vkDestroySwapchainKHR(_device, _internal, nullptr);
 
 #ifdef M3VK_MEMORYLOG

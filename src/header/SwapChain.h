@@ -1,5 +1,7 @@
 #pragma once
 
+#include "header/MultiFrame.h"
+#include "header/VkHandlers/VkImageViewHandler.h"
 #include <vector>
 #include <vulkan/vk_platform.h>
 #include <vulkan/vulkan_core.h>
@@ -11,13 +13,11 @@
 class SwapChain
 {
     public:
-    VkFormat ImageFormat;
-    VkExtent2D Extent;
-    VkSwapchainKHR _internal;
-    VkDevice _device;
+
+
 
     std::vector<VkImage> Images;
-    std::vector<VkImageView> ImageViews;
+    MultiFrameHandler<VkImageViewHandler> ImageViews;
     SwapChain(const Window & window, VkPhysicalDevice physicalDevice, VkDevice device, VkSurfaceKHR windowSurface);
     ~SwapChain();
 
@@ -26,7 +26,16 @@ class SwapChain
     VkPresentModeKHR SelectSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes) const;
     VkExtent2D SelectSwapExtents(const Window& window, const VkSurfaceCapabilitiesKHR& Capabilities) const;
 
+    inline VkFormat GetImageFormat() const { return _imageFormat; }
+    inline VkExtent2D GetExtent() const { return _extent; }
+    inline VkSwapchainKHR Get() const { return _internal; }
+
 
     private:
-    void CreateImageView();
+    void CreateImageViews();
+
+    VkFormat _imageFormat;
+    VkExtent2D _extent;
+    VkSwapchainKHR _internal;
+    VkDevice _device;
 };

@@ -1,5 +1,9 @@
 #include "header/VkHandlers/VkDescriptorPoolHandler.h"
+
+#ifdef M3VK_MEMORYLOG
 #include "header/DebugLayer.h"
+#endif
+
 #include <stdexcept>
 #include <vulkan/vulkan_core.h>
 
