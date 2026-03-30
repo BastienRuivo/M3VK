@@ -238,8 +238,8 @@ Application::Application() :
     _deviceHandler(_physicalDeviceHandler, _windowSurfaceHandler.Get(), _deviceExtensions),
 
     // Queues & Swapchain
-    _graphicsQueueHandler(_deviceHandler.Get(), _physicalDeviceHandler.QueueFamilyIds, VkQueueHandler::Graphics),
-    _presentQueueHandler(_deviceHandler.Get(), _physicalDeviceHandler.QueueFamilyIds, VkQueueHandler::Present),
+    _graphicsQueueHandler(_deviceHandler.Get(), _physicalDeviceHandler.GetQueueFamilyIds(), VkQueueHandler::Graphics),
+    _presentQueueHandler(_deviceHandler.Get(), _physicalDeviceHandler.GetQueueFamilyIds(), VkQueueHandler::Present),
     _swapChain(std::make_unique<SwapChain>(_window, _physicalDeviceHandler.Get(), _deviceHandler.Get(), _windowSurfaceHandler.Get())),
 
     // Render Layouts & Pipelines
@@ -250,7 +250,7 @@ Application::Application() :
 
     // Framebuffers & Command Pools
     _framebuffer(CreateFramebuffer()),
-    _graphicsCommandPoolHandler(_deviceHandler.Get(), _physicalDeviceHandler.QueueFamilyIds),
+    _graphicsCommandPoolHandler(_deviceHandler.Get(), _physicalDeviceHandler.GetQueueFamilyIds()),
 
     // Geometry & Data Buffers
     _vertexBuffer(_physicalDeviceHandler, _deviceHandler.Get(), _vertices.size(), sizeof(_vertices[0]), GraphicsBuffer::BufferType::VERTEX),
@@ -258,6 +258,7 @@ Application::Application() :
     _descriptorPoolHandler(_deviceHandler.Get(), static_cast<uint32_t>(MaxFrameInCount)),
     _cameraDataBuffer(MaxFrameInCount, _physicalDeviceHandler, _deviceHandler.Get(), 1, sizeof(CameraData), GraphicsBuffer::UNIFORM),
     _img(_deviceHandler.Get(), _physicalDeviceHandler, CPUImage("data/img/example.jpg", STBI_rgb_alpha), _graphicsCommandPoolHandler.Get(), _graphicsQueueHandler.Get()),
+    _sampler(_deviceHandler.Get(), _physicalDeviceHandler),
 
     // Descriptor Sets & Execution
     _descriptorSet(CreateDescriptorSet()),

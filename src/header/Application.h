@@ -1,5 +1,6 @@
 #pragma once
 
+#include "header/VkHandlers/VkSamplerHandler.h"
 #define GLM_FORCE_RADIANS
 
 #include "header/CommandBuffer.h"
@@ -126,6 +127,7 @@ class Application
     MultiFrameHandler<VkFenceHandler>  _waitFence;
 
     GPUImage _img;
+    VkSamplerHandler _sampler;
 
     void RefreshSwapChain();
 

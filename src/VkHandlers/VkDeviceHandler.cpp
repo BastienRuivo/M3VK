@@ -1,5 +1,4 @@
 #include "header/VkHandlers/VkDeviceHandler.h"
-#include "header/ProjectHelper.h"
 #include "header/DebugLayer.h"
 #include "header/VkHandlers/VkPhysicalDeviceHandler.h"
 #include <set>
@@ -15,8 +14,8 @@ VkDeviceHandler::VkDeviceHandler(const VkPhysicalDeviceHandler& physicalDeviceHa
     std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
     std::set<uint32_t> uniqueQueueIds =
     {
-        physicalDeviceHandler.QueueFamilyIds.Graphics.value(),
-        physicalDeviceHandler.QueueFamilyIds.Present.value(),
+        physicalDeviceHandler.GetGraphicsQueueId(),
+        physicalDeviceHandler.GetPresentQueueId(),
         //QueueFamilyId.Copy.value()
     };
 
@@ -32,6 +31,7 @@ VkDeviceHandler::VkDeviceHandler(const VkPhysicalDeviceHandler& physicalDeviceHa
     }
 
     VkPhysicalDeviceFeatures deviceFeatures{};
+    deviceFeatures.samplerAnisotropy = VK_TRUE;
 
     VkDeviceCreateInfo deviceCreateInfo{};
     deviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;

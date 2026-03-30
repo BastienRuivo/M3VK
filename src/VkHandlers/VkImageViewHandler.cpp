@@ -63,6 +63,7 @@ VkImageViewHandler& VkImageViewHandler::operator=(VkImageViewHandler&& other) no
     {
         _internal = other._internal;
         _device = other._device;
+        _format = other._format;
         other._internal = VK_NULL_HANDLE;
         other._device = VK_NULL_HANDLE;
         other._format = VK_FORMAT_UNDEFINED;
