@@ -14,6 +14,9 @@
 
 CPUImage::CPUImage(const std::string& path, int channelFormat)
 {
+#ifdef M3VK_MEMORYLOG
+    DebugLayer::Log(DebugLayer::LogType::CREATE, "CPUImage Create !");
+#endif
     _data = stbi_load(path.c_str(), &_width, &_height, &_channels, channelFormat);
 
     _channels = channelFormat;
@@ -30,6 +33,9 @@ CPUImage::~CPUImage()
 {
     stbi_image_free(_data);
     _width = _height = _channels = 0;
+#ifdef M3VK_MEMORYLOG
+    DebugLayer::Log(DebugLayer::LogType::DESTROY, "GPUImage Destroyed !");
+#endif
 }
 
 CPUImage::CPUImage(CPUImage&& other) noexcept
@@ -67,9 +73,10 @@ VkFormat CPUImage::GetGPUFormat() const
     }
 }
 
-GPUImage::GPUImage(VkDevice device,  const VkPhysicalDeviceHandler & physicalDevice,  const CPUImage& cpuImg)
+GPUImage::GPUImage(VkDevice device,  const VkPhysicalDeviceHandler & physicalDevice,  const CPUImage& cpuImg, VkCommandPool pool, VkQueue queue)
     : GPUImage(device, physicalDevice, cpuImg.GetGPUFormat(), cpuImg.Width(), cpuImg.Height())
 {
+    CopyCPUtoGPUImage(cpuImg, physicalDevice, pool, queue);
 }
 
 GPUImage::GPUImage(VkDevice device,  const VkPhysicalDeviceHandler & physicalDevice,  VkFormat format, uint32_t width, uint32_t height)
@@ -140,9 +147,28 @@ void GPUImage::TransitionImageLayout(VkCommandPool pool, VkQueue queue, VkImageL
         barrier.subresourceRange.levelCount = 1;
         barrier.subresourceRange.baseArrayLayer = 0;
         barrier.subresourceRange.layerCount = 1;
-        barrier.srcAccessMask = 0; // TODO
-        barrier.dstAccessMask = 0; // TODO
-        cmdBuffer.Barrier(nullptr, 0, nullptr, 0, &barrier, 1);
+
+        VkPipelineStageFlags sourceStage;
+        VkPipelineStageFlags destinationStage;
+
+        if(oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
+        {
+            barrier.srcAccessMask = 0;
+            barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+
+            sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+            destinationStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+        }
+        else if(oldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+        {
+            barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+            barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+            sourceStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+            destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+        }
+
+        cmdBuffer.Barrier(sourceStage, destinationStage, nullptr, 0, nullptr, 0, &barrier, 1);
     }
     cmdBuffer.End();
     cmdBuffer.WaitCompletion();
@@ -177,6 +203,7 @@ void GPUImage::CopyCPUtoGPUImage(const CPUImage & cpuImg, const VkPhysicalDevice
     }
     cmdBuffer.End();
     cmdBuffer.WaitCompletion();
+    TransitionImageLayout(pool, queue, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 }
 
 

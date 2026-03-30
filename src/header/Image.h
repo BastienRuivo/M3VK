@@ -18,7 +18,7 @@ class CPUImage
 
     VkFormat GetGPUFormat() const;
 
-    inline VkDeviceSize Size() const { return _width * _height* _channels * 4; }
+    inline VkDeviceSize Size() const { return _width * _height* _channels; }
     inline int Width() const { return _width; };
     inline int Height() const { return _height; };
     inline int Channels() const { return _channels; };
@@ -35,7 +35,7 @@ class CPUImage
 class GPUImage
 {
     public:
-    GPUImage(VkDevice device, const VkPhysicalDeviceHandler & physicalDevice,  const CPUImage& cpuImg);
+    GPUImage(VkDevice device, const VkPhysicalDeviceHandler & physicalDevice,  const CPUImage& cpuImg, VkCommandPool pool, VkQueue queue);
     GPUImage(VkDevice device, const VkPhysicalDeviceHandler & physicalDevice,  VkFormat format, uint32_t width, uint32_t height);
     ~GPUImage();
 

@@ -254,7 +254,7 @@ Application::Application() :
     _indexBuffer(_physicalDeviceHandler, _deviceHandler.Get(), _indices.size(), sizeof(_indices[0]), GraphicsBuffer::BufferType::INDEX),
     _descriptorPoolHandler(_deviceHandler.Get(), static_cast<uint32_t>(MaxFrameInCount)),
     _cameraDataBuffer(MaxFrameInCount, _physicalDeviceHandler, _deviceHandler.Get(), 1, sizeof(CameraData), GraphicsBuffer::UNIFORM),
-    _img(_deviceHandler.Get(), _physicalDeviceHandler, CPUImage("data/img/example.jpg", STBI_rgb_alpha)),
+    _img(_deviceHandler.Get(), _physicalDeviceHandler, CPUImage("data/img/example.jpg", STBI_rgb_alpha), _graphicsCommandPoolHandler.Get(), _graphicsQueueHandler.Get()),
 
     // Descriptor Sets & Execution
     _descriptorSet(CreateDescriptorSet()),

@@ -67,11 +67,10 @@ class CommandBuffer
         vkResetCommandBuffer(_internal, flags);
     }
 
-    inline void Barrier(VkMemoryBarrier* memoryBarriers, uint32_t memoryBarrierCount, VkBufferMemoryBarrier* bufferBarriers, uint32_t bufferBarrierCount, VkImageMemoryBarrier* imgBarriers, uint32_t imgBarrierCount) const
+    inline void Barrier(VkPipelineStageFlags srcAccesMask, VkPipelineStageFlags dstAccesMask, VkMemoryBarrier* memoryBarriers, uint32_t memoryBarrierCount, VkBufferMemoryBarrier* bufferBarriers, uint32_t bufferBarrierCount, VkImageMemoryBarrier* imgBarriers, uint32_t imgBarrierCount) const
     {
         vkCmdPipelineBarrier(_internal,
-            0, // todo
-            0, // todo
+            srcAccesMask, dstAccesMask,
             0,
             memoryBarrierCount, memoryBarriers,
             bufferBarrierCount, bufferBarriers,
