@@ -51,7 +51,9 @@ class GPUImage
     void TransitionLayout(VkCommandPool pool, VkQueue queue, VkImageLayout oldLayout, VkImageLayout newLayout);
     void TransitionLayoutCommand(const CommandBuffer& cmdBuffer, VkImageLayout oldLayout, VkImageLayout newLayout);
 
-    inline VkImage Get() { return _internal; }
+    inline VkImage Get() const { return _internal; }
+    inline VkImageView GetView() const { return _view.Get(); }
+    inline VkFormat GetFormat() const { return _format; }
 
     private:
     VkImage _internal;

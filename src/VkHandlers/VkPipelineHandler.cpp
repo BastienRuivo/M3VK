@@ -44,7 +44,7 @@ VkPipelineHandler::VkPipelineHandler(const VkExtent2D& appExtent, VkDevice devic
     pipelineStateCreateInfo.pDynamicStates = dynamicStates.data();
 
     VkVertexInputBindingDescription bindingDescription = Vertex::GetBindingDescription();
-    std::array<VkVertexInputAttributeDescription, 2> attributeDescription = Vertex::GetAttributeDescription();
+    auto attributeDescription = Vertex::GetAttributeDescription();
 
 
     VkPipelineVertexInputStateCreateInfo vertexInputCreateInfo{};

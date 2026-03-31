@@ -4,6 +4,7 @@
 // In
 layout(location = 0) in vec3 osVertexPosition;
 layout(location = 1) in vec3 vertexColor;
+layout(location = 2) in vec2 texCoords;
 
 
 // don't forget alignement the day you will have vec2 or nested
@@ -17,9 +18,11 @@ layout(set = 0, binding = 0) uniform CameraData
 
 // Out
 layout(location=0) out vec3 fragColor;
+layout(location=1) out vec2 fragTexCoords;
 
 void main()
 {
     gl_Position = ubo.projectionMatrix * ubo.worldToCameraMatrix * ubo.localToWorldMatrix * vec4(osVertexPosition, 1.0);
     fragColor = vertexColor;
+    fragTexCoords = texCoords;
 }

@@ -7,8 +7,6 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 include(FetchContent)
 
-# --- Dependencies ---
-
 fetchcontent_declare(
     glfw
     GIT_REPOSITORY https://github.com/glfw/glfw.git
@@ -26,17 +24,52 @@ fetchcontent_makeavailable(glfw stb)
 add_library(stb INTERFACE)
 target_include_directories(stb INTERFACE ${stb_SOURCE_DIR})
 
-# -------------------------------------------------------------------
+find_package(Vulkan REQUIRED)
 
-set(SHADER_OUTPUT_DIR "${CMAKE_BINARY_DIR}/shaders")
-add_definitions(-DSHADER_DIRECTORY="${SHADER_OUTPUT_DIR}/")
+find_program(GLSLC_EXECUTABLE NAMES glslc HINTS "$ENV{VULKAN_SDK}/bin")
+if(NOT GLSLC_EXECUTABLE)
+    message(FATAL_ERROR "glslc not found! Please ensure the Vulkan SDK is installed.")
+endif()
+
+set(SHADER_SOURCE_DIR "${CMAKE_SOURCE_DIR}/shaders")
+set(SHADER_BINARY_DIR "${CMAKE_BINARY_DIR}/shaders")
+
+if(NOT EXISTS ${SHADER_BINARY_DIR})
+    file(MAKE_DIRECTORY ${SHADER_BINARY_DIR})
+endif()
+
+file(GLOB_RECURSE SHADER_SOURCES
+    "${SHADER_SOURCE_DIR}/*.vert"
+    "${SHADER_SOURCE_DIR}/*.frag"
+    "${SHADER_SOURCE_DIR}/*.comp"
+)
+
+set(SPIRV_BINARY_FILES "")
+
+foreach(SHADER_SOURCE ${SHADER_SOURCES})
+    get_filename_component(FILE_NAME ${SHADER_SOURCE} NAME)
+    set(SPIRV_OUTPUT "${SHADER_BINARY_DIR}/${FILE_NAME}.spv")
+
+    add_custom_command(
+        OUTPUT ${SPIRV_OUTPUT}
+        COMMAND ${GLSLC_EXECUTABLE} ${SHADER_SOURCE} -o ${SPIRV_OUTPUT}
+        DEPENDS ${SHADER_SOURCE}
+        COMMENT "Compiling shader: ${FILE_NAME}"
+    )
+
+    list(APPEND SPIRV_BINARY_FILES ${SPIRV_OUTPUT})
+endforeach()
+
+add_custom_target(CompileShaders DEPENDS ${SPIRV_BINARY_FILES})
+
+add_definitions(-DSHADER_DIRECTORY="${SHADER_BINARY_DIR}/")
 
 file(GLOB_RECURSE SRC_FILES "${CMAKE_SOURCE_DIR}/src/*.cpp")
 file(GLOB_RECURSE HEADER_FILES "${CMAKE_SOURCE_DIR}/src/headers/*.h" "${CMAKE_SOURCE_DIR}/src/headers/*.hpp")
 
-find_package(Vulkan REQUIRED)
-
 add_executable(${PROJECT_NAME} ${SRC_FILES} ${HEADER_FILES})
+
+add_dependencies(${PROJECT_NAME} CompileShaders)
 
 target_include_directories(${PROJECT_NAME} PRIVATE
     ${CMAKE_SOURCE_DIR}/src
@@ -46,14 +79,9 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 
 target_link_libraries(${PROJECT_NAME} PRIVATE Vulkan::Vulkan glfw stb)
 
-# -------------------------------------------------------------------
-#  Data Assets Sync (outputs to ${CMAKE_BINARY_DIR}/data)
-# -------------------------------------------------------------------
-
 set(DATA_SOURCE_DIR "${CMAKE_SOURCE_DIR}/data")
 set(DATA_OUTPUT_DIR "${CMAKE_BINARY_DIR}/data")
 
-# Create the destination directory if it doesn't exist
 file(MAKE_DIRECTORY ${DATA_OUTPUT_DIR})
 
 add_custom_command(

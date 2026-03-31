@@ -54,10 +54,10 @@ class Application
     private:
 
     const std::vector<Vertex> _vertices = {
-        {{-0.5f, 0, -0.5f}, {1.0f, 0.0f, 0.0f}},
-        {{0.5f, 0, -0.5f}, {0.0f, 1.0f, 0.0f}},
-        {{0.5f, 0, 0.5f}, {0.0f, 0.0f, 1.0f}},
-        {{-0.5f, 0, 0.5f}, {1.0f, 1.0f, 1.0f}}
+        {{-0.5f, 0, -0.5f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
+        {{0.5f, 0, -0.5f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
+        {{0.5f, 0, 0.5f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
+        {{-0.5f, 0, 0.5f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}}
     };
 
     struct CameraData
@@ -113,6 +113,9 @@ class Application
     // Datas
     GraphicsBuffer _vertexBuffer;
     GraphicsBuffer _indexBuffer;
+    GPUImage _img;
+    VkSamplerHandler _sampler;
+
     VkDescriptorPoolHandler _descriptorPoolHandler;
 
     MultiFrameHandler<GraphicsBuffer> _cameraDataBuffer;
@@ -125,9 +128,6 @@ class Application
     MultiFrameHandler<VkSemaphoreHandler> _availableImageSemaphore;
     MultiFrameHandler<VkSemaphoreHandler> _renderFinishedSemaphores;
     MultiFrameHandler<VkFenceHandler>  _waitFence;
-
-    GPUImage _img;
-    VkSamplerHandler _sampler;
 
     void RefreshSwapChain();
 

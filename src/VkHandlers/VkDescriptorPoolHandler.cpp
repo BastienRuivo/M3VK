@@ -1,4 +1,6 @@
 #include "header/VkHandlers/VkDescriptorPoolHandler.h"
+#include <array>
+#include <cstdint>
 
 #ifdef M3VK_MEMORYLOG
 #include "header/DebugLayer.h"
@@ -14,14 +16,24 @@ VkDescriptorPoolHandler::VkDescriptorPoolHandler(VkDevice device, uint32_t frame
 #endif
     _device = device;
 
-    VkDescriptorPoolSize poolSize{};
-    poolSize.descriptorCount = frameCount;
-    poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    std::array<VkDescriptorPoolSize, 2> poolSizes
+    {
+        VkDescriptorPoolSize
+        {
+            .type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+            .descriptorCount = frameCount
+        },
+        VkDescriptorPoolSize
+        {
+            .type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+            .descriptorCount = frameCount
+        }
+    };
 
     VkDescriptorPoolCreateInfo poolCreateInfo{};
     poolCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-    poolCreateInfo.poolSizeCount = 1;
-    poolCreateInfo.pPoolSizes = &poolSize;
+    poolCreateInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
+    poolCreateInfo.pPoolSizes = poolSizes.data();
     poolCreateInfo.maxSets = frameCount;
 
     if(vkCreateDescriptorPool(_device, &poolCreateInfo, nullptr, &_internal) != VK_SUCCESS)
