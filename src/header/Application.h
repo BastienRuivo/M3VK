@@ -1,8 +1,7 @@
 #pragma once
 
-#include "header/VkHandlers/VkSamplerHandler.h"
-#define GLM_FORCE_RADIANS
 
+#include "header/VkHandlers/VkSamplerHandler.h"
 #include "header/CommandBuffer.h"
 #include "header/MultiFrame.h"
 #include "header/Vertex.h"
@@ -54,10 +53,20 @@ class Application
     private:
 
     const std::vector<Vertex> _vertices = {
-        {{-0.5f, 0, -0.5f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
-        {{0.5f, 0, -0.5f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
-        {{0.5f, 0, 0.5f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
-        {{-0.5f, 0, 0.5f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}}
+        {{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
+        {{0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
+        {{0.5f, 0.5f, 0.0f}, {1.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
+        {{-0.5f, 0.5f, 0.0f}, {1.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
+
+        {{-0.5f, -0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
+        {{0.5f, -0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
+        {{0.5f, 0.5f, -0.5f}, {0.0f, 1.0f, 1.0f}, {1.0f, 1.0f}},
+        {{-0.5f, 0.5f, -0.5f}, {0.0f, 1.0f, 1.0f}, {0.0f, 1.0f}}
+    };
+
+    const std::vector<uint32_t> _indices = {
+        0, 1, 2, 2, 3, 0,
+        4, 5, 6, 6, 7, 4
     };
 
     struct CameraData
@@ -69,12 +78,9 @@ class Application
         alignas(16) glm::mat4 viewProjectionMatrix;
     };
 
-    const std::vector<int> _indices = {
-        0, 1, 2, 2, 3, 0
-    };
-
     bool _framebufferResized;
     uint32_t _currentFrame = 0;
+    const VkFormat DepthFormat = VK_FORMAT_D32_SFLOAT;
 
     // RAII is first in last out order
     Window _window;
@@ -104,6 +110,9 @@ class Application
     VkPipelineLayoutHandler _pipelineLayoutHandler;
     VkPipelineHandler _graphicsPipelineHandler;
 
+    std::vector<VkClearValue> clearValues;
+
+    std::unique_ptr<GPUImage> _depthBuffer;
     MultiFrameHandler<VkFramebufferHandler> _framebuffer;
     MultiFrameHandler<VkFramebufferHandler> CreateFramebuffer();
     void InitFramebuffer(MultiFrameHandler<VkFramebufferHandler>& framebuffer);
@@ -130,8 +139,6 @@ class Application
     MultiFrameHandler<VkFenceHandler>  _waitFence;
 
     void RefreshSwapChain();
-
-    void CreateImage();
 
     void UpdateCameraData(uint32_t currentImage);
     void RecordCommandBuffer(const CommandBuffer& cmdBuffer, uint32_t currentFrame, uint32_t imageIndex);

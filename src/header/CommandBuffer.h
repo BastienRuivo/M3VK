@@ -2,6 +2,7 @@
 
 #include "header/GraphicsBuffer.h"
 #include <cstdint>
+#include <vector>
 #include <vulkan/vulkan_core.h>
 class CommandBuffer
 {
@@ -60,7 +61,7 @@ class CommandBuffer
         vkCmdEndRenderPass(_internal);
     }
 
-    void BeginRenderPass(VkRenderPass renderPass, VkFramebuffer framebuffer, VkClearColorValue clearColor, VkExtent2D extents, VkOffset2D offset = {0, 0}) const;
+    void BeginRenderPass(VkRenderPass renderPass, VkFramebuffer framebuffer, std::vector<VkClearValue>& clearValues, VkExtent2D extents, VkOffset2D offset = {0, 0}) const;
 
     void Reset(VkCommandBufferResetFlags flags = 0) const
     {

@@ -2,6 +2,7 @@
 #include "header/CommandBuffer.h"
 #include "header/DebugLayer.h"
 #include "header/GraphicsBuffer.h"
+#include "header/ProjectHelper.h"
 #include "header/VkHandlers/VkImageViewHandler.h"
 #include "header/VkHandlers/VkPhysicalDeviceHandler.h"
 #include <cstdint>
@@ -75,12 +76,17 @@ VkFormat CPUImage::GetGPUFormat() const
 }
 
 GPUImage::GPUImage(VkDevice device,  const VkPhysicalDeviceHandler & physicalDevice,  const CPUImage& cpuImg, VkCommandPool pool, VkQueue queue)
-    : GPUImage(device, physicalDevice, cpuImg.GetGPUFormat(), cpuImg.Width(), cpuImg.Height())
+    : GPUImage(device, physicalDevice,
+        cpuImg.Width(), cpuImg.Height(),
+        cpuImg.GetGPUFormat(),
+        VK_IMAGE_TILING_OPTIMAL,
+        VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
 {
     CopyCPUtoGPUImage(cpuImg, physicalDevice, pool, queue);
 }
 
-GPUImage::GPUImage(VkDevice device,  const VkPhysicalDeviceHandler & physicalDevice,  VkFormat format, uint32_t width, uint32_t height)
+GPUImage::GPUImage(VkDevice device,  const VkPhysicalDeviceHandler & physicalDevice, uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags imageUsageFlags, VkMemoryPropertyFlags memoryFlags)
 : _view()
 {
 #ifdef M3VK_MEMORYLOG
@@ -100,11 +106,10 @@ GPUImage::GPUImage(VkDevice device,  const VkPhysicalDeviceHandler & physicalDev
 
     createInfo.format = _format;
     // Optimal tiling data, if need to write / acces directly to the texture need LINEAR wich is classical row column
-    createInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+    createInfo.tiling = tiling;
     createInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
-    // Destination to copy the CPU image via stage buffer & will be used for sampling
-    createInfo.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+    createInfo.usage = imageUsageFlags;
     // only used by the graphics queue
     createInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     // Search on this later ?
@@ -121,7 +126,7 @@ GPUImage::GPUImage(VkDevice device,  const VkPhysicalDeviceHandler & physicalDev
     VkMemoryAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     allocInfo.allocationSize = memRequirements.size;
-    allocInfo.memoryTypeIndex = physicalDevice.FindMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    allocInfo.memoryTypeIndex = physicalDevice.FindMemoryType(memRequirements.memoryTypeBits, memoryFlags);
 
     if(vkAllocateMemory(_device, &allocInfo, nullptr, &_memoryInternal) != VK_SUCCESS)
     {
@@ -129,6 +134,7 @@ GPUImage::GPUImage(VkDevice device,  const VkPhysicalDeviceHandler & physicalDev
     }
 
     vkBindImageMemory(_device, _internal, _memoryInternal, 0);
+
     _view = VkImageViewHandler(_device, _internal, _format);
 }
 
@@ -142,7 +148,7 @@ void GPUImage::TransitionLayoutCommand(const CommandBuffer& cmdBuffer, VkImageLa
     barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     barrier.image = _internal;
-    barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+
     barrier.subresourceRange.baseMipLevel = 0;
     barrier.subresourceRange.levelCount = 1;
     barrier.subresourceRange.baseArrayLayer = 0;
@@ -150,6 +156,19 @@ void GPUImage::TransitionLayoutCommand(const CommandBuffer& cmdBuffer, VkImageLa
 
     VkPipelineStageFlags sourceStage;
     VkPipelineStageFlags destinationStage;
+
+    if(newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
+    {
+        barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+        if(ProjectHelper::HasStencilComponent(_format))
+        {
+            barrier.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
+        }
+    }
+    else
+    {
+        barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    }
 
     if(oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
     {
@@ -166,6 +185,14 @@ void GPUImage::TransitionLayoutCommand(const CommandBuffer& cmdBuffer, VkImageLa
 
         sourceStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
         destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+    }
+    else if(oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
+    {
+        barrier.srcAccessMask = 0;
+        barrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+
+        sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+        destinationStage = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
     }
     else
     {

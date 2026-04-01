@@ -62,12 +62,16 @@ endforeach()
 
 add_custom_target(CompileShaders DEPENDS ${SPIRV_BINARY_FILES})
 
-add_definitions(-DSHADER_DIRECTORY="${SHADER_BINARY_DIR}/")
-
 file(GLOB_RECURSE SRC_FILES "${CMAKE_SOURCE_DIR}/src/*.cpp")
 file(GLOB_RECURSE HEADER_FILES "${CMAKE_SOURCE_DIR}/src/headers/*.h" "${CMAKE_SOURCE_DIR}/src/headers/*.hpp")
 
 add_executable(${PROJECT_NAME} ${SRC_FILES} ${HEADER_FILES})
+
+target_compile_definitions(${PROJECT_NAME} PRIVATE
+    SHADER_DIRECTORY="${SHADER_BINARY_DIR}/"
+    GLM_FORCE_RADIANS
+    GLM_FORCE_DEPTH_ZERO_TO_ONE
+)
 
 add_dependencies(${PROJECT_NAME} CompileShaders)
 

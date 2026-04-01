@@ -1,6 +1,8 @@
 #include "header/CommandBuffer.h"
 #include "header/GraphicsBuffer.h"
+#include <cstdint>
 #include <stdexcept>
+#include <vector>
 #include <vulkan/vulkan_core.h>
 
 CommandBuffer::CommandBuffer(VkDevice device, VkCommandPool pool, VkQueue queue) : _device(device), _pool(pool), _queue(queue)
@@ -119,13 +121,13 @@ void CommandBuffer::SetViewport(uint32_t width, uint32_t height, uint32_t x, uin
     viewport.y = y;
     viewport.width = width;
     viewport.height = height;
-    viewport.minDepth = minDepth;
-    viewport.maxDepth = maxDepth;
+    viewport.minDepth = 0;
+    viewport.maxDepth = 1;
 
     vkCmdSetViewport(_internal, 0, 1, &viewport);
 }
 
-void CommandBuffer::BeginRenderPass(VkRenderPass renderPass, VkFramebuffer framebuffer, VkClearColorValue clearColor, VkExtent2D extents, VkOffset2D offset) const
+void CommandBuffer::BeginRenderPass(VkRenderPass renderPass, VkFramebuffer framebuffer, std::vector<VkClearValue>& clearValues, VkExtent2D extents, VkOffset2D offset) const
 {
     VkRenderPassBeginInfo rpBeginInfo{};
     rpBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -134,11 +136,8 @@ void CommandBuffer::BeginRenderPass(VkRenderPass renderPass, VkFramebuffer frame
     rpBeginInfo.renderArea.offset = offset;
     rpBeginInfo.renderArea.extent = extents;
 
-    VkClearValue clearValue{};
-    clearValue.color = {0.0f, 0.0f, 0.0f, 0.0f};
-
-    rpBeginInfo.clearValueCount = 1;
-    rpBeginInfo.pClearValues = &clearValue;
+    rpBeginInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
+    rpBeginInfo.pClearValues = clearValues.data();
 
     vkCmdBeginRenderPass(_internal, &rpBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 }

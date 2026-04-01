@@ -38,7 +38,7 @@ class GPUImage
 {
     public:
     GPUImage(VkDevice device, const VkPhysicalDeviceHandler & physicalDevice,  const CPUImage& cpuImg, VkCommandPool pool, VkQueue queue);
-    GPUImage(VkDevice device, const VkPhysicalDeviceHandler & physicalDevice,  VkFormat format, uint32_t width, uint32_t height);
+    GPUImage(VkDevice device, const VkPhysicalDeviceHandler & physicalDevice, uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags imageUsageFlags, VkMemoryPropertyFlags memoryFlags);
     ~GPUImage();
 
     GPUImage(GPUImage&& other) noexcept;

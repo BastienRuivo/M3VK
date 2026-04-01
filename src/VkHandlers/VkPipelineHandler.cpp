@@ -91,8 +91,8 @@ VkPipelineHandler::VkPipelineHandler(const VkExtent2D& appExtent, VkDevice devic
     rasterizeCreateInfo.rasterizerDiscardEnable = false;
     // VK_POLYGON_MODE_LINE for wireframe later maybe ? or this can be another feature to enable, check later
     rasterizeCreateInfo.polygonMode = VK_POLYGON_MODE_FILL;
-    rasterizeCreateInfo.cullMode = VK_CULL_MODE_BACK_BIT;
-    rasterizeCreateInfo.frontFace = VK_FRONT_FACE_CLOCKWISE; // because of y *=
+    rasterizeCreateInfo.cullMode = VK_CULL_MODE_NONE;
+    rasterizeCreateInfo.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
     rasterizeCreateInfo.depthBiasEnable = VK_FALSE;
     rasterizeCreateInfo.depthBiasConstantFactor = 0.0f;
     rasterizeCreateInfo.depthBiasClamp = 0.0f;
@@ -137,6 +137,23 @@ VkPipelineHandler::VkPipelineHandler(const VkExtent2D& appExtent, VkDevice devic
     pipelineCreateInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
     pipelineCreateInfo.stageCount = 2;
 
+    VkPipelineDepthStencilStateCreateInfo depthStencilCreateInfo{};
+    depthStencilCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+    depthStencilCreateInfo.depthTestEnable = VK_TRUE;
+    depthStencilCreateInfo.depthWriteEnable = VK_TRUE;
+    depthStencilCreateInfo.depthCompareOp = VK_COMPARE_OP_LESS;
+
+    // Can discard pixels fragment that aren't in this interval
+    depthStencilCreateInfo.depthBoundsTestEnable = VK_FALSE;
+    depthStencilCreateInfo.minDepthBounds = 0.0f;
+    depthStencilCreateInfo.maxDepthBounds = 1.0f;
+
+    // Depth Stencil
+    // Not used for now
+    depthStencilCreateInfo.stencilTestEnable = VK_FALSE;
+    depthStencilCreateInfo.front = {};
+    depthStencilCreateInfo.back = {};
+
     // Graphics pipeline
     pipelineCreateInfo.pStages = shadersStagesCreateInfo;
     pipelineCreateInfo.pVertexInputState = &vertexInputCreateInfo;
@@ -144,7 +161,7 @@ VkPipelineHandler::VkPipelineHandler(const VkExtent2D& appExtent, VkDevice devic
     pipelineCreateInfo.pViewportState = &viewportCreateInfo;
     pipelineCreateInfo.pRasterizationState = &rasterizeCreateInfo;
     pipelineCreateInfo.pMultisampleState = &msaaCreateInfo;
-    pipelineCreateInfo.pDepthStencilState = nullptr;
+    pipelineCreateInfo.pDepthStencilState = &depthStencilCreateInfo;
     pipelineCreateInfo.pColorBlendState = &colorBlending;
     pipelineCreateInfo.pDynamicState = &pipelineStateCreateInfo;
 

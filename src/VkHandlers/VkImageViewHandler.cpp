@@ -1,4 +1,5 @@
 #include "header/VkHandlers/VkImageViewHandler.h"
+#include "header/ProjectHelper.h"
 #include <stdexcept>
 #include <vulkan/vulkan_core.h>
 
@@ -6,7 +7,10 @@
 #include "header/DebugLayer.h"
 #endif
 
-VkImageViewHandler::VkImageViewHandler(VkDevice device, VkImage image, VkFormat format)
+VkImageViewHandler::VkImageViewHandler(VkDevice device, VkImage image, VkFormat format) :
+    VkImageViewHandler(device, image, format, ProjectHelper::GetImageAspectFlags(format)) {}
+
+VkImageViewHandler::VkImageViewHandler(VkDevice device, VkImage image, VkFormat format, VkImageAspectFlags aspectMask)
 {
 #ifdef M3VK_MEMORYLOG
     DebugLayer::Log(DebugLayer::LogType::CREATE, "VkImageViewHandler Creation !");
@@ -21,7 +25,7 @@ VkImageViewHandler::VkImageViewHandler(VkDevice device, VkImage image, VkFormat 
     createInfo.format = format;
 
     // Image info
-    createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    createInfo.subresourceRange.aspectMask = aspectMask;
     createInfo.subresourceRange.baseMipLevel = 0;
     createInfo.subresourceRange.levelCount = 1;
     createInfo.subresourceRange.baseArrayLayer = 0;

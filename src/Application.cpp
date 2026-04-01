@@ -34,11 +34,6 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-void Application::CreateImage()
-{
-
-}
-
 MultiFrameObject<VkDescriptorSet> Application::CreateDescriptorSet()
 {
     std::vector<VkDescriptorSetLayout> layouts(MaxFrameInCount, _descriptorSetLayoutHandler.Get());
@@ -106,9 +101,9 @@ void Application::UpdateCameraData(uint32_t currentFrame)
     VkExtent2D extent = _swapChain->GetExtent();
 
     CameraData cameraData = {};
-    cameraData.localToWorldMatrix = glm::rotate<float>(glm::mat4(1.0f), time * glm::radians<float>(90), glm::vec3(0, 1, 0));
-    cameraData.worldToCameraMatrix = glm::lookAt(glm::vec3(2, 2, 2), glm::vec3(0, 0, 0), glm::vec3(0, 1.0, 0));
-    cameraData.projectionMatrix = glm::perspective<float>(glm::radians<float>(45),(float)extent.width / extent.height, 0.1f,100.0f);
+    cameraData.localToWorldMatrix = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+    cameraData.worldToCameraMatrix = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+    cameraData.projectionMatrix = glm::perspective<float>(glm::radians<float>(45),(float)extent.width / extent.height, 0.01f,100.0f);
     // it was designed for opengl so flip it
     cameraData.projectionMatrix[1][1] *= -1;
 
@@ -134,11 +129,20 @@ void Application::FramebufferResized()
 
 void Application::RefreshSwapChain()
 {
+    int width = 0, height = 0;
+    while (width == 0 || height == 0) {
+        glfwGetFramebufferSize(_window.Get(), &width, &height);
+        glfwWaitEvents();
+    }
+
     vkDeviceWaitIdle(_deviceHandler.Get());
 
     // TODO : Swap chain is currently resetted the first frame beacause it is out of date
     _swapChain.reset();
     _swapChain = std::make_unique<SwapChain>(_window, _physicalDeviceHandler.Get(), _deviceHandler.Get(), _windowSurfaceHandler.Get());
+
+    _depthBuffer.reset();
+    _depthBuffer = std::make_unique<GPUImage>(_deviceHandler.Get(), _physicalDeviceHandler, _swapChain->GetExtent().width, _swapChain->GetExtent().height, DepthFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT),
 
     _framebuffer.Clear();
     InitFramebuffer(_framebuffer);
@@ -207,9 +211,10 @@ void Application::DrawFrame()
 void Application::RecordCommandBuffer(const CommandBuffer& cmdBuffer, uint32_t currentFrame, uint32_t imageIndex)
 {
     VkExtent2D renderExtent = _swapChain->GetExtent();
+
     cmdBuffer.Begin();
     {
-        cmdBuffer.BeginRenderPass(_renderPassHandler.Get(), _framebuffer.GetInternal(imageIndex), {0, 0, 0, 0}, renderExtent);
+        cmdBuffer.BeginRenderPass(_renderPassHandler.Get(), _framebuffer.GetInternal(imageIndex), clearValues, renderExtent);
         {
             cmdBuffer.BindPipeline(_graphicsPipelineHandler.Get(), VK_PIPELINE_BIND_POINT_GRAPHICS);
             cmdBuffer.SetViewport(renderExtent.width, renderExtent.height);
@@ -238,7 +243,8 @@ void Application::InitFramebuffer(MultiFrameHandler<VkFramebufferHandler>& frame
     for(size_t i = 0; i < _swapChain->ImageViews.Size(); ++i)
     {
         std::vector<VkImageView> attachments = {
-            _swapChain->ImageViews.GetInternal(i)
+            _swapChain->ImageViews.GetInternal(i),
+            _depthBuffer->GetView()
         };
         // emplace back to avoid a temp obejct
         framebuffer.EmplaceBack(_deviceHandler.Get(), _renderPassHandler.Get(), _swapChain->GetExtent(), attachments);
@@ -260,7 +266,7 @@ Application::Application() :
     _swapChain(std::make_unique<SwapChain>(_window, _physicalDeviceHandler.Get(), _deviceHandler.Get(), _windowSurfaceHandler.Get())),
 
     // Render Layouts & Pipelines
-    _renderPassHandler(_deviceHandler.Get(), _swapChain->GetImageFormat()),
+    _renderPassHandler(_deviceHandler.Get(), _swapChain->GetImageFormat(), DepthFormat),
     _descriptorSetLayoutHandler(_deviceHandler.Get()),
     _pipelineLayoutHandler(_deviceHandler.Get(), _descriptorSetLayoutHandler.Get()),
     _graphicsPipelineHandler(_swapChain->GetExtent(), _deviceHandler.Get(), _pipelineLayoutHandler.Get(), _renderPassHandler.Get()),
@@ -270,6 +276,7 @@ Application::Application() :
     _graphicsCommandPoolHandler(_deviceHandler.Get(), _physicalDeviceHandler.GetQueueFamilyIds()),
 
     // Geometry & Data Buffers
+    _depthBuffer(std::make_unique<GPUImage>(_deviceHandler.Get(), _physicalDeviceHandler, _swapChain->GetExtent().width, _swapChain->GetExtent().height, DepthFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)),
     _vertexBuffer(_physicalDeviceHandler, _deviceHandler.Get(), _vertices.size(), sizeof(_vertices[0]), GraphicsBuffer::BufferType::VERTEX),
     _indexBuffer(_physicalDeviceHandler, _deviceHandler.Get(), _indices.size(), sizeof(_indices[0]), GraphicsBuffer::BufferType::INDEX),
     _descriptorPoolHandler(_deviceHandler.Get(), static_cast<uint32_t>(MaxFrameInCount)),
@@ -289,6 +296,16 @@ Application::Application() :
 #ifdef M3VK_MEMORYLOG
     DebugLayer::Log(DebugLayer::LogType::CREATE, "Application Creation !");
 #endif
+    VkClearValue colorClear;
+    colorClear.color = {1.0f, 1.0f, 1.0f, 1.0f};
+    VkClearValue depthClear;
+    depthClear.depthStencil = {1.0f, 0};
+
+    clearValues.reserve(2);
+    clearValues.push_back(colorClear);
+    clearValues.push_back(depthClear);
+
+    _depthBuffer->TransitionLayout(_graphicsCommandPoolHandler.Get(), _graphicsQueueHandler.Get(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
     // init data
     _indexBuffer.CopyToBuffer(_physicalDeviceHandler, _deviceHandler.Get(), _graphicsQueueHandler.Get(), _graphicsCommandPoolHandler.Get(), (void*)_indices.data(), _indexBuffer.GetSize());

@@ -1,5 +1,5 @@
 #include "header/VkHandlers/VkFramebufferHandler.h"
-#include "header/DebugLayer.h"
+#include <cstdint>
 #include <stdexcept>
 #include <vector>
 #include <vulkan/vulkan_core.h>
@@ -15,7 +15,7 @@ VkFramebufferHandler::VkFramebufferHandler(VkDevice device, VkRenderPass renderP
     VkFramebufferCreateInfo createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
     createInfo.renderPass = renderPass;
-    createInfo.attachmentCount = imageViews.size();
+    createInfo.attachmentCount = static_cast<uint32_t>(imageViews.size());
     createInfo.pAttachments = imageViews.data();
     createInfo.width = imageExtent.width;
     createInfo.height = imageExtent.height;
