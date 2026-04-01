@@ -1,8 +1,11 @@
 #include "header/VkHandlers/VkCommandPoolHandler.h"
-#include "header/DebugLayer.h"
 #include "header/ProjectHelper.h"
 #include <stdexcept>
 #include <vulkan/vulkan_core.h>
+
+#ifdef M3VK_MEMORYLOG
+#include "header/DebugLayer.h"
+#endif
 
 VkCommandPoolHandler::VkCommandPoolHandler(VkDevice device, const ProjectHelper::QueueFamilyIds& families)
 {

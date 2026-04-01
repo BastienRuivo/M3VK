@@ -1,6 +1,10 @@
 #include "./header/Shader.h"
 #include "./header/ProjectHelper.h"
+
+#ifdef M3VK_MEMORYLOG
 #include "header/DebugLayer.h"
+#endif
+
 #include <stdexcept>
 #include <vector>
 #include <vulkan/vulkan_core.h>

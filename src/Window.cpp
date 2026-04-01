@@ -1,5 +1,8 @@
 #include "header/Window.h"
+
+#ifdef M3VK_MEMORYLOG
 #include "header/DebugLayer.h"
+#endif
 
 Window::Window(int width, int height, const char* title, void* resizeObject, GLFWframebuffersizefun resizeCallback)
 {

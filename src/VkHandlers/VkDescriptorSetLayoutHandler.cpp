@@ -1,7 +1,12 @@
 #include "header/VkHandlers/VkDescriptorSetLayoutHandler.h"
-#include "header/DebugLayer.h"
+#include <array>
+#include <cstdint>
 #include <stdexcept>
 #include <vulkan/vulkan_core.h>
+
+#ifdef M3VK_MEMORYLOG
+#include "header/DebugLayer.h"
+#endif
 
 VkDescriptorSetLayoutHandler::VkDescriptorSetLayoutHandler(VkDevice device)
 {
@@ -11,17 +16,29 @@ VkDescriptorSetLayoutHandler::VkDescriptorSetLayoutHandler(VkDevice device)
 
     _device = device;
 
-    VkDescriptorSetLayoutBinding cameraDataLayoutBindingDescriptor{};
-    cameraDataLayoutBindingDescriptor.binding = 0;
-    cameraDataLayoutBindingDescriptor.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    cameraDataLayoutBindingDescriptor.descriptorCount = 1;
-    cameraDataLayoutBindingDescriptor.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-    cameraDataLayoutBindingDescriptor.pImmutableSamplers = nullptr; // image sampling
+    VkDescriptorSetLayoutBinding cameraDataLayout{};
+    cameraDataLayout.binding = 0;
+    cameraDataLayout.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    cameraDataLayout.descriptorCount = 1;
+    cameraDataLayout.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    cameraDataLayout.pImmutableSamplers = nullptr; // image sampling
+
+    VkDescriptorSetLayoutBinding imageSamplerLayout{};
+    imageSamplerLayout.binding = 1;
+    imageSamplerLayout.descriptorCount = 1;
+    imageSamplerLayout.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    imageSamplerLayout.pImmutableSamplers = nullptr;
+    imageSamplerLayout.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+    std::array<VkDescriptorSetLayoutBinding, 2> bindings = {
+        cameraDataLayout,
+        imageSamplerLayout
+    };
 
     VkDescriptorSetLayoutCreateInfo createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    createInfo.bindingCount = 1;
-    createInfo.pBindings = &cameraDataLayoutBindingDescriptor;
+    createInfo.bindingCount = static_cast<uint32_t>(bindings.size());
+    createInfo.pBindings = bindings.data();
 
     if(vkCreateDescriptorSetLayout(_device, &createInfo, nullptr, &_internal) != VK_SUCCESS)
     {

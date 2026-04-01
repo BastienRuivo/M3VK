@@ -1,19 +1,36 @@
 #include "header/CommandBuffer.h"
 #include "header/GraphicsBuffer.h"
+#include <cstdint>
 #include <stdexcept>
+#include <vector>
+#include <vulkan/vulkan_core.h>
 
 CommandBuffer::CommandBuffer(VkDevice device, VkCommandPool pool, VkQueue queue) : _device(device), _pool(pool), _queue(queue)
 {
+#ifdef M3VK_MEMORYLOG
+    DebugLayer::Log(DebugLayer::LogType::CREATE, "CommandBuffer Creation !");
+#endif
     VkCommandBufferAllocateInfo allocateInfo{};
     allocateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     allocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
     allocateInfo.commandPool = _pool;
     allocateInfo.commandBufferCount = 1;
 
-    if(vkAllocateCommandBuffers(_device, &allocateInfo, &_handle) != VK_SUCCESS)
+    if(vkAllocateCommandBuffers(_device, &allocateInfo, &_internal) != VK_SUCCESS)
     {
         throw std::runtime_error("Can't create main command buffer");
     }
+}
+
+CommandBuffer::~CommandBuffer()
+{
+    if(_internal == VK_NULL_HANDLE) return;
+
+    vkFreeCommandBuffers(_device, _pool, 1, &_internal);
+
+#ifdef M3VK_MEMORYLOG
+    DebugLayer::Log(DebugLayer::LogType::DESTROY, "CommandBuffer Destroyed !");
+#endif
 }
 
 void CommandBuffer::Begin(VkCommandBufferUsageFlags flags) const
@@ -23,7 +40,7 @@ void CommandBuffer::Begin(VkCommandBufferUsageFlags flags) const
     beginInfo.flags = flags; // Tells how we're using command buffer (record each send, buffer used in a render pass...)
     beginInfo.pInheritanceInfo = nullptr; // state info when called by a primary command buffer when it's a secondary one
 
-    if(vkBeginCommandBuffer(_handle, &beginInfo) != VK_SUCCESS)
+    if(vkBeginCommandBuffer(_internal, &beginInfo) != VK_SUCCESS)
     {
         throw std::runtime_error("Failed to begin command buffer !");
     }
@@ -31,7 +48,7 @@ void CommandBuffer::Begin(VkCommandBufferUsageFlags flags) const
 
 void CommandBuffer::End() const
 {
-    if(vkEndCommandBuffer(_handle) != VK_SUCCESS)
+    if(vkEndCommandBuffer(_internal) != VK_SUCCESS)
     {
         throw std::runtime_error("Failed to record command buffer");
     }
@@ -53,7 +70,7 @@ void CommandBuffer::Submit(VkSemaphore waitSemaphores[], int waitCount,
     submitInfo.pSignalSemaphores = signalSemaphores;
 
     submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &_handle;
+    submitInfo.pCommandBuffers = &_internal;
 
     if(vkQueueSubmit(_queue, 1, &submitInfo, fence) != VK_SUCCESS)
     {
@@ -71,13 +88,13 @@ void CommandBuffer::BindBuffer(const GraphicsBuffer& buffer) const
         case GraphicsBuffer::VERTEX:
         {
             VkBuffer vertexBuffers[] = { buffer.Get() };
-            vkCmdBindVertexBuffers(_handle, 0, 1, vertexBuffers, offsets);
+            vkCmdBindVertexBuffers(_internal, 0, 1, vertexBuffers, offsets);
             break;
         }
 
         case GraphicsBuffer::INDEX:
         {
-            vkCmdBindIndexBuffer(_handle, buffer.Get(), 0, VK_INDEX_TYPE_UINT32);
+            vkCmdBindIndexBuffer(_internal, buffer.Get(), 0, VK_INDEX_TYPE_UINT32);
             break;
         }
 
@@ -94,7 +111,7 @@ void CommandBuffer::SetScissor(uint32_t x, uint32_t y, uint32_t width, uint32_t 
     scissors.offset = {0, 0};
     scissors.extent = {width, height};
 
-    vkCmdSetScissor(_handle, 0, 1, &scissors);
+    vkCmdSetScissor(_internal, 0, 1, &scissors);
 }
 
 void CommandBuffer::SetViewport(uint32_t width, uint32_t height, uint32_t x, uint32_t y, float minDepth, float maxDepth) const
@@ -104,23 +121,13 @@ void CommandBuffer::SetViewport(uint32_t width, uint32_t height, uint32_t x, uin
     viewport.y = y;
     viewport.width = width;
     viewport.height = height;
-    viewport.minDepth = minDepth;
-    viewport.maxDepth = maxDepth;
+    viewport.minDepth = 0;
+    viewport.maxDepth = 1;
 
-    vkCmdSetViewport(_handle, 0, 1, &viewport);
+    vkCmdSetViewport(_internal, 0, 1, &viewport);
 }
 
-void CommandBuffer::DrawIndexed(uint32_t indexCount) const
-{
-    vkCmdDrawIndexed(_handle, indexCount, 1, 0, 0, 0);
-}
-
-void CommandBuffer::BindPipeline(VkPipeline pipeline, VkPipelineBindPoint bindPoint) const
-{
-    vkCmdBindPipeline(_handle, bindPoint, pipeline);
-}
-
-void CommandBuffer::BeginRenderPass(VkRenderPass renderPass, VkFramebuffer framebuffer, VkClearColorValue clearColor, VkExtent2D extents, VkOffset2D offset) const
+void CommandBuffer::BeginRenderPass(VkRenderPass renderPass, VkFramebuffer framebuffer, std::vector<VkClearValue>& clearValues, VkExtent2D extents, VkOffset2D offset) const
 {
     VkRenderPassBeginInfo rpBeginInfo{};
     rpBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -129,21 +136,38 @@ void CommandBuffer::BeginRenderPass(VkRenderPass renderPass, VkFramebuffer frame
     rpBeginInfo.renderArea.offset = offset;
     rpBeginInfo.renderArea.extent = extents;
 
-    VkClearValue clearValue{};
-    clearValue.color = {0.0f, 0.0f, 0.0f, 0.0f};
+    rpBeginInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
+    rpBeginInfo.pClearValues = clearValues.data();
 
-    rpBeginInfo.clearValueCount = 1;
-    rpBeginInfo.pClearValues = &clearValue;
-
-    vkCmdBeginRenderPass(_handle, &rpBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+    vkCmdBeginRenderPass(_internal, &rpBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 }
 
-void CommandBuffer::EndRenderPass() const
+void CommandBuffer::WaitCompletion()
 {
-    vkCmdEndRenderPass(_handle);
+    VkSubmitInfo submitInfo{};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &_internal;
+
+    vkQueueSubmit(_queue, 1, &submitInfo, VK_NULL_HANDLE);
+    vkQueueWaitIdle(_queue);
 }
 
-void CommandBuffer::Reset(VkCommandBufferResetFlags flags)
+CommandBuffer::CommandBuffer(CommandBuffer&& other) noexcept
+: _device(other._device), _pool(other._pool), _queue(other._queue), _internal(other._internal)
 {
-    vkResetCommandBuffer(_handle, flags);
+    other._internal = VK_NULL_HANDLE;
+}
+
+CommandBuffer& CommandBuffer::operator=(CommandBuffer&& other) noexcept
+{
+    if(this != &other)
+    {
+        _device = other._device;
+        _internal = other._internal;
+        _pool = other._pool;
+        _queue = other._queue;
+        other._internal = VK_NULL_HANDLE;
+    }
+    return *this;
 }

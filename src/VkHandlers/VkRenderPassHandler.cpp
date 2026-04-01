@@ -1,13 +1,32 @@
 #include "header/VkHandlers/VkRenderPassHandler.h"
-#include "header/DebugLayer.h"
+#include <array>
+#include <cstdint>
 #include <stdexcept>
 #include <vulkan/vulkan_core.h>
 
-VkRenderPassHandler::VkRenderPassHandler(VkDevice device, VkFormat imageFormat)
+#ifdef M3VK_MEMORYLOG
+#include "header/DebugLayer.h"
+#endif
+
+VkRenderPassHandler::VkRenderPassHandler(VkDevice device, VkFormat imageFormat, VkFormat depthFormat)
 {
     _device = device;
 
-    VkAttachmentDescription colorAttachment =  {};
+    VkAttachmentDescription depthAttachment{};
+    depthAttachment.format = depthFormat;
+    depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+    depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+    VkAttachmentReference depthAttachmentRef{};
+    depthAttachmentRef.attachment = 1;
+    depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+    VkAttachmentDescription colorAttachment{};
     colorAttachment.format = imageFormat;
     colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
     // clear at new frame, load to keep and dont care to undefined
@@ -27,14 +46,17 @@ VkRenderPassHandler::VkRenderPassHandler(VkDevice device, VkFormat imageFormat)
     colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
     VkSubpassDescription subpass{};
-    subpass.pipelineBindPoint =VK_PIPELINE_BIND_POINT_GRAPHICS;
+    subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
     subpass.colorAttachmentCount = 1;
     subpass.pColorAttachments = &colorAttachmentRef;
+    subpass.pDepthStencilAttachment = &depthAttachmentRef;
+
+    std::array<VkAttachmentDescription, 2> attachments = {colorAttachment, depthAttachment};
 
     VkRenderPassCreateInfo rpCreateInfo{};
     rpCreateInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-    rpCreateInfo.attachmentCount = 1;
-    rpCreateInfo.pAttachments = &colorAttachment;
+    rpCreateInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
+    rpCreateInfo.pAttachments = attachments.data();
     rpCreateInfo.subpassCount = 1;
     rpCreateInfo.pSubpasses = &subpass;
 
@@ -42,11 +64,11 @@ VkRenderPassHandler::VkRenderPassHandler(VkDevice device, VkFormat imageFormat)
     dependency.srcSubpass = VK_SUBPASS_EXTERNAL; // the passe before or after depending if it's used in src or dst
     dependency.dstSubpass = 0; // our pass
 
-    dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    dependency.srcAccessMask = 0;
+    dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+    dependency.srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 
-    dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+    dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 
     rpCreateInfo.dependencyCount = 1;
     rpCreateInfo.pDependencies = &dependency;

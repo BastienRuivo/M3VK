@@ -1,5 +1,7 @@
 #pragma once
 
+
+#include "header/VkHandlers/VkSamplerHandler.h"
 #include "header/CommandBuffer.h"
 #include "header/MultiFrame.h"
 #include "header/Vertex.h"
@@ -34,6 +36,8 @@
 
 #include "DebugLayer.h"
 
+#include "header/Image.h"
+
 class Application
 {
     static const int MaxFrameInCount = 2;
@@ -49,27 +53,34 @@ class Application
     private:
 
     const std::vector<Vertex> _vertices = {
-        {{-0.5f, 0, -0.5f}, {1.0f, 0.0f, 0.0f}},
-        {{0.5f, 0, -0.5f}, {0.0f, 1.0f, 0.0f}},
-        {{0.5f, 0, 0.5f}, {0.0f, 0.0f, 1.0f}},
-        {{-0.5f, 0, 0.5f}, {1.0f, 1.0f, 1.0f}}
+        {{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
+        {{0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
+        {{0.5f, 0.5f, 0.0f}, {1.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
+        {{-0.5f, 0.5f, 0.0f}, {1.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
+
+        {{-0.5f, -0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
+        {{0.5f, -0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
+        {{0.5f, 0.5f, -0.5f}, {0.0f, 1.0f, 1.0f}, {1.0f, 1.0f}},
+        {{-0.5f, 0.5f, -0.5f}, {0.0f, 1.0f, 1.0f}, {0.0f, 1.0f}}
+    };
+
+    const std::vector<uint32_t> _indices = {
+        0, 1, 2, 2, 3, 0,
+        4, 5, 6, 6, 7, 4
     };
 
     struct CameraData
     {
         // temp
-        glm::mat4 localToWorldMatrix;
-        glm::mat4 worldToCameraMatrix;
-        glm::mat4 projectionMatrix;
-        glm::mat4 viewProjectionMatrix;
-    };
-
-    const std::vector<int> _indices = {
-        0, 1, 2, 2, 3, 0
+        alignas(16) glm::mat4 localToWorldMatrix;
+        alignas(16) glm::mat4 worldToCameraMatrix;
+        alignas(16) glm::mat4 projectionMatrix;
+        alignas(16) glm::mat4 viewProjectionMatrix;
     };
 
     bool _framebufferResized;
     uint32_t _currentFrame = 0;
+    const VkFormat DepthFormat = VK_FORMAT_D32_SFLOAT;
 
     // RAII is first in last out order
     Window _window;
@@ -99,6 +110,9 @@ class Application
     VkPipelineLayoutHandler _pipelineLayoutHandler;
     VkPipelineHandler _graphicsPipelineHandler;
 
+    std::vector<VkClearValue> clearValues;
+
+    std::unique_ptr<GPUImage> _depthBuffer;
     MultiFrameHandler<VkFramebufferHandler> _framebuffer;
     MultiFrameHandler<VkFramebufferHandler> CreateFramebuffer();
     void InitFramebuffer(MultiFrameHandler<VkFramebufferHandler>& framebuffer);
@@ -108,6 +122,9 @@ class Application
     // Datas
     GraphicsBuffer _vertexBuffer;
     GraphicsBuffer _indexBuffer;
+    GPUImage _img;
+    VkSamplerHandler _sampler;
+
     VkDescriptorPoolHandler _descriptorPoolHandler;
 
     MultiFrameHandler<GraphicsBuffer> _cameraDataBuffer;
@@ -124,7 +141,7 @@ class Application
     void RefreshSwapChain();
 
     void UpdateCameraData(uint32_t currentImage);
-    void RecordCommandBuffer(CommandBuffer cmdBuffer, uint32_t currentFrame, uint32_t imageIndex);
+    void RecordCommandBuffer(const CommandBuffer& cmdBuffer, uint32_t currentFrame, uint32_t imageIndex);
     void DrawFrame();
 
     // Utils

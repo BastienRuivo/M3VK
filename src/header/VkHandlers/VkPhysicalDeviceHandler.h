@@ -1,6 +1,7 @@
 #pragma once
 
 #include "header/ProjectHelper.h"
+#include <cstdint>
 #include <vector>
 #include <vulkan/vulkan_core.h>
 
@@ -15,7 +16,7 @@ class VkPhysicalDeviceHandler
         return _internal;
     }
 
-    int ScoreDeviceSuitability(VkPhysicalDevice physicalDevice, VkSurfaceKHR windowSurface, const std::vector<const char *>& deviceExtensions) const;
+    int ScoreDeviceSuitability(VkPhysicalDevice physicalDevice, VkSurfaceKHR windowSurface, const std::vector<const char *>& deviceExtensions, VkPhysicalDeviceProperties& deviceProperties, ProjectHelper::QueueFamilyIds& familyIds) const;
     bool CheckDeviceExtensionSupport(VkPhysicalDevice physicalDevice, const std::vector<const char *>& deviceExtensions) const;
     uint32_t FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) const;
 
@@ -27,8 +28,28 @@ class VkPhysicalDeviceHandler
     VkPhysicalDeviceHandler(const VkPhysicalDeviceHandler&) = delete;
     VkPhysicalDeviceHandler& operator=(const VkPhysicalDeviceHandler&) = delete;
 
-    ProjectHelper::QueueFamilyIds QueueFamilyIds;
+    inline const ProjectHelper::QueueFamilyIds& GetQueueFamilyIds() const
+    {
+        return _queueFamilyIds;
+    }
+
+    inline uint32_t GetGraphicsQueueId() const
+    {
+        return _queueFamilyIds.Graphics.value();
+    }
+
+    inline uint32_t GetPresentQueueId() const
+    {
+        return _queueFamilyIds.Present.value();
+    }
+
+    inline const VkPhysicalDeviceProperties& GetProperties() const
+    {
+        return _properties;
+    }
 
     private:
     VkPhysicalDevice _internal = VK_NULL_HANDLE;
+    ProjectHelper::QueueFamilyIds _queueFamilyIds{};
+    VkPhysicalDeviceProperties _properties{};
 };
