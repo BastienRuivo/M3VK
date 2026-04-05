@@ -4,6 +4,15 @@
 #include "header/DebugLayer.h"
 #endif
 
+void Window::SetIcon(unsigned char* pixels, int width, int height)
+{
+    GLFWimage image;
+    image.pixels = pixels;
+    image.width = width;
+    image.height = height;
+    glfwSetWindowIcon(_internal, 1, &image);
+}
+
 Window::Window(int width, int height, const char* title, void* resizeObject, GLFWframebuffersizefun resizeCallback)
 {
 #ifdef M3VK_MEMORYLOG

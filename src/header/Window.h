@@ -9,6 +9,7 @@ class Window
     Window(int width, int height, const char* title, void* resizeObject, GLFWframebuffersizefun resizeCallback);
     ~Window();
     void ResizeWindow(int width, int height);
+    void SetIcon(unsigned char* pixels, int width, int height);
 
     bool ShouldClose() const;
     void ProcessEvent() const;

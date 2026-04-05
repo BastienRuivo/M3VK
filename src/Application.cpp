@@ -296,6 +296,13 @@ Application::Application() :
 #ifdef M3VK_MEMORYLOG
     DebugLayer::Log(DebugLayer::LogType::CREATE, "Application Creation !");
 #endif
+
+    //load logo
+    {
+        CPUImage logo("data/img/logo.png", STBI_rgb_alpha);
+        _window.SetIcon(logo.Data(), logo.Width(), logo.Height());
+    }
+
     VkClearValue colorClear;
     colorClear.color = {0.0f, 0.0f, 0.0f, 1.0f};
     VkClearValue depthClear;
