@@ -86,20 +86,24 @@ GPUImage::GPUImage(VkDevice device,  const VkPhysicalDeviceHandler & physicalDev
         cpuImg.Width(), cpuImg.Height(),
         cpuImg.GetGPUFormat(),
         VK_IMAGE_TILING_OPTIMAL,
-        VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+        VK_IMAGE_USAGE_TRANSFER_SRC_BIT |VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
 {
     CopyCPUtoGPUImage(cpuImg, physicalDevice, pool, queue);
 }
 
 GPUImage::GPUImage(VkDevice device,  const VkPhysicalDeviceHandler & physicalDevice, uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags imageUsageFlags, VkMemoryPropertyFlags memoryFlags)
-: _view()
+: GPUImage(device, physicalDevice, width, height, static_cast<uint32_t>(std::floor(std::log2(std::max(width, height)))) + 1, format, tiling, imageUsageFlags, memoryFlags)
+{
+
+}
+
+GPUImage::GPUImage(VkDevice device,  const VkPhysicalDeviceHandler & physicalDevice, uint32_t width, uint32_t height, uint32_t mipCount, VkFormat format, VkImageTiling tiling, VkImageUsageFlags imageUsageFlags, VkMemoryPropertyFlags memoryFlags)
+: _view(), _device(device), _width(width), _height(height), _format(format), _mipCount(mipCount)
 {
 #ifdef M3VK_MEMORYLOG
     DebugLayer::Log(DebugLayer::LogType::CREATE, "GPUImage Create !");
 #endif
-    _device = device;
-    _format = format;
 
     VkImageCreateInfo createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -107,7 +111,7 @@ GPUImage::GPUImage(VkDevice device,  const VkPhysicalDeviceHandler & physicalDev
     createInfo.extent.width = static_cast<uint32_t>(width);
     createInfo.extent.height = static_cast<uint32_t>(height);
     createInfo.extent.depth = 1;
-    createInfo.mipLevels = 1;
+    createInfo.mipLevels = _mipCount;
     createInfo.arrayLayers = 1;
 
     createInfo.format = _format;
@@ -141,7 +145,7 @@ GPUImage::GPUImage(VkDevice device,  const VkPhysicalDeviceHandler & physicalDev
 
     vkBindImageMemory(_device, _internal, _memoryInternal, 0);
 
-    _view = VkImageViewHandler(_device, _internal, _format);
+    _view = VkImageViewHandler(_device, _internal, _format, _mipCount);
 }
 
 void GPUImage::TransitionLayoutCommand(const CommandBuffer& cmdBuffer, VkImageLayout oldLayout, VkImageLayout newLayout)
@@ -156,7 +160,7 @@ void GPUImage::TransitionLayoutCommand(const CommandBuffer& cmdBuffer, VkImageLa
     barrier.image = _internal;
 
     barrier.subresourceRange.baseMipLevel = 0;
-    barrier.subresourceRange.levelCount = 1;
+    barrier.subresourceRange.levelCount = _mipCount;
     barrier.subresourceRange.baseArrayLayer = 0;
     barrier.subresourceRange.layerCount = 1;
 
@@ -248,10 +252,86 @@ void GPUImage::CopyCPUtoGPUImage(const CPUImage & cpuImg, const VkPhysicalDevice
         };
         cmdBuffer.CopyBufferToImage(stage.Get(), _internal, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &region, 1);
 
-        TransitionLayoutCommand(cmdBuffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+        //TransitionLayoutCommand(cmdBuffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+        GenerateMipmapsCommand(cmdBuffer, physicalDevice);
     }
     cmdBuffer.End();
     cmdBuffer.WaitCompletion();
+}
+
+void GPUImage::GenerateMipmapsCommand(const CommandBuffer& cmdBuffer, const VkPhysicalDeviceHandler& physicalDevice)
+{
+    // Check if image format supports linear blitting
+    VkFormatProperties formatProperties;
+    vkGetPhysicalDeviceFormatProperties(physicalDevice.Get(), _format, &formatProperties);
+    if(!(formatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT))
+    {
+        // TODO Someday : software mipmapping and storing the mipmaps
+        throw std::runtime_error("texture image format does not support linear blitting!");
+    }
+
+    VkImageMemoryBarrier barrier{};
+    barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    barrier.image = _internal;
+    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    barrier.subresourceRange.baseArrayLayer = 0;
+    barrier.subresourceRange.layerCount = 1;
+    barrier.subresourceRange.levelCount = 1;
+
+    int32_t mipWidth = _width;
+    int32_t mipHeight = _height;
+
+    for(uint32_t i = 1; i < _mipCount; ++i)
+    {
+        barrier.subresourceRange.baseMipLevel = i - 1;
+        barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+        barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+        barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+
+        cmdBuffer.Barrier(VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, nullptr, 0, nullptr, 0, &barrier, 1);
+
+        VkImageBlit blit{};
+        // source
+        blit.srcOffsets[0] = {0, 0, 0};
+        blit.srcOffsets[1] = {mipWidth, mipHeight, 1};
+
+        blit.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        blit.srcSubresource.mipLevel = i - 1;
+        blit.srcSubresource.baseArrayLayer = 0;
+        blit.srcSubresource.layerCount = 1;
+
+        // destination
+        blit.dstOffsets[0] = {0, 0, 0};
+        blit.dstOffsets[1] = {mipWidth > 1 ? mipWidth / 2 : 1, mipHeight > 1 ? mipHeight / 2 : 1, 1};
+
+        blit.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        blit.dstSubresource.mipLevel = i;
+        blit.dstSubresource.baseArrayLayer = 0;
+        blit.dstSubresource.layerCount = 1;
+
+        cmdBuffer.Blit(_internal, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, _internal, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blit, VK_FILTER_LINEAR);
+
+        barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+        barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+        barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+        cmdBuffer.Barrier(VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, nullptr, 0, nullptr, 0, &barrier, 1);
+
+        if(mipWidth > 1) mipWidth /= 2;
+        if(mipHeight > 1) mipHeight /= 2;
+    }
+
+    barrier.subresourceRange.baseMipLevel = _mipCount - 1;
+    barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+    barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+    barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+    cmdBuffer.Barrier(VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, nullptr, 0, nullptr, 0, &barrier, 1);
 }
 
 

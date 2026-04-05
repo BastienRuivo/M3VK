@@ -7,10 +7,10 @@
 #include "header/DebugLayer.h"
 #endif
 
-VkImageViewHandler::VkImageViewHandler(VkDevice device, VkImage image, VkFormat format) :
-    VkImageViewHandler(device, image, format, ProjectHelper::GetImageAspectFlags(format)) {}
+VkImageViewHandler::VkImageViewHandler(VkDevice device, VkImage image, VkFormat format, uint32_t mipCount) :
+    VkImageViewHandler(device, image, format, mipCount, ProjectHelper::GetImageAspectFlags(format)) {}
 
-VkImageViewHandler::VkImageViewHandler(VkDevice device, VkImage image, VkFormat format, VkImageAspectFlags aspectMask)
+VkImageViewHandler::VkImageViewHandler(VkDevice device, VkImage image, VkFormat format, uint32_t mipCount, VkImageAspectFlags aspectMask)
 {
 #ifdef M3VK_MEMORYLOG
     DebugLayer::Log(DebugLayer::LogType::CREATE, "VkImageViewHandler Creation !");
@@ -27,7 +27,7 @@ VkImageViewHandler::VkImageViewHandler(VkDevice device, VkImage image, VkFormat 
     // Image info
     createInfo.subresourceRange.aspectMask = aspectMask;
     createInfo.subresourceRange.baseMipLevel = 0;
-    createInfo.subresourceRange.levelCount = 1;
+    createInfo.subresourceRange.levelCount = mipCount;
     createInfo.subresourceRange.baseArrayLayer = 0;
     createInfo.subresourceRange.layerCount = 1;
 

@@ -15,7 +15,7 @@ void SwapChain::CreateImageViews()
 
     for(int i = 0; i < Images.size(); i++)
     {
-        ImageViews.EmplaceBack(_device, Images[i], _imageFormat);
+        ImageViews.EmplaceBack(_device, Images[i], _imageFormat, 1);
     }
 }
 

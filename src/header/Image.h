@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <stb_image.h>
 #include "header/CommandBuffer.h"
 #include "header/VkHandlers/VkImageViewHandler.h"
@@ -39,6 +40,7 @@ class GPUImage
     public:
     GPUImage(VkDevice device, const VkPhysicalDeviceHandler & physicalDevice,  const CPUImage& cpuImg, VkCommandPool pool, VkQueue queue);
     GPUImage(VkDevice device, const VkPhysicalDeviceHandler & physicalDevice, uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags imageUsageFlags, VkMemoryPropertyFlags memoryFlags);
+    GPUImage(VkDevice device, const VkPhysicalDeviceHandler & physicalDevice, uint32_t width, uint32_t height, uint32_t mipCount, VkFormat format, VkImageTiling tiling, VkImageUsageFlags imageUsageFlags, VkMemoryPropertyFlags memoryFlags);
     ~GPUImage();
 
     GPUImage(GPUImage&& other) noexcept;
@@ -50,15 +52,21 @@ class GPUImage
     void CopyCPUtoGPUImage(const CPUImage & cpuImg, const VkPhysicalDeviceHandler& physicalDevice, VkCommandPool pool, VkQueue queue);
     void TransitionLayout(VkCommandPool pool, VkQueue queue, VkImageLayout oldLayout, VkImageLayout newLayout);
     void TransitionLayoutCommand(const CommandBuffer& cmdBuffer, VkImageLayout oldLayout, VkImageLayout newLayout);
+    void GenerateMipmapsCommand(const CommandBuffer& cmdBuffer, const VkPhysicalDeviceHandler& physicalDevice);
 
     inline VkImage Get() const { return _internal; }
     inline VkImageView GetView() const { return _view.Get(); }
     inline VkFormat GetFormat() const { return _format; }
+    inline uint32_t GetMipCount() const { return _mipCount; }
+    inline uint32_t GetWidth() const { return _width; }
+    inline uint32_t GetHeight() const { return _height; }
 
     private:
+    uint32_t _mipCount;
     VkImage _internal;
     VkDeviceMemory _memoryInternal;
     VkDevice _device;
     VkFormat _format;
     VkImageViewHandler _view;
+    uint32_t _width, _height;
 };

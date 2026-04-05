@@ -13,9 +13,6 @@
 class SwapChain
 {
     public:
-
-
-
     std::vector<VkImage> Images;
     MultiFrameHandler<VkImageViewHandler> ImageViews;
     SwapChain(const Window & window, VkPhysicalDevice physicalDevice, VkDevice device, VkSurfaceKHR windowSurface);

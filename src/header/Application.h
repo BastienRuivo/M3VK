@@ -105,7 +105,7 @@ class Application
     // Datas
     std::unique_ptr<GraphicsBuffer> _vertexBuffer;
     std::unique_ptr<GraphicsBuffer> _indexBuffer;
-    GPUImage _img;
+    GPUImage _modelImg;
     VkSamplerHandler _sampler;
 
     VkDescriptorPoolHandler _descriptorPoolHandler;

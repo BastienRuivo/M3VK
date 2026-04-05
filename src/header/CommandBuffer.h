@@ -79,6 +79,11 @@ class CommandBuffer
         );
     }
 
+    inline void Blit(VkImage src, VkImageLayout srcLayout, VkImage dst, VkImageLayout dstLayout, uint32_t regionCount, VkImageBlit* pRegions, VkFilter filter) const
+    {
+        vkCmdBlitImage(_internal, src, srcLayout, dst, dstLayout, regionCount, pRegions, filter);
+    }
+
     inline void CopyBufferToImage(VkBuffer buffer, VkImage image, VkImageLayout layout, VkBufferImageCopy* pRegions, int regionCount)
     {
         vkCmdCopyBufferToImage(_internal, buffer, image, layout, regionCount, pRegions);

@@ -1,13 +1,14 @@
 #pragma once
 
+#include <cstdint>
 #include <vulkan/vulkan_core.h>
 
 class VkImageViewHandler
 {
     public:
     VkImageViewHandler() {};
-    VkImageViewHandler(VkDevice device, VkImage image, VkFormat format, VkImageAspectFlags aspectMask);
-    VkImageViewHandler(VkDevice device, VkImage image, VkFormat format);
+    VkImageViewHandler(VkDevice device, VkImage image, VkFormat format, uint32_t mipCount, VkImageAspectFlags aspectMask);
+    VkImageViewHandler(VkDevice device, VkImage image, VkFormat format, uint32_t mipCount);
     ~VkImageViewHandler();
 
     // VkHandles can be destroyed by one of the two object when copying, so we enable moving and disable copying.

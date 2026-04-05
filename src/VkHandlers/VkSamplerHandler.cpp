@@ -40,7 +40,7 @@ VkSamplerHandler::VkSamplerHandler(VkDevice device, const VkPhysicalDeviceHandle
     createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
     createInfo.mipLodBias = 0.0f;
     createInfo.minLod = 0.0f;
-    createInfo.maxLod = 0.0f;
+    createInfo.maxLod = VK_LOD_CLAMP_NONE;
 
     if(vkCreateSampler(_device, &createInfo, nullptr, &_internal) != VK_SUCCESS)
     {
