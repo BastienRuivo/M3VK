@@ -100,6 +100,7 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
     SHADER_DIRECTORY="${SHADER_BINARY_DIR}/"
     GLM_FORCE_RADIANS
     GLM_FORCE_DEPTH_ZERO_TO_ONE
+    GLM_ENABLE_EXPERIMENTAL
 )
 
 add_dependencies(${PROJECT_NAME} CompileShaders)

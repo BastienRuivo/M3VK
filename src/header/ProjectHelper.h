@@ -6,6 +6,7 @@
 #include <fstream>
 #include <optional>
 #include <stdexcept>
+#include <unordered_map>
 #include <vector>
 #include <vulkan/vulkan_core.h>
 #include <tiny_obj_loader.h>
@@ -209,7 +210,8 @@ class ProjectHelper
         }
 
         indices.reserve(shapes[0].mesh.indices.size());
-        vertices.reserve(shapes[0].mesh.indices.size());
+
+        std::unordered_map<Vertex, uint32_t> uniqueVertices{};
 
         for(const auto& shape : shapes)
         {
@@ -228,8 +230,13 @@ class ProjectHelper
                     attrib.texcoords[2 * index.texcoord_index + 1]
                 };
 
-                vertices.push_back(vertex);
-                indices.push_back(indices.size());
+                if(uniqueVertices.count(vertex) == 0)
+                {
+                    uniqueVertices[vertex] = static_cast<uint32_t>(vertices.size());
+                    vertices.push_back(vertex);
+                }
+
+                indices.push_back(uniqueVertices[vertex]);
             }
         }
 
