@@ -104,7 +104,7 @@ void Application::UpdateCameraData(uint32_t currentFrame)
 
     CameraData cameraData = {};
     cameraData.localToWorldMatrix = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-    cameraData.worldToCameraMatrix = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+    cameraData.worldToCameraMatrix = glm::lookAt(glm::vec3(4.0f, 4.0f, 4.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
     cameraData.projectionMatrix = glm::perspective<float>(glm::radians<float>(45),(float)extent.width / extent.height, 0.01f,100.0f);
     // it was designed for opengl so flip it
     cameraData.projectionMatrix[1][1] *= -1;
@@ -281,7 +281,7 @@ Application::Application() :
     _depthBuffer(std::make_unique<GPUImage>(_deviceHandler.Get(), _physicalDeviceHandler, _swapChain->GetExtent().width, _swapChain->GetExtent().height, DepthFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)),
     _descriptorPoolHandler(_deviceHandler.Get(), static_cast<uint32_t>(MaxFrameInCount)),
     _cameraDataBuffer(MaxFrameInCount, _physicalDeviceHandler, _deviceHandler.Get(), 1, sizeof(CameraData), GraphicsBuffer::UNIFORM),
-    _img(_deviceHandler.Get(), _physicalDeviceHandler, CPUImage("data/img/models/viking_room.png", STBI_rgb_alpha), _graphicsCommandPoolHandler.Get(), _graphicsQueueHandler.Get()),
+    _img(_deviceHandler.Get(), _physicalDeviceHandler, CPUImage("data/img/example.jpg", STBI_rgb_alpha), _graphicsCommandPoolHandler.Get(), _graphicsQueueHandler.Get()),
     _sampler(_deviceHandler.Get(), _physicalDeviceHandler),
 
     // Descriptor Sets & Execution
@@ -308,7 +308,7 @@ Application::Application() :
     std::vector<Vertex> vertices;
     std::vector<uint32_t> indices;
 
-    ProjectHelper::LoadObj("data/models/viking_room.obj", vertices, indices);
+    ProjectHelper::LoadObj("data/models/Crate1.obj", vertices, indices);
 
     _vertexBuffer = std::make_unique<GraphicsBuffer>(_physicalDeviceHandler, _deviceHandler.Get(), vertices.size(), sizeof(vertices[0]), GraphicsBuffer::BufferType::VERTEX);
     _indexBuffer = std::make_unique<GraphicsBuffer>(_physicalDeviceHandler, _deviceHandler.Get(), indices.size(), sizeof(indices[0]), GraphicsBuffer::BufferType::INDEX);
