@@ -3,8 +3,10 @@
 #include "header/GraphicsBuffer.h"
 #include "header/Image.h"
 #include "header/MultiFrame.h"
+#include "header/ProjectHelper.h"
 #include "header/SwapChain.h"
 #include "header/DebugLayer.h"
+#include "header/Vertex.h"
 #include "header/VkHandlers/VkFramebufferHandler.h"
 #include <GLFW/glfw3.h>
 #include <array>
@@ -219,10 +221,10 @@ void Application::RecordCommandBuffer(const CommandBuffer& cmdBuffer, uint32_t c
             cmdBuffer.BindPipeline(_graphicsPipelineHandler.Get(), VK_PIPELINE_BIND_POINT_GRAPHICS);
             cmdBuffer.SetViewport(renderExtent.width, renderExtent.height);
             cmdBuffer.SetScissor(0, 0, renderExtent.width, renderExtent.height);
-            cmdBuffer.BindBuffer(_vertexBuffer);
-            cmdBuffer.BindBuffer(_indexBuffer);
+            cmdBuffer.BindBuffer(*_vertexBuffer);
+            cmdBuffer.BindBuffer(*_indexBuffer);
             cmdBuffer.BindDescriptorSets(VK_PIPELINE_BIND_POINT_GRAPHICS, _pipelineLayoutHandler.Get(), _descriptorSet.Get(currentFrame));
-            cmdBuffer.DrawIndexed(static_cast<uint32_t>(_indices.size()));
+            cmdBuffer.DrawIndexed(static_cast<uint32_t>(_indexBuffer->GetCount()));
         }
         cmdBuffer.EndRenderPass();
     }
@@ -277,11 +279,9 @@ Application::Application() :
 
     // Geometry & Data Buffers
     _depthBuffer(std::make_unique<GPUImage>(_deviceHandler.Get(), _physicalDeviceHandler, _swapChain->GetExtent().width, _swapChain->GetExtent().height, DepthFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)),
-    _vertexBuffer(_physicalDeviceHandler, _deviceHandler.Get(), _vertices.size(), sizeof(_vertices[0]), GraphicsBuffer::BufferType::VERTEX),
-    _indexBuffer(_physicalDeviceHandler, _deviceHandler.Get(), _indices.size(), sizeof(_indices[0]), GraphicsBuffer::BufferType::INDEX),
     _descriptorPoolHandler(_deviceHandler.Get(), static_cast<uint32_t>(MaxFrameInCount)),
     _cameraDataBuffer(MaxFrameInCount, _physicalDeviceHandler, _deviceHandler.Get(), 1, sizeof(CameraData), GraphicsBuffer::UNIFORM),
-    _img(_deviceHandler.Get(), _physicalDeviceHandler, CPUImage("data/img/example.jpg", STBI_rgb_alpha), _graphicsCommandPoolHandler.Get(), _graphicsQueueHandler.Get()),
+    _img(_deviceHandler.Get(), _physicalDeviceHandler, CPUImage("data/img/models/viking_room.png", STBI_rgb_alpha), _graphicsCommandPoolHandler.Get(), _graphicsQueueHandler.Get()),
     _sampler(_deviceHandler.Get(), _physicalDeviceHandler),
 
     // Descriptor Sets & Execution
@@ -297,7 +297,7 @@ Application::Application() :
     DebugLayer::Log(DebugLayer::LogType::CREATE, "Application Creation !");
 #endif
     VkClearValue colorClear;
-    colorClear.color = {1.0f, 1.0f, 1.0f, 1.0f};
+    colorClear.color = {0.0f, 0.0f, 0.0f, 1.0f};
     VkClearValue depthClear;
     depthClear.depthStencil = {1.0f, 0};
 
@@ -305,11 +305,17 @@ Application::Application() :
     clearValues.push_back(colorClear);
     clearValues.push_back(depthClear);
 
-    _depthBuffer->TransitionLayout(_graphicsCommandPoolHandler.Get(), _graphicsQueueHandler.Get(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+    std::vector<Vertex> vertices;
+    std::vector<uint32_t> indices;
+
+    ProjectHelper::LoadObj("data/models/viking_room.obj", vertices, indices);
+
+    _vertexBuffer = std::make_unique<GraphicsBuffer>(_physicalDeviceHandler, _deviceHandler.Get(), vertices.size(), sizeof(vertices[0]), GraphicsBuffer::BufferType::VERTEX);
+    _indexBuffer = std::make_unique<GraphicsBuffer>(_physicalDeviceHandler, _deviceHandler.Get(), indices.size(), sizeof(indices[0]), GraphicsBuffer::BufferType::INDEX);
 
     // init data
-    _indexBuffer.CopyToBuffer(_physicalDeviceHandler, _deviceHandler.Get(), _graphicsQueueHandler.Get(), _graphicsCommandPoolHandler.Get(), (void*)_indices.data(), _indexBuffer.GetSize());
-    _vertexBuffer.CopyToBuffer(_physicalDeviceHandler, _deviceHandler.Get(), _graphicsQueueHandler.Get(), _graphicsCommandPoolHandler.Get(), (void*)_vertices.data(), _vertexBuffer.GetSize());
+    _indexBuffer->CopyToBuffer(_physicalDeviceHandler, _deviceHandler.Get(), _graphicsQueueHandler.Get(), _graphicsCommandPoolHandler.Get(), (void*)indices.data(), _indexBuffer->GetSize());
+    _vertexBuffer->CopyToBuffer(_physicalDeviceHandler, _deviceHandler.Get(), _graphicsQueueHandler.Get(), _graphicsCommandPoolHandler.Get(), (void*)vertices.data(), _vertexBuffer->GetSize());
 }
 
 void Application::MainLoop()

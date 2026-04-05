@@ -7,22 +7,49 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 include(FetchContent)
 
+# --- Dependencies ---
+
+# GLFW
 fetchcontent_declare(
     glfw
     GIT_REPOSITORY https://github.com/glfw/glfw.git
     GIT_TAG        3.3.8
 )
 
+# STB
 fetchcontent_declare(
     stb
     GIT_REPOSITORY https://github.com/nothings/stb.git
     GIT_TAG        master
 )
 
-fetchcontent_makeavailable(glfw stb)
+# GLM
+fetchcontent_declare(
+    glm
+    GIT_REPOSITORY https://github.com/g-truc/glm.git
+    GIT_TAG        1.0.3
+)
 
+# TinyOBJLoader
+fetchcontent_declare(
+    tinyobjloader
+    GIT_REPOSITORY https://github.com/tinyobjloader/tinyobjloader.git
+    GIT_TAG        v2.0.0rc13
+)
+
+fetchcontent_makeavailable(glfw stb glm tinyobjloader)
+
+# --- Interface Library Setup ---
+
+# stb
 add_library(stb INTERFACE)
 target_include_directories(stb INTERFACE ${stb_SOURCE_DIR})
+
+# GLM (Note: GLM's own CMake might provide a target, but this ensures manual control)
+add_library(glm_lib INTERFACE)
+target_include_directories(glm_lib INTERFACE ${glm_SOURCE_DIR})
+
+# --- Vulkan and Shaders ---
 
 find_package(Vulkan REQUIRED)
 
@@ -62,6 +89,8 @@ endforeach()
 
 add_custom_target(CompileShaders DEPENDS ${SPIRV_BINARY_FILES})
 
+# --- Executable ---
+
 file(GLOB_RECURSE SRC_FILES "${CMAKE_SOURCE_DIR}/src/*.cpp")
 file(GLOB_RECURSE HEADER_FILES "${CMAKE_SOURCE_DIR}/src/headers/*.h" "${CMAKE_SOURCE_DIR}/src/headers/*.hpp")
 
@@ -81,7 +110,16 @@ target_include_directories(${PROJECT_NAME} PRIVATE
     ${Vulkan_INCLUDE_DIRS}
 )
 
-target_link_libraries(${PROJECT_NAME} PRIVATE Vulkan::Vulkan glfw stb)
+# Link the new libraries here
+target_link_libraries(${PROJECT_NAME} PRIVATE
+    Vulkan::Vulkan
+    glfw
+    stb
+    glm_lib
+    tinyobjloader
+)
+
+# --- Asset Management ---
 
 set(DATA_SOURCE_DIR "${CMAKE_SOURCE_DIR}/data")
 set(DATA_OUTPUT_DIR "${CMAKE_BINARY_DIR}/data")

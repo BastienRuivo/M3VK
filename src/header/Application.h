@@ -4,7 +4,6 @@
 #include "header/VkHandlers/VkSamplerHandler.h"
 #include "header/CommandBuffer.h"
 #include "header/MultiFrame.h"
-#include "header/Vertex.h"
 #include "header/VkHandlers/VkCommandPoolHandler.h"
 #include "header/VkHandlers/VkDescriptorPoolHandler.h"
 #include "header/VkHandlers/VkDescriptorSetLayoutHandler.h"
@@ -23,6 +22,7 @@
 #include "header/GraphicsBuffer.h"
 #include "header/SwapChain.h"
 #include <cstdint>
+#include <tiny_obj_loader.h>
 #include <glm/ext/vector_float2.hpp>
 #include <glm/ext/vector_float3.hpp>
 #include <glm/fwd.hpp>
@@ -51,23 +51,6 @@ class Application
     ~Application();
 
     private:
-
-    const std::vector<Vertex> _vertices = {
-        {{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
-        {{0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
-        {{0.5f, 0.5f, 0.0f}, {1.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
-        {{-0.5f, 0.5f, 0.0f}, {1.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
-
-        {{-0.5f, -0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
-        {{0.5f, -0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
-        {{0.5f, 0.5f, -0.5f}, {0.0f, 1.0f, 1.0f}, {1.0f, 1.0f}},
-        {{-0.5f, 0.5f, -0.5f}, {0.0f, 1.0f, 1.0f}, {0.0f, 1.0f}}
-    };
-
-    const std::vector<uint32_t> _indices = {
-        0, 1, 2, 2, 3, 0,
-        4, 5, 6, 6, 7, 4
-    };
 
     struct CameraData
     {
@@ -120,8 +103,8 @@ class Application
     VkCommandPoolHandler _graphicsCommandPoolHandler;
 
     // Datas
-    GraphicsBuffer _vertexBuffer;
-    GraphicsBuffer _indexBuffer;
+    std::unique_ptr<GraphicsBuffer> _vertexBuffer;
+    std::unique_ptr<GraphicsBuffer> _indexBuffer;
     GPUImage _img;
     VkSamplerHandler _sampler;
 
