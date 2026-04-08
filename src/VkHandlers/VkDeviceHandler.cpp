@@ -1,11 +1,12 @@
 #include "header/VkHandlers/VkDeviceHandler.h"
+#include "header/ApplicationInfo.h"
 #include "header/DebugLayer.h"
 #include "header/VkHandlers/VkPhysicalDeviceHandler.h"
 #include <set>
 #include <vector>
 #include <vulkan/vulkan_core.h>
 
-VkDeviceHandler::VkDeviceHandler(const VkPhysicalDeviceHandler& physicalDeviceHandler, VkSurfaceKHR windowSurface, const std::vector<const char*>& deviceExtensions)
+VkDeviceHandler::VkDeviceHandler(VkPhysicalDevice physicalDevice, VkSurfaceKHR windowSurface, const std::vector<const char*>& deviceExtensions)
 {
 #ifdef M3VK_MEMORYLOG
     DebugLayer::Log(DebugLayer::LogType::CREATE, "VkDeviceHandler Creation !");
@@ -14,8 +15,8 @@ VkDeviceHandler::VkDeviceHandler(const VkPhysicalDeviceHandler& physicalDeviceHa
     std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
     std::set<uint32_t> uniqueQueueIds =
     {
-        physicalDeviceHandler.GetGraphicsQueueId(),
-        physicalDeviceHandler.GetPresentQueueId(),
+        ApplicationInfo::Get().GetGraphicsQueueId(),
+        ApplicationInfo::Get().GetPresentQueueId(),
         //QueueFamilyId.Copy.value()
     };
 
@@ -52,7 +53,7 @@ VkDeviceHandler::VkDeviceHandler(const VkPhysicalDeviceHandler& physicalDeviceHa
         deviceCreateInfo.enabledLayerCount = 0;
     }
 
-    VkResult deviceCreation = vkCreateDevice(physicalDeviceHandler.Get(), &deviceCreateInfo, nullptr, &_internal);
+    VkResult deviceCreation = vkCreateDevice(physicalDevice, &deviceCreateInfo, nullptr, &_internal);
     if(deviceCreation != VK_SUCCESS)
     {
         throw std::runtime_error("Failed to create VK Logical Device !");

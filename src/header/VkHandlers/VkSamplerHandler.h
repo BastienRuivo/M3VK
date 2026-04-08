@@ -1,13 +1,12 @@
 #pragma once
 
-#include "header/VkHandlers/VkPhysicalDeviceHandler.h"
 #include <vulkan/vulkan_core.h>
 
 class VkSamplerHandler
 {
     public:
     VkSamplerHandler() {};
-    VkSamplerHandler(VkDevice device, const VkPhysicalDeviceHandler & physicalDevice);
+    VkSamplerHandler(VkDevice device);
     ~VkSamplerHandler();
 
     // VkHandles can be destroyed by one of the two object when copying, so we enable moving and disable copying.

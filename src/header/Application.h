@@ -40,7 +40,6 @@
 
 class Application
 {
-    static const int MaxFrameInCount = 2;
 
     public:
     void Run();

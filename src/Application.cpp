@@ -1,4 +1,5 @@
 #include "header/Application.h"
+#include "header/ApplicationInfo.h"
 #include "header/CommandBuffer.h"
 #include "header/GraphicsBuffer.h"
 #include "header/Image.h"
@@ -38,21 +39,21 @@
 
 MultiFrameObject<VkDescriptorSet> Application::CreateDescriptorSet()
 {
-    std::vector<VkDescriptorSetLayout> layouts(MaxFrameInCount, _descriptorSetLayoutHandler.Get());
+    std::vector<VkDescriptorSetLayout> layouts(ApplicationInfo::Constant::MaxFrameInCount, _descriptorSetLayoutHandler.Get());
     VkDescriptorSetAllocateInfo allocateInfo{};
     allocateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
     allocateInfo.descriptorPool = _descriptorPoolHandler.Get();
-    allocateInfo.descriptorSetCount = static_cast<uint32_t>(MaxFrameInCount);
+    allocateInfo.descriptorSetCount = ApplicationInfo::Constant::MaxFrameInCount;
     allocateInfo.pSetLayouts = layouts.data();
 
-    MultiFrameObject<VkDescriptorSet> descriptorSet(static_cast<uint32_t>(MaxFrameInCount));
-    descriptorSet.Resize(MaxFrameInCount);
+    MultiFrameObject<VkDescriptorSet> descriptorSet(static_cast<uint32_t>(ApplicationInfo::Constant::MaxFrameInCount));
+    descriptorSet.Resize(ApplicationInfo::Constant::MaxFrameInCount);
     if(vkAllocateDescriptorSets(_deviceHandler.Get(), &allocateInfo, descriptorSet.Data()) != VK_SUCCESS)
     {
         throw std::runtime_error("Failed to allocate descriptor set");
     }
 
-    for(int i = 0; i < MaxFrameInCount; ++i)
+    for(int i = 0; i < ApplicationInfo::Constant::MaxFrameInCount; ++i)
     {
         VkDescriptorBufferInfo cameraDataInfo{};
         cameraDataInfo.buffer = _cameraDataBuffer.GetInternal(i);
@@ -159,14 +160,14 @@ void Application::RefreshSwapChain()
 
     _colorBackBuffer.reset();
     _colorBackBuffer = std::make_unique<GPUImage>(_deviceHandler.Get(), _physicalDeviceHandler, _swapChain->GetExtent().width, _swapChain->GetExtent().height,
-        _physicalDeviceHandler.GetMsaaSample(),
+        ApplicationInfo::Get().GetMsaaSample(),
         1, _swapChain->GetImageFormat(),
         VK_IMAGE_TILING_OPTIMAL,
         VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
     _depthBuffer.reset();
-    _depthBuffer = std::make_unique<GPUImage>(_deviceHandler.Get(), _physicalDeviceHandler, _swapChain->GetExtent().width, _swapChain->GetExtent().height, _physicalDeviceHandler.GetMsaaSample(), 1, DepthFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT),
+    _depthBuffer = std::make_unique<GPUImage>(_deviceHandler.Get(), _physicalDeviceHandler, _swapChain->GetExtent().width, _swapChain->GetExtent().height, ApplicationInfo::Get().GetMsaaSample(), 1, DepthFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT),
 
     _framebuffer.Clear();
     InitFramebuffer(_framebuffer);
@@ -229,7 +230,7 @@ void Application::DrawFrame()
         throw std::runtime_error("failed to present swap chain image!");
     }
 
-    _currentFrame = (_currentFrame + 1) % Application::MaxFrameInCount;
+    _currentFrame = (_currentFrame + 1) % ApplicationInfo::Constant::MaxFrameInCount;
 }
 
 void Application::RecordCommandBuffer(const CommandBuffer& cmdBuffer, uint32_t currentFrame, uint32_t imageIndex)
@@ -283,47 +284,47 @@ Application::Application() :
     _vkDebugLayer(_instanceHandler.Get()),
     _windowSurfaceHandler(_instanceHandler.Get(), _window.Get()),
     _physicalDeviceHandler(_instanceHandler.Get(), _windowSurfaceHandler.Get(), _deviceExtensions),
-    _deviceHandler(_physicalDeviceHandler, _windowSurfaceHandler.Get(), _deviceExtensions),
+    _deviceHandler(_physicalDeviceHandler.Get(), _windowSurfaceHandler.Get(), _deviceExtensions),
 
     // Queues & Swapchain
-    _graphicsQueueHandler(_deviceHandler.Get(), _physicalDeviceHandler.GetQueueFamilyIds(), VkQueueHandler::Graphics),
-    _presentQueueHandler(_deviceHandler.Get(), _physicalDeviceHandler.GetQueueFamilyIds(), VkQueueHandler::Present),
+    _graphicsQueueHandler(_deviceHandler.Get(), VkQueueHandler::Graphics),
+    _presentQueueHandler(_deviceHandler.Get(), VkQueueHandler::Present),
     _swapChain(std::make_unique<SwapChain>(_window, _physicalDeviceHandler.Get(), _deviceHandler.Get(), _windowSurfaceHandler.Get())),
 
     // Render Layouts & Pipelines
-    _renderPassHandler(_deviceHandler.Get(), _physicalDeviceHandler.GetMsaaSample(), _swapChain->GetImageFormat(), DepthFormat),
+    _renderPassHandler(_deviceHandler.Get(), ApplicationInfo::Get().GetMsaaSample(), _swapChain->GetImageFormat(), DepthFormat),
     _descriptorSetLayoutHandler(_deviceHandler.Get()),
     _pipelineLayoutHandler(_deviceHandler.Get(), _descriptorSetLayoutHandler.Get()),
-    _graphicsPipelineHandler(_swapChain->GetExtent(), _deviceHandler.Get(), _physicalDeviceHandler.GetMsaaSample(), _pipelineLayoutHandler.Get(), _renderPassHandler.Get()),
+    _graphicsPipelineHandler(_swapChain->GetExtent(), _deviceHandler.Get(), ApplicationInfo::Get().GetMsaaSample(), _pipelineLayoutHandler.Get(), _renderPassHandler.Get()),
 
     // Framebuffers & Command Pools
     _framebuffer(CreateFramebuffer()),
-    _graphicsCommandPoolHandler(_deviceHandler.Get(), _physicalDeviceHandler.GetQueueFamilyIds()),
+    _graphicsCommandPoolHandler(_deviceHandler.Get()),
 
     // Geometry & Data Buffers
     _colorBackBuffer(std::make_unique<GPUImage>(_deviceHandler.Get(), _physicalDeviceHandler, _swapChain->GetExtent().width, _swapChain->GetExtent().height,
-        _physicalDeviceHandler.GetMsaaSample(),
+        ApplicationInfo::Get().GetMsaaSample(),
         1,
         _swapChain->GetImageFormat(),
         VK_IMAGE_TILING_OPTIMAL,
         VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)),
-    _depthBuffer(std::make_unique<GPUImage>(_deviceHandler.Get(), _physicalDeviceHandler, _swapChain->GetExtent().width, _swapChain->GetExtent().height, _physicalDeviceHandler.GetMsaaSample(), 1, DepthFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)),
-    _descriptorPoolHandler(_deviceHandler.Get(), static_cast<uint32_t>(MaxFrameInCount)),
-    _cameraDataBuffer(MaxFrameInCount, _physicalDeviceHandler, _deviceHandler.Get(), 1, sizeof(CameraData), GraphicsBuffer::UNIFORM),
+    _depthBuffer(std::make_unique<GPUImage>(_deviceHandler.Get(), _physicalDeviceHandler, _swapChain->GetExtent().width, _swapChain->GetExtent().height, ApplicationInfo::Get().GetMsaaSample(), 1, DepthFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)),
+    _descriptorPoolHandler(_deviceHandler.Get(), ApplicationInfo::Constant::MaxFrameInCount),
+    _cameraDataBuffer(ApplicationInfo::Constant::MaxFrameInCount, _physicalDeviceHandler, _deviceHandler.Get(), 1, sizeof(CameraData), GraphicsBuffer::UNIFORM),
     _modelImg(_deviceHandler.Get(), _physicalDeviceHandler, CPUImage("data/img/models/viking_room.png", STBI_rgb_alpha), _graphicsCommandPoolHandler.Get(), _graphicsQueueHandler.Get()),
-    _sampler(_deviceHandler.Get(), _physicalDeviceHandler),
+    _sampler(_deviceHandler.Get()),
 
     _objectDataBuffer(std::make_unique<GraphicsBuffer>(_physicalDeviceHandler, _deviceHandler.Get(), 1024, sizeof(ObjectData), GraphicsBuffer::BufferType::STATIC_STORAGE)),
 
     // Descriptor Sets & Execution
     _descriptorSet(CreateDescriptorSet()),
-    _commandBuffer(static_cast<uint32_t>(MaxFrameInCount), _deviceHandler.Get(), _graphicsCommandPoolHandler.Get(), _graphicsQueueHandler.Get()),
+    _commandBuffer(ApplicationInfo::Constant::MaxFrameInCount, _deviceHandler.Get(), _graphicsCommandPoolHandler.Get(), _graphicsQueueHandler.Get()),
 
     // Synchronization
-    _availableImageSemaphore(MaxFrameInCount, _deviceHandler.Get()),
+    _availableImageSemaphore(ApplicationInfo::Constant::MaxFrameInCount, _deviceHandler.Get()),
     _renderFinishedSemaphores(_swapChain->Images.size(), _deviceHandler.Get()),
-    _waitFence(MaxFrameInCount, _deviceHandler.Get())
+    _waitFence(ApplicationInfo::Constant::MaxFrameInCount, _deviceHandler.Get())
 {
 #ifdef M3VK_MEMORYLOG
     DebugLayer::Log(DebugLayer::LogType::CREATE, "Application Creation !");

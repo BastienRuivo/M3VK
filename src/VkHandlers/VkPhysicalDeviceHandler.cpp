@@ -1,4 +1,5 @@
 #include "header/VkHandlers/VkPhysicalDeviceHandler.h"
+#include "header/ApplicationInfo.h"
 #include "header/ProjectHelper.h"
 #include "header/DebugLayer.h"
 #include <cstdint>
@@ -110,18 +111,21 @@ VkPhysicalDeviceHandler::VkPhysicalDeviceHandler(VkInstance instance, VkSurfaceK
     std::vector<VkPhysicalDevice> physicalDevices(deviceCount);
     vkEnumeratePhysicalDevices(instance, &deviceCount, physicalDevices.data());
 
+    ProjectHelper::QueueFamilyIds queueFamilyIds;
+    VkPhysicalDeviceProperties properties;
+
     int bestScore = 0;
     for(const VkPhysicalDevice& physicalDevice : physicalDevices)
     {
-        ProjectHelper::QueueFamilyIds queueFamilyIds;
-        VkPhysicalDeviceProperties properties;
-        int score = ScoreDeviceSuitability(physicalDevice, windowSurface, deviceExtensions, properties, queueFamilyIds);
+        ProjectHelper::QueueFamilyIds localQueueIds;
+        VkPhysicalDeviceProperties localProperties;
+        int score = ScoreDeviceSuitability(physicalDevice, windowSurface, deviceExtensions, localProperties, localQueueIds);
         if(score > bestScore)
         {
             bestScore = score;
             _internal = physicalDevice;
-            _properties = properties;
-            _queueFamilyIds = queueFamilyIds;
+            queueFamilyIds = localQueueIds;
+            properties = localProperties;
         }
     }
 
@@ -130,20 +134,7 @@ VkPhysicalDeviceHandler::VkPhysicalDeviceHandler(VkInstance instance, VkSurfaceK
         throw std::runtime_error("Failed to find a suitable GPU on this device");
     }
 
-    _msaaSample = GetMaxUsableSampleCount(MaxMSAASample);
-}
-
-VkSampleCountFlagBits VkPhysicalDeviceHandler::GetMaxUsableSampleCount(VkSampleCountFlagBits maxSample) const
-{
-    VkSampleCountFlags counts = _properties.limits.framebufferColorSampleCounts & _properties.limits.framebufferDepthSampleCounts;
-
-    if((counts & VK_SAMPLE_COUNT_64_BIT) && (maxSample >= VK_SAMPLE_COUNT_64_BIT)) return VK_SAMPLE_COUNT_64_BIT;
-    else if((counts & VK_SAMPLE_COUNT_32_BIT) && (maxSample >= VK_SAMPLE_COUNT_32_BIT)) return VK_SAMPLE_COUNT_32_BIT;
-    else if((counts & VK_SAMPLE_COUNT_16_BIT) && (maxSample >= VK_SAMPLE_COUNT_16_BIT)) return VK_SAMPLE_COUNT_16_BIT;
-    else if((counts & VK_SAMPLE_COUNT_8_BIT) && (maxSample >= VK_SAMPLE_COUNT_8_BIT)) return VK_SAMPLE_COUNT_8_BIT;
-    else if((counts & VK_SAMPLE_COUNT_4_BIT) && (maxSample >= VK_SAMPLE_COUNT_4_BIT)) return VK_SAMPLE_COUNT_4_BIT;
-    else if((counts & VK_SAMPLE_COUNT_2_BIT) && (maxSample >= VK_SAMPLE_COUNT_2_BIT)) return VK_SAMPLE_COUNT_2_BIT;
-    else return VK_SAMPLE_COUNT_1_BIT;
+    ApplicationInfo::Get().SetPhysicalDeviceInformation(properties, queueFamilyIds);
 }
 
 VkPhysicalDeviceHandler::~VkPhysicalDeviceHandler()

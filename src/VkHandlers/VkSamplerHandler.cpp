@@ -1,4 +1,5 @@
 #include "header/VkHandlers/VkSamplerHandler.h"
+#include "header/ApplicationInfo.h"
 #include "header/VkHandlers/VkPhysicalDeviceHandler.h"
 #include <vulkan/vulkan_core.h>
 
@@ -6,7 +7,7 @@
 #include "header/DebugLayer.h"
 #endif
 
-VkSamplerHandler::VkSamplerHandler(VkDevice device, const VkPhysicalDeviceHandler& physicalDevice)
+VkSamplerHandler::VkSamplerHandler(VkDevice device)
 {
 #ifdef M3VK_MEMORYLOG
     DebugLayer::Log(DebugLayer::LogType::CREATE, "VkSamplerHandler Creation !");
@@ -28,7 +29,7 @@ VkSamplerHandler::VkSamplerHandler(VkDevice device, const VkPhysicalDeviceHandle
 
     // Anisotropy -> Avoiding blur caused by mipmapping by doing clever more sampling
     createInfo.anisotropyEnable = VK_TRUE;
-    createInfo.maxAnisotropy = physicalDevice.GetProperties().limits.maxSamplerAnisotropy;
+    createInfo.maxAnisotropy = ApplicationInfo::Get().GetProperties().limits.maxSamplerAnisotropy;
 
     createInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
     createInfo.unnormalizedCoordinates = VK_FALSE;

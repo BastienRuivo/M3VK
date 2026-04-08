@@ -9,8 +9,6 @@ class VkPhysicalDeviceHandler
 {
     public:
 
-    const VkSampleCountFlagBits MaxMSAASample = VK_SAMPLE_COUNT_8_BIT;
-
     VkPhysicalDeviceHandler(VkInstance instance, VkSurfaceKHR windowSurface, const std::vector<const char *>& deviceExtensions);
     ~VkPhysicalDeviceHandler();
 
@@ -31,35 +29,8 @@ class VkPhysicalDeviceHandler
     VkPhysicalDeviceHandler(const VkPhysicalDeviceHandler&) = delete;
     VkPhysicalDeviceHandler& operator=(const VkPhysicalDeviceHandler&) = delete;
 
-    inline const ProjectHelper::QueueFamilyIds& GetQueueFamilyIds() const
-    {
-        return _queueFamilyIds;
-    }
-
-    inline uint32_t GetGraphicsQueueId() const
-    {
-        return _queueFamilyIds.Graphics.value();
-    }
-
-    inline uint32_t GetPresentQueueId() const
-    {
-        return _queueFamilyIds.Present.value();
-    }
-
-    inline const VkPhysicalDeviceProperties& GetProperties() const
-    {
-        return _properties;
-    }
-
-    inline VkSampleCountFlagBits GetMsaaSample() const
-    {
-        return _msaaSample;
-    }
-
     private:
-    VkSampleCountFlagBits GetMaxUsableSampleCount(VkSampleCountFlagBits maxSample) const;
     VkPhysicalDevice _internal = VK_NULL_HANDLE;
-    ProjectHelper::QueueFamilyIds _queueFamilyIds{};
-    VkPhysicalDeviceProperties _properties{};
-    VkSampleCountFlagBits  _msaaSample = VK_SAMPLE_COUNT_1_BIT;
+
+    friend class ApplicationInfo;
 };

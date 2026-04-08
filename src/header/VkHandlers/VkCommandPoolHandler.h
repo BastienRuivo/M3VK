@@ -1,12 +1,11 @@
 #pragma once
 
-#include "header/ProjectHelper.h"
 #include <vulkan/vulkan_core.h>
 
 class VkCommandPoolHandler
 {
     public:
-    VkCommandPoolHandler(VkDevice device, const ProjectHelper::QueueFamilyIds& families);
+    VkCommandPoolHandler(VkDevice device);
     ~VkCommandPoolHandler();
 
     // VkHandles can be destroyed by one of the two object when copying, so we enable moving and disable copying.

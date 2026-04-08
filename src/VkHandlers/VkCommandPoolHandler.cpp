@@ -1,5 +1,5 @@
 #include "header/VkHandlers/VkCommandPoolHandler.h"
-#include "header/ProjectHelper.h"
+#include "header/ApplicationInfo.h"
 #include <stdexcept>
 #include <vulkan/vulkan_core.h>
 
@@ -7,7 +7,7 @@
 #include "header/DebugLayer.h"
 #endif
 
-VkCommandPoolHandler::VkCommandPoolHandler(VkDevice device, const ProjectHelper::QueueFamilyIds& families)
+VkCommandPoolHandler::VkCommandPoolHandler(VkDevice device)
 {
 #ifdef M3VK_MEMORYLOG
     DebugLayer::Log(DebugLayer::LogType::CREATE, "VkCommandPoolHandler Creation !");
@@ -18,7 +18,7 @@ VkCommandPoolHandler::VkCommandPoolHandler(VkDevice device, const ProjectHelper:
     VkCommandPoolCreateInfo poolInfo{};
     poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
     poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-    poolInfo.queueFamilyIndex = families.Graphics.value();
+    poolInfo.queueFamilyIndex = ApplicationInfo::Get().GetGraphicsQueueId();
 
     if(vkCreateCommandPool(_device, &poolInfo, nullptr, &_internal) != VK_SUCCESS)
     {

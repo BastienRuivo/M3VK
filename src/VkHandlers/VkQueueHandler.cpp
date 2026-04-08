@@ -1,5 +1,5 @@
 #include "header/VkHandlers/VkQueueHandler.h"
-#include "header/ProjectHelper.h"
+#include "header/ApplicationInfo.h"
 #include <cstdint>
 #include <stdexcept>
 #include <vulkan/vulkan_core.h>
@@ -8,7 +8,7 @@
 #include "header/DebugLayer.h"
 #endif
 
-VkQueueHandler::VkQueueHandler(VkDevice device, const ProjectHelper::QueueFamilyIds& queueFamilyIds, VkQueueHandler::QueueTypeEnum queueType)
+VkQueueHandler::VkQueueHandler(VkDevice device, VkQueueHandler::QueueTypeEnum queueType)
 {
 #ifdef M3VK_MEMORYLOG
     DebugLayer::Log(DebugLayer::LogType::CREATE, "VkQueueHandler Creation !");
@@ -18,8 +18,8 @@ VkQueueHandler::VkQueueHandler(VkDevice device, const ProjectHelper::QueueFamily
 
     switch (queueType)
     {
-        case Present: family = queueFamilyIds.Present.value(); break;
-        case Graphics: family = queueFamilyIds.Graphics.value(); break;
+        case Present: family = ApplicationInfo::Get().GetPresentQueueId(); break;
+        case Graphics: family = ApplicationInfo::Get().GetGraphicsQueueId(); break;
         default: throw std::runtime_error("Unimplemented graphics queue type");
     }
 

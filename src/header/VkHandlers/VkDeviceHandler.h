@@ -1,12 +1,12 @@
 #pragma once
 
-#include "header/VkHandlers/VkPhysicalDeviceHandler.h"
+#include <vector>
 #include <vulkan/vulkan_core.h>
 
 class VkDeviceHandler
 {
     public:
-    VkDeviceHandler(const VkPhysicalDeviceHandler& physicalDeviceHandler, VkSurfaceKHR windowSurface, const std::vector<const char*>& deviceExtensions);
+    VkDeviceHandler(VkPhysicalDevice physicalDevice, VkSurfaceKHR windowSurface, const std::vector<const char*>& deviceExtensions);
     ~VkDeviceHandler();
 
     // VkHandles can be destroyed by one of the two object when copying, so we enable moving and disable copying.

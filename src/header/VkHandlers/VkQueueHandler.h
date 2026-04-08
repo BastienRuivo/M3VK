@@ -1,6 +1,5 @@
 #pragma once
 
-#include "header/ProjectHelper.h"
 #include <cstdint>
 #include <vulkan/vulkan_core.h>
 
@@ -14,7 +13,7 @@ class VkQueueHandler
         Copy
     };
 
-    VkQueueHandler(VkDevice device, const ProjectHelper::QueueFamilyIds& queueFamilyIds, QueueTypeEnum queueType);
+    VkQueueHandler(VkDevice device, QueueTypeEnum queueType);
     ~VkQueueHandler();
 
     // VkHandles can be destroyed by one of the two object when copying, so we enable moving and disable copying.
