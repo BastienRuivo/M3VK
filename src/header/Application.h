@@ -55,10 +55,14 @@ class Application
     struct CameraData
     {
         // temp
-        alignas(16) glm::mat4 localToWorldMatrix;
         alignas(16) glm::mat4 worldToCameraMatrix;
         alignas(16) glm::mat4 projectionMatrix;
         alignas(16) glm::mat4 viewProjectionMatrix;
+    };
+
+    struct ObjectData
+    {
+        alignas(16) glm::mat4 localToWorldMatrix;
     };
 
     bool _framebufferResized;
@@ -107,6 +111,7 @@ class Application
     // Datas
     std::unique_ptr<GraphicsBuffer> _vertexBuffer;
     std::unique_ptr<GraphicsBuffer> _indexBuffer;
+    std::unique_ptr<GraphicsBuffer> _objectDataBuffer;
     GPUImage _modelImg;
     VkSamplerHandler _sampler;
 

@@ -135,6 +135,7 @@ GraphicsBuffer::GraphicsBuffer(const VkPhysicalDeviceHandler& physicalDevice, Vk
         case INDEX: usage |= VK_BUFFER_USAGE_INDEX_BUFFER_BIT; break;
         case VERTEX: usage |= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT; break;
         case UNIFORM: usage |= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT; break;
+        case STATIC_STORAGE: usage |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT; break;
         default:
         {
             throw std::runtime_error("Achievement get :: How did we get Here ? (Uknown Buffer Type)");
@@ -143,6 +144,7 @@ GraphicsBuffer::GraphicsBuffer(const VkPhysicalDeviceHandler& physicalDevice, Vk
 
     // Memory type
     switch (_type) {
+        case STATIC_STORAGE:
         case INDEX:
         case VERTEX: properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT; break; // Memory optimized for GPU access
         case UNIFORM: properties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT; // Host = CPU so it mean it is visible and writable by it

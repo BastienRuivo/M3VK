@@ -33,7 +33,8 @@ class GraphicsBuffer
     {
         INDEX = 0,
         VERTEX = 1,
-        UNIFORM = 2
+        UNIFORM = 2,
+        STATIC_STORAGE = 3
     };
     GraphicsBuffer(const VkPhysicalDeviceHandler& physicalDeviceHandler, VkDevice device, VkDeviceSize count, VkDeviceSize stride, BufferType type);
     ~GraphicsBuffer();

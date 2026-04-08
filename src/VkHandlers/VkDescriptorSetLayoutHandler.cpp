@@ -23,15 +23,23 @@ VkDescriptorSetLayoutHandler::VkDescriptorSetLayoutHandler(VkDevice device)
     cameraDataLayout.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
     cameraDataLayout.pImmutableSamplers = nullptr; // image sampling
 
+    VkDescriptorSetLayoutBinding objectDataLayout{};
+    objectDataLayout.binding = 1;
+    objectDataLayout.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+    objectDataLayout.descriptorCount = 1;
+    objectDataLayout.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+
+
     VkDescriptorSetLayoutBinding imageSamplerLayout{};
-    imageSamplerLayout.binding = 1;
+    imageSamplerLayout.binding = 2;
     imageSamplerLayout.descriptorCount = 1;
     imageSamplerLayout.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     imageSamplerLayout.pImmutableSamplers = nullptr;
     imageSamplerLayout.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
-    std::array<VkDescriptorSetLayoutBinding, 2> bindings = {
+    std::array<VkDescriptorSetLayoutBinding, 3> bindings = {
         cameraDataLayout,
+        objectDataLayout,
         imageSamplerLayout
     };
 

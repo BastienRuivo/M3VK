@@ -98,7 +98,7 @@ void CommandBuffer::BindBuffer(const GraphicsBuffer& buffer) const
             break;
         }
 
-        case GraphicsBuffer::UNIFORM:
+        default:
         {
             throw std::runtime_error("UNIMPLEMENTED");
         }

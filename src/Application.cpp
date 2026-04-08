@@ -54,17 +54,22 @@ MultiFrameObject<VkDescriptorSet> Application::CreateDescriptorSet()
 
     for(int i = 0; i < MaxFrameInCount; ++i)
     {
-        VkDescriptorBufferInfo bufferInfo{};
-        bufferInfo.buffer = _cameraDataBuffer.GetInternal(i);
-        bufferInfo.offset = 0;
-        bufferInfo.range = sizeof(CameraData);
+        VkDescriptorBufferInfo cameraDataInfo{};
+        cameraDataInfo.buffer = _cameraDataBuffer.GetInternal(i);
+        cameraDataInfo.offset = 0;
+        cameraDataInfo.range = sizeof(CameraData);
+
+        VkDescriptorBufferInfo objectDataInfo{};
+        objectDataInfo.buffer = _objectDataBuffer->Get();
+        objectDataInfo.offset = 0;
+        objectDataInfo.range = sizeof(ObjectData);
 
         VkDescriptorImageInfo imageInfo{};
         imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
         imageInfo.imageView = _modelImg.GetView();
         imageInfo.sampler = _sampler.Get();
 
-        std::array<VkWriteDescriptorSet, 2> descriptorWrites{};
+        std::array<VkWriteDescriptorSet, 3> descriptorWrites{};
 
         descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
         descriptorWrites[0].dstSet = descriptorSet.Get(i);
@@ -72,7 +77,7 @@ MultiFrameObject<VkDescriptorSet> Application::CreateDescriptorSet()
         descriptorWrites[0].dstArrayElement = 0;
         descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         descriptorWrites[0].descriptorCount = 1;
-        descriptorWrites[0].pBufferInfo = &bufferInfo;
+        descriptorWrites[0].pBufferInfo = &cameraDataInfo;
         descriptorWrites[0].pImageInfo = nullptr;
         descriptorWrites[0].pTexelBufferView = nullptr;
 
@@ -80,11 +85,21 @@ MultiFrameObject<VkDescriptorSet> Application::CreateDescriptorSet()
         descriptorWrites[1].dstSet = descriptorSet.Get(i);
         descriptorWrites[1].dstBinding = 1;
         descriptorWrites[1].dstArrayElement = 0;
-        descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
         descriptorWrites[1].descriptorCount = 1;
-        descriptorWrites[1].pBufferInfo = nullptr;
-        descriptorWrites[1].pImageInfo = &imageInfo;
+        descriptorWrites[1].pBufferInfo = &objectDataInfo;
+        descriptorWrites[1].pImageInfo = nullptr;
         descriptorWrites[1].pTexelBufferView = nullptr;
+
+        descriptorWrites[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        descriptorWrites[2].dstSet = descriptorSet.Get(i);
+        descriptorWrites[2].dstBinding = 2;
+        descriptorWrites[2].dstArrayElement = 0;
+        descriptorWrites[2].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        descriptorWrites[2].descriptorCount = 1;
+        descriptorWrites[2].pBufferInfo = nullptr;
+        descriptorWrites[2].pImageInfo = &imageInfo;
+        descriptorWrites[2].pTexelBufferView = nullptr;
 
         vkUpdateDescriptorSets(_deviceHandler.Get(), static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
     }
@@ -103,7 +118,6 @@ void Application::UpdateCameraData(uint32_t currentFrame)
     VkExtent2D extent = _swapChain->GetExtent();
 
     CameraData cameraData = {};
-    cameraData.localToWorldMatrix = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
     cameraData.worldToCameraMatrix = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
     cameraData.projectionMatrix = glm::perspective<float>(glm::radians<float>(45),(float)extent.width / extent.height, 0.01f,100.0f);
     // it was designed for opengl so flip it
@@ -300,6 +314,8 @@ Application::Application() :
     _modelImg(_deviceHandler.Get(), _physicalDeviceHandler, CPUImage("data/img/models/viking_room.png", STBI_rgb_alpha), _graphicsCommandPoolHandler.Get(), _graphicsQueueHandler.Get()),
     _sampler(_deviceHandler.Get(), _physicalDeviceHandler),
 
+    _objectDataBuffer(std::make_unique<GraphicsBuffer>(_physicalDeviceHandler, _deviceHandler.Get(), 1024, sizeof(ObjectData), GraphicsBuffer::BufferType::STATIC_STORAGE)),
+
     // Descriptor Sets & Execution
     _descriptorSet(CreateDescriptorSet()),
     _commandBuffer(static_cast<uint32_t>(MaxFrameInCount), _deviceHandler.Get(), _graphicsCommandPoolHandler.Get(), _graphicsQueueHandler.Get()),
@@ -333,12 +349,15 @@ Application::Application() :
 
     ProjectHelper::LoadObj("data/models/viking_room.obj", vertices, indices);
 
+    std::array<glm::mat4, 1> instances = { glm::mat4(1.0f) };
+
     _vertexBuffer = std::make_unique<GraphicsBuffer>(_physicalDeviceHandler, _deviceHandler.Get(), vertices.size(), sizeof(vertices[0]), GraphicsBuffer::BufferType::VERTEX);
     _indexBuffer = std::make_unique<GraphicsBuffer>(_physicalDeviceHandler, _deviceHandler.Get(), indices.size(), sizeof(indices[0]), GraphicsBuffer::BufferType::INDEX);
 
     // init data
     _indexBuffer->CopyToBuffer(_physicalDeviceHandler, _deviceHandler.Get(), _graphicsQueueHandler.Get(), _graphicsCommandPoolHandler.Get(), (void*)indices.data(), _indexBuffer->GetSize());
     _vertexBuffer->CopyToBuffer(_physicalDeviceHandler, _deviceHandler.Get(), _graphicsQueueHandler.Get(), _graphicsCommandPoolHandler.Get(), (void*)vertices.data(), _vertexBuffer->GetSize());
+    _objectDataBuffer->CopyToBuffer(_physicalDeviceHandler, _deviceHandler.Get(), _graphicsQueueHandler.Get(), _graphicsCommandPoolHandler.Get(), (void*)instances.data(), sizeof(instances[0]));
 }
 
 void Application::MainLoop()

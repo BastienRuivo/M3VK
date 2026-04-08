@@ -2,7 +2,6 @@
 #include <array>
 #include <cstdint>
 #include <stdexcept>
-#include <vector>
 #include <vulkan/vulkan_core.h>
 
 #ifdef M3VK_MEMORYLOG

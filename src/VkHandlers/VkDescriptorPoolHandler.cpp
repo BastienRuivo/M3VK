@@ -16,11 +16,16 @@ VkDescriptorPoolHandler::VkDescriptorPoolHandler(VkDevice device, uint32_t frame
 #endif
     _device = device;
 
-    std::array<VkDescriptorPoolSize, 2> poolSizes
+    std::array<VkDescriptorPoolSize, 3> poolSizes
     {
         VkDescriptorPoolSize
         {
             .type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+            .descriptorCount = frameCount
+        },
+        VkDescriptorPoolSize
+        {
+            .type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
             .descriptorCount = frameCount
         },
         VkDescriptorPoolSize
