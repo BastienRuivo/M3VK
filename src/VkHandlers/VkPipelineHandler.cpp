@@ -8,7 +8,7 @@
 #include "header/DebugLayer.h"
 #endif
 
-VkPipelineHandler::VkPipelineHandler(const VkExtent2D& appExtent, VkDevice device, VkPipelineLayout pipelineLayout, VkRenderPass renderPass)
+VkPipelineHandler::VkPipelineHandler(const VkExtent2D& appExtent, VkDevice device, VkSampleCountFlagBits msaaSampleCount, VkPipelineLayout pipelineLayout, VkRenderPass renderPass)
 {
 #ifdef M3VK_MEMORYLOG
     DebugLayer::Log(DebugLayer::LogType::CREATE, "VkPipelineHandler Creation !");
@@ -99,12 +99,11 @@ VkPipelineHandler::VkPipelineHandler(const VkExtent2D& appExtent, VkDevice devic
     rasterizeCreateInfo.depthBiasSlopeFactor = 0.0f;
     rasterizeCreateInfo.lineWidth = 1.0f;
 
-    // MSAA, disabled for now
     VkPipelineMultisampleStateCreateInfo msaaCreateInfo{};
     msaaCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-    msaaCreateInfo.sampleShadingEnable = VK_FALSE;
-    msaaCreateInfo.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
-    msaaCreateInfo.minSampleShading = 1.0f;
+    msaaCreateInfo.sampleShadingEnable = VK_TRUE;
+    msaaCreateInfo.rasterizationSamples = msaaSampleCount;
+    msaaCreateInfo.minSampleShading = 0.2f;
     msaaCreateInfo.pSampleMask = nullptr;
     msaaCreateInfo.alphaToCoverageEnable = VK_FALSE;
     msaaCreateInfo.alphaToOneEnable = VK_FALSE;

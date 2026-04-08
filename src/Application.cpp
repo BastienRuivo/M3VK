@@ -143,8 +143,16 @@ void Application::RefreshSwapChain()
     _swapChain.reset();
     _swapChain = std::make_unique<SwapChain>(_window, _physicalDeviceHandler.Get(), _deviceHandler.Get(), _windowSurfaceHandler.Get());
 
+    _colorBackBuffer.reset();
+    _colorBackBuffer = std::make_unique<GPUImage>(_deviceHandler.Get(), _physicalDeviceHandler, _swapChain->GetExtent().width, _swapChain->GetExtent().height,
+        _physicalDeviceHandler.GetMsaaSample(),
+        1, _swapChain->GetImageFormat(),
+        VK_IMAGE_TILING_OPTIMAL,
+        VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
     _depthBuffer.reset();
-    _depthBuffer = std::make_unique<GPUImage>(_deviceHandler.Get(), _physicalDeviceHandler, _swapChain->GetExtent().width, _swapChain->GetExtent().height, 1, DepthFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT),
+    _depthBuffer = std::make_unique<GPUImage>(_deviceHandler.Get(), _physicalDeviceHandler, _swapChain->GetExtent().width, _swapChain->GetExtent().height, _physicalDeviceHandler.GetMsaaSample(), 1, DepthFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT),
 
     _framebuffer.Clear();
     InitFramebuffer(_framebuffer);
@@ -245,8 +253,9 @@ void Application::InitFramebuffer(MultiFrameHandler<VkFramebufferHandler>& frame
     for(size_t i = 0; i < _swapChain->ImageViews.Size(); ++i)
     {
         std::vector<VkImageView> attachments = {
-            _swapChain->ImageViews.GetInternal(i),
-            _depthBuffer->GetView()
+            _colorBackBuffer->GetView(),
+            _depthBuffer->GetView(),
+            _swapChain->ImageViews.GetInternal(i)
         };
         // emplace back to avoid a temp obejct
         framebuffer.EmplaceBack(_deviceHandler.Get(), _renderPassHandler.Get(), _swapChain->GetExtent(), attachments);
@@ -268,17 +277,24 @@ Application::Application() :
     _swapChain(std::make_unique<SwapChain>(_window, _physicalDeviceHandler.Get(), _deviceHandler.Get(), _windowSurfaceHandler.Get())),
 
     // Render Layouts & Pipelines
-    _renderPassHandler(_deviceHandler.Get(), _swapChain->GetImageFormat(), DepthFormat),
+    _renderPassHandler(_deviceHandler.Get(), _physicalDeviceHandler.GetMsaaSample(), _swapChain->GetImageFormat(), DepthFormat),
     _descriptorSetLayoutHandler(_deviceHandler.Get()),
     _pipelineLayoutHandler(_deviceHandler.Get(), _descriptorSetLayoutHandler.Get()),
-    _graphicsPipelineHandler(_swapChain->GetExtent(), _deviceHandler.Get(), _pipelineLayoutHandler.Get(), _renderPassHandler.Get()),
+    _graphicsPipelineHandler(_swapChain->GetExtent(), _deviceHandler.Get(), _physicalDeviceHandler.GetMsaaSample(), _pipelineLayoutHandler.Get(), _renderPassHandler.Get()),
 
     // Framebuffers & Command Pools
     _framebuffer(CreateFramebuffer()),
     _graphicsCommandPoolHandler(_deviceHandler.Get(), _physicalDeviceHandler.GetQueueFamilyIds()),
 
     // Geometry & Data Buffers
-    _depthBuffer(std::make_unique<GPUImage>(_deviceHandler.Get(), _physicalDeviceHandler, _swapChain->GetExtent().width, _swapChain->GetExtent().height, 1, DepthFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)),
+    _colorBackBuffer(std::make_unique<GPUImage>(_deviceHandler.Get(), _physicalDeviceHandler, _swapChain->GetExtent().width, _swapChain->GetExtent().height,
+        _physicalDeviceHandler.GetMsaaSample(),
+        1,
+        _swapChain->GetImageFormat(),
+        VK_IMAGE_TILING_OPTIMAL,
+        VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)),
+    _depthBuffer(std::make_unique<GPUImage>(_deviceHandler.Get(), _physicalDeviceHandler, _swapChain->GetExtent().width, _swapChain->GetExtent().height, _physicalDeviceHandler.GetMsaaSample(), 1, DepthFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)),
     _descriptorPoolHandler(_deviceHandler.Get(), static_cast<uint32_t>(MaxFrameInCount)),
     _cameraDataBuffer(MaxFrameInCount, _physicalDeviceHandler, _deviceHandler.Get(), 1, sizeof(CameraData), GraphicsBuffer::UNIFORM),
     _modelImg(_deviceHandler.Get(), _physicalDeviceHandler, CPUImage("data/img/models/viking_room.png", STBI_rgb_alpha), _graphicsCommandPoolHandler.Get(), _graphicsQueueHandler.Get()),

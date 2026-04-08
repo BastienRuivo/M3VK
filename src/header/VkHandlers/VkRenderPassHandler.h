@@ -5,7 +5,7 @@
 class VkRenderPassHandler
 {
     public:
-    VkRenderPassHandler(VkDevice device, VkFormat imageFormat, VkFormat depthFormat);
+    VkRenderPassHandler(VkDevice device, VkSampleCountFlagBits sampleCount, VkFormat imageFormat, VkFormat depthFormat);
     ~VkRenderPassHandler();
 
     // VkHandles can be destroyed by one of the two object when copying, so we enable moving and disable copying.

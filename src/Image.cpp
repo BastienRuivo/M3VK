@@ -99,6 +99,12 @@ GPUImage::GPUImage(VkDevice device,  const VkPhysicalDeviceHandler & physicalDev
 }
 
 GPUImage::GPUImage(VkDevice device,  const VkPhysicalDeviceHandler & physicalDevice, uint32_t width, uint32_t height, uint32_t mipCount, VkFormat format, VkImageTiling tiling, VkImageUsageFlags imageUsageFlags, VkMemoryPropertyFlags memoryFlags)
+: GPUImage(device, physicalDevice, width, height, VK_SAMPLE_COUNT_1_BIT, mipCount, format, tiling, imageUsageFlags, memoryFlags)
+{
+
+}
+
+GPUImage::GPUImage(VkDevice device,  const VkPhysicalDeviceHandler & physicalDevice, uint32_t width, uint32_t height, VkSampleCountFlagBits msaaSampleCount, uint32_t mipCount, VkFormat format, VkImageTiling tiling, VkImageUsageFlags imageUsageFlags, VkMemoryPropertyFlags memoryFlags)
 : _view(), _device(device), _width(width), _height(height), _format(format), _mipCount(mipCount)
 {
 #ifdef M3VK_MEMORYLOG
@@ -123,7 +129,7 @@ GPUImage::GPUImage(VkDevice device,  const VkPhysicalDeviceHandler & physicalDev
     // only used by the graphics queue
     createInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     // Search on this later ?
-    createInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+    createInfo.samples = msaaSampleCount;
 
     if(vkCreateImage(_device, &createInfo, nullptr, &_internal) != VK_SUCCESS)
     {

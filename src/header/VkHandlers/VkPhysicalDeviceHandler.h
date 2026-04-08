@@ -8,6 +8,9 @@
 class VkPhysicalDeviceHandler
 {
     public:
+
+    const VkSampleCountFlagBits MaxMSAASample = VK_SAMPLE_COUNT_8_BIT;
+
     VkPhysicalDeviceHandler(VkInstance instance, VkSurfaceKHR windowSurface, const std::vector<const char *>& deviceExtensions);
     ~VkPhysicalDeviceHandler();
 
@@ -48,8 +51,15 @@ class VkPhysicalDeviceHandler
         return _properties;
     }
 
+    inline VkSampleCountFlagBits GetMsaaSample() const
+    {
+        return _msaaSample;
+    }
+
     private:
+    VkSampleCountFlagBits GetMaxUsableSampleCount(VkSampleCountFlagBits maxSample) const;
     VkPhysicalDevice _internal = VK_NULL_HANDLE;
     ProjectHelper::QueueFamilyIds _queueFamilyIds{};
     VkPhysicalDeviceProperties _properties{};
+    VkSampleCountFlagBits  _msaaSample = VK_SAMPLE_COUNT_1_BIT;
 };

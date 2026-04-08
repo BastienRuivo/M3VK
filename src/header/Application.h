@@ -95,7 +95,9 @@ class Application
 
     std::vector<VkClearValue> clearValues;
 
+    std::unique_ptr<GPUImage> _colorBackBuffer;
     std::unique_ptr<GPUImage> _depthBuffer;
+
     MultiFrameHandler<VkFramebufferHandler> _framebuffer;
     MultiFrameHandler<VkFramebufferHandler> CreateFramebuffer();
     void InitFramebuffer(MultiFrameHandler<VkFramebufferHandler>& framebuffer);
