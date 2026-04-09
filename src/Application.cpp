@@ -1,4 +1,5 @@
 #include "header/Application.h"
+#include "glm/common.hpp"
 #include "header/ApplicationInfo.h"
 #include "header/CommandBuffer.h"
 #include "header/GraphicsBuffer.h"
@@ -20,6 +21,7 @@
 #include <glm/ext/vector_float3.hpp>
 #include <glm/fwd.hpp>
 #include <glm/trigonometric.hpp>
+#include <iostream>
 #include <memory>
 #include <stdexcept>
 
@@ -110,17 +112,11 @@ MultiFrameObject<VkDescriptorSet> Application::CreateDescriptorSet()
 
 void Application::UpdateCameraData(uint32_t currentFrame)
 {
-    static auto startTime = std::chrono::high_resolution_clock::now();
-
-    auto currentTime = std::chrono::high_resolution_clock::now();
-
-    float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
-
     VkExtent2D extent = _swapChain->GetExtent();
 
     CameraData cameraData = {};
-    cameraData.worldToCameraMatrix = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-    cameraData.projectionMatrix = glm::perspective<float>(glm::radians<float>(45),(float)extent.width / extent.height, 0.01f,100.0f);
+    cameraData.worldToCameraMatrix = _camera.GetViewMatrix();
+    cameraData.projectionMatrix = _camera.GetProjectionMatrix();
     // it was designed for opengl so flip it
     cameraData.projectionMatrix[1][1] *= -1;
 
@@ -132,6 +128,39 @@ static void FramebufferResizeCallback(GLFWwindow* window, int width, int height)
     Application* app = reinterpret_cast<Application*>(glfwGetWindowUserPointer(window));
     app->FramebufferResized();
     app->UpdateWindowSize(width, height);
+}
+
+void Application::WindowFocusCallback(GLFWwindow* window, int focused)
+{
+    Application* app = reinterpret_cast<Application*>(glfwGetWindowUserPointer(window));
+
+    if(focused)
+    {
+        app->_inputDeltaPrevent = 3;
+    }
+}
+
+void Application::MouseMoveCallback(GLFWwindow* window, double xpos, double ypos)
+{
+    Application* app = reinterpret_cast<Application*>(glfwGetWindowUserPointer(window));
+
+    if(app->_inputDeltaPrevent > 0)
+    {
+        app->_lastMouseX = xpos;
+        app->_lastMouseY = ypos;
+        app->_inputDeltaPrevent--;
+        return;
+    }
+
+    double dx = xpos - app->_lastMouseX;
+    double dy = ypos - app->_lastMouseY;
+
+    const float sensitivity = 0.1f;
+
+    app->_camera.Rotate(dx * sensitivity, dy * sensitivity);
+
+    app->_lastMouseX = xpos;
+    app->_lastMouseY = ypos;
 }
 
 void Application::UpdateWindowSize(int width, int height)
@@ -279,7 +308,7 @@ void Application::InitFramebuffer(MultiFrameHandler<VkFramebufferHandler>& frame
 
 Application::Application() :
     // Core Window & Instance (The Foundation)
-    _window(1920, 1080, "Window", this, FramebufferResizeCallback),
+    _window(1920, 1080, "Window", this, FramebufferResizeCallback, Application::MouseMoveCallback, Application::WindowFocusCallback),
     _instanceHandler(),
     _vkDebugLayer(_instanceHandler.Get()),
     _windowSurfaceHandler(_instanceHandler.Get(), _window.Get()),
@@ -314,6 +343,7 @@ Application::Application() :
     _cameraDataBuffer(ApplicationInfo::Constant::MaxFrameInCount, _physicalDeviceHandler, _deviceHandler.Get(), 1, sizeof(CameraData), GraphicsBuffer::UNIFORM),
     _modelImg(_deviceHandler.Get(), _physicalDeviceHandler, CPUImage("data/img/models/viking_room.png", STBI_rgb_alpha), _graphicsCommandPoolHandler.Get(), _graphicsQueueHandler.Get()),
     _sampler(_deviceHandler.Get()),
+    _camera(glm::vec3(0.0f, 0.0f, 3.0f), glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, 1.0f, 0.0f), 45.0f, (float)_swapChain->GetExtent().width / (float)_swapChain->GetExtent().height, 0.1f, 100.0f),
 
     _objectDataBuffer(std::make_unique<GraphicsBuffer>(_physicalDeviceHandler, _deviceHandler.Get(), 1024, sizeof(ObjectData), GraphicsBuffer::BufferType::STATIC_STORAGE)),
 
@@ -352,6 +382,9 @@ Application::Application() :
 
     std::array<glm::mat4, 1> instances = { glm::mat4(1.0f) };
 
+    instances[0] = glm::rotate<float>(instances[0], glm::radians(-90.0f), glm::vec3(1, 0, 0));
+    instances[0] = glm::rotate<float>(instances[0], glm::radians(-90.0f), glm::vec3(0, 0, 1));
+
     _vertexBuffer = std::make_unique<GraphicsBuffer>(_physicalDeviceHandler, _deviceHandler.Get(), vertices.size(), sizeof(vertices[0]), GraphicsBuffer::BufferType::VERTEX);
     _indexBuffer = std::make_unique<GraphicsBuffer>(_physicalDeviceHandler, _deviceHandler.Get(), indices.size(), sizeof(indices[0]), GraphicsBuffer::BufferType::INDEX);
 
@@ -366,6 +399,21 @@ void Application::MainLoop()
     while (!_window.ShouldClose())
     {
         _window.ProcessEvent();
+
+        auto currentTime = std::chrono::high_resolution_clock::now();
+
+        auto deltaTime = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - _lastFrameTime).count();
+        _lastFrameTime = currentTime;
+
+        float speed = _camera.speed * deltaTime;
+
+        if(_window.IsKeyPressed(GLFW_KEY_W)) _camera.position += speed * _camera.Front();
+        if(_window.IsKeyPressed(GLFW_KEY_S)) _camera.position -= speed * _camera.Front();
+        if(_window.IsKeyPressed(GLFW_KEY_A)) _camera.position -= speed * glm::normalize(glm::cross(_camera.Front(), _camera.Up()));
+        if(_window.IsKeyPressed(GLFW_KEY_D)) _camera.position += speed * glm::normalize(glm::cross(_camera.Front(), _camera.Up()));
+        if(_window.IsKeyPressed(GLFW_KEY_SPACE)) _camera.position += speed * _camera.Up();
+        if(_window.IsKeyPressed(GLFW_KEY_LEFT_SHIFT)) _camera.position -= speed * _camera.Up();
+
         DrawFrame();
     }
 

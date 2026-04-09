@@ -1,6 +1,7 @@
 #pragma once
 
 
+#include "header/Camera.h"
 #include "header/VkHandlers/VkSamplerHandler.h"
 #include "header/CommandBuffer.h"
 #include "header/MultiFrame.h"
@@ -21,6 +22,7 @@
 #include "header/Window.h"
 #include "header/GraphicsBuffer.h"
 #include "header/SwapChain.h"
+#include <chrono>
 #include <cstdint>
 #include <tiny_obj_loader.h>
 #include <glm/ext/vector_float2.hpp>
@@ -126,6 +128,16 @@ class Application
     MultiFrameHandler<VkSemaphoreHandler> _availableImageSemaphore;
     MultiFrameHandler<VkSemaphoreHandler> _renderFinishedSemaphores;
     MultiFrameHandler<VkFenceHandler>  _waitFence;
+
+    double _lastMouseX = -1.0;
+    double _lastMouseY = -1.0;
+    uint32_t _inputDeltaPrevent = 3; // see : https://github.com/glfw/glfw/issues/2523
+    static void MouseMoveCallback(GLFWwindow* window, double xpos, double ypos);
+    static void WindowFocusCallback(GLFWwindow* window, int focused);
+
+    Camera _camera;
+
+    std::chrono::time_point<std::chrono::system_clock> _lastFrameTime = std::chrono::system_clock::now();
 
     void RefreshSwapChain();
 

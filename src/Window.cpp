@@ -1,4 +1,5 @@
 #include "header/Window.h"
+#include "GLFW/glfw3.h"
 
 #ifdef M3VK_MEMORYLOG
 #include "header/DebugLayer.h"
@@ -13,7 +14,7 @@ void Window::SetIcon(unsigned char* pixels, int width, int height)
     glfwSetWindowIcon(_internal, 1, &image);
 }
 
-Window::Window(int width, int height, const char* title, void* resizeObject, GLFWframebuffersizefun resizeCallback)
+Window::Window(int width, int height, const char* title, void* resizeObject, GLFWframebuffersizefun resizeCallback, GLFWcursorposfun mouseCallback, GLFWwindowfocusfun focusCallback)
 {
 #ifdef M3VK_MEMORYLOG
     DebugLayer::Log(DebugLayer::LogType::CREATE, "Window Creation !");
@@ -31,6 +32,11 @@ Window::Window(int width, int height, const char* title, void* resizeObject, GLF
     _internal = glfwCreateWindow(_width, _height, _title, nullptr, nullptr);
     glfwSetWindowUserPointer(_internal, resizeObject);
     glfwSetFramebufferSizeCallback(_internal, resizeCallback);
+
+    glfwSetInputMode(_internal, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    glfwSetCursorPosCallback(_internal, mouseCallback);
+    glfwSetWindowFocusCallback(_internal, focusCallback);
+
 }
 
 void Window::GetFramebufferSize(int& width, int& height) const
