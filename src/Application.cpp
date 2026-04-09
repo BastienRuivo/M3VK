@@ -425,6 +425,10 @@ Application::~Application()
 #ifdef M3VK_MEMORYLOG
     DebugLayer::Log(DebugLayer::LogType::DESTROY, "Application Destroyed !");
 #endif
+
+    _vertexBuffer.reset();
+    _indexBuffer.reset();
+    _objectDataBuffer.reset();
 }
 
 void Application::Run()
