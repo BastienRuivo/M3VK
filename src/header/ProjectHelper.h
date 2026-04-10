@@ -191,6 +191,21 @@ class ProjectHelper
         return format == VK_FORMAT_S8_UINT || format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT;
     }
 
+    static uint32_t GetFormatSize(VkFormat format)
+    {
+        switch(format)
+        {
+            case VK_FORMAT_D16_UNORM:
+            case VK_FORMAT_D32_SFLOAT:
+            case VK_FORMAT_D32_SFLOAT_S8_UINT:
+            case VK_FORMAT_D24_UNORM_S8_UINT:
+                return 4;
+            case VK_FORMAT_S8_UINT:
+                return 1;
+            default: throw std::runtime_error("Unimplemented Format GetFormatSize");
+        }
+    }
+
     static void LoadObj(const std::string& path, std::vector<Vertex>& vertices, std::vector<uint32_t>& indices)
     {
         tinyobj::attrib_t attrib;
@@ -204,7 +219,7 @@ class ProjectHelper
             throw std::runtime_error(err);
         }
 
-        if (warn.empty())
+        if (!warn.empty())
         {
             DebugLayer::Log(DebugLayer::LogType::WARNING, warn);
         }

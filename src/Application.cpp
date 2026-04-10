@@ -1,11 +1,10 @@
 #include "header/Application.h"
-#include "glm/common.hpp"
 #include "header/ApplicationInfo.h"
 #include "header/CommandBuffer.h"
 #include "header/GraphicsBuffer.h"
 #include "header/Image.h"
+#include "header/Mesh.h"
 #include "header/MultiFrame.h"
-#include "header/ProjectHelper.h"
 #include "header/SwapChain.h"
 #include "header/DebugLayer.h"
 #include "header/Vertex.h"
@@ -21,7 +20,6 @@
 #include <glm/ext/vector_float3.hpp>
 #include <glm/fwd.hpp>
 #include <glm/trigonometric.hpp>
-#include <iostream>
 #include <memory>
 #include <stdexcept>
 
@@ -341,9 +339,11 @@ Application::Application() :
     _depthBuffer(std::make_unique<GPUImage>(_deviceHandler.Get(), _physicalDeviceHandler, _swapChain->GetExtent().width, _swapChain->GetExtent().height, ApplicationInfo::Get().GetMsaaSample(), 1, DepthFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)),
     _descriptorPoolHandler(_deviceHandler.Get(), ApplicationInfo::Constant::MaxFrameInCount),
     _cameraDataBuffer(ApplicationInfo::Constant::MaxFrameInCount, _physicalDeviceHandler, _deviceHandler.Get(), 1, sizeof(CameraData), GraphicsBuffer::UNIFORM),
-    _modelImg(_deviceHandler.Get(), _physicalDeviceHandler, CPUImage("data/img/models/viking_room.png", STBI_rgb_alpha), _graphicsCommandPoolHandler.Get(), _graphicsQueueHandler.Get()),
+    _modelImg(_deviceHandler.Get(), _physicalDeviceHandler, CPUImage("data/img/kirbo.png", STBI_rgb_alpha), _graphicsCommandPoolHandler.Get(), _graphicsQueueHandler.Get()),
     _sampler(_deviceHandler.Get()),
     _camera(glm::vec3(0.0f, 0.0f, 3.0f), glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, 1.0f, 0.0f), 45.0f, (float)_swapChain->GetExtent().width / (float)_swapChain->GetExtent().height, 0.1f, 100.0f),
+    _vertexBuffer(std::make_unique<MemoryBuffer>(_physicalDeviceHandler, _deviceHandler.Get(), ApplicationInfo::Constant::VertexBufferMaxSize, sizeof(Vertex), GraphicsBuffer::BufferType::VERTEX)),
+    _indexBuffer(std::make_unique<MemoryBuffer>(_physicalDeviceHandler, _deviceHandler.Get(), ApplicationInfo::Constant::IndexBufferMaxSize, sizeof(uint32_t), GraphicsBuffer::BufferType::INDEX)),
 
     _objectDataBuffer(std::make_unique<GraphicsBuffer>(_physicalDeviceHandler, _deviceHandler.Get(), 1024, sizeof(ObjectData), GraphicsBuffer::BufferType::STATIC_STORAGE)),
 
@@ -367,7 +367,7 @@ Application::Application() :
     }
 
     VkClearValue colorClear;
-    colorClear.color = {0.0f, 0.0f, 0.0f, 1.0f};
+    colorClear.color = {0.2f, 0.4f, 0.75f, 1.0f};
     VkClearValue depthClear;
     depthClear.depthStencil = {1.0f, 0};
 
@@ -375,28 +375,22 @@ Application::Application() :
     clearValues.push_back(colorClear);
     clearValues.push_back(depthClear);
 
-    std::vector<Vertex> vertices;
-    std::vector<uint32_t> indices;
-
-    ProjectHelper::LoadObj("data/models/viking_room.obj", vertices, indices);
+    Mesh mesh;
+    mesh.LoadFromObj("data/models/Crate1.obj");
+    mesh.UploadAndRelease(_physicalDeviceHandler, _deviceHandler.Get(), _graphicsQueueHandler.Get(), _graphicsCommandPoolHandler.Get(),
+        *_vertexBuffer,
+        *_indexBuffer);
 
     std::array<glm::mat4, 1> instances = { glm::mat4(1.0f) };
-
     instances[0] = glm::rotate<float>(instances[0], glm::radians(-90.0f), glm::vec3(1, 0, 0));
     instances[0] = glm::rotate<float>(instances[0], glm::radians(-90.0f), glm::vec3(0, 0, 1));
-
-    _vertexBuffer = std::make_unique<GraphicsBuffer>(_physicalDeviceHandler, _deviceHandler.Get(), vertices.size(), sizeof(vertices[0]), GraphicsBuffer::BufferType::VERTEX);
-    _indexBuffer = std::make_unique<GraphicsBuffer>(_physicalDeviceHandler, _deviceHandler.Get(), indices.size(), sizeof(indices[0]), GraphicsBuffer::BufferType::INDEX);
-
-    // init data
-    _indexBuffer->CopyToBuffer(_physicalDeviceHandler, _deviceHandler.Get(), _graphicsQueueHandler.Get(), _graphicsCommandPoolHandler.Get(), (void*)indices.data(), _indexBuffer->GetSize());
-    _vertexBuffer->CopyToBuffer(_physicalDeviceHandler, _deviceHandler.Get(), _graphicsQueueHandler.Get(), _graphicsCommandPoolHandler.Get(), (void*)vertices.data(), _vertexBuffer->GetSize());
     _objectDataBuffer->CopyToBuffer(_physicalDeviceHandler, _deviceHandler.Get(), _graphicsQueueHandler.Get(), _graphicsCommandPoolHandler.Get(), (void*)instances.data(), sizeof(instances[0]));
 }
 
 void Application::MainLoop()
 {
-    while (!_window.ShouldClose())
+    bool shouldClose = false;
+    while (!_window.ShouldClose() && !shouldClose)
     {
         _window.ProcessEvent();
 
@@ -413,6 +407,8 @@ void Application::MainLoop()
         if(_window.IsKeyPressed(GLFW_KEY_D)) _camera.position += speed * glm::normalize(glm::cross(_camera.Front(), _camera.Up()));
         if(_window.IsKeyPressed(GLFW_KEY_SPACE)) _camera.position += speed * _camera.Up();
         if(_window.IsKeyPressed(GLFW_KEY_LEFT_SHIFT)) _camera.position -= speed * _camera.Up();
+
+        if(_window.IsKeyPressed(GLFW_KEY_ESCAPE)) shouldClose = true;
 
         DrawFrame();
     }

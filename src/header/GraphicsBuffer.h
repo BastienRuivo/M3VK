@@ -1,6 +1,7 @@
 #pragma once
 
 #include "header/VkHandlers/VkPhysicalDeviceHandler.h"
+#include <cstdint>
 #include <vulkan/vulkan_core.h>
 
 class StageBuffer
@@ -45,7 +46,14 @@ class GraphicsBuffer
     GraphicsBuffer(const GraphicsBuffer&) = delete;
     GraphicsBuffer& operator=(const GraphicsBuffer&) = delete;
 
-    void CopyToBuffer(const VkPhysicalDeviceHandler& physicalDevice, const VkDevice& device, const VkQueue& queue, const VkCommandPool& cmdPool, void* srcData, VkDeviceSize size);
+    void CopyToBuffer(const VkPhysicalDeviceHandler& physicalDevice,
+        const VkDevice& device,
+        const VkQueue& queue,
+        const VkCommandPool& pool,
+        void* srcData,
+        VkDeviceSize size,
+        uint32_t srcIndex = 0,
+        uint32_t dstIndex = 0);
 
     VkBuffer Get() const { return _internal; }
     BufferType GetType() const { return _type; }
@@ -64,4 +72,22 @@ class GraphicsBuffer
     VkDeviceSize _stride;
     VkDeviceSize _count;
     VkDevice _device;
+};
+
+// this class handle a graphics buffer with an arbitrary huge size where we can append data
+class MemoryBuffer : public GraphicsBuffer
+{
+    public:
+    using GraphicsBuffer::GraphicsBuffer;
+
+    void CopyToBuffer(const VkPhysicalDeviceHandler& physicalDevice,
+        const VkDevice& device,
+        const VkQueue& queue,
+        const VkCommandPool& cmdPool,
+        void* srcData,
+        VkDeviceSize size
+    );
+
+    private:
+    VkDeviceSize _currentSize = 0;
 };

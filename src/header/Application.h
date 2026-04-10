@@ -110,8 +110,8 @@ class Application
     VkCommandPoolHandler _graphicsCommandPoolHandler;
 
     // Datas
-    std::unique_ptr<GraphicsBuffer> _vertexBuffer;
-    std::unique_ptr<GraphicsBuffer> _indexBuffer;
+    std::unique_ptr<MemoryBuffer> _vertexBuffer;
+    std::unique_ptr<MemoryBuffer> _indexBuffer;
     std::unique_ptr<GraphicsBuffer> _objectDataBuffer;
     GPUImage _modelImg;
     VkSamplerHandler _sampler;

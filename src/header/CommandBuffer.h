@@ -89,6 +89,21 @@ class CommandBuffer
         vkCmdCopyBufferToImage(_internal, buffer, image, layout, regionCount, pRegions);
     }
 
+    inline void CopyBuffer(VkBuffer src, VkBuffer dst, VkDeviceSize size, VkBufferCopy* pRegions, int regionCount)
+    {
+        vkCmdCopyBuffer(_internal, src, dst, regionCount, pRegions);
+    }
+
+    inline void CopyBuffer(VkBuffer src, VkBuffer dst, VkDeviceSize size, uint32_t srcIndex = 0, uint32_t dstIndex = 0)
+    {
+        VkBufferCopy region{};
+        region.srcOffset = srcIndex;
+        region.dstOffset = dstIndex;
+        region.size = size;
+
+        vkCmdCopyBuffer(_internal, src, dst, 1, &region);
+    }
+
     inline VkCommandBuffer GetInternal() const { return _internal; }
 
     private:

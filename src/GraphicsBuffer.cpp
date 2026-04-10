@@ -1,6 +1,8 @@
 #include "header/GraphicsBuffer.h"
+#include "header/CommandBuffer.h"
 #include "header/VkHandlers/VkPhysicalDeviceHandler.h"
 #include <cstddef>
+#include <cstdint>
 #include <stdexcept>
 #include <vulkan/vulkan_core.h>
 
@@ -182,44 +184,25 @@ GraphicsBuffer::GraphicsBuffer(const VkPhysicalDeviceHandler& physicalDevice, Vk
     }
 }
 
-void GraphicsBuffer::CopyToBuffer(const VkPhysicalDeviceHandler& physicalDevice, const VkDevice& device, const VkQueue& queue, const VkCommandPool& cmdPool, void* srcData, VkDeviceSize size)
+void GraphicsBuffer::CopyToBuffer(const VkPhysicalDeviceHandler& physicalDevice,
+    const VkDevice& device,
+    const VkQueue& queue,
+    const VkCommandPool& pool,
+    void* srcData,
+    VkDeviceSize size,
+    uint32_t srcIndex,
+    uint32_t dstIndex)
 {
     StageBuffer copyBuffer(physicalDevice, device, size);
     copyBuffer.CopyToBuffer(device, srcData, size);
 
-    VkCommandBufferAllocateInfo allocInfo{};
-    allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    allocInfo.commandPool = cmdPool;
-    allocInfo.commandBufferCount = 1;
-
-    VkCommandBuffer cmdBuffer;
-    vkAllocateCommandBuffers(device, &allocInfo, &cmdBuffer);
-
-    VkCommandBufferBeginInfo beginInfo{};
-    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-
-    vkBeginCommandBuffer(cmdBuffer, &beginInfo);
-
-    VkBufferCopy copyRegion{};
-    copyRegion.size = size;
-    copyRegion.srcOffset = 0;
-    copyRegion.dstOffset = 0;
-    vkCmdCopyBuffer(cmdBuffer, copyBuffer._internal, _internal, 1, &copyRegion);
-
-    vkEndCommandBuffer(cmdBuffer);
-
-    VkSubmitInfo submitInfo{};
-    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &cmdBuffer;
-
-    // wait for the queue idle, we can use a fence to submit multiple shit later
-    vkQueueSubmit(queue, 1, &submitInfo, VK_NULL_HANDLE);
-    vkQueueWaitIdle(queue);
-
-    vkFreeCommandBuffers(device, cmdPool, 1, &cmdBuffer);
+    CommandBuffer cmdBuffer(_device, pool, queue);
+    cmdBuffer.BeginSingleTime();
+    {
+        cmdBuffer.CopyBuffer(copyBuffer.Get(), _internal, size, srcIndex, dstIndex);
+    }
+    cmdBuffer.End();
+    cmdBuffer.WaitCompletion();
 }
 
 GraphicsBuffer::~GraphicsBuffer()
@@ -273,4 +256,15 @@ GraphicsBuffer& GraphicsBuffer::operator=(GraphicsBuffer&& other) noexcept
     }
 
     return *this;
+}
+
+void MemoryBuffer::CopyToBuffer(const VkPhysicalDeviceHandler& physicalDevice,
+    const VkDevice& device,
+    const VkQueue& queue,
+    const VkCommandPool& cmdPool,
+    void* srcData,
+    VkDeviceSize size)
+{
+    GraphicsBuffer::CopyToBuffer(physicalDevice, device, queue, cmdPool, srcData, size, 0, _currentSize);
+    _currentSize += size;
 }

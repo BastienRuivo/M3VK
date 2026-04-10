@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <sys/types.h>
 #include <vulkan/vulkan_core.h>
 
@@ -21,8 +22,10 @@ class ApplicationInfo
 
     struct Constant
     {
-        static const VkSampleCountFlagBits MaxMSAASample = VK_SAMPLE_COUNT_8_BIT;
-        static const uint MaxFrameInCount = 2;
+        static inline constexpr VkSampleCountFlagBits MaxMSAASample = VK_SAMPLE_COUNT_8_BIT;
+        static inline constexpr uint32_t MaxFrameInCount = 2;
+        static inline constexpr uint32_t VertexBufferMaxSize = 8388608; // 2^23
+        static inline constexpr uint32_t IndexBufferMaxSize = 8388608;
     };
 
     inline const ProjectHelper::QueueFamilyIds& GetQueueFamilyIds() const
