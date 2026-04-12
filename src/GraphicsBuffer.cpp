@@ -22,6 +22,8 @@ StageBuffer::StageBuffer(const VkPhysicalDeviceHandler& physicalDeviceHandler, V
     info.usage = usage;
     info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
+    // If note exclusive, need to add a queue family index
+
     if(vkCreateBuffer(_device, &info, nullptr, &_internal) != VK_SUCCESS)
     {
         throw std::runtime_error("Failed to create buffer !");
@@ -39,11 +41,14 @@ StageBuffer::StageBuffer(const VkPhysicalDeviceHandler& physicalDeviceHandler, V
 
     if(vkAllocateMemory(_device, &allocateInfo, nullptr, &_memoryInternal) != VK_SUCCESS)
     {
+        vkDestroyBuffer(_device, _internal, nullptr);
         throw std::runtime_error("Failed to allocate Stage Buffer memory");
     }
 
     if(vkBindBufferMemory(_device, _internal, _memoryInternal, 0) != VK_SUCCESS)
     {
+        vkDestroyBuffer(_device, _internal, nullptr);
+        vkFreeMemory(_device, _memoryInternal, nullptr);
         throw std::runtime_error("Failed to bind stage buffer memory");
     }
 }
@@ -51,7 +56,10 @@ StageBuffer::StageBuffer(const VkPhysicalDeviceHandler& physicalDeviceHandler, V
 void StageBuffer::CopyToBuffer(const VkDevice& device, void* srcData, VkDeviceSize copySize)
 {
     void* data;
-    vkMapMemory(device, _memoryInternal, 0, copySize, 0, &data);
+    if(vkMapMemory(device, _memoryInternal, 0, copySize, 0, &data) != VK_SUCCESS)
+    {
+        throw std::runtime_error("Failed to map stage buffer memory");
+    }
     memcpy(data, srcData, (size_t)copySize);
     vkUnmapMemory(device, _memoryInternal);
 };
@@ -158,6 +166,8 @@ GraphicsBuffer::GraphicsBuffer(const VkPhysicalDeviceHandler& physicalDevice, Vk
     info.usage = usage;
     info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
+    // // If note exclusive, need to add a queue family index
+
     if(vkCreateBuffer(device, &info, nullptr, &_internal) != VK_SUCCESS)
     {
         throw std::runtime_error("Failed to create buffer !");
@@ -180,7 +190,10 @@ GraphicsBuffer::GraphicsBuffer(const VkPhysicalDeviceHandler& physicalDevice, Vk
 
     if(_type == UNIFORM)
     {
-        vkMapMemory(device, _memoryInternal, 0, size, 0, &_dataPtr);
+        if(vkMapMemory(device, _memoryInternal, 0, memRequirements.size, 0, &_dataPtr) != VK_SUCCESS)
+        {
+            throw std::runtime_error("Failed to map buffer memory");
+        }
     }
 }
 
