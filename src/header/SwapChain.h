@@ -33,6 +33,6 @@ class SwapChain
 
     VkFormat _imageFormat;
     VkExtent2D _extent;
-    VkSwapchainKHR _internal;
-    VkDevice _device;
+    VkSwapchainKHR _internal = VK_NULL_HANDLE;
+    VkDevice _device = VK_NULL_HANDLE;
 };

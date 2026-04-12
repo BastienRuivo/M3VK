@@ -64,9 +64,9 @@ class GPUImage
 
     private:
     uint32_t _mipCount;
-    VkImage _internal;
-    VkDeviceMemory _memoryInternal;
-    VkDevice _device;
+    VkImage _internal = VK_NULL_HANDLE;
+    VkDeviceMemory _memoryInternal = VK_NULL_HANDLE;
+    VkDevice _device = VK_NULL_HANDLE;
     VkFormat _format;
     VkImageViewHandler _view;
     uint32_t _width, _height;

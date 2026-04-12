@@ -21,9 +21,9 @@ class StageBuffer
     inline VkBuffer Get() const { return _internal; };
 
     private:
-    VkBuffer _internal;
-    VkDeviceMemory _memoryInternal;
-    VkDevice _device;
+    VkBuffer _internal = VK_NULL_HANDLE;
+    VkDeviceMemory _memoryInternal = VK_NULL_HANDLE;
+    VkDevice _device = VK_NULL_HANDLE;
 };
 
 

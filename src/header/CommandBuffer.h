@@ -116,8 +116,8 @@ class CommandBuffer
     void CreateSingleTime();
     void CreateMultiUsage();
 
-    VkDevice _device;
-    VkCommandPool _pool;
-    VkQueue _queue;
-    VkCommandBuffer _internal;
+    VkDevice _device = VK_NULL_HANDLE;
+    VkCommandPool _pool = VK_NULL_HANDLE;
+    VkQueue _queue = VK_NULL_HANDLE;
+    VkCommandBuffer _internal = VK_NULL_HANDLE;
 };
