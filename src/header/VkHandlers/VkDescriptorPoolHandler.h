@@ -1,12 +1,15 @@
 #pragma once
 
 #include <cstdint>
+#include <initializer_list>
 #include <vulkan/vulkan_core.h>
 
 class VkDescriptorPoolHandler
 {
     public:
-    VkDescriptorPoolHandler(VkDevice device, uint32_t frameCount);
+
+    VkDescriptorPoolHandler(VkDevice device, std::initializer_list<VkDescriptorPoolSize> poolSizes, uint32_t maxSets);
+    VkDescriptorPoolHandler(VkDevice device, const VkDescriptorPoolSize* poolSizes, uint32_t poolSizesCount, uint32_t maxSets);
     ~VkDescriptorPoolHandler();
 
     // VkHandles can be destroyed by one of the two object when copying, so we enable moving and disable copying.

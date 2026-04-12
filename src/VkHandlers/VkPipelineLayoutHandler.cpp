@@ -1,4 +1,6 @@
 #include "header/VkHandlers/VkPipelineLayoutHandler.h"
+#include <cstdint>
+#include <initializer_list>
 #include <stdexcept>
 #include <vulkan/vulkan_core.h>
 
@@ -6,22 +8,23 @@
 #include "header/DebugLayer.h"
 #endif
 
-VkPipelineLayoutHandler::VkPipelineLayoutHandler(VkDevice device, VkDescriptorSetLayout descriptorLayout)
+VkPipelineLayoutHandler::VkPipelineLayoutHandler(VkDevice device, std::initializer_list<VkDescriptorSetLayout> descriptorLayouts, std::initializer_list<VkPushConstantRange> pushConstantRanges)
+    : VkPipelineLayoutHandler(device, descriptorLayouts.begin(), descriptorLayouts.size(), pushConstantRanges.begin(), pushConstantRanges.size()) {}
+
+VkPipelineLayoutHandler::VkPipelineLayoutHandler(VkDevice device, const VkDescriptorSetLayout* descriptorLayouts, uint32_t descriptorLayoutCount, const VkPushConstantRange* pushConstantRanges, uint32_t pushConstantRangeCount)
 {
 #ifdef M3VK_MEMORYLOG
     DebugLayer::Log(DebugLayer::LogType::CREATE, "VkPipelineLayoutHandler Creation !");
 #endif
-    VkDescriptorSetLayout descriptorSetLayout = descriptorLayout;
-
     _device = device;
 
     // Uniforms (empty for now)
     VkPipelineLayoutCreateInfo layoutCreateInfo{};
     layoutCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    layoutCreateInfo.setLayoutCount = 1;
-    layoutCreateInfo.pSetLayouts = &descriptorSetLayout;
-    layoutCreateInfo.pushConstantRangeCount = 0; // Optional
-    layoutCreateInfo.pPushConstantRanges = nullptr; // Optional
+    layoutCreateInfo.setLayoutCount = descriptorLayoutCount;
+    layoutCreateInfo.pSetLayouts = descriptorLayouts;
+    layoutCreateInfo.pushConstantRangeCount = pushConstantRangeCount;
+    layoutCreateInfo.pPushConstantRanges = pushConstantRanges;
 
     if(vkCreatePipelineLayout(_device, &layoutCreateInfo, nullptr, &_internal) != VK_SUCCESS)
     {

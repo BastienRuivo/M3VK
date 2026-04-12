@@ -112,11 +112,11 @@ class Application
     // Datas
     std::unique_ptr<MemoryBuffer> _vertexBuffer;
     std::unique_ptr<MemoryBuffer> _indexBuffer;
-    std::unique_ptr<GraphicsBuffer> _objectDataBuffer;
     GPUImage _modelImg;
     VkSamplerHandler _sampler;
 
-    VkDescriptorPoolHandler _descriptorPoolHandler;
+    VkDescriptorPoolHandler _dynamicDescriptorPoolHandler;
+    VkDescriptorPoolHandler _staticDescriptorPoolHandler;
 
     MultiFrameHandler<GraphicsBuffer> _cameraDataBuffer;
 

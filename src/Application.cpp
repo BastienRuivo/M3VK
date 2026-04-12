@@ -10,7 +10,6 @@
 #include "header/Vertex.h"
 #include "header/VkHandlers/VkFramebufferHandler.h"
 #include <GLFW/glfw3.h>
-#include <array>
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
@@ -20,6 +19,7 @@
 #include <glm/ext/vector_float3.hpp>
 #include <glm/fwd.hpp>
 #include <glm/trigonometric.hpp>
+#include <initializer_list>
 #include <memory>
 #include <stdexcept>
 
@@ -42,7 +42,7 @@ MultiFrameObject<VkDescriptorSet> Application::CreateDescriptorSet()
     std::vector<VkDescriptorSetLayout> layouts(ApplicationInfo::Constant::MaxFrameInCount, _descriptorSetLayoutHandler.Get());
     VkDescriptorSetAllocateInfo allocateInfo{};
     allocateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    allocateInfo.descriptorPool = _descriptorPoolHandler.Get();
+    allocateInfo.descriptorPool = _dynamicDescriptorPoolHandler.Get();
     allocateInfo.descriptorSetCount = ApplicationInfo::Constant::MaxFrameInCount;
     allocateInfo.pSetLayouts = layouts.data();
 
@@ -60,47 +60,37 @@ MultiFrameObject<VkDescriptorSet> Application::CreateDescriptorSet()
         cameraDataInfo.offset = 0;
         cameraDataInfo.range = sizeof(CameraData);
 
-        VkDescriptorBufferInfo objectDataInfo{};
-        objectDataInfo.buffer = _objectDataBuffer->Get();
-        objectDataInfo.offset = 0;
-        objectDataInfo.range = sizeof(ObjectData);
-
         VkDescriptorImageInfo imageInfo{};
         imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
         imageInfo.imageView = _modelImg.GetView();
         imageInfo.sampler = _sampler.Get();
 
-        std::array<VkWriteDescriptorSet, 3> descriptorWrites{};
-
-        descriptorWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        descriptorWrites[0].dstSet = descriptorSet.Get(i);
-        descriptorWrites[0].dstBinding = 0;
-        descriptorWrites[0].dstArrayElement = 0;
-        descriptorWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        descriptorWrites[0].descriptorCount = 1;
-        descriptorWrites[0].pBufferInfo = &cameraDataInfo;
-        descriptorWrites[0].pImageInfo = nullptr;
-        descriptorWrites[0].pTexelBufferView = nullptr;
-
-        descriptorWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        descriptorWrites[1].dstSet = descriptorSet.Get(i);
-        descriptorWrites[1].dstBinding = 1;
-        descriptorWrites[1].dstArrayElement = 0;
-        descriptorWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-        descriptorWrites[1].descriptorCount = 1;
-        descriptorWrites[1].pBufferInfo = &objectDataInfo;
-        descriptorWrites[1].pImageInfo = nullptr;
-        descriptorWrites[1].pTexelBufferView = nullptr;
-
-        descriptorWrites[2].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        descriptorWrites[2].dstSet = descriptorSet.Get(i);
-        descriptorWrites[2].dstBinding = 2;
-        descriptorWrites[2].dstArrayElement = 0;
-        descriptorWrites[2].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        descriptorWrites[2].descriptorCount = 1;
-        descriptorWrites[2].pBufferInfo = nullptr;
-        descriptorWrites[2].pImageInfo = &imageInfo;
-        descriptorWrites[2].pTexelBufferView = nullptr;
+        uint32_t binding = 0;
+        std::vector<VkWriteDescriptorSet> descriptorWrites
+        {
+            {
+                .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                .dstSet = descriptorSet.Get(i),
+                .dstBinding = binding++,
+                .dstArrayElement = 0,
+                .descriptorCount = 1,
+                .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+                .pImageInfo = nullptr,
+                .pBufferInfo = &cameraDataInfo,
+                .pTexelBufferView = nullptr
+            },
+            {
+                .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                .dstSet = descriptorSet.Get(i),
+                .dstBinding = binding++,
+                .dstArrayElement = 0,
+                .descriptorCount = 1,
+                .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                .pImageInfo = &imageInfo,
+                .pBufferInfo = nullptr,
+                .pTexelBufferView = nullptr
+            }
+        };
 
         vkUpdateDescriptorSets(_deviceHandler.Get(), static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
     }
@@ -264,6 +254,11 @@ void Application::RecordCommandBuffer(const CommandBuffer& cmdBuffer, uint32_t c
 {
     VkExtent2D renderExtent = _swapChain->GetExtent();
 
+    ObjectData objectData = {};
+    objectData.localToWorldMatrix = glm::mat4(1.0f);
+    objectData.localToWorldMatrix = glm::rotate<float>(objectData.localToWorldMatrix, glm::radians(-90.0f), glm::vec3(1, 0, 0));
+    objectData.localToWorldMatrix = glm::rotate<float>(objectData.localToWorldMatrix, glm::radians(-90.0f), glm::vec3(0, 0, 1));
+
     cmdBuffer.Begin();
     {
         cmdBuffer.BeginRenderPass(_renderPassHandler.Get(), _framebuffer.GetInternal(imageIndex), clearValues, renderExtent);
@@ -271,6 +266,9 @@ void Application::RecordCommandBuffer(const CommandBuffer& cmdBuffer, uint32_t c
             cmdBuffer.BindPipeline(_graphicsPipelineHandler.Get(), VK_PIPELINE_BIND_POINT_GRAPHICS);
             cmdBuffer.SetViewport(renderExtent.width, renderExtent.height);
             cmdBuffer.SetScissor(0, 0, renderExtent.width, renderExtent.height);
+
+            cmdBuffer.PushConstants(_pipelineLayoutHandler.Get(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(ObjectData), &objectData);
+
             cmdBuffer.BindBuffer(*_vertexBuffer);
             cmdBuffer.BindBuffer(*_indexBuffer);
             cmdBuffer.BindDescriptorSets(VK_PIPELINE_BIND_POINT_GRAPHICS, _pipelineLayoutHandler.Get(), _descriptorSet.Get(currentFrame));
@@ -320,8 +318,23 @@ Application::Application() :
 
     // Render Layouts & Pipelines
     _renderPassHandler(_deviceHandler.Get(), ApplicationInfo::Get().GetMsaaSample(), _swapChain->GetImageFormat(), DepthFormat),
-    _descriptorSetLayoutHandler(_deviceHandler.Get()),
-    _pipelineLayoutHandler(_deviceHandler.Get(), _descriptorSetLayoutHandler.Get()),
+
+    _descriptorSetLayoutHandler(_deviceHandler.Get(), std::initializer_list<VkDescriptorSetLayoutBinding>(
+        {
+            VkDescriptorSetLayoutBinding{ 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT, nullptr },
+            VkDescriptorSetLayoutBinding{ 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr }
+        }
+    )),
+    _pipelineLayoutHandler(_deviceHandler.Get(), std::initializer_list<VkDescriptorSetLayout>(
+        {
+            _descriptorSetLayoutHandler.Get()
+        }
+    ),
+    std::initializer_list<VkPushConstantRange>(
+        {
+            VkPushConstantRange{ VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(ObjectData) }
+        }
+    )),
     _graphicsPipelineHandler(_swapChain->GetExtent(), _deviceHandler.Get(), ApplicationInfo::Get().GetMsaaSample(), _pipelineLayoutHandler.Get(), _renderPassHandler.Get()),
 
     // Framebuffers & Command Pools
@@ -337,15 +350,46 @@ Application::Application() :
         VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)),
     _depthBuffer(std::make_unique<GPUImage>(_deviceHandler.Get(), _physicalDeviceHandler, _swapChain->GetExtent().width, _swapChain->GetExtent().height, ApplicationInfo::Get().GetMsaaSample(), 1, DepthFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)),
-    _descriptorPoolHandler(_deviceHandler.Get(), ApplicationInfo::Constant::MaxFrameInCount),
+
+    // Descriptor Pools
+    _dynamicDescriptorPoolHandler(_deviceHandler.Get(), std::initializer_list<VkDescriptorPoolSize>(
+        {
+            VkDescriptorPoolSize
+            {
+                .type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+                .descriptorCount = ApplicationInfo::Constant::MaxFrameInCount
+            },
+            VkDescriptorPoolSize
+            {
+                .type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+                .descriptorCount = ApplicationInfo::Constant::MaxFrameInCount
+            },
+            VkDescriptorPoolSize
+            {
+                .type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                .descriptorCount = ApplicationInfo::Constant::MaxFrameInCount
+            }
+        }), ApplicationInfo::Constant::MaxFrameInCount),
+    _staticDescriptorPoolHandler(_deviceHandler.Get(), std::initializer_list<VkDescriptorPoolSize>(
+        {
+            VkDescriptorPoolSize
+            {
+                .type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+                .descriptorCount = 1
+            },
+            VkDescriptorPoolSize
+            {
+                .type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                .descriptorCount = 1
+            }
+        }), 1),
+
     _cameraDataBuffer(ApplicationInfo::Constant::MaxFrameInCount, _physicalDeviceHandler, _deviceHandler.Get(), 1, sizeof(CameraData), GraphicsBuffer::UNIFORM),
     _modelImg(_deviceHandler.Get(), _physicalDeviceHandler, CPUImage("data/img/kirbo.png", STBI_rgb_alpha), _graphicsCommandPoolHandler.Get(), _graphicsQueueHandler.Get()),
     _sampler(_deviceHandler.Get()),
     _camera(glm::vec3(0.0f, 0.0f, 3.0f), glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, 1.0f, 0.0f), 45.0f, (float)_swapChain->GetExtent().width / (float)_swapChain->GetExtent().height, 0.1f, 100.0f),
     _vertexBuffer(std::make_unique<MemoryBuffer>(_physicalDeviceHandler, _deviceHandler.Get(), ApplicationInfo::Constant::VertexBufferMaxSize, sizeof(Vertex), GraphicsBuffer::BufferType::VERTEX)),
     _indexBuffer(std::make_unique<MemoryBuffer>(_physicalDeviceHandler, _deviceHandler.Get(), ApplicationInfo::Constant::IndexBufferMaxSize, sizeof(uint32_t), GraphicsBuffer::BufferType::INDEX)),
-
-    _objectDataBuffer(std::make_unique<GraphicsBuffer>(_physicalDeviceHandler, _deviceHandler.Get(), 1024, sizeof(ObjectData), GraphicsBuffer::BufferType::STATIC_STORAGE)),
 
     // Descriptor Sets & Execution
     _descriptorSet(CreateDescriptorSet()),
@@ -380,11 +424,6 @@ Application::Application() :
     mesh.UploadAndRelease(_physicalDeviceHandler, _deviceHandler.Get(), _graphicsQueueHandler.Get(), _graphicsCommandPoolHandler.Get(),
         *_vertexBuffer,
         *_indexBuffer);
-
-    std::array<glm::mat4, 1> instances = { glm::mat4(1.0f) };
-    instances[0] = glm::rotate<float>(instances[0], glm::radians(-90.0f), glm::vec3(1, 0, 0));
-    instances[0] = glm::rotate<float>(instances[0], glm::radians(-90.0f), glm::vec3(0, 0, 1));
-    _objectDataBuffer->CopyToBuffer(_physicalDeviceHandler, _deviceHandler.Get(), _graphicsQueueHandler.Get(), _graphicsCommandPoolHandler.Get(), (void*)instances.data(), sizeof(instances[0]));
 }
 
 void Application::MainLoop()
@@ -424,7 +463,6 @@ Application::~Application()
 
     _vertexBuffer.reset();
     _indexBuffer.reset();
-    _objectDataBuffer.reset();
 }
 
 void Application::Run()

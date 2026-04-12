@@ -15,7 +15,7 @@ layout(set = 0, binding = 0) uniform CameraData
     mat4 viewProjectionMatrix;
 } _Camera;
 
-layout(std430, binding = 1) readonly buffer ObjectData
+layout(push_constant, std430) uniform ObjectData
 {
     mat4 localToWorldMatrix;
 } _Instance;

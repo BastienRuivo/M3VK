@@ -1,11 +1,13 @@
 #pragma once
 
 #include <vulkan/vulkan_core.h>
+#include <initializer_list>
 
 class VkDescriptorSetLayoutHandler
 {
     public:
-    VkDescriptorSetLayoutHandler(VkDevice device);
+    VkDescriptorSetLayoutHandler(VkDevice device, std::initializer_list<VkDescriptorSetLayoutBinding> bindings);
+    VkDescriptorSetLayoutHandler(VkDevice device, const VkDescriptorSetLayoutBinding* bindings, uint32_t bindingCount);
     ~VkDescriptorSetLayoutHandler();
 
     // VkHandles can be destroyed by one of the two object when copying, so we enable moving and disable copying.

@@ -68,6 +68,11 @@ class CommandBuffer
         vkResetCommandBuffer(_internal, flags);
     }
 
+    inline void PushConstants(VkPipelineLayout layout, VkShaderStageFlags stageFlags, uint32_t offset, uint32_t size, const void* pValues) const
+    {
+        vkCmdPushConstants(_internal, layout, stageFlags, offset, size, pValues);
+    }
+
     inline void Barrier(VkPipelineStageFlags srcAccesMask, VkPipelineStageFlags dstAccesMask, VkMemoryBarrier* memoryBarriers, uint32_t memoryBarrierCount, VkBufferMemoryBarrier* bufferBarriers, uint32_t bufferBarrierCount, VkImageMemoryBarrier* imgBarriers, uint32_t imgBarrierCount) const
     {
         vkCmdPipelineBarrier(_internal,

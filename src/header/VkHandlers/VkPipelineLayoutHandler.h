@@ -1,11 +1,13 @@
 #pragma once
 
+#include <initializer_list>
 #include <vulkan/vulkan_core.h>
 
 class VkPipelineLayoutHandler
 {
     public:
-    VkPipelineLayoutHandler(VkDevice device, VkDescriptorSetLayout descriptorLayout);
+    VkPipelineLayoutHandler(VkDevice device, std::initializer_list<VkDescriptorSetLayout> descriptorLayouts, std::initializer_list<VkPushConstantRange> pushConstantRanges);
+    VkPipelineLayoutHandler(VkDevice device, const VkDescriptorSetLayout* descriptorLayouts, uint32_t descriptorLayoutCount, const VkPushConstantRange* pushConstantRanges, uint32_t pushConstantRangeCount);
     ~VkPipelineLayoutHandler();
 
     // VkHandles can be destroyed by one of the two object when copying, so we enable moving and disable copying.
