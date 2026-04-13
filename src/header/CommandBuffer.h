@@ -48,9 +48,10 @@ class CommandBuffer
     {
         vkCmdBindDescriptorSets(_internal, bindPoint, pipelineLayout, 0, 1, &set, 0, nullptr);;
     }
-    inline void DrawIndexed(uint32_t indexCount) const
+
+    inline void DrawIndexed(uint32_t firstIndex, uint32_t indexCount, uint32_t vertexOffset) const
     {
-        vkCmdDrawIndexed(_internal, indexCount, 1, 0, 0, 0);
+        vkCmdDrawIndexed(_internal, indexCount, 1, firstIndex, vertexOffset, 0);
     }
 
     inline void BindPipeline(VkPipeline pipeline, VkPipelineBindPoint bindPoint) const

@@ -105,25 +105,17 @@ StageBuffer& StageBuffer::operator=(StageBuffer&& other) noexcept
 }
 
 GraphicsBuffer::GraphicsBuffer(const VkPhysicalDeviceHandler& physicalDevice, VkDevice device, VkDeviceSize count, VkDeviceSize stride, BufferType type)
+: _device(device), _type(type), _stride(stride), _count(count)
 {
 #ifdef M3VK_MEMORYLOG
     DebugLayer::Log(DebugLayer::LogType::CREATE, "GraphicsBuffer Creation !");
 #endif
-    _device = device;
     // mean it's a dst buffer, already in good memory shape but cant be writable directly by cpu
     VkBufferUsageFlags usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 
-    // mean it's a GPU buffer
-    VkMemoryPropertyFlags properties;
-
-    _type = type;
-    _dataPtr = nullptr;
-    _stride = stride;
-    _count = count;
 
     VkDeviceSize size = _stride * _count;
 
-    // Usage
     switch (_type) {
         case INDEX: usage |= VK_BUFFER_USAGE_INDEX_BUFFER_BIT; break;
         case VERTEX: usage |= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT; break;
@@ -135,7 +127,7 @@ GraphicsBuffer::GraphicsBuffer(const VkPhysicalDeviceHandler& physicalDevice, Vk
         }
     }
 
-    // Memory type
+    VkMemoryPropertyFlags properties;
     switch (_type) {
         case STATIC_STORAGE:
         case INDEX:
@@ -258,13 +250,21 @@ GraphicsBuffer& GraphicsBuffer::operator=(GraphicsBuffer&& other) noexcept
     return *this;
 }
 
-void MemoryBuffer::CopyToBuffer(const VkPhysicalDeviceHandler& physicalDevice,
+void GeometryBuffer::CopyToBuffer(const VkPhysicalDeviceHandler& physicalDevice,
     const VkDevice& device,
     const VkQueue& queue,
     const VkCommandPool& cmdPool,
     void* srcData,
     VkDeviceSize size)
 {
+    if((_currentSize + size) > (_count * _stride))
+    {
+        DebugLayer::Log(DebugLayer::LogType::ERROR, "Max vertex buffer size reached");
+        throw std::runtime_error("Max vertex buffer size reached");
+    }
+
+    uint32_t index = 0;
+
     GraphicsBuffer::CopyToBuffer(physicalDevice, device, queue, cmdPool, srcData, size, 0, _currentSize);
     _currentSize += size;
 }

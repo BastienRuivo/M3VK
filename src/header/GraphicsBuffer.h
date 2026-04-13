@@ -71,7 +71,7 @@ class GraphicsBuffer
         return _dataPtr;
     }
 
-    private:
+    protected:
     VkBuffer _internal;
     VkDeviceMemory _memoryInternal;
     BufferType _type;
@@ -82,7 +82,7 @@ class GraphicsBuffer
 };
 
 // this class handle a graphics buffer with an arbitrary huge size where we can append data
-class MemoryBuffer : public GraphicsBuffer
+class GeometryBuffer : public GraphicsBuffer
 {
     public:
     using GraphicsBuffer::GraphicsBuffer;
@@ -96,6 +96,7 @@ class MemoryBuffer : public GraphicsBuffer
     );
 
     inline VkDeviceSize GetCurrentSize() const { return _currentSize; }
+    inline uint32_t GetCurrentIndex() const { return _currentSize / _stride; }
 
     private:
     VkDeviceSize _currentSize = 0;

@@ -103,7 +103,7 @@ VkPipelineHandler::VkPipelineHandler(const VkExtent2D& appExtent, VkDevice devic
         .rasterizerDiscardEnable = false,
         // VK_POLYGON_MODE_LINE for wireframe later maybe ? or this can be another feature to enable, check later
         .polygonMode = VK_POLYGON_MODE_FILL,
-        .cullMode = VK_CULL_MODE_NONE,
+        .cullMode = VK_CULL_MODE_BACK_BIT,
         .frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE,
         .depthBiasEnable = VK_FALSE,
         .depthBiasConstantFactor = 0.0f,

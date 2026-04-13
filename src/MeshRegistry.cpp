@@ -1,0 +1,59 @@
+#include "header/MeshRegistry.h"
+#include "header/ApplicationInfo.h"
+#include "header/VkHandlers/VkPhysicalDeviceHandler.h"
+
+MeshRegistry::MeshRegistry(VkDevice device, const VkPhysicalDeviceHandler& physicalDevice, uint32_t vertexBufferSize, uint32_t indexBufferSize)
+: _vertexBuffer(physicalDevice, device, vertexBufferSize, sizeof(Vertex), GraphicsBuffer::BufferType::VERTEX),
+    _indexBuffer(physicalDevice, device, indexBufferSize, sizeof(uint32_t), GraphicsBuffer::BufferType::INDEX)
+{
+
+}
+
+SubMesh MeshRegistry::Add(std::span<const Vertex> vertices, std::span<const uint32_t> indices)
+{
+    SubMesh subMesh
+    {
+        .firstIndex = static_cast<uint32_t>(_cpuIndices.size()),
+        .indexCount = static_cast<uint32_t>(indices.size()),
+        .vertexOffset = static_cast<uint32_t>(_cpuVertices.size())
+    };
+
+    _cpuVertices.insert(_cpuVertices.end(), vertices.begin(), vertices.end());
+    _cpuIndices.insert(_cpuIndices.end(), indices.begin(), indices.end());
+
+    return subMesh;
+}
+
+SubMesh MeshRegistry::AddFromObj(const std::string& path)
+{
+    std::vector<Vertex> vertices;
+    std::vector<uint32_t> indices;
+
+    ProjectHelper::LoadObj(path, vertices, indices);
+
+    return Add(vertices, indices);
+}
+
+void MeshRegistry::UploadAndRelease(const VkPhysicalDeviceHandler& physicalDevice, VkDevice device, VkQueue queue, VkCommandPool cmdPool)
+{
+    if(_cpuVertices.size() >= ApplicationInfo::Constant::VertexBufferMaxSize)
+    {
+        DebugLayer::Log(DebugLayer::LogType::ERROR, "Max vertex buffer size reached");
+        throw std::runtime_error("Max vertex buffer size reached");
+    }
+
+    if(_cpuIndices.size() >= ApplicationInfo::Constant::IndexBufferMaxSize)
+    {
+        DebugLayer::Log(DebugLayer::LogType::ERROR, "Max index buffer size reached");
+        throw std::runtime_error("Max index buffer size reached");
+    }
+
+    _vertexBuffer.CopyToBuffer(physicalDevice, device, queue, cmdPool, _cpuVertices.data(), _cpuVertices.size() * sizeof(Vertex));
+    _indexBuffer.CopyToBuffer(physicalDevice, device, queue, cmdPool, _cpuIndices.data(), _cpuIndices.size() * sizeof(uint32_t));
+}
+
+void MeshRegistry::Bind(const CommandBuffer& cmdBuffer) const
+{
+    cmdBuffer.BindBuffer(_vertexBuffer);
+    cmdBuffer.BindBuffer(_indexBuffer);
+}

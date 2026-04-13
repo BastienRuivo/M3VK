@@ -2,11 +2,11 @@
 #include "header/ApplicationInfo.h"
 #include "header/CommandBuffer.h"
 #include "header/GraphicsBuffer.h"
-#include "header/Mesh.h"
+#include "header/MeshRegistry.h"
 #include "header/MultiFrame.h"
+#include "header/Renderer.h"
 #include "header/SwapChain.h"
 #include "header/DebugLayer.h"
-#include "header/Vertex.h"
 #include <GLFW/glfw3.h>
 #include <chrono>
 #include <cstdint>
@@ -281,14 +281,6 @@ void Application::RecordCommandBuffer(const CommandBuffer& cmdBuffer, uint32_t c
 
     const SwapChain::SwapChainImage& backBuffer = _swapChain->Images.Get(imageIndex);
 
-
-    ObjectData objectData =
-    {
-        .localToWorldMatrix = glm::mat4(1.0f)
-    };
-    objectData.localToWorldMatrix = glm::rotate<float>(objectData.localToWorldMatrix, glm::radians(-90.0f), glm::vec3(1, 0, 0));
-    objectData.localToWorldMatrix = glm::rotate<float>(objectData.localToWorldMatrix, glm::radians(-90.0f), glm::vec3(0, 0, 1));
-
     cmdBuffer.Begin();
     {
         _colorBackBuffer->TransitionLayoutCommand(cmdBuffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
@@ -301,12 +293,14 @@ void Application::RecordCommandBuffer(const CommandBuffer& cmdBuffer, uint32_t c
             cmdBuffer.SetViewport(0, 0, renderArea.extent.width, renderArea.extent.height);
             cmdBuffer.SetScissor(renderArea);
 
-            cmdBuffer.PushConstants(_pipelineLayoutHandler.Get(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(ObjectData), &objectData);
+            _meshRegistry.Bind(cmdBuffer);
 
-            cmdBuffer.BindBuffer(*_vertexBuffer);
-            cmdBuffer.BindBuffer(*_indexBuffer);
             cmdBuffer.BindDescriptorSets(VK_PIPELINE_BIND_POINT_GRAPHICS, _pipelineLayoutHandler.Get(), _descriptorSet.Get(currentFrame));
-            cmdBuffer.DrawIndexed(static_cast<uint32_t>(_indexBuffer->GetCount()));
+
+            for(const auto& renderer : _renderers)
+            {
+                renderer.Draw(cmdBuffer, _pipelineLayoutHandler.Get());
+            }
         }
         cmdBuffer.EndRendering();
         backBuffer.TransitionLayoutCommand(cmdBuffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
@@ -393,11 +387,10 @@ Application::Application() :
         }), 1),
 
     _cameraDataBuffer(ApplicationInfo::Constant::MaxFrameInCount, _physicalDeviceHandler, _deviceHandler.Get(), 1, sizeof(CameraData), GraphicsBuffer::UNIFORM),
-    _modelImg(_deviceHandler.Get(), _physicalDeviceHandler, CPUImage("data/img/kirbo.png", STBI_rgb_alpha), _graphicsCommandPoolHandler.Get(), _graphicsQueueHandler.Get()),
+    _modelImg(_deviceHandler.Get(), _physicalDeviceHandler, CPUImage("data/img/models/viking_room.png", STBI_rgb_alpha), _graphicsCommandPoolHandler.Get(), _graphicsQueueHandler.Get()),
     _sampler(_deviceHandler.Get()),
     _camera(glm::vec3(0.0f, 0.0f, 3.0f), glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, 1.0f, 0.0f), 45.0f, (float)_swapChain->GetExtent().width / (float)_swapChain->GetExtent().height, 0.1f, 100.0f),
-    _vertexBuffer(std::make_unique<MemoryBuffer>(_physicalDeviceHandler, _deviceHandler.Get(), ApplicationInfo::Constant::VertexBufferMaxSize, sizeof(Vertex), GraphicsBuffer::BufferType::VERTEX)),
-    _indexBuffer(std::make_unique<MemoryBuffer>(_physicalDeviceHandler, _deviceHandler.Get(), ApplicationInfo::Constant::IndexBufferMaxSize, sizeof(uint32_t), GraphicsBuffer::BufferType::INDEX)),
+    _meshRegistry(_deviceHandler.Get(), _physicalDeviceHandler),
 
     // Descriptor Sets & Execution
     _descriptorSet(CreateDescriptorSet()),
@@ -418,11 +411,26 @@ Application::Application() :
         _window.SetIcon(logo.Data(), logo.Width(), logo.Height());
     }
 
-    Mesh mesh;
-    mesh.LoadFromObj("data/models/Crate1.obj");
-    mesh.UploadAndRelease(_physicalDeviceHandler, _deviceHandler.Get(), _graphicsQueueHandler.Get(), _graphicsCommandPoolHandler.Get(),
-        *_vertexBuffer,
-        *_indexBuffer);
+    SubMesh vikingRoom = _meshRegistry.AddFromObj("data/models/viking_room.obj");
+    ObjectData vikingRoomData = { .localToWorldMatrix = glm::mat4(1.0f) };
+    vikingRoomData.localToWorldMatrix = glm::translate<float>(vikingRoomData.localToWorldMatrix, glm::vec3(0.0f, 1.0f, 0.0f));
+    vikingRoomData.localToWorldMatrix = glm::rotate<float>(vikingRoomData.localToWorldMatrix, glm::radians(-90.0f), glm::vec3(1, 0, 0));
+    vikingRoomData.localToWorldMatrix = glm::rotate<float>(vikingRoomData.localToWorldMatrix, glm::radians(-90.0f), glm::vec3(0, 0, 1));
+    _renderers.emplace_back(vikingRoom, vikingRoomData);
+
+    SubMesh cube = _meshRegistry.AddFromObj("data/models/Crate1.obj");
+
+    for(uint32_t i = 0; i < 1000; ++i)
+    {
+        ObjectData cubeData = { .localToWorldMatrix = glm::mat4(1.0f) };
+        cubeData.localToWorldMatrix = glm::translate<float>(cubeData.localToWorldMatrix, glm::vec3(0.0f, 0.0f, i * -3.0f));
+        cubeData.localToWorldMatrix = glm::rotate<float>(cubeData.localToWorldMatrix, glm::radians(-90.0f), glm::vec3(1, 0, 0));
+        cubeData.localToWorldMatrix = glm::rotate<float>(cubeData.localToWorldMatrix, glm::radians(-90.0f), glm::vec3(0, 0, 1));
+        cubeData.localToWorldMatrix = glm::scale<float>(cubeData.localToWorldMatrix, glm::vec3(0.5f, 0.5f, 0.5f));
+        _renderers.emplace_back(cube, cubeData);
+    }
+
+    _meshRegistry.UploadAndRelease(_physicalDeviceHandler, _deviceHandler.Get(), _graphicsQueueHandler.Get(), _graphicsCommandPoolHandler.Get());
 }
 
 void Application::MainLoop()
@@ -460,8 +468,6 @@ Application::~Application()
     DebugLayer::Log(DebugLayer::LogType::DESTROY, "Application Destroyed !");
 #endif
 
-    _vertexBuffer.reset();
-    _indexBuffer.reset();
     _swapChain.reset();
 }
 

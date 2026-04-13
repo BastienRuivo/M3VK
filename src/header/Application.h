@@ -2,6 +2,8 @@
 
 
 #include "header/Camera.h"
+#include "header/MeshRegistry.h"
+#include "header/Renderer.h"
 #include "header/VkHandlers/VkSamplerHandler.h"
 #include "header/CommandBuffer.h"
 #include "header/MultiFrame.h"
@@ -58,11 +60,6 @@ class Application
         alignas(16) glm::mat4 viewProjectionMatrix;
     };
 
-    struct ObjectData
-    {
-        alignas(16) glm::mat4 localToWorldMatrix;
-    };
-
     uint32_t _currentFrame = 0;
 
     // RAII is first in last out order
@@ -97,8 +94,7 @@ class Application
     VkCommandPoolHandler _graphicsCommandPoolHandler;
 
     // Datas
-    std::unique_ptr<MemoryBuffer> _vertexBuffer;
-    std::unique_ptr<MemoryBuffer> _indexBuffer;
+    MeshRegistry _meshRegistry;
     GPUAllocatedImage _modelImg;
     VkSamplerHandler _sampler;
 
@@ -115,6 +111,8 @@ class Application
     MultiFrameHandler<VkSemaphoreHandler> _availableImageSemaphore;
     MultiFrameHandler<VkSemaphoreHandler> _renderFinishedSemaphores;
     MultiFrameHandler<VkFenceHandler>  _waitFence;
+
+    std::vector<Renderer> _renderers;
 
     double _lastMouseX = -1.0;
     double _lastMouseY = -1.0;
