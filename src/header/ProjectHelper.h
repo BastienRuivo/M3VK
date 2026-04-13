@@ -11,6 +11,7 @@
 #include <vulkan/vulkan_core.h>
 #include <tiny_obj_loader.h>
 #include "DebugLayer.h"
+#include "glm/fwd.hpp"
 #include "header/Vertex.h"
 
 class ProjectHelper
@@ -212,6 +213,11 @@ class ProjectHelper
                 return 1;
             default: throw std::runtime_error("Unimplemented Format GetFormatSize");
         }
+    }
+
+    static glm::quat EulerToQuat(glm::vec3 euler)
+    {
+        return glm::quat(glm::vec3(glm::radians(euler.x), glm::radians(euler.y), glm::radians(euler.z)));
     }
 
     static void LoadObj(const std::string& path, std::vector<Vertex>& vertices, std::vector<uint32_t>& indices)

@@ -4,6 +4,7 @@
 #include "header/GraphicsBuffer.h"
 #include "header/MeshRegistry.h"
 #include "header/MultiFrame.h"
+#include "header/ProjectHelper.h"
 #include "header/Renderer.h"
 #include "header/SwapChain.h"
 #include "header/DebugLayer.h"
@@ -412,22 +413,13 @@ Application::Application() :
     }
 
     SubMesh vikingRoom = _meshRegistry.AddFromObj("data/models/viking_room.obj");
-    ObjectData vikingRoomData = { .localToWorldMatrix = glm::mat4(1.0f) };
-    vikingRoomData.localToWorldMatrix = glm::translate<float>(vikingRoomData.localToWorldMatrix, glm::vec3(0.0f, 1.0f, 0.0f));
-    vikingRoomData.localToWorldMatrix = glm::rotate<float>(vikingRoomData.localToWorldMatrix, glm::radians(-90.0f), glm::vec3(1, 0, 0));
-    vikingRoomData.localToWorldMatrix = glm::rotate<float>(vikingRoomData.localToWorldMatrix, glm::radians(-90.0f), glm::vec3(0, 0, 1));
-    _renderers.emplace_back(vikingRoom, vikingRoomData);
+    _renderers.emplace_back(vikingRoom, glm::vec3(0.0f, 0.0f, 1.0f), ProjectHelper::EulerToQuat(glm::vec3(-90, -90, 0)), glm::vec3(1.0f));
 
     SubMesh cube = _meshRegistry.AddFromObj("data/models/Crate1.obj");
 
     for(uint32_t i = 0; i < 1000; ++i)
     {
-        ObjectData cubeData = { .localToWorldMatrix = glm::mat4(1.0f) };
-        cubeData.localToWorldMatrix = glm::translate<float>(cubeData.localToWorldMatrix, glm::vec3(0.0f, 0.0f, i * -3.0f));
-        cubeData.localToWorldMatrix = glm::rotate<float>(cubeData.localToWorldMatrix, glm::radians(-90.0f), glm::vec3(1, 0, 0));
-        cubeData.localToWorldMatrix = glm::rotate<float>(cubeData.localToWorldMatrix, glm::radians(-90.0f), glm::vec3(0, 0, 1));
-        cubeData.localToWorldMatrix = glm::scale<float>(cubeData.localToWorldMatrix, glm::vec3(0.5f, 0.5f, 0.5f));
-        _renderers.emplace_back(cube, cubeData);
+        _renderers.emplace_back(cube, glm::vec3(0.0f, 0.0f,  -3.0 + -2.0f * i), ProjectHelper::EulerToQuat(glm::vec3(0, 0, 0)), glm::vec3(0.5f));
     }
 
     _meshRegistry.UploadAndRelease(_physicalDeviceHandler, _deviceHandler.Get(), _graphicsQueueHandler.Get(), _graphicsCommandPoolHandler.Get());
@@ -444,6 +436,8 @@ void Application::MainLoop()
 
         auto deltaTime = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - _lastFrameTime).count();
         _lastFrameTime = currentTime;
+
+        for(auto& renderer : _renderers) renderer.Update(currentTime.time_since_epoch().count(), deltaTime);
 
         float speed = _camera.speed * deltaTime;
 
