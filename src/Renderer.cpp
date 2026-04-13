@@ -1,4 +1,6 @@
 #include "header/Renderer.h"
+#include "glm/ext/vector_float3.hpp"
+#include "header/ProjectHelper.h"
 
 void Renderer::AddMesh(const SubMesh& mesh)
 {
@@ -16,6 +18,6 @@ void Renderer::Draw(const CommandBuffer& cmdBuffer, VkPipelineLayout layout) con
 
 void Renderer::Update(float time, float dt)
 {
-    _rotation = _rotation * glm::angleAxis(2.0f * dt, glm::vec3(0.0f, 1.0f, 0.0f));
+    _rotation = ProjectHelper::EulerToQuat(glm::vec3(0, dt * 100.0f, 0)) * _rotation;
     _data.localToWorldMatrix = glm::translate(glm::mat4(1.0f), _position) * glm::toMat4(_rotation) * glm::scale(glm::mat4(1.0f), _scale);
 }

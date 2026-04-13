@@ -408,6 +408,8 @@ Application::Application() :
     DebugLayer::Log(DebugLayer::LogType::CREATE, "Application Creation !");
 #endif
 
+    _window.LockMouse(_mouseLocked);
+
     //load logo
     {
         CPUImage logo("data/img/logo.png", STBI_rgb_alpha);

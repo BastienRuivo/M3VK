@@ -114,7 +114,7 @@ class Application
 
     std::vector<Renderer> _renderers;
 
-    bool _mouseLocked = false;
+    bool _mouseLocked = true;
     float _inputPrevent = 0;
     double _lastMouseX = -1.0;
     double _lastMouseY = -1.0;
