@@ -18,18 +18,21 @@ VkImageViewHandler::VkImageViewHandler(VkDevice device, VkImage image, VkFormat 
 
     _device = device;
 
-    VkImageViewCreateInfo createInfo{};
-    createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-    createInfo.image = image;
-    createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-    createInfo.format = format;
-
-    // Image info
-    createInfo.subresourceRange.aspectMask = aspectMask;
-    createInfo.subresourceRange.baseMipLevel = 0;
-    createInfo.subresourceRange.levelCount = mipCount;
-    createInfo.subresourceRange.baseArrayLayer = 0;
-    createInfo.subresourceRange.layerCount = 1;
+    VkImageViewCreateInfo createInfo
+    {
+        .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+        .image = image,
+        .viewType = VK_IMAGE_VIEW_TYPE_2D,
+        .format = format,
+        .subresourceRange =
+        {
+            .aspectMask = aspectMask,
+            .baseMipLevel = 0,
+            .levelCount = mipCount,
+            .baseArrayLayer = 0,
+            .layerCount = 1
+        }
+    };
 
     if(vkCreateImageView(_device, &createInfo, nullptr, &_internal) != VK_SUCCESS)
     {

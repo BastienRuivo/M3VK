@@ -12,14 +12,16 @@ VkFramebufferHandler::VkFramebufferHandler(VkDevice device, VkRenderPass renderP
 
     _device = device;
 
-    VkFramebufferCreateInfo createInfo{};
-    createInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-    createInfo.renderPass = renderPass;
-    createInfo.attachmentCount = static_cast<uint32_t>(imageViews.size());
-    createInfo.pAttachments = imageViews.data();
-    createInfo.width = imageExtent.width;
-    createInfo.height = imageExtent.height;
-    createInfo.layers = 1;
+    VkFramebufferCreateInfo createInfo
+    {
+        .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
+        .renderPass = renderPass,
+        .attachmentCount = static_cast<uint32_t>(imageViews.size()),
+        .pAttachments = imageViews.data(),
+        .width = imageExtent.width,
+        .height = imageExtent.height,
+        .layers = 1
+    };
 
     if(vkCreateFramebuffer(_device, &createInfo, nullptr, &_internal) != VK_SUCCESS)
     {

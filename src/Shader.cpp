@@ -21,10 +21,12 @@ Shader::~Shader()
 
 VkShaderModule Shader::CreateShaderModule(const std::vector<char>& shaderCode)
 {
-    VkShaderModuleCreateInfo createInfo{};
-    createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-    createInfo.codeSize = shaderCode.size();
-    createInfo.pCode = reinterpret_cast<const uint32_t*>(shaderCode.data());
+    VkShaderModuleCreateInfo createInfo
+    {
+        .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+        .codeSize = shaderCode.size(),
+        .pCode = reinterpret_cast<const uint32_t*>(shaderCode.data())
+    };
 
     VkShaderModule module{};
     if(vkCreateShaderModule(_device, &createInfo, nullptr, &module) != VK_SUCCESS)

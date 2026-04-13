@@ -10,11 +10,13 @@ CommandBuffer::CommandBuffer(VkDevice device, VkCommandPool pool, VkQueue queue)
 #ifdef M3VK_MEMORYLOG
     DebugLayer::Log(DebugLayer::LogType::CREATE, "CommandBuffer Creation !");
 #endif
-    VkCommandBufferAllocateInfo allocateInfo{};
-    allocateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    allocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    allocateInfo.commandPool = _pool;
-    allocateInfo.commandBufferCount = 1;
+    VkCommandBufferAllocateInfo allocateInfo
+    {
+        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+        .commandPool = _pool,
+        .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+        .commandBufferCount = 1
+    };
 
     if(vkAllocateCommandBuffers(_device, &allocateInfo, &_internal) != VK_SUCCESS)
     {
@@ -35,10 +37,12 @@ CommandBuffer::~CommandBuffer()
 
 void CommandBuffer::Begin(VkCommandBufferUsageFlags flags) const
 {
-    VkCommandBufferBeginInfo beginInfo{};
-    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    beginInfo.flags = flags; // Tells how we're using command buffer (record each send, buffer used in a render pass...)
-    beginInfo.pInheritanceInfo = nullptr; // state info when called by a primary command buffer when it's a secondary one
+    VkCommandBufferBeginInfo beginInfo
+    {
+        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+        .flags = flags,
+        .pInheritanceInfo = nullptr
+    };
 
     if(vkBeginCommandBuffer(_internal, &beginInfo) != VK_SUCCESS)
     {
@@ -59,18 +63,20 @@ void CommandBuffer::Submit(VkSemaphore waitSemaphores[], int waitCount,
     VkSemaphore signalSemaphores[], int signalCount,
     VkFence fence) const
 {
-    VkSubmitInfo submitInfo{};
-    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    VkSubmitInfo submitInfo
+    {
+        .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
 
-    submitInfo.waitSemaphoreCount = waitCount;
-    submitInfo.pWaitSemaphores = waitSemaphores;
-    submitInfo.pWaitDstStageMask = waitStages;
+        .waitSemaphoreCount = static_cast<uint32_t>(waitCount),
+        .pWaitSemaphores = waitSemaphores,
+        .pWaitDstStageMask = waitStages,
 
-    submitInfo.signalSemaphoreCount = signalCount;
-    submitInfo.pSignalSemaphores = signalSemaphores;
+        .commandBufferCount = 1,
+        .pCommandBuffers = &_internal,
 
-    submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &_internal;
+        .signalSemaphoreCount = static_cast<uint32_t>(signalCount),
+        .pSignalSemaphores = signalSemaphores
+    };
 
     if(vkQueueSubmit(_queue, 1, &submitInfo, fence) != VK_SUCCESS)
     {
@@ -105,9 +111,13 @@ void CommandBuffer::BindBuffer(const GraphicsBuffer& buffer) const
     }
 }
 
-void CommandBuffer::SetScissor(uint32_t x, uint32_t y, uint32_t width, uint32_t height) const
+void CommandBuffer::SetScissor(int32_t x, int32_t y, uint32_t width, uint32_t height) const
 {
-    VkRect2D scissors{};
+    VkRect2D scissors
+    {
+        .offset = {x, y},
+        .extent = {width, height}
+    };
     scissors.offset = {0, 0};
     scissors.extent = {width, height};
 
@@ -116,38 +126,42 @@ void CommandBuffer::SetScissor(uint32_t x, uint32_t y, uint32_t width, uint32_t 
 
 void CommandBuffer::SetViewport(uint32_t width, uint32_t height, uint32_t x, uint32_t y, float minDepth, float maxDepth) const
 {
-    VkViewport viewport{};
-    viewport.x = x;
-    viewport.y = y;
-    viewport.width = width;
-    viewport.height = height;
-    viewport.minDepth = 0;
-    viewport.maxDepth = 1;
+    VkViewport viewport
+    {
+        .x = (float)x,
+        .y = (float)y,
+        .width = (float)width,
+        .height = (float)height,
+        .minDepth = 0,
+        .maxDepth = 1
+    };
 
     vkCmdSetViewport(_internal, 0, 1, &viewport);
 }
 
 void CommandBuffer::BeginRenderPass(VkRenderPass renderPass, VkFramebuffer framebuffer, std::vector<VkClearValue>& clearValues, VkExtent2D extents, VkOffset2D offset) const
 {
-    VkRenderPassBeginInfo rpBeginInfo{};
-    rpBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-    rpBeginInfo.renderPass = renderPass;
-    rpBeginInfo.framebuffer = framebuffer;
-    rpBeginInfo.renderArea.offset = offset;
-    rpBeginInfo.renderArea.extent = extents;
-
-    rpBeginInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
-    rpBeginInfo.pClearValues = clearValues.data();
+    VkRenderPassBeginInfo rpBeginInfo
+    {
+        .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+        .renderPass = renderPass,
+        .framebuffer = framebuffer,
+        .renderArea = {offset, extents},
+        .clearValueCount = static_cast<uint32_t>(clearValues.size()),
+        .pClearValues = clearValues.data()
+    };
 
     vkCmdBeginRenderPass(_internal, &rpBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 }
 
 void CommandBuffer::WaitCompletion()
 {
-    VkSubmitInfo submitInfo{};
-    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &_internal;
+    VkSubmitInfo submitInfo
+    {
+        .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+        .commandBufferCount = 1,
+        .pCommandBuffers = &_internal
+    };
 
     vkQueueSubmit(_queue, 1, &submitInfo, VK_NULL_HANDLE);
     vkQueueWaitIdle(_queue);

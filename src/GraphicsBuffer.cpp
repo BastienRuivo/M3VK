@@ -16,11 +16,13 @@ StageBuffer::StageBuffer(const VkPhysicalDeviceHandler& physicalDeviceHandler, V
 
     VkBufferUsageFlags usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 
-    VkBufferCreateInfo info{};
-    info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    info.size = size;
-    info.usage = usage;
-    info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    VkBufferCreateInfo info
+    {
+        .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+        .size = size,
+        .usage = usage,
+        .sharingMode = VK_SHARING_MODE_EXCLUSIVE
+    };
 
     // If note exclusive, need to add a queue family index
 
@@ -32,12 +34,13 @@ StageBuffer::StageBuffer(const VkPhysicalDeviceHandler& physicalDeviceHandler, V
     VkMemoryRequirements memRequirements;
     vkGetBufferMemoryRequirements(_device, _internal, &memRequirements);
 
-    VkMemoryAllocateInfo allocateInfo{};
-    allocateInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    allocateInfo.allocationSize = memRequirements.size;
-    // mean it's a visible and writable by CPU directecly
-    VkMemoryPropertyFlags properties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-    allocateInfo.memoryTypeIndex = physicalDeviceHandler.FindMemoryType(memRequirements.memoryTypeBits, properties);
+    VkMemoryAllocateInfo allocateInfo
+    {
+        .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+        .allocationSize = memRequirements.size,
+        // mean it's a visible and writable by CPU directecly
+        .memoryTypeIndex = physicalDeviceHandler.FindMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)
+    };
 
     if(vkAllocateMemory(_device, &allocateInfo, nullptr, &_memoryInternal) != VK_SUCCESS)
     {
@@ -160,11 +163,13 @@ GraphicsBuffer::GraphicsBuffer(const VkPhysicalDeviceHandler& physicalDevice, Vk
         case UNIFORM: properties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT; // Host = CPU so it mean it is visible and writable by it
     }
 
-    VkBufferCreateInfo info{};
-    info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    info.size = size;
-    info.usage = usage;
-    info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    VkBufferCreateInfo info
+    {
+        .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+        .size = size,
+        .usage = usage,
+        .sharingMode = VK_SHARING_MODE_EXCLUSIVE
+    };
 
     // // If note exclusive, need to add a queue family index
 
@@ -176,10 +181,12 @@ GraphicsBuffer::GraphicsBuffer(const VkPhysicalDeviceHandler& physicalDevice, Vk
     VkMemoryRequirements memRequirements;
     vkGetBufferMemoryRequirements(device, _internal, &memRequirements);
 
-    VkMemoryAllocateInfo allocateInfo{};
-    allocateInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    allocateInfo.allocationSize = memRequirements.size;
-    allocateInfo.memoryTypeIndex = physicalDevice.FindMemoryType(memRequirements.memoryTypeBits, properties);
+    VkMemoryAllocateInfo allocateInfo
+    {
+        .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+        .allocationSize = memRequirements.size,
+        .memoryTypeIndex = physicalDevice.FindMemoryType(memRequirements.memoryTypeBits, properties)
+    };
 
     if(vkAllocateMemory(device, &allocateInfo, nullptr, &_memoryInternal) != VK_SUCCESS)
     {

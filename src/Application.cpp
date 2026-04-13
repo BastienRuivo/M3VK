@@ -40,11 +40,13 @@
 MultiFrameObject<VkDescriptorSet> Application::CreateDescriptorSet()
 {
     std::vector<VkDescriptorSetLayout> layouts(ApplicationInfo::Constant::MaxFrameInCount, _descriptorSetLayoutHandler.Get());
-    VkDescriptorSetAllocateInfo allocateInfo{};
-    allocateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    allocateInfo.descriptorPool = _dynamicDescriptorPoolHandler.Get();
-    allocateInfo.descriptorSetCount = ApplicationInfo::Constant::MaxFrameInCount;
-    allocateInfo.pSetLayouts = layouts.data();
+    VkDescriptorSetAllocateInfo allocateInfo
+    {
+        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+        .descriptorPool = _dynamicDescriptorPoolHandler.Get(),
+        .descriptorSetCount = ApplicationInfo::Constant::MaxFrameInCount,
+        .pSetLayouts = layouts.data()
+    };
 
     MultiFrameObject<VkDescriptorSet> descriptorSet(static_cast<uint32_t>(ApplicationInfo::Constant::MaxFrameInCount));
     descriptorSet.Resize(ApplicationInfo::Constant::MaxFrameInCount);
@@ -55,15 +57,19 @@ MultiFrameObject<VkDescriptorSet> Application::CreateDescriptorSet()
 
     for(int i = 0; i < ApplicationInfo::Constant::MaxFrameInCount; ++i)
     {
-        VkDescriptorBufferInfo cameraDataInfo{};
-        cameraDataInfo.buffer = _cameraDataBuffer.GetInternal(i);
-        cameraDataInfo.offset = 0;
-        cameraDataInfo.range = sizeof(CameraData);
+        VkDescriptorBufferInfo cameraDataInfo
+        {
+            .buffer = _cameraDataBuffer.GetInternal(i),
+            .offset = 0,
+            .range = sizeof(CameraData)
+        };
 
-        VkDescriptorImageInfo imageInfo{};
-        imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        imageInfo.imageView = _modelImg.GetView();
-        imageInfo.sampler = _sampler.Get();
+        VkDescriptorImageInfo imageInfo
+        {
+            .sampler = _sampler.Get(),
+            .imageView = _modelImg.GetView(),
+            .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+        };
 
         uint32_t binding = 0;
         std::vector<VkWriteDescriptorSet> descriptorWrites
@@ -102,9 +108,11 @@ void Application::UpdateCameraData(uint32_t currentFrame)
 {
     VkExtent2D extent = _swapChain->GetExtent();
 
-    CameraData cameraData = {};
-    cameraData.worldToCameraMatrix = _camera.GetViewMatrix();
-    cameraData.projectionMatrix = _camera.GetProjectionMatrix();
+    CameraData cameraData =
+    {
+        .worldToCameraMatrix = _camera.GetViewMatrix(),
+        .projectionMatrix = _camera.GetProjectionMatrix()
+    };
     // it was designed for opengl so flip it
     cameraData.projectionMatrix[1][1] *= -1;
 
@@ -224,16 +232,16 @@ void Application::DrawFrame()
     _commandBuffer.Get(_currentFrame).Submit(wait, 1, waitStages, signalSemaphore, 1, _waitFence.GetInternal(_currentFrame));
 
     // actually present the frame
-    VkPresentInfoKHR presentInfo{};
-    presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-    presentInfo.waitSemaphoreCount = 1;
-    presentInfo.pWaitSemaphores = signalSemaphore;
-
-    VkSwapchainKHR swapChains[] = {_swapChain->Get()};
-    presentInfo.swapchainCount = 1;
-    presentInfo.pSwapchains = swapChains;
-    presentInfo.pImageIndices = &imageIndex;
-    presentInfo.pResults = nullptr;
+    VkSwapchainKHR swapChain = _swapChain->Get();
+    VkPresentInfoKHR presentInfo
+    {
+        .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
+        .waitSemaphoreCount = 1,
+        .pWaitSemaphores = signalSemaphore,
+        .swapchainCount = 1,
+        .pSwapchains = &swapChain,
+        .pImageIndices = &imageIndex
+    };
 
     result = vkQueuePresentKHR(_graphicsQueueHandler.Get(), &presentInfo);
 
@@ -254,8 +262,10 @@ void Application::RecordCommandBuffer(const CommandBuffer& cmdBuffer, uint32_t c
 {
     VkExtent2D renderExtent = _swapChain->GetExtent();
 
-    ObjectData objectData = {};
-    objectData.localToWorldMatrix = glm::mat4(1.0f);
+    ObjectData objectData =
+    {
+        .localToWorldMatrix = glm::mat4(1.0f)
+    };
     objectData.localToWorldMatrix = glm::rotate<float>(objectData.localToWorldMatrix, glm::radians(-90.0f), glm::vec3(1, 0, 0));
     objectData.localToWorldMatrix = glm::rotate<float>(objectData.localToWorldMatrix, glm::radians(-90.0f), glm::vec3(0, 0, 1));
 

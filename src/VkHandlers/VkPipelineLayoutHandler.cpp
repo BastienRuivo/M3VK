@@ -18,13 +18,14 @@ VkPipelineLayoutHandler::VkPipelineLayoutHandler(VkDevice device, const VkDescri
 #endif
     _device = device;
 
-    // Uniforms (empty for now)
-    VkPipelineLayoutCreateInfo layoutCreateInfo{};
-    layoutCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    layoutCreateInfo.setLayoutCount = descriptorLayoutCount;
-    layoutCreateInfo.pSetLayouts = descriptorLayouts;
-    layoutCreateInfo.pushConstantRangeCount = pushConstantRangeCount;
-    layoutCreateInfo.pPushConstantRanges = pushConstantRanges;
+    VkPipelineLayoutCreateInfo layoutCreateInfo
+    {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+        .setLayoutCount = descriptorLayoutCount,
+        .pSetLayouts = descriptorLayouts,
+        .pushConstantRangeCount = pushConstantRangeCount,
+        .pPushConstantRanges = pushConstantRanges
+    };
 
     if(vkCreatePipelineLayout(_device, &layoutCreateInfo, nullptr, &_internal) != VK_SUCCESS)
     {

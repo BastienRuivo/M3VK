@@ -17,11 +17,13 @@ VkDescriptorPoolHandler::VkDescriptorPoolHandler(VkDevice device, const VkDescri
 #endif
     _device = device;
 
-    VkDescriptorPoolCreateInfo poolCreateInfo{};
-    poolCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-    poolCreateInfo.poolSizeCount = poolSizesCount;
-    poolCreateInfo.pPoolSizes = poolSizes;
-    poolCreateInfo.maxSets = maxSets;
+    VkDescriptorPoolCreateInfo poolCreateInfo
+    {
+        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+        .maxSets = maxSets,
+        .poolSizeCount = poolSizesCount,
+        .pPoolSizes = poolSizes,
+    };
 
     if(vkCreateDescriptorPool(_device, &poolCreateInfo, nullptr, &_internal) != VK_SUCCESS)
     {

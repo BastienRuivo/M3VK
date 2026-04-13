@@ -1,6 +1,5 @@
 #pragma once
 
-#include <array>
 #include <glm/ext/vector_float2.hpp>
 #include <glm/ext/vector_float3.hpp>
 #include <glm/fwd.hpp>
@@ -15,44 +14,44 @@
 struct Vertex
 {
     glm::vec3 pos;
-    glm::vec3 color;
     glm::vec2 texCoord;
 
     bool operator==(const Vertex& other) const
     {
-        return pos == other.pos && color == other.color && texCoord == other.texCoord;
+        return pos == other.pos && texCoord == other.texCoord;
     }
 
     static VkVertexInputBindingDescription GetBindingDescription()
     {
-        VkVertexInputBindingDescription description{};
-        description.binding = 0;
-        description.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-        description.stride = sizeof(Vertex);
+        VkVertexInputBindingDescription description
+        {
+            .binding = 0,
+            .stride = sizeof(Vertex),
+            .inputRate = VK_VERTEX_INPUT_RATE_VERTEX
+        };
         return description;
     }
 
-    static std::array<VkVertexInputAttributeDescription, 3> GetAttributeDescription()
+    static std::vector<VkVertexInputAttributeDescription> GetAttributeDescription()
     {
-        std::array<VkVertexInputAttributeDescription, 3> attributeDescriptions{};
-
-        // position
-        attributeDescriptions[0].binding = 0;
-        attributeDescriptions[0].location = 0;
-        attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
-        attributeDescriptions[0].offset = offsetof(Vertex, pos);
-
-        // color
-        attributeDescriptions[1].binding = 0;
-        attributeDescriptions[1].location = 1;
-        attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
-        attributeDescriptions[1].offset = offsetof(Vertex, color);
-
-        // texture coordinates
-        attributeDescriptions[2].binding = 0;
-        attributeDescriptions[2].location = 2;
-        attributeDescriptions[2].format = VK_FORMAT_R32G32_SFLOAT;
-        attributeDescriptions[2].offset = offsetof(Vertex, texCoord);
+        uint32_t location = 0;
+        std::vector<VkVertexInputAttributeDescription> attributeDescriptions
+        {
+            VkVertexInputAttributeDescription
+            {
+                .location = location++,
+                .binding = 0,
+                .format = VK_FORMAT_R32G32B32_SFLOAT,
+                .offset = offsetof(Vertex, pos)
+            },
+            VkVertexInputAttributeDescription
+            {
+                .location = location++,
+                .binding = 0,
+                .format = VK_FORMAT_R32G32_SFLOAT,
+                .offset = offsetof(Vertex, texCoord)
+            }
+        };
 
         return attributeDescriptions;
     }
@@ -61,9 +60,7 @@ struct Vertex
 namespace std {
     template<> struct hash<Vertex> {
         size_t operator()(Vertex const& vertex) const {
-            return ((hash<glm::vec3>()(vertex.pos) ^
-                   (hash<glm::vec3>()(vertex.color) << 1)) >> 1) ^
-                   (hash<glm::vec2>()(vertex.texCoord) << 1);
+            return ((hash<glm::vec3>()(vertex.pos) ^ (hash<glm::vec2>()(vertex.texCoord) << 1)) >> 1);
         }
     };
 }

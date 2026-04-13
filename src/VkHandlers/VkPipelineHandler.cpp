@@ -38,139 +38,157 @@ VkPipelineHandler::VkPipelineHandler(const VkExtent2D& appExtent, VkDevice devic
         VK_DYNAMIC_STATE_SCISSOR
     };
 
-    VkPipelineDynamicStateCreateInfo pipelineStateCreateInfo{};
-    pipelineStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-    pipelineStateCreateInfo.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
-    pipelineStateCreateInfo.pDynamicStates = dynamicStates.data();
+    VkPipelineDynamicStateCreateInfo pipelineStateCreateInfo
+    {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
+        .dynamicStateCount = static_cast<uint32_t>(dynamicStates.size()),
+        .pDynamicStates = dynamicStates.data()
+    };
 
     VkVertexInputBindingDescription bindingDescription = Vertex::GetBindingDescription();
     auto attributeDescription = Vertex::GetAttributeDescription();
 
 
-    VkPipelineVertexInputStateCreateInfo vertexInputCreateInfo{};
-    vertexInputCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-    vertexInputCreateInfo.vertexBindingDescriptionCount = 1;
-    vertexInputCreateInfo.pVertexBindingDescriptions = &bindingDescription;
-    vertexInputCreateInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescription.size());
-    vertexInputCreateInfo.pVertexAttributeDescriptions = attributeDescription.data();
+    VkPipelineVertexInputStateCreateInfo vertexInputCreateInfo
+    {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
+        .vertexBindingDescriptionCount = 1,
+        .pVertexBindingDescriptions = &bindingDescription,
+        .vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescription.size()),
+        .pVertexAttributeDescriptions = attributeDescription.data()
+    };
 
     // Input Assembly
-    VkPipelineInputAssemblyStateCreateInfo inputAssemblyCreateInfo{};
-    inputAssemblyCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-    // For later use (When i will choose if i still want to make a cube world like thingy) maybe i can try strip ?
-    // like in opengl, this turn 4 index like 1234 into 2 triangle (123, 324) and this can save me some place (bandwith <3)
-    // theres also some element buffer shit to setup here later
-    inputAssemblyCreateInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-    inputAssemblyCreateInfo.primitiveRestartEnable = false;
+    VkPipelineInputAssemblyStateCreateInfo inputAssemblyCreateInfo
+    {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
+        // For later use (When i will choose if i still want to make a cube world like thingy) maybe i can try strip ?
+        // like in opengl, this turn 4 index like 1234 into 2 triangle (123, 324) and this can save me some place (bandwith <3)
+        // theres also some element buffer shit to setup here later
+        .topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
+        .primitiveRestartEnable = false
+    };
 
-    VkViewport viewport{};
-    viewport.x = 0.0f;
-    viewport.y = 0.0f;
-    viewport.width = appExtent.width;
-    viewport.height = appExtent.height;
-    viewport.minDepth = 0.0f;
-    viewport.maxDepth = 1.0f;
+    VkViewport viewport
+    {
+        .x = 0.0f,
+        .y = 0.0f,
+        .width = (float)appExtent.width,
+        .height = (float)appExtent.height,
+        .minDepth = 0.0f,
+        .maxDepth = 1.0f
+    };
 
     // Region to rasterize pixels on
-    VkRect2D scissors{};
-    scissors.extent = appExtent;
-    scissors.offset.x = 0;
-    scissors.offset.y = 0;
+    VkRect2D scissors
+    {
+        .offset = {0, 0},
+        .extent = appExtent
+    };
 
-    VkPipelineViewportStateCreateInfo viewportCreateInfo{};
-    viewportCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
-    viewportCreateInfo.viewportCount = 1;
-    viewportCreateInfo.scissorCount = 1;
+    VkPipelineViewportStateCreateInfo viewportCreateInfo
+    {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
+        .viewportCount = 1,
+        .scissorCount = 1,
+    };
 
     // Rasterizer
-    VkPipelineRasterizationStateCreateInfo rasterizeCreateInfo{};
-    rasterizeCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-    // if true, clamp near and far object to the planes instead of discarding them
-    rasterizeCreateInfo.depthClampEnable = false;
-    // disable geometry from going to the rasterizer stage ??
-    rasterizeCreateInfo.rasterizerDiscardEnable = false;
-    // VK_POLYGON_MODE_LINE for wireframe later maybe ? or this can be another feature to enable, check later
-    rasterizeCreateInfo.polygonMode = VK_POLYGON_MODE_FILL;
-    rasterizeCreateInfo.cullMode = VK_CULL_MODE_NONE;
-    rasterizeCreateInfo.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
-    rasterizeCreateInfo.depthBiasEnable = VK_FALSE;
-    rasterizeCreateInfo.depthBiasConstantFactor = 0.0f;
-    rasterizeCreateInfo.depthBiasClamp = 0.0f;
-    rasterizeCreateInfo.depthBiasSlopeFactor = 0.0f;
-    rasterizeCreateInfo.lineWidth = 1.0f;
+    VkPipelineRasterizationStateCreateInfo rasterizeCreateInfo
+    {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
+        // if true, clamp near and far object to the planes instead of discarding them
+        .depthClampEnable = false,
+        // disable geometry from going to the rasterizer stage ??
+        .rasterizerDiscardEnable = false,
+        // VK_POLYGON_MODE_LINE for wireframe later maybe ? or this can be another feature to enable, check later
+        .polygonMode = VK_POLYGON_MODE_FILL,
+        .cullMode = VK_CULL_MODE_NONE,
+        .frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE,
+        .depthBiasEnable = VK_FALSE,
+        .depthBiasConstantFactor = 0.0f,
+        .depthBiasClamp = 0.0f,
+        .depthBiasSlopeFactor = 0.0f,
+        .lineWidth = 1.0f
+    };
 
-    VkPipelineMultisampleStateCreateInfo msaaCreateInfo{};
-    msaaCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-    msaaCreateInfo.sampleShadingEnable = VK_TRUE;
-    msaaCreateInfo.rasterizationSamples = msaaSampleCount;
-    msaaCreateInfo.minSampleShading = 0.2f;
-    msaaCreateInfo.pSampleMask = nullptr;
-    msaaCreateInfo.alphaToCoverageEnable = VK_FALSE;
-    msaaCreateInfo.alphaToOneEnable = VK_FALSE;
-
-    // Here depth later
+    VkPipelineMultisampleStateCreateInfo msaaCreateInfo
+    {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
+        .rasterizationSamples = msaaSampleCount,
+        .sampleShadingEnable = VK_TRUE,
+        .minSampleShading = 0.2f,
+        .pSampleMask = nullptr,
+        .alphaToCoverageEnable = VK_FALSE,
+        .alphaToOneEnable = VK_FALSE
+    };
 
     // Blending
-    VkPipelineColorBlendAttachmentState colorBlendAttachment{};
-    colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-    colorBlendAttachment.blendEnable = VK_FALSE;
-    colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE; // Optional
-    colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ZERO; // Optional
-    colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD; // Optional
-    colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE; // Optional
-    colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO; // Optional
-    colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD; // Optional
+    VkPipelineColorBlendAttachmentState colorBlendAttachment
+    {
+        .blendEnable = VK_FALSE,
+        .srcColorBlendFactor = VK_BLEND_FACTOR_ONE, // Optional
+        .dstColorBlendFactor = VK_BLEND_FACTOR_ZERO, // Optional
+        .colorBlendOp = VK_BLEND_OP_ADD, // Optional
+        .srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE, // Optional
+        .dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO, // Optional
+        .alphaBlendOp = VK_BLEND_OP_ADD, // Optional
+        .colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
+    };
 
-    VkPipelineColorBlendStateCreateInfo colorBlending{};
-    colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-    colorBlending.logicOpEnable = VK_FALSE;
-    colorBlending.logicOp = VK_LOGIC_OP_COPY; // Optional
-    colorBlending.attachmentCount = 1;
-    colorBlending.pAttachments = &colorBlendAttachment;
-    colorBlending.blendConstants[0] = 0.0f; // Optional
-    colorBlending.blendConstants[1] = 0.0f; // Optional
-    colorBlending.blendConstants[2] = 0.0f; // Optional
-    colorBlending.blendConstants[3] = 0.0f; // Optional
+    VkPipelineColorBlendStateCreateInfo colorBlending
+    {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
+        .logicOpEnable = VK_FALSE,
+        .logicOp = VK_LOGIC_OP_COPY, // Optional
+        .attachmentCount = 1,
+        .pAttachments = &colorBlendAttachment,
+        .blendConstants = { 0.0f, 0.0f, 0.0f, 0.0f } // Optional
+    };
 
-    VkGraphicsPipelineCreateInfo pipelineCreateInfo{};
-    pipelineCreateInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-    pipelineCreateInfo.stageCount = 2;
+    VkPipelineDepthStencilStateCreateInfo depthStencilCreateInfo
+    {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
+        .depthTestEnable = VK_TRUE,
+        .depthWriteEnable = VK_TRUE,
+        .depthCompareOp = VK_COMPARE_OP_LESS,
 
-    VkPipelineDepthStencilStateCreateInfo depthStencilCreateInfo{};
-    depthStencilCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-    depthStencilCreateInfo.depthTestEnable = VK_TRUE;
-    depthStencilCreateInfo.depthWriteEnable = VK_TRUE;
-    depthStencilCreateInfo.depthCompareOp = VK_COMPARE_OP_LESS;
+        // Can discard pixels fragment that aren't in this interval
+        .depthBoundsTestEnable = VK_FALSE,
 
-    // Can discard pixels fragment that aren't in this interval
-    depthStencilCreateInfo.depthBoundsTestEnable = VK_FALSE;
-    depthStencilCreateInfo.minDepthBounds = 0.0f;
-    depthStencilCreateInfo.maxDepthBounds = 1.0f;
+        // Depth Stencil Not used for now
+        .stencilTestEnable = VK_FALSE,
+        .front{},
+        .back{},
 
-    // Depth Stencil
-    // Not used for now
-    depthStencilCreateInfo.stencilTestEnable = VK_FALSE;
-    depthStencilCreateInfo.front = {};
-    depthStencilCreateInfo.back = {};
+        .minDepthBounds = 0.0f, // Optional
+        .maxDepthBounds = 1.0f, // Optional
+    };
 
-    // Graphics pipeline
-    pipelineCreateInfo.pStages = shadersStagesCreateInfo;
-    pipelineCreateInfo.pVertexInputState = &vertexInputCreateInfo;
-    pipelineCreateInfo.pInputAssemblyState = &inputAssemblyCreateInfo;
-    pipelineCreateInfo.pViewportState = &viewportCreateInfo;
-    pipelineCreateInfo.pRasterizationState = &rasterizeCreateInfo;
-    pipelineCreateInfo.pMultisampleState = &msaaCreateInfo;
-    pipelineCreateInfo.pDepthStencilState = &depthStencilCreateInfo;
-    pipelineCreateInfo.pColorBlendState = &colorBlending;
-    pipelineCreateInfo.pDynamicState = &pipelineStateCreateInfo;
+    VkGraphicsPipelineCreateInfo pipelineCreateInfo
+    {
+        .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
+        .stageCount = 2,
 
-    pipelineCreateInfo.layout = pipelineLayout;
-    pipelineCreateInfo.renderPass = renderPass;
-    pipelineCreateInfo.subpass = 0;
+        // Graphics pipeline
+        .pStages = shadersStagesCreateInfo,
+        .pVertexInputState = &vertexInputCreateInfo,
+        .pInputAssemblyState = &inputAssemblyCreateInfo,
+        .pViewportState = &viewportCreateInfo,
+        .pRasterizationState = &rasterizeCreateInfo,
+        .pMultisampleState = &msaaCreateInfo,
+        .pDepthStencilState = &depthStencilCreateInfo,
+        .pColorBlendState = &colorBlending,
+        .pDynamicState = &pipelineStateCreateInfo,
 
-    // can be use to switch between parent pipeline (less expensive theorically if simillar)
-    pipelineCreateInfo.basePipelineHandle = VK_NULL_HANDLE;
-    pipelineCreateInfo.basePipelineIndex = -1;
+        .layout = pipelineLayout,
+        .renderPass = renderPass,
+        .subpass = 0,
+
+        // can be use to switch between parent pipeline (less expensive theorically if simillar)
+        .basePipelineHandle = VK_NULL_HANDLE,
+        .basePipelineIndex = -1
+    };
 
     if(vkCreateGraphicsPipelines(_device, VK_NULL_HANDLE, 1, &pipelineCreateInfo, nullptr, &_internal) != VK_SUCCESS)
     {

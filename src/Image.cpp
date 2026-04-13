@@ -111,25 +111,25 @@ GPUImage::GPUImage(VkDevice device,  const VkPhysicalDeviceHandler & physicalDev
     DebugLayer::Log(DebugLayer::LogType::CREATE, "GPUImage Create !");
 #endif
 
-    VkImageCreateInfo createInfo{};
-    createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-    createInfo.imageType = VK_IMAGE_TYPE_2D;
-    createInfo.extent.width = static_cast<uint32_t>(width);
-    createInfo.extent.height = static_cast<uint32_t>(height);
-    createInfo.extent.depth = 1;
-    createInfo.mipLevels = _mipCount;
-    createInfo.arrayLayers = 1;
-
-    createInfo.format = _format;
-    // Optimal tiling data, if need to write / acces directly to the texture need LINEAR wich is classical row column
-    createInfo.tiling = tiling;
-    createInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-
-    createInfo.usage = imageUsageFlags;
-    // only used by the graphics queue
-    createInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    // Search on this later ?
-    createInfo.samples = msaaSampleCount;
+    VkImageCreateInfo createInfo
+    {
+        .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+        .imageType = VK_IMAGE_TYPE_2D,
+        .format = _format,
+        .extent
+        {
+            .width = static_cast<uint32_t>(width),
+            .height = static_cast<uint32_t>(height),
+            .depth = 1
+        },
+        .mipLevels = _mipCount,
+        .arrayLayers = 1,
+        .samples = msaaSampleCount,
+        .tiling = tiling, // Optimal tiling data, if need to write / acces directly to the texture need LINEAR wich is classical row column
+        .usage = imageUsageFlags,
+        .sharingMode = VK_SHARING_MODE_EXCLUSIVE, // only used by the graphics queue
+        .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+    };
 
     if(vkCreateImage(_device, &createInfo, nullptr, &_internal) != VK_SUCCESS)
     {
@@ -139,36 +139,50 @@ GPUImage::GPUImage(VkDevice device,  const VkPhysicalDeviceHandler & physicalDev
     VkMemoryRequirements memRequirements;
     vkGetImageMemoryRequirements(device, _internal, &memRequirements);
 
-    VkMemoryAllocateInfo allocInfo{};
-    allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    allocInfo.allocationSize = memRequirements.size;
-    allocInfo.memoryTypeIndex = physicalDevice.FindMemoryType(memRequirements.memoryTypeBits, memoryFlags);
+    VkMemoryAllocateInfo allocInfo
+    {
+        .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+        .allocationSize = memRequirements.size,
+        .memoryTypeIndex = physicalDevice.FindMemoryType(memRequirements.memoryTypeBits, memoryFlags)
+    };
 
     if(vkAllocateMemory(_device, &allocInfo, nullptr, &_memoryInternal) != VK_SUCCESS)
     {
+        vkDestroyImage(_device, _internal, nullptr);
         throw  std::runtime_error("Can't allocate image memory !");
     }
 
-    vkBindImageMemory(_device, _internal, _memoryInternal, 0);
+    if(vkBindImageMemory(_device, _internal, _memoryInternal, 0) != VK_SUCCESS)
+    {
+        vkDestroyImage(_device, _internal, nullptr);
+        vkFreeMemory(_device, _memoryInternal, nullptr);
+        throw  std::runtime_error("Can't bind image memory !");
+    }
 
     _view = VkImageViewHandler(_device, _internal, _format, _mipCount);
 }
 
 void GPUImage::TransitionLayoutCommand(const CommandBuffer& cmdBuffer, VkImageLayout oldLayout, VkImageLayout newLayout)
 {
-    VkImageMemoryBarrier barrier{};
-    barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    barrier.oldLayout = oldLayout;
-    barrier.newLayout = newLayout;
-    // used to transfer queue ownership if someday I do a copy queue
-    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barrier.image = _internal;
-
-    barrier.subresourceRange.baseMipLevel = 0;
-    barrier.subresourceRange.levelCount = _mipCount;
-    barrier.subresourceRange.baseArrayLayer = 0;
-    barrier.subresourceRange.layerCount = 1;
+    VkImageMemoryBarrier barrier
+    {
+        .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+        .srcAccessMask = 0,
+        .dstAccessMask = 0,
+        .oldLayout = oldLayout,
+        .newLayout = newLayout,
+        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED, // used to transfer queue ownership if someday I do a copy queue
+        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+        .image = _internal,
+        .subresourceRange
+        {
+            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+            .baseMipLevel = 0,
+            .levelCount = _mipCount,
+            .baseArrayLayer = 0,
+            .layerCount = 1
+        },
+    };
 
     VkPipelineStageFlags sourceStage;
     VkPipelineStageFlags destinationStage;
@@ -240,21 +254,30 @@ void GPUImage::CopyCPUtoGPUImage(const CPUImage & cpuImg, const VkPhysicalDevice
     {
         TransitionLayoutCommand(cmdBuffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
-        VkBufferImageCopy region{};
-        region.bufferOffset = 0;
-        region.bufferRowLength = 0;
-        region.bufferImageHeight = 0;
-
-        region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        region.imageSubresource.mipLevel = 0;
-        region.imageSubresource.baseArrayLayer = 0;
-        region.imageSubresource.layerCount = 1;
-
-        region.imageOffset = {0, 0, 0};
-        region.imageExtent = {
-            static_cast<uint32_t>(cpuImg.Width()),
-            static_cast<uint32_t>(cpuImg.Height()),
-            1
+        VkBufferImageCopy region
+        {
+            .bufferOffset = 0,
+            .bufferRowLength = 0,
+            .bufferImageHeight = 0,
+            .imageSubresource
+            {
+                .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                .mipLevel = 0,
+                .baseArrayLayer = 0,
+                .layerCount = 1
+            },
+            .imageOffset
+            {
+                .x = 0,
+                .y = 0,
+                .z = 0
+            },
+            .imageExtent
+            {
+                .width = static_cast<uint32_t>(cpuImg.Width()),
+                .height = static_cast<uint32_t>(cpuImg.Height()),
+                .depth = 1
+            },
         };
         cmdBuffer.CopyBufferToImage(stage.Get(), _internal, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &region, 1);
 
@@ -276,15 +299,21 @@ void GPUImage::GenerateMipmapsCommand(const CommandBuffer& cmdBuffer, const VkPh
         throw std::runtime_error("texture image format does not support linear blitting!");
     }
 
-    VkImageMemoryBarrier barrier{};
-    barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    barrier.image = _internal;
-    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    barrier.subresourceRange.baseArrayLayer = 0;
-    barrier.subresourceRange.layerCount = 1;
-    barrier.subresourceRange.levelCount = 1;
+    VkImageMemoryBarrier barrier
+    {
+        .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+        .image = _internal,
+        .subresourceRange
+        {
+            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+            .baseMipLevel = 0,
+            .levelCount = 1,
+            .baseArrayLayer = 0,
+            .layerCount = 1
+        }
+    };
 
     int32_t mipWidth = _width;
     int32_t mipHeight = _height;
@@ -299,24 +328,34 @@ void GPUImage::GenerateMipmapsCommand(const CommandBuffer& cmdBuffer, const VkPh
 
         cmdBuffer.Barrier(VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, nullptr, 0, nullptr, 0, &barrier, 1);
 
-        VkImageBlit blit{};
-        // source
-        blit.srcOffsets[0] = {0, 0, 0};
-        blit.srcOffsets[1] = {mipWidth, mipHeight, 1};
+        VkImageBlit blit
+        {
+            .srcSubresource
+            {
+                .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                .mipLevel = i - 1,
+                .baseArrayLayer = 0,
+                .layerCount = 1
+            },
+            .srcOffsets =
+            {
+                {0, 0, 0},
+                {mipWidth, mipHeight, 1}
+            },
+            .dstSubresource
+            {
+                .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                .mipLevel = i,
+                .baseArrayLayer = 0,
+                .layerCount = 1
+            },
+            .dstOffsets =
+            {
+                {0, 0, 0},
+                {mipWidth > 1 ? mipWidth / 2 : 1, mipHeight > 1 ? mipHeight / 2 : 1, 1}
+            },
 
-        blit.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        blit.srcSubresource.mipLevel = i - 1;
-        blit.srcSubresource.baseArrayLayer = 0;
-        blit.srcSubresource.layerCount = 1;
-
-        // destination
-        blit.dstOffsets[0] = {0, 0, 0};
-        blit.dstOffsets[1] = {mipWidth > 1 ? mipWidth / 2 : 1, mipHeight > 1 ? mipHeight / 2 : 1, 1};
-
-        blit.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        blit.dstSubresource.mipLevel = i;
-        blit.dstSubresource.baseArrayLayer = 0;
-        blit.dstSubresource.layerCount = 1;
+        };
 
         cmdBuffer.Blit(_internal, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, _internal, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blit, VK_FILTER_LINEAR);
 

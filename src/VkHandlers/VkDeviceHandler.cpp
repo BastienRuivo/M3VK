@@ -23,46 +23,42 @@ VkDeviceHandler::VkDeviceHandler(VkPhysicalDevice physicalDevice, VkSurfaceKHR w
     float queuePriority = 1.0f;
     for(uint32_t queueId : uniqueQueueIds)
     {
-        VkDeviceQueueCreateInfo queueCreateInfo{};
-        queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-        queueCreateInfo.queueFamilyIndex = queueId;
-        queueCreateInfo.queueCount = 1;
-        queueCreateInfo.pQueuePriorities = &queuePriority;
+        VkDeviceQueueCreateInfo queueCreateInfo
+        {
+            .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
+            .queueFamilyIndex = queueId,
+            .queueCount = 1,
+            .pQueuePriorities = &queuePriority
+        };
         queueCreateInfos.push_back(queueCreateInfo);
     }
 
-    VkPhysicalDeviceFeatures deviceFeatures{};
-    deviceFeatures.samplerAnisotropy = VK_TRUE;
-    deviceFeatures.sampleRateShading = VK_TRUE;
 
-    VkDeviceCreateInfo deviceCreateInfo{};
-    deviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-    deviceCreateInfo.pQueueCreateInfos = queueCreateInfos.data();
-    deviceCreateInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
-    deviceCreateInfo.pEnabledFeatures = &deviceFeatures;
-    deviceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(deviceExtensions.size());
-    deviceCreateInfo.ppEnabledExtensionNames = deviceExtensions.data();
+    VkPhysicalDeviceFeatures deviceFeatures
+    {
+        .sampleRateShading = VK_TRUE,
+        .samplerAnisotropy = VK_TRUE,
+    };
 
-    if(DebugLayer::Enabled)
+    VkDeviceCreateInfo deviceCreateInfo
     {
-        deviceCreateInfo.enabledLayerCount = static_cast<uint32_t>(DebugLayer::ValidationLayer.size());
-        deviceCreateInfo.ppEnabledLayerNames = DebugLayer::ValidationLayer.data();
-    }
-    else
-    {
-        deviceCreateInfo.enabledLayerCount = 0;
-    }
+        .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
+        .queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size()),
+        .pQueueCreateInfos = queueCreateInfos.data(),
+
+        .enabledLayerCount = DebugLayer::Enabled ? static_cast<uint32_t>(DebugLayer::ValidationLayer.size()) : 0,
+        .ppEnabledLayerNames = DebugLayer::Enabled ? DebugLayer::ValidationLayer.data() : nullptr,
+
+        .enabledExtensionCount = static_cast<uint32_t>(deviceExtensions.size()),
+        .ppEnabledExtensionNames = deviceExtensions.data(),
+        .pEnabledFeatures = &deviceFeatures
+    };
 
     VkResult deviceCreation = vkCreateDevice(physicalDevice, &deviceCreateInfo, nullptr, &_internal);
     if(deviceCreation != VK_SUCCESS)
     {
         throw std::runtime_error("Failed to create VK Logical Device !");
     }
-
-    //vkGetDeviceQueue(_device, QueueFamilyId.Graphics.value(), 0, &_graphicsQueue);
-    //vkGetDeviceQueue(_device, QueueFamilyId.Present.value(), 0, &_presentQueue);
-    // use it
-    //vkGetDeviceQueue(_device, queueFamilyId.Copy.value(), 0, &_copyQueue);
 }
 
 VkDeviceHandler::~VkDeviceHandler()

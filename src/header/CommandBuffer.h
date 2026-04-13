@@ -40,7 +40,7 @@ class CommandBuffer
 
     // Todo: how to handle this properly (both need different params)
     void BindBuffer(const GraphicsBuffer& buffer) const;
-    void SetScissor(uint32_t x, uint32_t y, uint32_t width, uint32_t height) const;
+    void SetScissor(int32_t x, int32_t y, uint32_t width, uint32_t height) const;
     void SetViewport(uint32_t width, uint32_t height, uint32_t x = 0, uint32_t y = 0, float minDepth = 1.0f, float maxDepth = 0.0f) const;
     void BindDescriptorSets(VkPipelineBindPoint bindPoint, const VkPipelineLayout& pipelineLayout, const VkDescriptorSet& set) const
     {
@@ -101,10 +101,12 @@ class CommandBuffer
 
     inline void CopyBuffer(VkBuffer src, VkBuffer dst, VkDeviceSize size, uint32_t srcIndex = 0, uint32_t dstIndex = 0)
     {
-        VkBufferCopy region{};
-        region.srcOffset = srcIndex;
-        region.dstOffset = dstIndex;
-        region.size = size;
+        VkBufferCopy region
+        {
+            .srcOffset = srcIndex,
+            .dstOffset = dstIndex,
+            .size = size
+        };
 
         vkCmdCopyBuffer(_internal, src, dst, 1, &region);
     }

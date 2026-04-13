@@ -17,10 +17,12 @@ VkDescriptorSetLayoutHandler::VkDescriptorSetLayoutHandler(VkDevice device, cons
 
     _device = device;
 
-    VkDescriptorSetLayoutCreateInfo createInfo{};
-    createInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    createInfo.bindingCount = bindingCount;
-    createInfo.pBindings = bindings;
+    VkDescriptorSetLayoutCreateInfo createInfo
+    {
+        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+        .bindingCount = bindingCount,
+        .pBindings = bindings
+    };
 
     if(vkCreateDescriptorSetLayout(_device, &createInfo, nullptr, &_internal) != VK_SUCCESS)
     {
