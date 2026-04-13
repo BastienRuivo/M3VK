@@ -114,6 +114,8 @@ class Application
 
     std::vector<Renderer> _renderers;
 
+    bool _mouseLocked = false;
+    float _inputPrevent = 0;
     double _lastMouseX = -1.0;
     double _lastMouseY = -1.0;
     uint32_t _inputDeltaPrevent = 3; // see : https://github.com/glfw/glfw/issues/2523

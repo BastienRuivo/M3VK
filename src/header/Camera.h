@@ -44,15 +44,14 @@ public:
 
     float speed = 2.5f;
     glm::vec3 position;
+    float _fov;
+    float _aspect;
+    float _near;
+    float _far;
 
     private:
     float _yaw = -90.0f;
     float _pitch = 0.0f;
     glm::vec3 _front;
     glm::vec3 _up;
-
-    float _fov;
-    float _aspect;
-    float _near;
-    float _far;
 };

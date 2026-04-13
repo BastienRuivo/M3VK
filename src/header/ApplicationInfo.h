@@ -27,6 +27,7 @@ class ApplicationInfo
         static inline constexpr uint32_t VertexBufferMaxSize = 8388608; // 2^23
         static inline constexpr uint32_t IndexBufferMaxSize = 8388608;
         static inline constexpr VkFormat DepthFormat = VK_FORMAT_D32_SFLOAT;
+        static inline constexpr int InputPrevent = 60;
     };
 
     inline const ProjectHelper::QueueFamilyIds& GetQueueFamilyIds() const

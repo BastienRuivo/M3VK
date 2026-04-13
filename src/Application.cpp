@@ -175,6 +175,8 @@ void Application::RefreshSwapChain()
     _swapChain.reset();
     _swapChain = std::make_unique<SwapChain>(_window, _physicalDeviceHandler.Get(), _deviceHandler.Get(), _windowSurfaceHandler.Get());
 
+    _camera._aspect = static_cast<float>(_swapChain->GetExtent().width) / static_cast<float>(_swapChain->GetExtent().height);
+
     _colorBackBuffer.reset();
     _colorBackBuffer = std::make_unique<GPUAllocatedImage>(_deviceHandler.Get(), _physicalDeviceHandler, _swapChain->GetExtent().width, _swapChain->GetExtent().height,
         ApplicationInfo::Get().GetMsaaSample(),
@@ -449,6 +451,16 @@ void Application::MainLoop()
         if(_window.IsKeyPressed(GLFW_KEY_LEFT_SHIFT)) _camera.position -= speed * _camera.Up();
 
         if(_window.IsKeyPressed(GLFW_KEY_ESCAPE)) shouldClose = true;
+
+        if(_inputPrevent <= 0)
+        {
+            if(_window.IsKeyPressed(GLFW_KEY_LEFT_ALT)) _window.LockMouse(_mouseLocked = !_mouseLocked); _inputPrevent = ApplicationInfo::Constant::InputPrevent;
+        }
+        else
+        {
+            // it's in ms, deduce delta time in ms
+            _inputPrevent = _inputPrevent - deltaTime * 1000;
+        }
 
         DrawFrame();
     }

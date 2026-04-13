@@ -72,13 +72,13 @@ class GraphicsBuffer
     }
 
     protected:
-    VkBuffer _internal;
-    VkDeviceMemory _memoryInternal;
+    VkBuffer _internal = VK_NULL_HANDLE;
+    VkDeviceMemory _memoryInternal = VK_NULL_HANDLE;
     BufferType _type;
-    void* _dataPtr; // Currently used for persistent mapping for Uniform buffers, we only map it once to avoid the cost of mapping it each time
-    VkDeviceSize _stride;
-    VkDeviceSize _count;
-    VkDevice _device;
+    void* _dataPtr = nullptr; // Currently used for persistent mapping for Uniform buffers, we only map it once to avoid the cost of mapping it each time
+    VkDeviceSize _stride = 0;
+    VkDeviceSize _count = 0;
+    VkDevice _device = VK_NULL_HANDLE;
 };
 
 // this class handle a graphics buffer with an arbitrary huge size where we can append data

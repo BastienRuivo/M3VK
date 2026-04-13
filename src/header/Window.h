@@ -30,10 +30,11 @@ class Window
         return _internal;
     }
 
+    void LockMouse(bool lock);
 
     private:
     GLFWwindow* _internal = nullptr;
-    int _width;
-    int _height;
-    const char * _title;
+    int _width = 0;
+    int _height = 0;
+    const char * _title = nullptr;
 };

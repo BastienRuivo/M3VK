@@ -33,7 +33,6 @@ Window::Window(int width, int height, const char* title, void* resizeObject, GLF
     glfwSetWindowUserPointer(_internal, resizeObject);
     glfwSetFramebufferSizeCallback(_internal, resizeCallback);
 
-    glfwSetInputMode(_internal, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     glfwSetCursorPosCallback(_internal, mouseCallback);
     glfwSetWindowFocusCallback(_internal, focusCallback);
 
@@ -68,4 +67,9 @@ Window::~Window()
 #ifdef M3VK_MEMORYLOG
     DebugLayer::Log(DebugLayer::LogType::DESTROY, "Window Destroyed !");
 #endif
+}
+
+void Window::LockMouse(bool lock)
+{
+    glfwSetInputMode(_internal, GLFW_CURSOR, lock? GLFW_CURSOR_DISABLED : GLFW_CURSOR_NORMAL);
 }

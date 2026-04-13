@@ -44,7 +44,7 @@ class SwapChain
 
     private:
 
-    VkFormat _imageFormat;
+    VkFormat _imageFormat = VK_FORMAT_UNDEFINED;
     VkExtent2D _extent;
     VkSwapchainKHR _internal = VK_NULL_HANDLE;
     VkDevice _device = VK_NULL_HANDLE;
