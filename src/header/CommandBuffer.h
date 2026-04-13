@@ -2,7 +2,6 @@
 
 #include "header/GraphicsBuffer.h"
 #include <cstdint>
-#include <vector>
 #include <vulkan/vulkan_core.h>
 class CommandBuffer
 {
@@ -41,8 +40,11 @@ class CommandBuffer
     // Todo: how to handle this properly (both need different params)
     void BindBuffer(const GraphicsBuffer& buffer) const;
     void SetScissor(int32_t x, int32_t y, uint32_t width, uint32_t height) const;
-    void SetViewport(uint32_t width, uint32_t height, uint32_t x = 0, uint32_t y = 0, float minDepth = 1.0f, float maxDepth = 0.0f) const;
-    void BindDescriptorSets(VkPipelineBindPoint bindPoint, const VkPipelineLayout& pipelineLayout, const VkDescriptorSet& set) const
+    void SetScissor(const VkRect2D& scissors) const;
+    void SetViewport(uint32_t x, uint32_t y, uint32_t width, uint32_t height) const;
+    void TransitionImageLayout(VkImage img, VkFormat format, uint32_t mipCount, VkImageLayout oldLayout, VkImageLayout newLayout) const;
+
+    inline void BindDescriptorSets(VkPipelineBindPoint bindPoint, const VkPipelineLayout& pipelineLayout, const VkDescriptorSet& set) const
     {
         vkCmdBindDescriptorSets(_internal, bindPoint, pipelineLayout, 0, 1, &set, 0, nullptr);;
     }
@@ -55,13 +57,6 @@ class CommandBuffer
     {
         vkCmdBindPipeline(_internal, bindPoint, pipeline);
     }
-
-    inline void EndRenderPass() const
-    {
-        vkCmdEndRenderPass(_internal);
-    }
-
-    void BeginRenderPass(VkRenderPass renderPass, VkFramebuffer framebuffer, std::vector<VkClearValue>& clearValues, VkExtent2D extents, VkOffset2D offset = {0, 0}) const;
 
     void Reset(VkCommandBufferResetFlags flags = 0) const
     {
@@ -109,6 +104,26 @@ class CommandBuffer
         };
 
         vkCmdCopyBuffer(_internal, src, dst, 1, &region);
+    }
+
+    inline void BeginRendering(VkRect2D renderArea, const VkRenderingAttachmentInfo * colorAttachment, uint32_t colorAttachmentCount, const VkRenderingAttachmentInfo& depthAttachment, const VkRenderingAttachmentInfo& stencilAttachment) const
+    {
+        VkRenderingInfo renderingInfo
+        {
+            .sType = VK_STRUCTURE_TYPE_RENDERING_INFO,
+            .renderArea = renderArea,
+            .layerCount = 1,
+            .colorAttachmentCount = colorAttachmentCount,
+            .pColorAttachments = colorAttachment,
+            .pDepthAttachment = &depthAttachment,
+            .pStencilAttachment = &stencilAttachment
+        };
+        vkCmdBeginRendering(_internal, &renderingInfo);
+    }
+
+    inline void EndRendering() const
+    {
+        vkCmdEndRendering(_internal);
     }
 
     inline VkCommandBuffer GetInternal() const { return _internal; }

@@ -10,13 +10,11 @@
 #include "header/VkHandlers/VkDescriptorSetLayoutHandler.h"
 #include "header/VkHandlers/VkDeviceHandler.h"
 #include "header/VkHandlers/VkFenceHandler.h"
-#include "header/VkHandlers/VkFramebufferHandler.h"
 #include "header/VkHandlers/VkInstanceHandler.h"
 #include "header/VkHandlers/VkPhysicalDeviceHandler.h"
 #include "header/VkHandlers/VkPipelineHandler.h"
 #include "header/VkHandlers/VkPipelineLayoutHandler.h"
 #include "header/VkHandlers/VkQueueHandler.h"
-#include "header/VkHandlers/VkRenderPassHandler.h"
 #include "header/VkHandlers/VkSemaphoreHandler.h"
 #include "header/VkHandlers/VkSurfaceHandler.h"
 #include "header/Window.h"
@@ -38,14 +36,13 @@
 
 #include "DebugLayer.h"
 
-#include "header/Image.h"
+#include "header/GPUImage.h"
 
 class Application
 {
 
     public:
     void Run();
-    void FramebufferResized();
     void UpdateWindowSize(int width, int height);
 
     Application();
@@ -66,9 +63,7 @@ class Application
         alignas(16) glm::mat4 localToWorldMatrix;
     };
 
-    bool _framebufferResized;
     uint32_t _currentFrame = 0;
-    const VkFormat DepthFormat = VK_FORMAT_D32_SFLOAT;
 
     // RAII is first in last out order
     Window _window;
@@ -85,8 +80,6 @@ class Application
     // Dynamic lifetime
     std::unique_ptr<SwapChain> _swapChain;
 
-    VkRenderPassHandler _renderPassHandler;
-
     // layout binding
     // Layout -> General description
     // Pool -> memory pool to allocate something
@@ -98,21 +91,15 @@ class Application
     VkPipelineLayoutHandler _pipelineLayoutHandler;
     VkPipelineHandler _graphicsPipelineHandler;
 
-    std::vector<VkClearValue> clearValues;
-
-    std::unique_ptr<GPUImage> _colorBackBuffer;
-    std::unique_ptr<GPUImage> _depthBuffer;
-
-    MultiFrameHandler<VkFramebufferHandler> _framebuffer;
-    MultiFrameHandler<VkFramebufferHandler> CreateFramebuffer();
-    void InitFramebuffer(MultiFrameHandler<VkFramebufferHandler>& framebuffer);
+    std::unique_ptr<GPUAllocatedImage> _colorBackBuffer;
+    std::unique_ptr<GPUAllocatedImage> _depthBuffer;
 
     VkCommandPoolHandler _graphicsCommandPoolHandler;
 
     // Datas
     std::unique_ptr<MemoryBuffer> _vertexBuffer;
     std::unique_ptr<MemoryBuffer> _indexBuffer;
-    GPUImage _modelImg;
+    GPUAllocatedImage _modelImg;
     VkSamplerHandler _sampler;
 
     VkDescriptorPoolHandler _dynamicDescriptorPoolHandler;
@@ -134,6 +121,7 @@ class Application
     uint32_t _inputDeltaPrevent = 3; // see : https://github.com/glfw/glfw/issues/2523
     static void MouseMoveCallback(GLFWwindow* window, double xpos, double ypos);
     static void WindowFocusCallback(GLFWwindow* window, int focused);
+    static void ResizeCallback(GLFWwindow* window, int width, int height);
 
     Camera _camera;
 

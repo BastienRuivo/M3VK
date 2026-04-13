@@ -8,7 +8,7 @@
 #include "header/DebugLayer.h"
 #endif
 
-VkPipelineHandler::VkPipelineHandler(const VkExtent2D& appExtent, VkDevice device, VkSampleCountFlagBits msaaSampleCount, VkPipelineLayout pipelineLayout, VkRenderPass renderPass)
+VkPipelineHandler::VkPipelineHandler(const VkExtent2D& appExtent, VkDevice device, VkSampleCountFlagBits msaaSampleCount, VkPipelineLayout pipelineLayout, VkFormat swapChainFormat, VkFormat depthFormat)
 {
 #ifdef M3VK_MEMORYLOG
     DebugLayer::Log(DebugLayer::LogType::CREATE, "VkPipelineHandler Creation !");
@@ -165,9 +165,18 @@ VkPipelineHandler::VkPipelineHandler(const VkExtent2D& appExtent, VkDevice devic
         .maxDepthBounds = 1.0f, // Optional
     };
 
+    VkPipelineRenderingCreateInfoKHR pipelineRenderingCreateInfo
+    {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR,
+        .colorAttachmentCount = 1,
+        .pColorAttachmentFormats = &swapChainFormat,
+        .depthAttachmentFormat = depthFormat,
+    };
+
     VkGraphicsPipelineCreateInfo pipelineCreateInfo
     {
         .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
+        .pNext = &pipelineRenderingCreateInfo,
         .stageCount = 2,
 
         // Graphics pipeline
@@ -182,13 +191,14 @@ VkPipelineHandler::VkPipelineHandler(const VkExtent2D& appExtent, VkDevice devic
         .pDynamicState = &pipelineStateCreateInfo,
 
         .layout = pipelineLayout,
-        .renderPass = renderPass,
         .subpass = 0,
 
         // can be use to switch between parent pipeline (less expensive theorically if simillar)
         .basePipelineHandle = VK_NULL_HANDLE,
         .basePipelineIndex = -1
     };
+
+
 
     if(vkCreateGraphicsPipelines(_device, VK_NULL_HANDLE, 1, &pipelineCreateInfo, nullptr, &_internal) != VK_SUCCESS)
     {

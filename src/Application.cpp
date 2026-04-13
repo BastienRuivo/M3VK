@@ -2,16 +2,13 @@
 #include "header/ApplicationInfo.h"
 #include "header/CommandBuffer.h"
 #include "header/GraphicsBuffer.h"
-#include "header/Image.h"
 #include "header/Mesh.h"
 #include "header/MultiFrame.h"
 #include "header/SwapChain.h"
 #include "header/DebugLayer.h"
 #include "header/Vertex.h"
-#include "header/VkHandlers/VkFramebufferHandler.h"
 #include <GLFW/glfw3.h>
 #include <chrono>
-#include <cstddef>
 #include <cstdint>
 #include <cstring>
 #include <glm/ext/matrix_clip_space.hpp>
@@ -119,10 +116,9 @@ void Application::UpdateCameraData(uint32_t currentFrame)
     memcpy(_cameraDataBuffer.Get(currentFrame).GetDataPtr(), &cameraData, sizeof(cameraData));
 }
 
-static void FramebufferResizeCallback(GLFWwindow* window, int width, int height)
+void Application::ResizeCallback(GLFWwindow* window, int width, int height)
 {
     Application* app = reinterpret_cast<Application*>(glfwGetWindowUserPointer(window));
-    app->FramebufferResized();
     app->UpdateWindowSize(width, height);
 }
 
@@ -164,11 +160,6 @@ void Application::UpdateWindowSize(int width, int height)
     _window.ResizeWindow(width, height);
 }
 
-void Application::FramebufferResized()
-{
-    _framebufferResized = true;
-}
-
 void Application::RefreshSwapChain()
 {
     int width = 0, height = 0;
@@ -184,7 +175,7 @@ void Application::RefreshSwapChain()
     _swapChain = std::make_unique<SwapChain>(_window, _physicalDeviceHandler.Get(), _deviceHandler.Get(), _windowSurfaceHandler.Get());
 
     _colorBackBuffer.reset();
-    _colorBackBuffer = std::make_unique<GPUImage>(_deviceHandler.Get(), _physicalDeviceHandler, _swapChain->GetExtent().width, _swapChain->GetExtent().height,
+    _colorBackBuffer = std::make_unique<GPUAllocatedImage>(_deviceHandler.Get(), _physicalDeviceHandler, _swapChain->GetExtent().width, _swapChain->GetExtent().height,
         ApplicationInfo::Get().GetMsaaSample(),
         1, _swapChain->GetImageFormat(),
         VK_IMAGE_TILING_OPTIMAL,
@@ -192,10 +183,7 @@ void Application::RefreshSwapChain()
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
     _depthBuffer.reset();
-    _depthBuffer = std::make_unique<GPUImage>(_deviceHandler.Get(), _physicalDeviceHandler, _swapChain->GetExtent().width, _swapChain->GetExtent().height, ApplicationInfo::Get().GetMsaaSample(), 1, DepthFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT),
-
-    _framebuffer.Clear();
-    InitFramebuffer(_framebuffer);
+    _depthBuffer = std::make_unique<GPUAllocatedImage>(_deviceHandler.Get(), _physicalDeviceHandler, _swapChain->GetExtent().width, _swapChain->GetExtent().height, ApplicationInfo::Get().GetMsaaSample(), 1, ApplicationInfo::Constant::DepthFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 }
 
 void Application::DrawFrame()
@@ -245,9 +233,8 @@ void Application::DrawFrame()
 
     result = vkQueuePresentKHR(_graphicsQueueHandler.Get(), &presentInfo);
 
-    if(result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || _framebufferResized)
+    if(result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)
     {
-        _framebufferResized = false;
         RefreshSwapChain();
     }
     else if(result != VK_SUCCESS)
@@ -260,7 +247,40 @@ void Application::DrawFrame()
 
 void Application::RecordCommandBuffer(const CommandBuffer& cmdBuffer, uint32_t currentFrame, uint32_t imageIndex)
 {
-    VkExtent2D renderExtent = _swapChain->GetExtent();
+    VkRect2D renderArea = {0, 0, _swapChain->GetExtent().width, _swapChain->GetExtent().height};
+
+    VkRenderingAttachmentInfo colorAttachment
+    {
+        .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
+        .imageView = _colorBackBuffer->GetView(),
+        .imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+        .resolveMode = VK_RESOLVE_MODE_AVERAGE_BIT,
+        .resolveImageView = _swapChain->GetView(imageIndex),
+        .resolveImageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+        .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+        .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+        .clearValue = {{0.2f, 0.4f, 0.75f, 1.0f}}
+    };
+
+    VkRenderingAttachmentInfo depthAttachment
+    {
+        .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
+        .imageView = _depthBuffer->GetView(),
+        .imageLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
+        .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
+        .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+        .clearValue = {1.0f, 0}
+    };
+
+    // there is no stencil buffer
+    VkRenderingAttachmentInfo stencilAttachment
+    {
+        .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
+        .imageView = VK_NULL_HANDLE,
+    };
+
+    const SwapChain::SwapChainImage& backBuffer = _swapChain->Images.Get(imageIndex);
+
 
     ObjectData objectData =
     {
@@ -271,11 +291,15 @@ void Application::RecordCommandBuffer(const CommandBuffer& cmdBuffer, uint32_t c
 
     cmdBuffer.Begin();
     {
-        cmdBuffer.BeginRenderPass(_renderPassHandler.Get(), _framebuffer.GetInternal(imageIndex), clearValues, renderExtent);
+        _colorBackBuffer->TransitionLayoutCommand(cmdBuffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+        _depthBuffer->TransitionLayoutCommand(cmdBuffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
+        backBuffer.TransitionLayoutCommand(cmdBuffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+
+        cmdBuffer.BeginRendering(renderArea, &colorAttachment, 1, depthAttachment, stencilAttachment);
         {
             cmdBuffer.BindPipeline(_graphicsPipelineHandler.Get(), VK_PIPELINE_BIND_POINT_GRAPHICS);
-            cmdBuffer.SetViewport(renderExtent.width, renderExtent.height);
-            cmdBuffer.SetScissor(0, 0, renderExtent.width, renderExtent.height);
+            cmdBuffer.SetViewport(0, 0, renderArea.extent.width, renderArea.extent.height);
+            cmdBuffer.SetScissor(renderArea);
 
             cmdBuffer.PushConstants(_pipelineLayoutHandler.Get(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(ObjectData), &objectData);
 
@@ -284,37 +308,15 @@ void Application::RecordCommandBuffer(const CommandBuffer& cmdBuffer, uint32_t c
             cmdBuffer.BindDescriptorSets(VK_PIPELINE_BIND_POINT_GRAPHICS, _pipelineLayoutHandler.Get(), _descriptorSet.Get(currentFrame));
             cmdBuffer.DrawIndexed(static_cast<uint32_t>(_indexBuffer->GetCount()));
         }
-        cmdBuffer.EndRenderPass();
+        cmdBuffer.EndRendering();
+        backBuffer.TransitionLayoutCommand(cmdBuffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
     }
     cmdBuffer.End();
 }
 
-MultiFrameHandler<VkFramebufferHandler> Application::CreateFramebuffer()
-{
-    MultiFrameHandler<VkFramebufferHandler> framebuffer(_swapChain->ImageViews.Size());
-
-    InitFramebuffer(framebuffer);
-
-    return framebuffer;
-}
-
-void Application::InitFramebuffer(MultiFrameHandler<VkFramebufferHandler>& framebuffer)
-{
-    for(size_t i = 0; i < _swapChain->ImageViews.Size(); ++i)
-    {
-        std::vector<VkImageView> attachments = {
-            _colorBackBuffer->GetView(),
-            _depthBuffer->GetView(),
-            _swapChain->ImageViews.GetInternal(i)
-        };
-        // emplace back to avoid a temp obejct
-        framebuffer.EmplaceBack(_deviceHandler.Get(), _renderPassHandler.Get(), _swapChain->GetExtent(), attachments);
-    }
-}
-
 Application::Application() :
     // Core Window & Instance (The Foundation)
-    _window(1920, 1080, "Window", this, FramebufferResizeCallback, Application::MouseMoveCallback, Application::WindowFocusCallback),
+    _window(1920, 1080, "Window", this, Application::ResizeCallback, Application::MouseMoveCallback, Application::WindowFocusCallback),
     _instanceHandler(),
     _vkDebugLayer(_instanceHandler.Get()),
     _windowSurfaceHandler(_instanceHandler.Get(), _window.Get()),
@@ -325,9 +327,6 @@ Application::Application() :
     _graphicsQueueHandler(_deviceHandler.Get(), VkQueueHandler::Graphics),
     _presentQueueHandler(_deviceHandler.Get(), VkQueueHandler::Present),
     _swapChain(std::make_unique<SwapChain>(_window, _physicalDeviceHandler.Get(), _deviceHandler.Get(), _windowSurfaceHandler.Get())),
-
-    // Render Layouts & Pipelines
-    _renderPassHandler(_deviceHandler.Get(), ApplicationInfo::Get().GetMsaaSample(), _swapChain->GetImageFormat(), DepthFormat),
 
     _descriptorSetLayoutHandler(_deviceHandler.Get(), std::initializer_list<VkDescriptorSetLayoutBinding>(
         {
@@ -345,21 +344,20 @@ Application::Application() :
             VkPushConstantRange{ VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(ObjectData) }
         }
     )),
-    _graphicsPipelineHandler(_swapChain->GetExtent(), _deviceHandler.Get(), ApplicationInfo::Get().GetMsaaSample(), _pipelineLayoutHandler.Get(), _renderPassHandler.Get()),
+    _graphicsPipelineHandler(_swapChain->GetExtent(), _deviceHandler.Get(), ApplicationInfo::Get().GetMsaaSample(), _pipelineLayoutHandler.Get(), _swapChain->GetImageFormat(), ApplicationInfo::Constant::DepthFormat),
 
-    // Framebuffers & Command Pools
-    _framebuffer(CreateFramebuffer()),
+    // Command pool
     _graphicsCommandPoolHandler(_deviceHandler.Get()),
 
     // Geometry & Data Buffers
-    _colorBackBuffer(std::make_unique<GPUImage>(_deviceHandler.Get(), _physicalDeviceHandler, _swapChain->GetExtent().width, _swapChain->GetExtent().height,
+    _colorBackBuffer(std::make_unique<GPUAllocatedImage>(_deviceHandler.Get(), _physicalDeviceHandler, _swapChain->GetExtent().width, _swapChain->GetExtent().height,
         ApplicationInfo::Get().GetMsaaSample(),
         1,
         _swapChain->GetImageFormat(),
         VK_IMAGE_TILING_OPTIMAL,
         VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)),
-    _depthBuffer(std::make_unique<GPUImage>(_deviceHandler.Get(), _physicalDeviceHandler, _swapChain->GetExtent().width, _swapChain->GetExtent().height, ApplicationInfo::Get().GetMsaaSample(), 1, DepthFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)),
+    _depthBuffer(std::make_unique<GPUAllocatedImage>(_deviceHandler.Get(), _physicalDeviceHandler, _swapChain->GetExtent().width, _swapChain->GetExtent().height, ApplicationInfo::Get().GetMsaaSample(), 1, ApplicationInfo::Constant::DepthFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)),
 
     // Descriptor Pools
     _dynamicDescriptorPoolHandler(_deviceHandler.Get(), std::initializer_list<VkDescriptorPoolSize>(
@@ -407,7 +405,7 @@ Application::Application() :
 
     // Synchronization
     _availableImageSemaphore(ApplicationInfo::Constant::MaxFrameInCount, _deviceHandler.Get()),
-    _renderFinishedSemaphores(_swapChain->Images.size(), _deviceHandler.Get()),
+    _renderFinishedSemaphores(_swapChain->Images.Size(), _deviceHandler.Get()),
     _waitFence(ApplicationInfo::Constant::MaxFrameInCount, _deviceHandler.Get())
 {
 #ifdef M3VK_MEMORYLOG
@@ -419,15 +417,6 @@ Application::Application() :
         CPUImage logo("data/img/logo.png", STBI_rgb_alpha);
         _window.SetIcon(logo.Data(), logo.Width(), logo.Height());
     }
-
-    VkClearValue colorClear;
-    colorClear.color = {0.2f, 0.4f, 0.75f, 1.0f};
-    VkClearValue depthClear;
-    depthClear.depthStencil = {1.0f, 0};
-
-    clearValues.reserve(2);
-    clearValues.push_back(colorClear);
-    clearValues.push_back(depthClear);
 
     Mesh mesh;
     mesh.LoadFromObj("data/models/Crate1.obj");
@@ -473,6 +462,7 @@ Application::~Application()
 
     _vertexBuffer.reset();
     _indexBuffer.reset();
+    _swapChain.reset();
 }
 
 void Application::Run()

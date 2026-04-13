@@ -1,88 +1,27 @@
-#include "header/Image.h"
+#include "header/GPUImage.h"
+#include "header/CPUImage.h"
 #include "header/CommandBuffer.h"
-#include "header/DebugLayer.h"
 #include "header/GraphicsBuffer.h"
-#include "header/ProjectHelper.h"
 #include "header/VkHandlers/VkImageViewHandler.h"
 #include "header/VkHandlers/VkPhysicalDeviceHandler.h"
 #include <cstdint>
 #include <stdexcept>
-#include <string>
 #include <vulkan/vulkan_core.h>
 
 
-#define STB_IMAGE_IMPLEMENTATION
-#include <stb_image.h>
-
-CPUImage::CPUImage(const std::string& path, int channelFormat)
-{
 #ifdef M3VK_MEMORYLOG
-    DebugLayer::Log(DebugLayer::LogType::CREATE, "CPUImage Create !");
+#include "header/DebugLayer.h"
 #endif
-    _data = stbi_load(path.c_str(), &_width, &_height, &_channels, channelFormat);
 
-    _channels = channelFormat;
-
-
-    if(_data == nullptr)
-    {
-        const char* reason = stbi_failure_reason();
-        if (reason)
-        {
-            DebugLayer::Log(DebugLayer::LogType::ERROR, std::filesystem::current_path().string() + "/" + path + " : " + reason);
-            DebugLayer::Log(DebugLayer::LogType::ERROR, std::string("Failed to load image ") +  path + " : " + reason);
-        }
-
-        throw std::runtime_error("Failed to load texture image");
-    }
-}
-
-CPUImage::~CPUImage()
+void GPUImage::TransitionLayoutCommand(const CommandBuffer& cmdBuffer, VkImageLayout oldLayout, VkImageLayout newLayout) const
 {
-    stbi_image_free(_data);
-    _width = _height = _channels = 0;
-#ifdef M3VK_MEMORYLOG
-    DebugLayer::Log(DebugLayer::LogType::DESTROY, "GPUImage Destroyed !");
-#endif
+    cmdBuffer.TransitionImageLayout(_internal, _format, _mipCount, oldLayout, newLayout);
 }
 
-CPUImage::CPUImage(CPUImage&& other) noexcept
-{
-    _width = other._width;
-    _height = other._height;
-    _channels = other._channels;
-    _data = other._data;
+/* --- GPU Allocated Image --- */
 
-    other._data = nullptr;
-    _width = _height = _channels = 0;
-}
-
-CPUImage& CPUImage::operator=(CPUImage&& other) noexcept
-{
-    if(this != &other)
-    {
-        _width = other._width;
-        _height = other._height;
-        _channels = other._channels;
-        _data = other._data;
-
-        other._data = nullptr;
-        _width = _height = _channels = 0;
-    }
-    return *this;
-}
-
-VkFormat CPUImage::GetGPUFormat() const
-{
-    switch (_channels)
-    {
-        case STBI_rgb_alpha: return VK_FORMAT_R8G8B8A8_SRGB;
-        default: throw std::runtime_error("Unimplemented Color Format");
-    }
-}
-
-GPUImage::GPUImage(VkDevice device,  const VkPhysicalDeviceHandler & physicalDevice,  const CPUImage& cpuImg, VkCommandPool pool, VkQueue queue)
-    : GPUImage(device, physicalDevice,
+GPUAllocatedImage::GPUAllocatedImage(VkDevice device,  const VkPhysicalDeviceHandler & physicalDevice,  const CPUImage& cpuImg, VkCommandPool pool, VkQueue queue)
+    : GPUAllocatedImage(device, physicalDevice,
         cpuImg.Width(), cpuImg.Height(),
         cpuImg.GetGPUFormat(),
         VK_IMAGE_TILING_OPTIMAL,
@@ -92,24 +31,28 @@ GPUImage::GPUImage(VkDevice device,  const VkPhysicalDeviceHandler & physicalDev
     CopyCPUtoGPUImage(cpuImg, physicalDevice, pool, queue);
 }
 
-GPUImage::GPUImage(VkDevice device,  const VkPhysicalDeviceHandler & physicalDevice, uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags imageUsageFlags, VkMemoryPropertyFlags memoryFlags)
-: GPUImage(device, physicalDevice, width, height, static_cast<uint32_t>(std::floor(std::log2(std::max(width, height)))) + 1, format, tiling, imageUsageFlags, memoryFlags)
+GPUAllocatedImage::GPUAllocatedImage(VkDevice device,  const VkPhysicalDeviceHandler & physicalDevice, uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags imageUsageFlags, VkMemoryPropertyFlags memoryFlags)
+: GPUAllocatedImage(device, physicalDevice, width, height, static_cast<uint32_t>(std::floor(std::log2(std::max(width, height)))) + 1, format, tiling, imageUsageFlags, memoryFlags)
 {
 
 }
 
-GPUImage::GPUImage(VkDevice device,  const VkPhysicalDeviceHandler & physicalDevice, uint32_t width, uint32_t height, uint32_t mipCount, VkFormat format, VkImageTiling tiling, VkImageUsageFlags imageUsageFlags, VkMemoryPropertyFlags memoryFlags)
-: GPUImage(device, physicalDevice, width, height, VK_SAMPLE_COUNT_1_BIT, mipCount, format, tiling, imageUsageFlags, memoryFlags)
+GPUAllocatedImage::GPUAllocatedImage(VkDevice device,  const VkPhysicalDeviceHandler & physicalDevice, uint32_t width, uint32_t height, uint32_t mipCount, VkFormat format, VkImageTiling tiling, VkImageUsageFlags imageUsageFlags, VkMemoryPropertyFlags memoryFlags)
+: GPUAllocatedImage(device, physicalDevice, width, height, VK_SAMPLE_COUNT_1_BIT, mipCount, format, tiling, imageUsageFlags, memoryFlags)
 {
 
 }
 
-GPUImage::GPUImage(VkDevice device,  const VkPhysicalDeviceHandler & physicalDevice, uint32_t width, uint32_t height, VkSampleCountFlagBits msaaSampleCount, uint32_t mipCount, VkFormat format, VkImageTiling tiling, VkImageUsageFlags imageUsageFlags, VkMemoryPropertyFlags memoryFlags)
-: _view(), _device(device), _width(width), _height(height), _format(format), _mipCount(mipCount)
+GPUAllocatedImage::GPUAllocatedImage(VkDevice device,  const VkPhysicalDeviceHandler & physicalDevice, uint32_t width, uint32_t height, VkSampleCountFlagBits msaaSampleCount, uint32_t mipCount, VkFormat format, VkImageTiling tiling, VkImageUsageFlags imageUsageFlags, VkMemoryPropertyFlags memoryFlags)
 {
 #ifdef M3VK_MEMORYLOG
     DebugLayer::Log(DebugLayer::LogType::CREATE, "GPUImage Create !");
 #endif
+    _device = device;
+    _width = width;
+    _height = height;
+    _format = format;
+    _mipCount = mipCount;
 
     VkImageCreateInfo createInfo
     {
@@ -162,77 +105,8 @@ GPUImage::GPUImage(VkDevice device,  const VkPhysicalDeviceHandler & physicalDev
     _view = VkImageViewHandler(_device, _internal, _format, _mipCount);
 }
 
-void GPUImage::TransitionLayoutCommand(const CommandBuffer& cmdBuffer, VkImageLayout oldLayout, VkImageLayout newLayout)
-{
-    VkImageMemoryBarrier barrier
-    {
-        .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-        .srcAccessMask = 0,
-        .dstAccessMask = 0,
-        .oldLayout = oldLayout,
-        .newLayout = newLayout,
-        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED, // used to transfer queue ownership if someday I do a copy queue
-        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-        .image = _internal,
-        .subresourceRange
-        {
-            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-            .baseMipLevel = 0,
-            .levelCount = _mipCount,
-            .baseArrayLayer = 0,
-            .layerCount = 1
-        },
-    };
 
-    VkPipelineStageFlags sourceStage;
-    VkPipelineStageFlags destinationStage;
-
-    if(newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
-    {
-        barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-        if(ProjectHelper::HasStencilComponent(_format))
-        {
-            barrier.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
-        }
-    }
-    else
-    {
-        barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    }
-
-    if(oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
-    {
-        barrier.srcAccessMask = 0;
-        barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-
-        sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-        destinationStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-    }
-    else if(oldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
-    {
-        barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-        barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-
-        sourceStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-        destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-    }
-    else if(oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
-    {
-        barrier.srcAccessMask = 0;
-        barrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-
-        sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-        destinationStage = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-    }
-    else
-    {
-        throw std::runtime_error("Unsupported layout transition !");
-    }
-
-    cmdBuffer.Barrier(sourceStage, destinationStage, nullptr, 0, nullptr, 0, &barrier, 1);
-}
-
-void GPUImage::TransitionLayout(VkCommandPool pool, VkQueue queue, VkImageLayout oldLayout, VkImageLayout newLayout)
+void GPUAllocatedImage::TransitionLayout(VkCommandPool pool, VkQueue queue, VkImageLayout oldLayout, VkImageLayout newLayout) const
 {
     CommandBuffer cmdBuffer(_device, pool, queue);
     cmdBuffer.BeginSingleTime();
@@ -243,7 +117,7 @@ void GPUImage::TransitionLayout(VkCommandPool pool, VkQueue queue, VkImageLayout
     cmdBuffer.WaitCompletion();
 }
 
-void GPUImage::CopyCPUtoGPUImage(const CPUImage & cpuImg, const VkPhysicalDeviceHandler& physicalDevice, VkCommandPool pool, VkQueue queue)
+void GPUAllocatedImage::CopyCPUtoGPUImage(const CPUImage & cpuImg, const VkPhysicalDeviceHandler& physicalDevice, VkCommandPool pool, VkQueue queue)
 {
     StageBuffer stage(physicalDevice, _device, cpuImg.Size());
     stage.CopyToBuffer(_device, (void*)cpuImg.Data(), cpuImg.Size());
@@ -288,7 +162,7 @@ void GPUImage::CopyCPUtoGPUImage(const CPUImage & cpuImg, const VkPhysicalDevice
     cmdBuffer.WaitCompletion();
 }
 
-void GPUImage::GenerateMipmapsCommand(const CommandBuffer& cmdBuffer, const VkPhysicalDeviceHandler& physicalDevice)
+void GPUAllocatedImage::GenerateMipmapsCommand(const CommandBuffer& cmdBuffer, const VkPhysicalDeviceHandler& physicalDevice) const
 {
     // Check if image format supports linear blitting
     VkFormatProperties formatProperties;
@@ -380,7 +254,7 @@ void GPUImage::GenerateMipmapsCommand(const CommandBuffer& cmdBuffer, const VkPh
 }
 
 
-GPUImage::~GPUImage()
+GPUAllocatedImage::~GPUAllocatedImage()
 {
      if(_internal == VK_NULL_HANDLE) return;
 
@@ -390,4 +264,38 @@ GPUImage::~GPUImage()
 #ifdef M3VK_MEMORYLOG
     DebugLayer::Log(DebugLayer::LogType::DESTROY, "GPUImage Destroyed !");
 #endif
+}
+
+GPUAllocatedImage::GPUAllocatedImage(GPUAllocatedImage&& other) noexcept
+{
+    _internal = other._internal;
+    _memoryInternal = other._memoryInternal;
+    _device = other._device;
+    _format = other._format;
+    _width = other._width;
+    _height = other._height;
+    _mipCount = other._mipCount;
+    _view = std::move(other._view);
+
+    other._internal = VK_NULL_HANDLE;
+    other._memoryInternal = VK_NULL_HANDLE;
+}
+
+GPUAllocatedImage& GPUAllocatedImage::operator=(GPUAllocatedImage&& other) noexcept
+{
+    if(this != &other)
+    {
+        _internal = other._internal;
+        _memoryInternal = other._memoryInternal;
+        _device = other._device;
+        _format = other._format;
+        _width = other._width;
+        _height = other._height;
+        _mipCount = other._mipCount;
+        _view = std::move(other._view);
+
+        other._internal = VK_NULL_HANDLE;
+        other._memoryInternal = VK_NULL_HANDLE;
+    }
+    return *this;
 }

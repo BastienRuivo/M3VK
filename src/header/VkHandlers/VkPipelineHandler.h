@@ -5,7 +5,7 @@
 class VkPipelineHandler
 {
     public:
-    VkPipelineHandler(const VkExtent2D& appExtent, VkDevice device, VkSampleCountFlagBits msaaSampleCount, VkPipelineLayout pipelineLayout, VkRenderPass renderPass);
+    VkPipelineHandler(const VkExtent2D& appExtent, VkDevice device, VkSampleCountFlagBits msaaSampleCount, VkPipelineLayout pipelineLayout, VkFormat swapChainFormat, VkFormat depthFormat);
     ~VkPipelineHandler();
 
     // VkHandles can be destroyed by one of the two object when copying, so we enable moving and disable copying.

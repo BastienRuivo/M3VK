@@ -1,5 +1,6 @@
 #pragma once
 
+#include "header/DebugLayer.h"
 #include "header/VkHandlers/VkPhysicalDeviceHandler.h"
 #include <cstdint>
 #include <vulkan/vulkan_core.h>
@@ -58,11 +59,17 @@ class GraphicsBuffer
     VkBuffer Get() const { return _internal; }
     BufferType GetType() const { return _type; }
 
-    VkDeviceSize GetSize() const;
-    VkDeviceSize GetCount() const;
-    VkDeviceSize GetStride() const;
-
-    void* GetDataPtr();
+    inline VkDeviceSize GetSize() const { return _count * _stride; }
+    inline VkDeviceSize GetCount() const { return _count; }
+    inline VkDeviceSize GetStride() const { return _stride; }
+    inline void* GetDataPtr() const
+    {
+        if(_type != BufferType::UNIFORM)
+        {
+            DebugLayer::Log(DebugLayer::LogType::ERROR, "Trying to get data pointer for non uniform buffer");
+        }
+        return _dataPtr;
+    }
 
     private:
     VkBuffer _internal;
@@ -87,6 +94,8 @@ class MemoryBuffer : public GraphicsBuffer
         void* srcData,
         VkDeviceSize size
     );
+
+    inline VkDeviceSize GetCurrentSize() const { return _currentSize; }
 
     private:
     VkDeviceSize _currentSize = 0;

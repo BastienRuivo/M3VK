@@ -33,6 +33,11 @@ VkDeviceHandler::VkDeviceHandler(VkPhysicalDevice physicalDevice, VkSurfaceKHR w
         queueCreateInfos.push_back(queueCreateInfo);
     }
 
+    VkPhysicalDeviceDynamicRenderingFeatures dynamicRenderingFeatures
+    {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES,
+        .dynamicRendering = VK_TRUE
+    };
 
     VkPhysicalDeviceFeatures deviceFeatures
     {
@@ -43,6 +48,7 @@ VkDeviceHandler::VkDeviceHandler(VkPhysicalDevice physicalDevice, VkSurfaceKHR w
     VkDeviceCreateInfo deviceCreateInfo
     {
         .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
+        .pNext = &dynamicRenderingFeatures,
         .queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size()),
         .pQueueCreateInfos = queueCreateInfos.data(),
 

@@ -104,26 +104,6 @@ StageBuffer& StageBuffer::operator=(StageBuffer&& other) noexcept
     return *this;
 }
 
-void* GraphicsBuffer::GetDataPtr()
-{
-    return _dataPtr;
-}
-
-VkDeviceSize GraphicsBuffer::GetSize() const
-{
-    return GetCount() * GetStride();
-}
-
-VkDeviceSize GraphicsBuffer::GetCount() const
-{
-    return _count;
-}
-
-VkDeviceSize GraphicsBuffer::GetStride() const
-{
-    return _stride;
-}
-
 GraphicsBuffer::GraphicsBuffer(const VkPhysicalDeviceHandler& physicalDevice, VkDevice device, VkDeviceSize count, VkDeviceSize stride, BufferType type)
 {
 #ifdef M3VK_MEMORYLOG

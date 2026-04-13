@@ -26,12 +26,12 @@ VkFenceHandler::VkFenceHandler(VkDevice device)
 
 }
 
-void VkFenceHandler::Wait(uint64_t timeout)
+void VkFenceHandler::Wait(uint64_t timeout) const
 {
     vkWaitForFences(_device, 1, &_internal, VK_TRUE, timeout);
 }
 
-void VkFenceHandler::Reset()
+void VkFenceHandler::Reset() const
 {
     vkResetFences(_device, 1, &_internal);
 }

@@ -1,23 +1,15 @@
 #include "./header/SwapChain.h"
 #include "./header/ProjectHelper.h"
 #include "header/MultiFrame.h"
+#include "header/VkHandlers/VkImageViewHandler.h"
 #include <GLFW/glfw3.h>
 #include <algorithm>
+#include <cstdint>
 #include <limits>
 #include <stdexcept>
+#include <vector>
 #include <vulkan/vulkan_core.h>
 
-
-
-void SwapChain::CreateImageViews()
-{
-    ImageViews.Reserve(Images.size());
-
-    for(int i = 0; i < Images.size(); i++)
-    {
-        ImageViews.EmplaceBack(_device, Images[i], _imageFormat, 1);
-    }
-}
 
 VkExtent2D SwapChain::SelectSwapExtents(const Window& window, const VkSurfaceCapabilitiesKHR& Capabilities) const
 {
@@ -110,7 +102,7 @@ VkSurfaceFormatKHR SwapChain::SelectSwapSurfaceFormat(const std::vector<VkSurfac
 }
 
 SwapChain::SwapChain(const Window& window, VkPhysicalDevice physicalDevice, VkDevice device, VkSurfaceKHR windowSurface)
-: ImageViews(0)
+: Images(0)
 {
 #ifdef M3VK_MEMORYLOG
     DebugLayer::Log(DebugLayer::LogType::CREATE, "SwapChain Creation !");
@@ -179,13 +171,18 @@ SwapChain::SwapChain(const Window& window, VkPhysicalDevice physicalDevice, VkDe
     }
 
     vkGetSwapchainImagesKHR(_device, _internal, &imageCount, nullptr);
-    Images.resize(imageCount);
-    vkGetSwapchainImagesKHR(_device, _internal, &imageCount, Images.data());
+
+    std::vector<VkImage> tempImages(imageCount);
+    vkGetSwapchainImagesKHR(_device, _internal, &imageCount, tempImages.data());
+
+    Images.Reserve(imageCount);
+    for(int i = 0; i < imageCount; i++)
+    {
+        Images.EmplaceBack(_device, tempImages[i], format.format, extents.width, extents.height);
+    }
 
     _imageFormat = format.format;
     _extent = extents;
-
-    CreateImageViews();
 }
 
 SwapChain::~SwapChain()
@@ -195,4 +192,40 @@ SwapChain::~SwapChain()
 #ifdef M3VK_MEMORYLOG
     DebugLayer::Log(DebugLayer::LogType::DESTROY, "SwapChain Destruction !");
 #endif
+}
+
+SwapChain::SwapChainImage::SwapChainImage(VkDevice device, VkImage swapChainImage, VkFormat format, uint32_t width, uint32_t height)
+{
+    _device = device;
+    _internal = swapChainImage;
+    _format = format;
+    _width = width;
+    _height = height;
+    _mipCount = 1;
+
+    _view = VkImageViewHandler(device, _internal, _format, 1);
+}
+
+SwapChain::SwapChainImage::SwapChainImage(SwapChainImage&& other) noexcept
+{
+    _device = other._device;
+    _internal = other._internal;
+    _format = other._format;
+    _width = other._width;
+    _height = other._height;
+    _view = std::move(other._view);
+}
+
+SwapChain::SwapChainImage& SwapChain::SwapChainImage::operator=(SwapChainImage&& other) noexcept
+{
+    if(this != &other)
+    {
+        _device = other._device;
+        _internal = other._internal;
+        _format = other._format;
+        _width = other._width;
+        _height = other._height;
+        _view = std::move(other._view);
+    }
+    return *this;
 }

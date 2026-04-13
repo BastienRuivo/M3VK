@@ -16,8 +16,8 @@ class VkFenceHandler
     VkFenceHandler(const VkFenceHandler&) = delete;
     VkFenceHandler& operator=(const VkFenceHandler&) = delete;
 
-    void Wait(uint64_t timeout);
-    void Reset();
+    void Wait(uint64_t timeout) const;
+    void Reset() const;
 
     inline VkFence Get() const
     {

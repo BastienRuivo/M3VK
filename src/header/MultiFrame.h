@@ -61,7 +61,7 @@ class MultiFrameObject
     MultiFrameObject(const MultiFrameObject&) = delete;
     MultiFrameObject& operator=(const MultiFrameObject&) = delete;
 
-    inline T& Get(size_t frameIndex)
+    inline const T& Get(size_t frameIndex) const
     {
         return _internals[frameIndex];
     }
@@ -95,7 +95,7 @@ class MultiFrameHandler : public MultiFrameObject<T>
     MultiFrameHandler(const MultiFrameHandler&) = delete;
     MultiFrameHandler& operator=(const MultiFrameHandler&) = delete;
 
-    inline auto GetInternal(size_t frameIndex)
+    inline auto GetInternal(size_t frameIndex) const
     {
         return this->_internals[frameIndex].Get();
     }
