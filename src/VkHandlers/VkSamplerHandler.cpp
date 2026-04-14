@@ -7,13 +7,11 @@
 #include "header/DebugLayer.h"
 #endif
 
-VkSamplerHandler::VkSamplerHandler(VkDevice device)
+VkSamplerHandler::VkSamplerHandler()
 {
 #ifdef M3VK_MEMORYLOG
     DebugLayer::Log(DebugLayer::LogType::CREATE, "VkSamplerHandler Creation !");
 #endif
-
-
 
     VkSamplerCreateInfo createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;

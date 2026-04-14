@@ -5,8 +5,7 @@
 class VkSamplerHandler
 {
     public:
-    VkSamplerHandler() {};
-    VkSamplerHandler(VkDevice device);
+    VkSamplerHandler();
     ~VkSamplerHandler();
 
     // VkHandles can be destroyed by one of the two object when copying, so we enable moving and disable copying.

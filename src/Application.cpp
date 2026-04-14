@@ -1,6 +1,7 @@
 #include "header/Application.h"
 #include "header/ApplicationInfo.h"
 #include "header/CommandBuffer.h"
+#include "header/DescriptorPool.h"
 #include "header/GraphicsBuffer.h"
 #include "header/MeshRegistry.h"
 #include "header/MultiFrame.h"
@@ -37,44 +38,18 @@
 
 MultiFrameObject<VkDescriptorSet> Application::CreateDescriptorSet()
 {
-    std::vector<VkDescriptorSetLayout> layouts(ApplicationInfo::Constant::MaxFrameInCount, _descriptorSetLayoutHandler.Get());
-    VkDescriptorSetAllocateInfo allocateInfo
-    {
-        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-        .descriptorPool = _dynamicDescriptorPoolHandler.Get(),
-        .descriptorSetCount = ApplicationInfo::Constant::MaxFrameInCount,
-        .pSetLayouts = layouts.data()
-    };
-
-    MultiFrameObject<VkDescriptorSet> descriptorSet(static_cast<uint32_t>(ApplicationInfo::Constant::MaxFrameInCount));
-    descriptorSet.Resize(ApplicationInfo::Constant::MaxFrameInCount);
-    if(vkAllocateDescriptorSets(ApplicationInfo::Device(), &allocateInfo, descriptorSet.Data()) != VK_SUCCESS)
-    {
-        throw std::runtime_error("Failed to allocate descriptor set");
-    }
+    MultiFrameObject<VkDescriptorSet> descriptorSets(_dynamicDescriptorPool.Allocate(ApplicationInfo::Constant::MaxFrameInCount));
 
     for(int i = 0; i < ApplicationInfo::Constant::MaxFrameInCount; ++i)
     {
-        VkDescriptorBufferInfo cameraDataInfo
-        {
-            .buffer = _cameraDataBuffer.GetInternal(i),
-            .offset = 0,
-            .range = sizeof(CameraData)
-        };
-
-        VkDescriptorImageInfo imageInfo
-        {
-            .sampler = _sampler.Get(),
-            .imageView = _modelImg.GetView(),
-            .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-        };
+        VkDescriptorBufferInfo cameraDataInfo = DescriptorPool::DescriptorBufferInfo(_cameraDataBuffer.Get(i), 0);
 
         uint32_t binding = 0;
-        std::vector<VkWriteDescriptorSet> descriptorWrites
-        {
+        _dynamicDescriptorPool.UpdateDescriptorSet(std::initializer_list<VkWriteDescriptorSet>(
             {
+                {
                 .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-                .dstSet = descriptorSet.Get(i),
+                .dstSet = descriptorSets.Get(i),
                 .dstBinding = binding++,
                 .dstArrayElement = 0,
                 .descriptorCount = 1,
@@ -82,24 +57,12 @@ MultiFrameObject<VkDescriptorSet> Application::CreateDescriptorSet()
                 .pImageInfo = nullptr,
                 .pBufferInfo = &cameraDataInfo,
                 .pTexelBufferView = nullptr
-            },
-            {
-                .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-                .dstSet = descriptorSet.Get(i),
-                .dstBinding = binding++,
-                .dstArrayElement = 0,
-                .descriptorCount = 1,
-                .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-                .pImageInfo = &imageInfo,
-                .pBufferInfo = nullptr,
-                .pTexelBufferView = nullptr
+                }
             }
-        };
-
-        vkUpdateDescriptorSets(ApplicationInfo::Device(), static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
+        ), {});
     }
 
-    return descriptorSet;
+    return descriptorSets;
 }
 
 void Application::UpdateCameraData(uint32_t currentFrame)
@@ -298,11 +261,14 @@ void Application::RecordCommandBuffer(const CommandBuffer& cmdBuffer, uint32_t c
 
             _meshRegistry.Bind(cmdBuffer);
 
-            cmdBuffer.BindDescriptorSets(VK_PIPELINE_BIND_POINT_GRAPHICS, _pipelineLayoutHandler.Get(), _descriptorSet.Get(currentFrame));
+            cmdBuffer.BindDescriptorSets(_pipelineLayoutHandler.Get(), _descriptorSet.Get(currentFrame), 0);
 
+            int i = 0;
             for(const auto& renderer : _renderers)
             {
+                cmdBuffer.BindDescriptorSets(_pipelineLayoutHandler.Get(), i == 0 ? _textureDescriptorSet0 : _textureDescriptorSet1, 1);
                 renderer.Draw(cmdBuffer, _pipelineLayoutHandler.Get());
+                i++;
             }
         }
         cmdBuffer.EndRendering();
@@ -325,15 +291,20 @@ Application::Application() :
     _presentQueueHandler(VkQueueHandler::Present),
     _swapChain(std::make_unique<SwapChain>(_window, _windowSurfaceHandler.Get())),
 
-    _descriptorSetLayoutHandler(std::initializer_list<VkDescriptorSetLayoutBinding>(
+    _dynamicDescriptorPool(std::initializer_list<VkDescriptorSetLayoutBinding>(
         {
             VkDescriptorSetLayoutBinding{ 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT, nullptr },
-            VkDescriptorSetLayoutBinding{ 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr }
         }
-    )),
+    ), ApplicationInfo::Constant::MaxFrameInCount),
+    _staticDescriptorPool(std::initializer_list<VkDescriptorSetLayoutBinding>(
+        {
+            VkDescriptorSetLayoutBinding{ 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr }
+        }
+    ), 255),
     _pipelineLayoutHandler(std::initializer_list<VkDescriptorSetLayout>(
         {
-            _descriptorSetLayoutHandler.Get()
+            _dynamicDescriptorPool.Layout(),
+            _staticDescriptorPool.Layout()
         }
     ),
     std::initializer_list<VkPushConstantRange>(
@@ -356,43 +327,11 @@ Application::Application() :
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)),
     _depthBuffer(std::make_unique<GPUAllocatedImage>(_swapChain->GetExtent().width, _swapChain->GetExtent().height, ApplicationInfo::Get().GetMsaaSample(), 1, ApplicationInfo::Constant::DepthFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)),
 
-    // Descriptor Pools
-    _dynamicDescriptorPoolHandler(std::initializer_list<VkDescriptorPoolSize>(
-        {
-            VkDescriptorPoolSize
-            {
-                .type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-                .descriptorCount = ApplicationInfo::Constant::MaxFrameInCount
-            },
-            VkDescriptorPoolSize
-            {
-                .type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-                .descriptorCount = ApplicationInfo::Constant::MaxFrameInCount
-            },
-            VkDescriptorPoolSize
-            {
-                .type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-                .descriptorCount = ApplicationInfo::Constant::MaxFrameInCount
-            }
-        }), ApplicationInfo::Constant::MaxFrameInCount),
-    _staticDescriptorPoolHandler(std::initializer_list<VkDescriptorPoolSize>(
-        {
-            VkDescriptorPoolSize
-            {
-                .type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-                .descriptorCount = 1
-            },
-            VkDescriptorPoolSize
-            {
-                .type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-                .descriptorCount = 1
-            }
-        }), 1),
-
     _cameraDataBuffer(ApplicationInfo::Constant::MaxFrameInCount, 1, sizeof(CameraData), GraphicsBuffer::UNIFORM),
-    _modelImg(CPUImage("data/img/models/viking_room.png", STBI_rgb_alpha), _graphicsCommandPoolHandler.Get(), _graphicsQueueHandler.Get()),
-    _sampler(_deviceHandler.Get()),
-    _camera(glm::vec3(0.0f, 0.0f, 3.0f), glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, 1.0f, 0.0f), 45.0f, (float)_swapChain->GetExtent().width / (float)_swapChain->GetExtent().height, 0.1f, 100.0f),
+    _modelImg0(CPUImage("data/img/models/viking_room.png", STBI_rgb_alpha), _graphicsCommandPoolHandler.Get(), _graphicsQueueHandler.Get()),
+    _modelImg1(CPUImage("data/img/kirby.jpg", STBI_rgb_alpha), _graphicsCommandPoolHandler.Get(), _graphicsQueueHandler.Get()),
+    _sampler(),
+    _camera(glm::vec3(0.0f, 0.5f, 4.0f), glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, 1.0f, 0.0f), 45.0f, (float)_swapChain->GetExtent().width / (float)_swapChain->GetExtent().height, 0.1f, 100.0f),
     _meshRegistry(),
 
     // Descriptor Sets & Execution
@@ -417,16 +356,44 @@ Application::Application() :
     }
 
     SubMesh vikingRoom = _meshRegistry.AddFromObj("data/models/viking_room.obj");
-    _renderers.emplace_back(vikingRoom, glm::vec3(0.0f, 0.0f, 1.0f), ProjectHelper::EulerToQuat(glm::vec3(-90, -90, 0)), glm::vec3(1.0f));
+    _renderers.emplace_back(vikingRoom, glm::vec3(-1.0f, 0.0f, 0.0f), ProjectHelper::EulerToQuat(glm::vec3(-90, -90, 0)), glm::vec3(1.0f));
 
     SubMesh cube = _meshRegistry.AddFromObj("data/models/Crate1.obj");
+    _renderers.emplace_back(cube, glm::vec3(1.0f, 0.5f, 0.0f), ProjectHelper::EulerToQuat(glm::vec3(0, 0, 0)), glm::vec3(0.5f));
 
-    for(uint32_t i = 0; i < 1000; ++i)
-    {
-        _renderers.emplace_back(cube, glm::vec3(0.0f, 0.0f,  -3.0 + -2.0f * i), ProjectHelper::EulerToQuat(glm::vec3(0, 0, 0)), glm::vec3(0.5f));
-    }
 
     _meshRegistry.UploadAndRelease(_graphicsQueueHandler.Get(), _graphicsCommandPoolHandler.Get());
+
+    _textureDescriptorSet0 = _staticDescriptorPool.Allocate();
+    _textureDescriptorSet1 = _staticDescriptorPool.Allocate();
+
+    VkDescriptorImageInfo imageInfo0 = DescriptorPool::DescriptorImageInfo(_modelImg0, _sampler.Get());
+    VkDescriptorImageInfo imageInfo1 = DescriptorPool::DescriptorImageInfo(_modelImg1, _sampler.Get());
+
+    _staticDescriptorPool.UpdateDescriptorSet(std::initializer_list<VkWriteDescriptorSet>(
+        {
+            VkWriteDescriptorSet
+            {
+                .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                .dstSet = _textureDescriptorSet0,
+                .dstBinding = 0,
+                .dstArrayElement = 0,
+                .descriptorCount = 1,
+                .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                .pImageInfo = &imageInfo0,
+            },
+            VkWriteDescriptorSet
+            {
+                .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                .dstSet = _textureDescriptorSet1,
+                .dstBinding = 0,
+                .dstArrayElement = 0,
+                .descriptorCount = 1,
+                .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                .pImageInfo = &imageInfo1,
+            },
+        }
+    ), {});
 }
 
 void Application::MainLoop()

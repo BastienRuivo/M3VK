@@ -19,6 +19,8 @@ class MultiFrameObject
         }
     }
 
+    MultiFrameObject(std::vector<T> internals): _internals(std::move(internals)) {}
+
 
     static MultiFrameObject WithCapacity(size_t maxFrameInCount)
     {

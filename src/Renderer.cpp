@@ -18,6 +18,6 @@ void Renderer::Draw(const CommandBuffer& cmdBuffer, VkPipelineLayout layout) con
 
 void Renderer::Update(float time, float dt)
 {
-    _rotation = ProjectHelper::EulerToQuat(glm::vec3(0, dt * 100.0f, 0)) * _rotation;
-    _data.localToWorldMatrix = glm::translate(glm::mat4(1.0f), _position) * glm::toMat4(_rotation) * glm::scale(glm::mat4(1.0f), _scale);
+    //_rotation = ProjectHelper::EulerToQuat(glm::vec3(0, dt * 100.0f, 0)) * _rotation;
+    //_data.localToWorldMatrix = glm::translate(glm::mat4(1.0f), _position) * glm::toMat4(_rotation) * glm::scale(glm::mat4(1.0f), _scale);
 }

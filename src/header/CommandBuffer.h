@@ -44,9 +44,9 @@ class CommandBuffer
     void SetViewport(uint32_t x, uint32_t y, uint32_t width, uint32_t height) const;
     void TransitionImageLayout(VkImage img, VkFormat format, uint32_t mipCount, VkImageLayout oldLayout, VkImageLayout newLayout) const;
 
-    inline void BindDescriptorSets(VkPipelineBindPoint bindPoint, const VkPipelineLayout& pipelineLayout, const VkDescriptorSet& set) const
+    inline void BindDescriptorSets(const VkPipelineLayout& pipelineLayout, const VkDescriptorSet& set, uint32_t location) const
     {
-        vkCmdBindDescriptorSets(_internal, bindPoint, pipelineLayout, 0, 1, &set, 0, nullptr);;
+        vkCmdBindDescriptorSets(_internal, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, location, 1, &set, 0, nullptr);
     }
 
     inline void DrawIndexed(uint32_t firstIndex, uint32_t indexCount, uint32_t vertexOffset) const

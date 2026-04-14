@@ -2,14 +2,13 @@
 
 
 #include "header/Camera.h"
+#include "header/DescriptorPool.h"
 #include "header/MeshRegistry.h"
 #include "header/Renderer.h"
 #include "header/VkHandlers/VkSamplerHandler.h"
 #include "header/CommandBuffer.h"
 #include "header/MultiFrame.h"
 #include "header/VkHandlers/VkCommandPoolHandler.h"
-#include "header/VkHandlers/VkDescriptorPoolHandler.h"
-#include "header/VkHandlers/VkDescriptorSetLayoutHandler.h"
 #include "header/VkHandlers/VkDeviceHandler.h"
 #include "header/VkHandlers/VkFenceHandler.h"
 #include "header/VkHandlers/VkInstanceHandler.h"
@@ -77,13 +76,11 @@ class Application
     // Dynamic lifetime
     std::unique_ptr<SwapChain> _swapChain;
 
-    // layout binding
-    // Layout -> General description
-    // Pool -> memory pool to allocate something
-    // Set -> Object allocated on the pool
-    // So, layout and pool are the memory and need to be cleaned, but as we clean layout, we also clean set automatically
+    // used for object sharing data between cpu and gpu -> due to race condition we need one copy for each frame
+    DescriptorPool _dynamicDescriptorPool;
 
-    VkDescriptorSetLayoutHandler _descriptorSetLayoutHandler;
+    // used for static data where we can reuse the same descriptor between frames
+    DescriptorPool _staticDescriptorPool;
 
     VkPipelineLayoutHandler _pipelineLayoutHandler;
     VkPipelineHandler _graphicsPipelineHandler;
@@ -95,16 +92,16 @@ class Application
 
     // Datas
     MeshRegistry _meshRegistry;
-    GPUAllocatedImage _modelImg;
+    GPUAllocatedImage _modelImg0;
+    GPUAllocatedImage _modelImg1;
     VkSamplerHandler _sampler;
 
-    VkDescriptorPoolHandler _dynamicDescriptorPoolHandler;
-    VkDescriptorPoolHandler _staticDescriptorPoolHandler;
-
     MultiFrameHandler<GraphicsBuffer> _cameraDataBuffer;
-
     MultiFrameObject<VkDescriptorSet> _descriptorSet;
     MultiFrameObject<VkDescriptorSet> CreateDescriptorSet();
+    VkDescriptorSet _textureDescriptorSet0;
+    VkDescriptorSet _textureDescriptorSet1;
+
     MultiFrameObject<CommandBuffer> _commandBuffer;
 
     // GPU Sync
