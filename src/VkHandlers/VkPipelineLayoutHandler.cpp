@@ -1,4 +1,5 @@
 #include "header/VkHandlers/VkPipelineLayoutHandler.h"
+#include "header/ApplicationInfo.h"
 #include <cstdint>
 #include <initializer_list>
 #include <stdexcept>
@@ -8,15 +9,15 @@
 #include "header/DebugLayer.h"
 #endif
 
-VkPipelineLayoutHandler::VkPipelineLayoutHandler(VkDevice device, std::initializer_list<VkDescriptorSetLayout> descriptorLayouts, std::initializer_list<VkPushConstantRange> pushConstantRanges)
-    : VkPipelineLayoutHandler(device, descriptorLayouts.begin(), descriptorLayouts.size(), pushConstantRanges.begin(), pushConstantRanges.size()) {}
+VkPipelineLayoutHandler::VkPipelineLayoutHandler(std::initializer_list<VkDescriptorSetLayout> descriptorLayouts, std::initializer_list<VkPushConstantRange> pushConstantRanges)
+    : VkPipelineLayoutHandler(descriptorLayouts.begin(), descriptorLayouts.size(), pushConstantRanges.begin(), pushConstantRanges.size()) {}
 
-VkPipelineLayoutHandler::VkPipelineLayoutHandler(VkDevice device, const VkDescriptorSetLayout* descriptorLayouts, uint32_t descriptorLayoutCount, const VkPushConstantRange* pushConstantRanges, uint32_t pushConstantRangeCount)
+VkPipelineLayoutHandler::VkPipelineLayoutHandler(const VkDescriptorSetLayout* descriptorLayouts, uint32_t descriptorLayoutCount, const VkPushConstantRange* pushConstantRanges, uint32_t pushConstantRangeCount)
 {
 #ifdef M3VK_MEMORYLOG
     DebugLayer::Log(DebugLayer::LogType::CREATE, "VkPipelineLayoutHandler Creation !");
 #endif
-    _device = device;
+
 
     VkPipelineLayoutCreateInfo layoutCreateInfo
     {
@@ -27,7 +28,7 @@ VkPipelineLayoutHandler::VkPipelineLayoutHandler(VkDevice device, const VkDescri
         .pPushConstantRanges = pushConstantRanges
     };
 
-    if(vkCreatePipelineLayout(_device, &layoutCreateInfo, nullptr, &_internal) != VK_SUCCESS)
+    if(vkCreatePipelineLayout(ApplicationInfo::Device(), &layoutCreateInfo, nullptr, &_internal) != VK_SUCCESS)
     {
         throw std::runtime_error("Failed to create VK Layout !");
     }
@@ -35,7 +36,7 @@ VkPipelineLayoutHandler::VkPipelineLayoutHandler(VkDevice device, const VkDescri
 VkPipelineLayoutHandler::~VkPipelineLayoutHandler()
 {
     if(_internal == VK_NULL_HANDLE) return;
-    vkDestroyPipelineLayout(_device, _internal, nullptr);
+    vkDestroyPipelineLayout(ApplicationInfo::Device(), _internal, nullptr);
 
 #ifdef M3VK_MEMORYLOG
     DebugLayer::Log(DebugLayer::LogType::DESTROY, "VkPipelineLayoutHandler Destroyed !");
@@ -49,7 +50,7 @@ VkPipelineLayoutHandler::VkPipelineLayoutHandler(VkPipelineLayoutHandler && othe
 #endif
 
     _internal = other._internal;
-    _device = other._device;
+
     other._internal = VK_NULL_HANDLE;
 }
 
@@ -58,7 +59,7 @@ VkPipelineLayoutHandler& VkPipelineLayoutHandler::operator=(VkPipelineLayoutHand
     if(this != &other)
     {
         _internal = other._internal;
-        _device = other._device;
+
         other._internal = VK_NULL_HANDLE;
     }
 

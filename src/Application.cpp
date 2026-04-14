@@ -48,7 +48,7 @@ MultiFrameObject<VkDescriptorSet> Application::CreateDescriptorSet()
 
     MultiFrameObject<VkDescriptorSet> descriptorSet(static_cast<uint32_t>(ApplicationInfo::Constant::MaxFrameInCount));
     descriptorSet.Resize(ApplicationInfo::Constant::MaxFrameInCount);
-    if(vkAllocateDescriptorSets(_deviceHandler.Get(), &allocateInfo, descriptorSet.Data()) != VK_SUCCESS)
+    if(vkAllocateDescriptorSets(ApplicationInfo::Device(), &allocateInfo, descriptorSet.Data()) != VK_SUCCESS)
     {
         throw std::runtime_error("Failed to allocate descriptor set");
     }
@@ -96,7 +96,7 @@ MultiFrameObject<VkDescriptorSet> Application::CreateDescriptorSet()
             }
         };
 
-        vkUpdateDescriptorSets(_deviceHandler.Get(), static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
+        vkUpdateDescriptorSets(ApplicationInfo::Device(), static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
     }
 
     return descriptorSet;
@@ -173,12 +173,12 @@ void Application::RefreshSwapChain()
 
     // TODO : Swap chain is currently resetted the first frame beacause it is out of date
     _swapChain.reset();
-    _swapChain = std::make_unique<SwapChain>(_window, _physicalDeviceHandler.Get(), _deviceHandler.Get(), _windowSurfaceHandler.Get());
+    _swapChain = std::make_unique<SwapChain>(_window, _windowSurfaceHandler.Get());
 
     _camera._aspect = static_cast<float>(_swapChain->GetExtent().width) / static_cast<float>(_swapChain->GetExtent().height);
 
     _colorBackBuffer.reset();
-    _colorBackBuffer = std::make_unique<GPUAllocatedImage>(_deviceHandler.Get(), _physicalDeviceHandler, _swapChain->GetExtent().width, _swapChain->GetExtent().height,
+    _colorBackBuffer = std::make_unique<GPUAllocatedImage>(_swapChain->GetExtent().width, _swapChain->GetExtent().height,
         ApplicationInfo::Get().GetMsaaSample(),
         1, _swapChain->GetImageFormat(),
         VK_IMAGE_TILING_OPTIMAL,
@@ -186,7 +186,7 @@ void Application::RefreshSwapChain()
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
     _depthBuffer.reset();
-    _depthBuffer = std::make_unique<GPUAllocatedImage>(_deviceHandler.Get(), _physicalDeviceHandler, _swapChain->GetExtent().width, _swapChain->GetExtent().height, ApplicationInfo::Get().GetMsaaSample(), 1, ApplicationInfo::Constant::DepthFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    _depthBuffer = std::make_unique<GPUAllocatedImage>(_swapChain->GetExtent().width, _swapChain->GetExtent().height, ApplicationInfo::Get().GetMsaaSample(), 1, ApplicationInfo::Constant::DepthFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 }
 
 void Application::DrawFrame()
@@ -195,7 +195,7 @@ void Application::DrawFrame()
 
     // Acquire image to draw on
     uint32_t imageIndex;
-    VkResult result = vkAcquireNextImageKHR(_deviceHandler.Get(), _swapChain->Get(), UINT64_MAX, _availableImageSemaphore.GetInternal(_currentFrame), VK_NULL_HANDLE, &imageIndex);
+    VkResult result = vkAcquireNextImageKHR(ApplicationInfo::Device(), _swapChain->Get(), UINT64_MAX, _availableImageSemaphore.GetInternal(_currentFrame), VK_NULL_HANDLE, &imageIndex);
 
     if(result == VK_ERROR_OUT_OF_DATE_KHR)
     {
@@ -318,20 +318,20 @@ Application::Application() :
     _vkDebugLayer(_instanceHandler.Get()),
     _windowSurfaceHandler(_instanceHandler.Get(), _window.Get()),
     _physicalDeviceHandler(_instanceHandler.Get(), _windowSurfaceHandler.Get(), _deviceExtensions),
-    _deviceHandler(_physicalDeviceHandler.Get(), _windowSurfaceHandler.Get(), _deviceExtensions),
+    _deviceHandler(_windowSurfaceHandler.Get(), _deviceExtensions),
 
     // Queues & Swapchain
-    _graphicsQueueHandler(_deviceHandler.Get(), VkQueueHandler::Graphics),
-    _presentQueueHandler(_deviceHandler.Get(), VkQueueHandler::Present),
-    _swapChain(std::make_unique<SwapChain>(_window, _physicalDeviceHandler.Get(), _deviceHandler.Get(), _windowSurfaceHandler.Get())),
+    _graphicsQueueHandler(VkQueueHandler::Graphics),
+    _presentQueueHandler(VkQueueHandler::Present),
+    _swapChain(std::make_unique<SwapChain>(_window, _windowSurfaceHandler.Get())),
 
-    _descriptorSetLayoutHandler(_deviceHandler.Get(), std::initializer_list<VkDescriptorSetLayoutBinding>(
+    _descriptorSetLayoutHandler(std::initializer_list<VkDescriptorSetLayoutBinding>(
         {
             VkDescriptorSetLayoutBinding{ 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT, nullptr },
             VkDescriptorSetLayoutBinding{ 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr }
         }
     )),
-    _pipelineLayoutHandler(_deviceHandler.Get(), std::initializer_list<VkDescriptorSetLayout>(
+    _pipelineLayoutHandler(std::initializer_list<VkDescriptorSetLayout>(
         {
             _descriptorSetLayoutHandler.Get()
         }
@@ -341,23 +341,23 @@ Application::Application() :
             VkPushConstantRange{ VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(ObjectData) }
         }
     )),
-    _graphicsPipelineHandler(_swapChain->GetExtent(), _deviceHandler.Get(), ApplicationInfo::Get().GetMsaaSample(), _pipelineLayoutHandler.Get(), _swapChain->GetImageFormat(), ApplicationInfo::Constant::DepthFormat),
+    _graphicsPipelineHandler(_swapChain->GetExtent(), ApplicationInfo::Get().GetMsaaSample(), _pipelineLayoutHandler.Get(), _swapChain->GetImageFormat(), ApplicationInfo::Constant::DepthFormat),
 
     // Command pool
     _graphicsCommandPoolHandler(_deviceHandler.Get()),
 
     // Geometry & Data Buffers
-    _colorBackBuffer(std::make_unique<GPUAllocatedImage>(_deviceHandler.Get(), _physicalDeviceHandler, _swapChain->GetExtent().width, _swapChain->GetExtent().height,
+    _colorBackBuffer(std::make_unique<GPUAllocatedImage>(_swapChain->GetExtent().width, _swapChain->GetExtent().height,
         ApplicationInfo::Get().GetMsaaSample(),
         1,
         _swapChain->GetImageFormat(),
         VK_IMAGE_TILING_OPTIMAL,
         VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)),
-    _depthBuffer(std::make_unique<GPUAllocatedImage>(_deviceHandler.Get(), _physicalDeviceHandler, _swapChain->GetExtent().width, _swapChain->GetExtent().height, ApplicationInfo::Get().GetMsaaSample(), 1, ApplicationInfo::Constant::DepthFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)),
+    _depthBuffer(std::make_unique<GPUAllocatedImage>(_swapChain->GetExtent().width, _swapChain->GetExtent().height, ApplicationInfo::Get().GetMsaaSample(), 1, ApplicationInfo::Constant::DepthFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)),
 
     // Descriptor Pools
-    _dynamicDescriptorPoolHandler(_deviceHandler.Get(), std::initializer_list<VkDescriptorPoolSize>(
+    _dynamicDescriptorPoolHandler(std::initializer_list<VkDescriptorPoolSize>(
         {
             VkDescriptorPoolSize
             {
@@ -375,7 +375,7 @@ Application::Application() :
                 .descriptorCount = ApplicationInfo::Constant::MaxFrameInCount
             }
         }), ApplicationInfo::Constant::MaxFrameInCount),
-    _staticDescriptorPoolHandler(_deviceHandler.Get(), std::initializer_list<VkDescriptorPoolSize>(
+    _staticDescriptorPoolHandler(std::initializer_list<VkDescriptorPoolSize>(
         {
             VkDescriptorPoolSize
             {
@@ -389,20 +389,20 @@ Application::Application() :
             }
         }), 1),
 
-    _cameraDataBuffer(ApplicationInfo::Constant::MaxFrameInCount, _physicalDeviceHandler, _deviceHandler.Get(), 1, sizeof(CameraData), GraphicsBuffer::UNIFORM),
-    _modelImg(_deviceHandler.Get(), _physicalDeviceHandler, CPUImage("data/img/models/viking_room.png", STBI_rgb_alpha), _graphicsCommandPoolHandler.Get(), _graphicsQueueHandler.Get()),
+    _cameraDataBuffer(ApplicationInfo::Constant::MaxFrameInCount, 1, sizeof(CameraData), GraphicsBuffer::UNIFORM),
+    _modelImg(CPUImage("data/img/models/viking_room.png", STBI_rgb_alpha), _graphicsCommandPoolHandler.Get(), _graphicsQueueHandler.Get()),
     _sampler(_deviceHandler.Get()),
     _camera(glm::vec3(0.0f, 0.0f, 3.0f), glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, 1.0f, 0.0f), 45.0f, (float)_swapChain->GetExtent().width / (float)_swapChain->GetExtent().height, 0.1f, 100.0f),
-    _meshRegistry(_deviceHandler.Get(), _physicalDeviceHandler),
+    _meshRegistry(),
 
     // Descriptor Sets & Execution
     _descriptorSet(CreateDescriptorSet()),
-    _commandBuffer(ApplicationInfo::Constant::MaxFrameInCount, _deviceHandler.Get(), _graphicsCommandPoolHandler.Get(), _graphicsQueueHandler.Get()),
+    _commandBuffer(ApplicationInfo::Constant::MaxFrameInCount, _graphicsCommandPoolHandler.Get(), _graphicsQueueHandler.Get()),
 
     // Synchronization
-    _availableImageSemaphore(ApplicationInfo::Constant::MaxFrameInCount, _deviceHandler.Get()),
-    _renderFinishedSemaphores(_swapChain->Images.Size(), _deviceHandler.Get()),
-    _waitFence(ApplicationInfo::Constant::MaxFrameInCount, _deviceHandler.Get())
+    _availableImageSemaphore(ApplicationInfo::Constant::MaxFrameInCount),
+    _renderFinishedSemaphores(_swapChain->Images.Size()),
+    _waitFence(ApplicationInfo::Constant::MaxFrameInCount)
 {
 #ifdef M3VK_MEMORYLOG
     DebugLayer::Log(DebugLayer::LogType::CREATE, "Application Creation !");
@@ -426,7 +426,7 @@ Application::Application() :
         _renderers.emplace_back(cube, glm::vec3(0.0f, 0.0f,  -3.0 + -2.0f * i), ProjectHelper::EulerToQuat(glm::vec3(0, 0, 0)), glm::vec3(0.5f));
     }
 
-    _meshRegistry.UploadAndRelease(_physicalDeviceHandler, _deviceHandler.Get(), _graphicsQueueHandler.Get(), _graphicsCommandPoolHandler.Get());
+    _meshRegistry.UploadAndRelease(_graphicsQueueHandler.Get(), _graphicsCommandPoolHandler.Get());
 }
 
 void Application::MainLoop()

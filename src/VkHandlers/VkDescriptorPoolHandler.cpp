@@ -1,4 +1,5 @@
 #include "header/VkHandlers/VkDescriptorPoolHandler.h"
+#include "header/ApplicationInfo.h"
 #include <cstdint>
 
 #ifdef M3VK_MEMORYLOG
@@ -8,14 +9,13 @@
 #include <stdexcept>
 #include <vulkan/vulkan_core.h>
 
-VkDescriptorPoolHandler::VkDescriptorPoolHandler(VkDevice device, std::initializer_list<VkDescriptorPoolSize> poolSizes, uint32_t maxSets) : VkDescriptorPoolHandler(device, poolSizes.begin(), poolSizes.size(), maxSets) {}
+VkDescriptorPoolHandler::VkDescriptorPoolHandler(std::initializer_list<VkDescriptorPoolSize> poolSizes, uint32_t maxSets) : VkDescriptorPoolHandler(poolSizes.begin(), poolSizes.size(), maxSets) {}
 
-VkDescriptorPoolHandler::VkDescriptorPoolHandler(VkDevice device, const VkDescriptorPoolSize* poolSizes, uint32_t poolSizesCount, uint32_t maxSets)
+VkDescriptorPoolHandler::VkDescriptorPoolHandler(const VkDescriptorPoolSize* poolSizes, uint32_t poolSizesCount, uint32_t maxSets)
 {
 #ifdef M3VK_MEMORYLOG
     DebugLayer::Log(DebugLayer::LogType::CREATE, "VkDescriptorPoolHandler Creation !");
 #endif
-    _device = device;
 
     VkDescriptorPoolCreateInfo poolCreateInfo
     {
@@ -25,7 +25,7 @@ VkDescriptorPoolHandler::VkDescriptorPoolHandler(VkDevice device, const VkDescri
         .pPoolSizes = poolSizes,
     };
 
-    if(vkCreateDescriptorPool(_device, &poolCreateInfo, nullptr, &_internal) != VK_SUCCESS)
+    if(vkCreateDescriptorPool(ApplicationInfo::Device(), &poolCreateInfo, nullptr, &_internal) != VK_SUCCESS)
     {
         throw std::runtime_error("VK Create Descriptor Pool Failed !");
     }
@@ -35,7 +35,7 @@ VkDescriptorPoolHandler::~VkDescriptorPoolHandler()
 {
     if(_internal == VK_NULL_HANDLE) return;
 
-    vkDestroyDescriptorPool(_device, _internal, nullptr);
+    vkDestroyDescriptorPool(ApplicationInfo::Device(), _internal, nullptr);
 
 #ifdef M3VK_MEMORYLOG
     DebugLayer::Log(DebugLayer::LogType::DESTROY, "VkDescriptorPoolHandler Destroyed !");
@@ -49,7 +49,7 @@ VkDescriptorPoolHandler::VkDescriptorPoolHandler(VkDescriptorPoolHandler && othe
 #endif
 
     _internal = other._internal;
-    _device = other._device;
+
     other._internal = VK_NULL_HANDLE;
 }
 
@@ -58,7 +58,7 @@ VkDescriptorPoolHandler& VkDescriptorPoolHandler::operator=(VkDescriptorPoolHand
     if(this != &other)
     {
         _internal = other._internal;
-        _device = other._device;
+
         other._internal = VK_NULL_HANDLE;
     }
 

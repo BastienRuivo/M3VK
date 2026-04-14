@@ -1,6 +1,8 @@
 #include "./header/SwapChain.h"
 #include "./header/ProjectHelper.h"
+#include "header/ApplicationInfo.h"
 #include "header/MultiFrame.h"
+#include "header/QueueFamilyIds.h"
 #include "header/VkHandlers/VkImageViewHandler.h"
 #include <GLFW/glfw3.h>
 #include <algorithm>
@@ -101,16 +103,14 @@ VkSurfaceFormatKHR SwapChain::SelectSwapSurfaceFormat(const std::vector<VkSurfac
     return availableFormats[0];
 }
 
-SwapChain::SwapChain(const Window& window, VkPhysicalDevice physicalDevice, VkDevice device, VkSurfaceKHR windowSurface)
-: Images(0)
+SwapChain::SwapChain(const Window& window, VkSurfaceKHR windowSurface)
+: Images()
 {
 #ifdef M3VK_MEMORYLOG
     DebugLayer::Log(DebugLayer::LogType::CREATE, "SwapChain Creation !");
 #endif
 
-    _device = device;
-
-    ProjectHelper::SwapChainSupportDetails details = ProjectHelper::QuerySwapChainSupportDetail(physicalDevice, windowSurface);
+    ProjectHelper::SwapChainSupportDetails details = ProjectHelper::QuerySwapChainSupportDetail(ApplicationInfo::PhysicalDevice(), windowSurface);
 
     VkSurfaceFormatKHR format = SelectSwapSurfaceFormat(details.Formats);
     VkPresentModeKHR presentMode = SelectSwapPresentMode(details.PresentsModes);
@@ -137,7 +137,7 @@ SwapChain::SwapChain(const Window& window, VkPhysicalDevice physicalDevice, VkDe
         .imageUsage =VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT
     };
 
-    ProjectHelper::QueueFamilyIds queueIds = ProjectHelper::QueryQueueFamilies(physicalDevice, windowSurface);
+    QueueFamilyIds queueIds = QueueFamilyIds::QueryQueueFamilies(ApplicationInfo::PhysicalDevice(), windowSurface);
 
     uint32_t queueFamilyIndices[] = {queueIds.Graphics.value(), queueIds.Present.value()};
 
@@ -165,20 +165,20 @@ SwapChain::SwapChain(const Window& window, VkPhysicalDevice physicalDevice, VkDe
     // When we handle resizing
     createInfo.oldSwapchain = VK_NULL_HANDLE;
 
-    if(vkCreateSwapchainKHR(_device, &createInfo, nullptr, &_internal) != VK_SUCCESS)
+    if(vkCreateSwapchainKHR(ApplicationInfo::Device(), &createInfo, nullptr, &_internal) != VK_SUCCESS)
     {
         throw std::runtime_error("Failed to create swap chain !");
     }
 
-    vkGetSwapchainImagesKHR(_device, _internal, &imageCount, nullptr);
+    vkGetSwapchainImagesKHR(ApplicationInfo::Device(), _internal, &imageCount, nullptr);
 
     std::vector<VkImage> tempImages(imageCount);
-    vkGetSwapchainImagesKHR(_device, _internal, &imageCount, tempImages.data());
+    vkGetSwapchainImagesKHR(ApplicationInfo::Device(), _internal, &imageCount, tempImages.data());
 
     Images.Reserve(imageCount);
     for(int i = 0; i < imageCount; i++)
     {
-        Images.EmplaceBack(_device, tempImages[i], format.format, extents.width, extents.height);
+        Images.EmplaceBack(tempImages[i], format.format, extents.width, extents.height);
     }
 
     _imageFormat = format.format;
@@ -187,28 +187,26 @@ SwapChain::SwapChain(const Window& window, VkPhysicalDevice physicalDevice, VkDe
 
 SwapChain::~SwapChain()
 {
-    vkDestroySwapchainKHR(_device, _internal, nullptr);
+    vkDestroySwapchainKHR(ApplicationInfo::Device(), _internal, nullptr);
 
 #ifdef M3VK_MEMORYLOG
     DebugLayer::Log(DebugLayer::LogType::DESTROY, "SwapChain Destruction !");
 #endif
 }
 
-SwapChain::SwapChainImage::SwapChainImage(VkDevice device, VkImage swapChainImage, VkFormat format, uint32_t width, uint32_t height)
+SwapChain::SwapChainImage::SwapChainImage(VkImage swapChainImage, VkFormat format, uint32_t width, uint32_t height)
 {
-    _device = device;
     _internal = swapChainImage;
     _format = format;
     _width = width;
     _height = height;
     _mipCount = 1;
 
-    _view = VkImageViewHandler(device, _internal, _format, 1);
+    _view = VkImageViewHandler(_internal, _format, 1);
 }
 
 SwapChain::SwapChainImage::SwapChainImage(SwapChainImage&& other) noexcept
 {
-    _device = other._device;
     _internal = other._internal;
     _format = other._format;
     _width = other._width;
@@ -220,7 +218,6 @@ SwapChain::SwapChainImage& SwapChain::SwapChainImage::operator=(SwapChainImage&&
 {
     if(this != &other)
     {
-        _device = other._device;
         _internal = other._internal;
         _format = other._format;
         _width = other._width;

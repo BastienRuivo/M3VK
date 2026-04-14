@@ -16,7 +16,7 @@ class SwapChain
     class SwapChainImage : public GPUImage
     {
         public:
-        SwapChainImage(VkDevice device, VkImage swapChainImage, VkFormat format, uint32_t width, uint32_t height);
+        SwapChainImage(VkImage swapChainImage, VkFormat format, uint32_t width, uint32_t height);
 
         ~SwapChainImage() override = default;
 
@@ -28,7 +28,7 @@ class SwapChain
     };
 
     MultiFrameHandler<SwapChainImage> Images;
-    SwapChain(const Window & window, VkPhysicalDevice physicalDevice, VkDevice device, VkSurfaceKHR windowSurface);
+    SwapChain(const Window & window, VkSurfaceKHR windowSurface);
     ~SwapChain();
 
     VkSurfaceFormatKHR SelectSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats) const;
@@ -47,5 +47,4 @@ class SwapChain
     VkFormat _imageFormat = VK_FORMAT_UNDEFINED;
     VkExtent2D _extent;
     VkSwapchainKHR _internal = VK_NULL_HANDLE;
-    VkDevice _device = VK_NULL_HANDLE;
 };

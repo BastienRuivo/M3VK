@@ -1,7 +1,6 @@
 #pragma once
 
 #include "header/DebugLayer.h"
-#include "header/VkHandlers/VkPhysicalDeviceHandler.h"
 #include <cstdint>
 #include <vulkan/vulkan_core.h>
 
@@ -9,7 +8,7 @@ class StageBuffer
 {
     friend class GraphicsBuffer;
     public:
-    StageBuffer(const VkPhysicalDeviceHandler& physicalDeviceHandler, VkDevice device, VkDeviceSize size);
+    StageBuffer(VkDeviceSize size);
     ~StageBuffer();
 
     StageBuffer(StageBuffer&& other) noexcept;
@@ -18,13 +17,12 @@ class StageBuffer
     StageBuffer(const StageBuffer&) = delete;
     StageBuffer& operator=(const StageBuffer&) = delete;
 
-    void CopyToBuffer(const VkDevice& device, void* srcData, VkDeviceSize copySize);
+    void CopyToBuffer(void* srcData, VkDeviceSize copySize);
     inline VkBuffer Get() const { return _internal; };
 
     private:
     VkBuffer _internal = VK_NULL_HANDLE;
     VkDeviceMemory _memoryInternal = VK_NULL_HANDLE;
-    VkDevice _device = VK_NULL_HANDLE;
 };
 
 
@@ -38,7 +36,7 @@ class GraphicsBuffer
         UNIFORM = 2,
         STATIC_STORAGE = 3
     };
-    GraphicsBuffer(const VkPhysicalDeviceHandler& physicalDeviceHandler, VkDevice device, VkDeviceSize count, VkDeviceSize stride, BufferType type);
+    GraphicsBuffer(VkDeviceSize count, VkDeviceSize stride, BufferType type);
     ~GraphicsBuffer();
 
     GraphicsBuffer(GraphicsBuffer&& other) noexcept;
@@ -47,9 +45,7 @@ class GraphicsBuffer
     GraphicsBuffer(const GraphicsBuffer&) = delete;
     GraphicsBuffer& operator=(const GraphicsBuffer&) = delete;
 
-    void CopyToBuffer(const VkPhysicalDeviceHandler& physicalDevice,
-        const VkDevice& device,
-        const VkQueue& queue,
+    void CopyToBuffer(const VkQueue& queue,
         const VkCommandPool& pool,
         void* srcData,
         VkDeviceSize size,
@@ -78,7 +74,6 @@ class GraphicsBuffer
     void* _dataPtr = nullptr; // Currently used for persistent mapping for Uniform buffers, we only map it once to avoid the cost of mapping it each time
     VkDeviceSize _stride = 0;
     VkDeviceSize _count = 0;
-    VkDevice _device = VK_NULL_HANDLE;
 };
 
 // this class handle a graphics buffer with an arbitrary huge size where we can append data
@@ -87,9 +82,7 @@ class GeometryBuffer : public GraphicsBuffer
     public:
     using GraphicsBuffer::GraphicsBuffer;
 
-    void CopyToBuffer(const VkPhysicalDeviceHandler& physicalDevice,
-        const VkDevice& device,
-        const VkQueue& queue,
+    void CopyToBuffer(const VkQueue& queue,
         const VkCommandPool& cmdPool,
         void* srcData,
         VkDeviceSize size

@@ -5,7 +5,7 @@
 class VkPipelineHandler
 {
     public:
-    VkPipelineHandler(const VkExtent2D& appExtent, VkDevice device, VkSampleCountFlagBits msaaSampleCount, VkPipelineLayout pipelineLayout, VkFormat swapChainFormat, VkFormat depthFormat);
+    VkPipelineHandler(const VkExtent2D& appExtent, VkSampleCountFlagBits msaaSampleCount, VkPipelineLayout pipelineLayout, VkFormat swapChainFormat, VkFormat depthFormat);
     ~VkPipelineHandler();
 
     // VkHandles can be destroyed by one of the two object when copying, so we enable moving and disable copying.
@@ -23,5 +23,4 @@ class VkPipelineHandler
 
     private:
     VkPipeline _internal = VK_NULL_HANDLE;
-    VkDevice _device = VK_NULL_HANDLE;
 };

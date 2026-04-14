@@ -1,4 +1,5 @@
 #include "header/VkHandlers/VkPipelineHandler.h"
+#include "header/ApplicationInfo.h"
 #include "header/Shader.h"
 #include "header/Vertex.h"
 #include <stdexcept>
@@ -8,15 +9,12 @@
 #include "header/DebugLayer.h"
 #endif
 
-VkPipelineHandler::VkPipelineHandler(const VkExtent2D& appExtent, VkDevice device, VkSampleCountFlagBits msaaSampleCount, VkPipelineLayout pipelineLayout, VkFormat swapChainFormat, VkFormat depthFormat)
+VkPipelineHandler::VkPipelineHandler(const VkExtent2D& appExtent, VkSampleCountFlagBits msaaSampleCount, VkPipelineLayout pipelineLayout, VkFormat swapChainFormat, VkFormat depthFormat)
 {
 #ifdef M3VK_MEMORYLOG
     DebugLayer::Log(DebugLayer::LogType::CREATE, "VkPipelineHandler Creation !");
 #endif
-
-    _device = device;
-
-    Shader shader(_device);
+    Shader shader;
 
     VkPipelineShaderStageCreateInfo shadersStagesCreateInfo[2] = {
         {},
@@ -200,7 +198,7 @@ VkPipelineHandler::VkPipelineHandler(const VkExtent2D& appExtent, VkDevice devic
 
 
 
-    if(vkCreateGraphicsPipelines(_device, VK_NULL_HANDLE, 1, &pipelineCreateInfo, nullptr, &_internal) != VK_SUCCESS)
+    if(vkCreateGraphicsPipelines(ApplicationInfo::Device(), VK_NULL_HANDLE, 1, &pipelineCreateInfo, nullptr, &_internal) != VK_SUCCESS)
     {
         throw std::runtime_error("Failed to create graphics pipeline !");
     }
@@ -208,7 +206,7 @@ VkPipelineHandler::VkPipelineHandler(const VkExtent2D& appExtent, VkDevice devic
 VkPipelineHandler::~VkPipelineHandler()
 {
     if(_internal == VK_NULL_HANDLE) return;
-    vkDestroyPipeline(_device, _internal, nullptr);
+    vkDestroyPipeline(ApplicationInfo::Device(), _internal, nullptr);
 
 #ifdef M3VK_MEMORYLOG
     DebugLayer::Log(DebugLayer::LogType::DESTROY, "VkPipelineHandler Destroyed !");
@@ -222,7 +220,7 @@ VkPipelineHandler::VkPipelineHandler(VkPipelineHandler && other) noexcept
 #endif
 
     _internal = other._internal;
-    _device = other._device;
+
     other._internal = VK_NULL_HANDLE;
 }
 
@@ -231,7 +229,7 @@ VkPipelineHandler& VkPipelineHandler::operator=(VkPipelineHandler&& other) noexc
     if(this != &other)
     {
         _internal = other._internal;
-        _device = other._device;
+
         other._internal = VK_NULL_HANDLE;
     }
 

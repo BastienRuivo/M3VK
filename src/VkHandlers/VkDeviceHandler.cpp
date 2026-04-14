@@ -1,12 +1,12 @@
 #include "header/VkHandlers/VkDeviceHandler.h"
 #include "header/ApplicationInfo.h"
 #include "header/DebugLayer.h"
-#include "header/VkHandlers/VkPhysicalDeviceHandler.h"
 #include <set>
+#include <stdexcept>
 #include <vector>
 #include <vulkan/vulkan_core.h>
 
-VkDeviceHandler::VkDeviceHandler(VkPhysicalDevice physicalDevice, VkSurfaceKHR windowSurface, const std::vector<const char*>& deviceExtensions)
+VkDeviceHandler::VkDeviceHandler(VkSurfaceKHR windowSurface, const std::vector<const char*>& deviceExtensions)
 {
 #ifdef M3VK_MEMORYLOG
     DebugLayer::Log(DebugLayer::LogType::CREATE, "VkDeviceHandler Creation !");
@@ -60,11 +60,13 @@ VkDeviceHandler::VkDeviceHandler(VkPhysicalDevice physicalDevice, VkSurfaceKHR w
         .pEnabledFeatures = &deviceFeatures
     };
 
-    VkResult deviceCreation = vkCreateDevice(physicalDevice, &deviceCreateInfo, nullptr, &_internal);
+    VkResult deviceCreation = vkCreateDevice(ApplicationInfo::PhysicalDevice(), &deviceCreateInfo, nullptr, &_internal);
     if(deviceCreation != VK_SUCCESS)
     {
         throw std::runtime_error("Failed to create VK Logical Device !");
     }
+
+    ApplicationInfo::Get()._device = _internal;
 }
 
 VkDeviceHandler::~VkDeviceHandler()

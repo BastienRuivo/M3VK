@@ -12,7 +12,7 @@ class CommandBuffer
         MultipleTime
     };
 
-    CommandBuffer(VkDevice device, VkCommandPool pool, VkQueue queue);
+    CommandBuffer(VkCommandPool pool, VkQueue queue);
     ~CommandBuffer();
 
     CommandBuffer(CommandBuffer&& other) noexcept;
@@ -134,7 +134,6 @@ class CommandBuffer
     void CreateSingleTime();
     void CreateMultiUsage();
 
-    VkDevice _device = VK_NULL_HANDLE;
     VkCommandPool _pool = VK_NULL_HANDLE;
     VkQueue _queue = VK_NULL_HANDLE;
     VkCommandBuffer _internal = VK_NULL_HANDLE;

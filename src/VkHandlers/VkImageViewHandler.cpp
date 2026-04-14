@@ -1,4 +1,5 @@
 #include "header/VkHandlers/VkImageViewHandler.h"
+#include "header/ApplicationInfo.h"
 #include "header/ProjectHelper.h"
 #include <stdexcept>
 #include <vulkan/vulkan_core.h>
@@ -7,16 +8,16 @@
 #include "header/DebugLayer.h"
 #endif
 
-VkImageViewHandler::VkImageViewHandler(VkDevice device, VkImage image, VkFormat format, uint32_t mipCount) :
-    VkImageViewHandler(device, image, format, mipCount, ProjectHelper::GetImageAspectFlags(format)) {}
+VkImageViewHandler::VkImageViewHandler(VkImage image, VkFormat format, uint32_t mipCount) :
+    VkImageViewHandler(image, format, mipCount, ProjectHelper::GetImageAspectFlags(format)) {}
 
-VkImageViewHandler::VkImageViewHandler(VkDevice device, VkImage image, VkFormat format, uint32_t mipCount, VkImageAspectFlags aspectMask)
+VkImageViewHandler::VkImageViewHandler(VkImage image, VkFormat format, uint32_t mipCount, VkImageAspectFlags aspectMask)
 {
 #ifdef M3VK_MEMORYLOG
     DebugLayer::Log(DebugLayer::LogType::CREATE, "VkImageViewHandler Creation !");
 #endif
 
-    _device = device;
+
 
     VkImageViewCreateInfo createInfo
     {
@@ -34,7 +35,7 @@ VkImageViewHandler::VkImageViewHandler(VkDevice device, VkImage image, VkFormat 
         }
     };
 
-    if(vkCreateImageView(_device, &createInfo, nullptr, &_internal) != VK_SUCCESS)
+    if(vkCreateImageView(ApplicationInfo::Device(), &createInfo, nullptr, &_internal) != VK_SUCCESS)
     {
         throw std::runtime_error("Failed to create swap chain images !");
     }
@@ -43,7 +44,7 @@ VkImageViewHandler::~VkImageViewHandler()
 {
     if(_internal == VK_NULL_HANDLE) return;
 
-    vkDestroyImageView(_device, _internal, nullptr);
+    vkDestroyImageView(ApplicationInfo::Device(), _internal, nullptr);
 
 #ifdef M3VK_MEMORYLOG
     DebugLayer::Log(DebugLayer::LogType::DESTROY, "VkImageViewHandler Destroyed !");
@@ -57,10 +58,8 @@ VkImageViewHandler::VkImageViewHandler(VkImageViewHandler && other) noexcept
 #endif
 
     _internal = other._internal;
-    _device = other._device;
     _format = other._format;
     other._internal = VK_NULL_HANDLE;
-    other._device = VK_NULL_HANDLE;
     other._format = VK_FORMAT_UNDEFINED;
 }
 
@@ -69,10 +68,8 @@ VkImageViewHandler& VkImageViewHandler::operator=(VkImageViewHandler&& other) no
     if(this != &other)
     {
         _internal = other._internal;
-        _device = other._device;
         _format = other._format;
         other._internal = VK_NULL_HANDLE;
-        other._device = VK_NULL_HANDLE;
         other._format = VK_FORMAT_UNDEFINED;
     }
 

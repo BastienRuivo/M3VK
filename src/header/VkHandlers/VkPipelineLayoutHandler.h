@@ -6,8 +6,8 @@
 class VkPipelineLayoutHandler
 {
     public:
-    VkPipelineLayoutHandler(VkDevice device, std::initializer_list<VkDescriptorSetLayout> descriptorLayouts, std::initializer_list<VkPushConstantRange> pushConstantRanges);
-    VkPipelineLayoutHandler(VkDevice device, const VkDescriptorSetLayout* descriptorLayouts, uint32_t descriptorLayoutCount, const VkPushConstantRange* pushConstantRanges, uint32_t pushConstantRangeCount);
+    VkPipelineLayoutHandler(std::initializer_list<VkDescriptorSetLayout> descriptorLayouts, std::initializer_list<VkPushConstantRange> pushConstantRanges);
+    VkPipelineLayoutHandler(const VkDescriptorSetLayout* descriptorLayouts, uint32_t descriptorLayoutCount, const VkPushConstantRange* pushConstantRanges, uint32_t pushConstantRangeCount);
     ~VkPipelineLayoutHandler();
 
     // VkHandles can be destroyed by one of the two object when copying, so we enable moving and disable copying.
@@ -27,5 +27,4 @@ class VkPipelineLayoutHandler
 
     private:
     VkPipelineLayout _internal = VK_NULL_HANDLE;
-    VkDevice _device = VK_NULL_HANDLE;
 };

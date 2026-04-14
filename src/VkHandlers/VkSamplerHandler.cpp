@@ -1,6 +1,6 @@
 #include "header/VkHandlers/VkSamplerHandler.h"
 #include "header/ApplicationInfo.h"
-#include "header/VkHandlers/VkPhysicalDeviceHandler.h"
+#include <stdexcept>
 #include <vulkan/vulkan_core.h>
 
 #ifdef M3VK_MEMORYLOG
@@ -13,7 +13,7 @@ VkSamplerHandler::VkSamplerHandler(VkDevice device)
     DebugLayer::Log(DebugLayer::LogType::CREATE, "VkSamplerHandler Creation !");
 #endif
 
-    _device = device;
+
 
     VkSamplerCreateInfo createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
@@ -43,7 +43,7 @@ VkSamplerHandler::VkSamplerHandler(VkDevice device)
     createInfo.minLod = 0.0f;
     createInfo.maxLod = VK_LOD_CLAMP_NONE;
 
-    if(vkCreateSampler(_device, &createInfo, nullptr, &_internal) != VK_SUCCESS)
+    if(vkCreateSampler(ApplicationInfo::Device(), &createInfo, nullptr, &_internal) != VK_SUCCESS)
     {
         throw std::runtime_error("Can't create sampler");
     }
@@ -52,7 +52,7 @@ VkSamplerHandler::~VkSamplerHandler()
 {
     if(_internal == VK_NULL_HANDLE) return;
 
-    vkDestroySampler(_device, _internal, nullptr);
+    vkDestroySampler(ApplicationInfo::Device(), _internal, nullptr);
 
 #ifdef M3VK_MEMORYLOG
     DebugLayer::Log(DebugLayer::LogType::DESTROY, "VkSamplerHandler Destroyed !");
@@ -64,11 +64,8 @@ VkSamplerHandler::VkSamplerHandler(VkSamplerHandler && other) noexcept
 #ifdef M3VK_MEMORYLOG
     DebugLayer::Log(DebugLayer::LogType::CREATE, "VkSamplerHandler Move Creation !");
 #endif
-
     _internal = other._internal;
-    _device = other._device;
     other._internal = VK_NULL_HANDLE;
-    other._device = VK_NULL_HANDLE;
 }
 
 VkSamplerHandler& VkSamplerHandler::operator=(VkSamplerHandler&& other) noexcept
@@ -76,9 +73,7 @@ VkSamplerHandler& VkSamplerHandler::operator=(VkSamplerHandler&& other) noexcept
     if(this != &other)
     {
         _internal = other._internal;
-        _device = other._device;
         other._internal = VK_NULL_HANDLE;
-        other._device = VK_NULL_HANDLE;
     }
 
     return *this;

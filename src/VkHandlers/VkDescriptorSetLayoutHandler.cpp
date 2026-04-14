@@ -1,4 +1,5 @@
 #include "header/VkHandlers/VkDescriptorSetLayoutHandler.h"
+#include "header/ApplicationInfo.h"
 #include <cstdint>
 #include <stdexcept>
 #include <vulkan/vulkan_core.h>
@@ -7,15 +8,15 @@
 #include "header/DebugLayer.h"
 #endif
 
-VkDescriptorSetLayoutHandler::VkDescriptorSetLayoutHandler(VkDevice device, std::initializer_list<VkDescriptorSetLayoutBinding> bindings) : VkDescriptorSetLayoutHandler(device, bindings.begin(), static_cast<uint32_t>(bindings.size())) {}
+VkDescriptorSetLayoutHandler::VkDescriptorSetLayoutHandler(std::initializer_list<VkDescriptorSetLayoutBinding> bindings) : VkDescriptorSetLayoutHandler(bindings.begin(), static_cast<uint32_t>(bindings.size())) {}
 
-VkDescriptorSetLayoutHandler::VkDescriptorSetLayoutHandler(VkDevice device, const VkDescriptorSetLayoutBinding* bindings, uint32_t bindingCount)
+VkDescriptorSetLayoutHandler::VkDescriptorSetLayoutHandler(const VkDescriptorSetLayoutBinding* bindings, uint32_t bindingCount)
 {
 #ifdef M3VK_MEMORYLOG
     DebugLayer::Log(DebugLayer::LogType::CREATE, "VkDescriptorSetLayoutHandler Creation !");
 #endif
 
-    _device = device;
+
 
     VkDescriptorSetLayoutCreateInfo createInfo
     {
@@ -24,7 +25,7 @@ VkDescriptorSetLayoutHandler::VkDescriptorSetLayoutHandler(VkDevice device, cons
         .pBindings = bindings
     };
 
-    if(vkCreateDescriptorSetLayout(_device, &createInfo, nullptr, &_internal) != VK_SUCCESS)
+    if(vkCreateDescriptorSetLayout(ApplicationInfo::Device(), &createInfo, nullptr, &_internal) != VK_SUCCESS)
     {
         throw std::runtime_error("Failed to create descriptor set layout");
     }
@@ -34,7 +35,7 @@ VkDescriptorSetLayoutHandler::~VkDescriptorSetLayoutHandler()
 {
     if(_internal == VK_NULL_HANDLE) return;
 
-    vkDestroyDescriptorSetLayout(_device, _internal, nullptr);
+    vkDestroyDescriptorSetLayout(ApplicationInfo::Device(), _internal, nullptr);
 
 #ifdef M3VK_MEMORYLOG
     DebugLayer::Log(DebugLayer::LogType::DESTROY, "VkDescriptorSetLayoutHandler Destroyed !");
@@ -48,7 +49,7 @@ VkDescriptorSetLayoutHandler::VkDescriptorSetLayoutHandler(VkDescriptorSetLayout
 #endif
 
     _internal = other._internal;
-    _device = other._device;
+
     other._internal = VK_NULL_HANDLE;
 }
 
@@ -57,7 +58,7 @@ VkDescriptorSetLayoutHandler& VkDescriptorSetLayoutHandler::operator=(VkDescript
     if(this != &other)
     {
         _internal = other._internal;
-        _device = other._device;
+
         other._internal = VK_NULL_HANDLE;
     }
 

@@ -1,4 +1,5 @@
 #include "header/VkHandlers/VkFenceHandler.h"
+#include "header/ApplicationInfo.h"
 #include <stdexcept>
 #include <vulkan/vulkan_core.h>
 
@@ -6,12 +7,12 @@
 #include "header/DebugLayer.h"
 #endif
 
-VkFenceHandler::VkFenceHandler(VkDevice device)
+VkFenceHandler::VkFenceHandler()
 {
 #ifdef M3VK_MEMORYLOG
     DebugLayer::Log(DebugLayer::LogType::CREATE, "VkFenceHandler Creation !");
 #endif
-    _device = device;
+
 
     VkFenceCreateInfo fenceCreateInfo
     {
@@ -19,7 +20,7 @@ VkFenceHandler::VkFenceHandler(VkDevice device)
         .flags = VK_FENCE_CREATE_SIGNALED_BIT // Create the queue in the "Signaled" state to ensure the first frame won't wait eternally for a fence that is not signaled, thus preventing an infinit loop
     };
 
-    if(vkCreateFence(_device, &fenceCreateInfo, nullptr, &_internal) != VK_SUCCESS)
+    if(vkCreateFence(ApplicationInfo::Device(), &fenceCreateInfo, nullptr, &_internal) != VK_SUCCESS)
     {
         throw std::runtime_error("Can't create fence");
     }
@@ -28,19 +29,19 @@ VkFenceHandler::VkFenceHandler(VkDevice device)
 
 void VkFenceHandler::Wait(uint64_t timeout) const
 {
-    vkWaitForFences(_device, 1, &_internal, VK_TRUE, timeout);
+    vkWaitForFences(ApplicationInfo::Device(), 1, &_internal, VK_TRUE, timeout);
 }
 
 void VkFenceHandler::Reset() const
 {
-    vkResetFences(_device, 1, &_internal);
+    vkResetFences(ApplicationInfo::Device(), 1, &_internal);
 }
 
 VkFenceHandler::~VkFenceHandler()
 {
     if(_internal == VK_NULL_HANDLE) return;
 
-    vkDestroyFence(_device, _internal, nullptr);
+    vkDestroyFence(ApplicationInfo::Device(), _internal, nullptr);
 
 #ifdef M3VK_MEMORYLOG
     DebugLayer::Log(DebugLayer::LogType::DESTROY, "VkFenceHandler Destroyed !");
@@ -53,7 +54,7 @@ VkFenceHandler::VkFenceHandler(VkFenceHandler && other) noexcept
     DebugLayer::Log(DebugLayer::LogType::CREATE, "VkFenceHandler Move Creation !");
 #endif
     _internal = other._internal;
-    _device = other._device;
+
     other._internal = VK_NULL_HANDLE;
 }
 
@@ -62,7 +63,7 @@ VkFenceHandler& VkFenceHandler::operator=(VkFenceHandler&& other) noexcept
     if(this != &other)
     {
         _internal = other._internal;
-        _device = other._device;
+
         other._internal = VK_NULL_HANDLE;
     }
 

@@ -6,8 +6,8 @@
 class VkDescriptorSetLayoutHandler
 {
     public:
-    VkDescriptorSetLayoutHandler(VkDevice device, std::initializer_list<VkDescriptorSetLayoutBinding> bindings);
-    VkDescriptorSetLayoutHandler(VkDevice device, const VkDescriptorSetLayoutBinding* bindings, uint32_t bindingCount);
+    VkDescriptorSetLayoutHandler(std::initializer_list<VkDescriptorSetLayoutBinding> bindings);
+    VkDescriptorSetLayoutHandler(const VkDescriptorSetLayoutBinding* bindings, uint32_t bindingCount);
     ~VkDescriptorSetLayoutHandler();
 
     // VkHandles can be destroyed by one of the two object when copying, so we enable moving and disable copying.
@@ -25,5 +25,4 @@ class VkDescriptorSetLayoutHandler
 
     private:
     VkDescriptorSetLayout _internal = VK_NULL_HANDLE;
-    VkDevice _device = VK_NULL_HANDLE;
 };

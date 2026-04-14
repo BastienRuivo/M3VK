@@ -13,8 +13,6 @@ VkCommandPoolHandler::VkCommandPoolHandler(VkDevice device)
     DebugLayer::Log(DebugLayer::LogType::CREATE, "VkCommandPoolHandler Creation !");
 #endif
 
-    _device = device;
-
     VkCommandPoolCreateInfo poolInfo
     {
         .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
@@ -22,7 +20,7 @@ VkCommandPoolHandler::VkCommandPoolHandler(VkDevice device)
         .queueFamilyIndex = ApplicationInfo::Get().GetGraphicsQueueId()
     };
 
-    if(vkCreateCommandPool(_device, &poolInfo, nullptr, &_internal) != VK_SUCCESS)
+    if(vkCreateCommandPool(ApplicationInfo::Device(), &poolInfo, nullptr, &_internal) != VK_SUCCESS)
     {
         throw std::runtime_error("Failed to create command pool !");
     }
@@ -32,7 +30,7 @@ VkCommandPoolHandler::~VkCommandPoolHandler()
 {
     if(_internal == VK_NULL_HANDLE) return;
 
-    vkDestroyCommandPool(_device, _internal, nullptr);
+    vkDestroyCommandPool(ApplicationInfo::Device(), _internal, nullptr);
 
 #ifdef M3VK_MEMORYLOG
     DebugLayer::Log(DebugLayer::LogType::DESTROY, "VkCommandPoolHandler Destroyed !");
@@ -46,7 +44,7 @@ VkCommandPoolHandler::VkCommandPoolHandler(VkCommandPoolHandler && other) noexce
 #endif
 
     _internal = other._internal;
-    _device = other._device;
+
     other._internal = VK_NULL_HANDLE;
 }
 
@@ -55,7 +53,7 @@ VkCommandPoolHandler& VkCommandPoolHandler::operator=(VkCommandPoolHandler&& oth
     if(this != &other)
     {
         _internal = other._internal;
-        _device = other._device;
+
         other._internal = VK_NULL_HANDLE;
     }
 

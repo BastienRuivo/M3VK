@@ -1,18 +1,17 @@
 #include "header/GraphicsBuffer.h"
+#include "header/ApplicationInfo.h"
 #include "header/CommandBuffer.h"
-#include "header/VkHandlers/VkPhysicalDeviceHandler.h"
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
 #include <stdexcept>
 #include <vulkan/vulkan_core.h>
 
-StageBuffer::StageBuffer(const VkPhysicalDeviceHandler& physicalDeviceHandler, VkDevice device, VkDeviceSize size)
+StageBuffer::StageBuffer(VkDeviceSize size)
 {
 #ifdef M3VK_MEMORYLOG
     DebugLayer::Log(DebugLayer::LogType::CREATE, "StageBuffer creation !");
 #endif
-
-    _device = device;
 
     VkBufferUsageFlags usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
 
@@ -26,51 +25,51 @@ StageBuffer::StageBuffer(const VkPhysicalDeviceHandler& physicalDeviceHandler, V
 
     // If note exclusive, need to add a queue family index
 
-    if(vkCreateBuffer(_device, &info, nullptr, &_internal) != VK_SUCCESS)
+    if(vkCreateBuffer(ApplicationInfo::Device(), &info, nullptr, &_internal) != VK_SUCCESS)
     {
         throw std::runtime_error("Failed to create buffer !");
     }
 
     VkMemoryRequirements memRequirements;
-    vkGetBufferMemoryRequirements(_device, _internal, &memRequirements);
+    vkGetBufferMemoryRequirements(ApplicationInfo::Device(), _internal, &memRequirements);
 
     VkMemoryAllocateInfo allocateInfo
     {
         .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
         .allocationSize = memRequirements.size,
         // mean it's a visible and writable by CPU directecly
-        .memoryTypeIndex = physicalDeviceHandler.FindMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)
+        .memoryTypeIndex = ApplicationInfo::FindMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)
     };
 
-    if(vkAllocateMemory(_device, &allocateInfo, nullptr, &_memoryInternal) != VK_SUCCESS)
+    if(vkAllocateMemory(ApplicationInfo::Device(), &allocateInfo, nullptr, &_memoryInternal) != VK_SUCCESS)
     {
-        vkDestroyBuffer(_device, _internal, nullptr);
+        vkDestroyBuffer(ApplicationInfo::Device(), _internal, nullptr);
         throw std::runtime_error("Failed to allocate Stage Buffer memory");
     }
 
-    if(vkBindBufferMemory(_device, _internal, _memoryInternal, 0) != VK_SUCCESS)
+    if(vkBindBufferMemory(ApplicationInfo::Device(), _internal, _memoryInternal, 0) != VK_SUCCESS)
     {
-        vkDestroyBuffer(_device, _internal, nullptr);
-        vkFreeMemory(_device, _memoryInternal, nullptr);
+        vkDestroyBuffer(ApplicationInfo::Device(), _internal, nullptr);
+        vkFreeMemory(ApplicationInfo::Device(), _memoryInternal, nullptr);
         throw std::runtime_error("Failed to bind stage buffer memory");
     }
 }
 
-void StageBuffer::CopyToBuffer(const VkDevice& device, void* srcData, VkDeviceSize copySize)
+void StageBuffer::CopyToBuffer(void* srcData, VkDeviceSize copySize)
 {
     void* data;
-    if(vkMapMemory(device, _memoryInternal, 0, copySize, 0, &data) != VK_SUCCESS)
+    if(vkMapMemory(ApplicationInfo::Device(), _memoryInternal, 0, copySize, 0, &data) != VK_SUCCESS)
     {
         throw std::runtime_error("Failed to map stage buffer memory");
     }
     memcpy(data, srcData, (size_t)copySize);
-    vkUnmapMemory(device, _memoryInternal);
+    vkUnmapMemory(ApplicationInfo::Device(), _memoryInternal);
 };
 
 StageBuffer::~StageBuffer()
 {
-    vkDestroyBuffer(_device, _internal, nullptr);
-    vkFreeMemory(_device, _memoryInternal, nullptr);
+    vkDestroyBuffer(ApplicationInfo::Device(), _internal, nullptr);
+    vkFreeMemory(ApplicationInfo::Device(), _memoryInternal, nullptr);
 #ifdef M3VK_MEMORYLOG
     DebugLayer::Log(DebugLayer::LogType::DESTROY, "StageBuffer Destroyed !");
 #endif
@@ -84,7 +83,6 @@ StageBuffer::StageBuffer(StageBuffer && other) noexcept
 
     _internal = other._internal;
     _memoryInternal = other._memoryInternal;
-    _device = other._device;
 
     other._internal = VK_NULL_HANDLE;
     other._memoryInternal = VK_NULL_HANDLE;
@@ -96,7 +94,7 @@ StageBuffer& StageBuffer::operator=(StageBuffer&& other) noexcept
     {
         _internal = other._internal;
         _memoryInternal = other._memoryInternal;
-        _device = other._device;
+
         other._internal = VK_NULL_HANDLE;
         other._memoryInternal = VK_NULL_HANDLE;
     }
@@ -104,8 +102,8 @@ StageBuffer& StageBuffer::operator=(StageBuffer&& other) noexcept
     return *this;
 }
 
-GraphicsBuffer::GraphicsBuffer(const VkPhysicalDeviceHandler& physicalDevice, VkDevice device, VkDeviceSize count, VkDeviceSize stride, BufferType type)
-: _device(device), _type(type), _stride(stride), _count(count)
+GraphicsBuffer::GraphicsBuffer(VkDeviceSize count, VkDeviceSize stride, BufferType type)
+: _type(type), _stride(stride), _count(count)
 {
 #ifdef M3VK_MEMORYLOG
     DebugLayer::Log(DebugLayer::LogType::CREATE, "GraphicsBuffer Creation !");
@@ -145,50 +143,48 @@ GraphicsBuffer::GraphicsBuffer(const VkPhysicalDeviceHandler& physicalDevice, Vk
 
     // // If note exclusive, need to add a queue family index
 
-    if(vkCreateBuffer(device, &info, nullptr, &_internal) != VK_SUCCESS)
+    if(vkCreateBuffer(ApplicationInfo::Device(),&info, nullptr, &_internal) != VK_SUCCESS)
     {
         throw std::runtime_error("Failed to create buffer !");
     }
 
     VkMemoryRequirements memRequirements;
-    vkGetBufferMemoryRequirements(device, _internal, &memRequirements);
+    vkGetBufferMemoryRequirements(ApplicationInfo::Device(),_internal, &memRequirements);
 
     VkMemoryAllocateInfo allocateInfo
     {
         .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
         .allocationSize = memRequirements.size,
-        .memoryTypeIndex = physicalDevice.FindMemoryType(memRequirements.memoryTypeBits, properties)
+        .memoryTypeIndex = ApplicationInfo::FindMemoryType(memRequirements.memoryTypeBits, properties)
     };
 
-    if(vkAllocateMemory(device, &allocateInfo, nullptr, &_memoryInternal) != VK_SUCCESS)
+    if(vkAllocateMemory(ApplicationInfo::Device(),&allocateInfo, nullptr, &_memoryInternal) != VK_SUCCESS)
     {
         throw std::runtime_error("Failed to allocate buffer memory");
     }
 
-    vkBindBufferMemory(device, _internal, _memoryInternal, 0);
+    vkBindBufferMemory(ApplicationInfo::Device(),_internal, _memoryInternal, 0);
 
     if(_type == UNIFORM)
     {
-        if(vkMapMemory(device, _memoryInternal, 0, memRequirements.size, 0, &_dataPtr) != VK_SUCCESS)
+        if(vkMapMemory(ApplicationInfo::Device(),_memoryInternal, 0, memRequirements.size, 0, &_dataPtr) != VK_SUCCESS)
         {
             throw std::runtime_error("Failed to map buffer memory");
         }
     }
 }
 
-void GraphicsBuffer::CopyToBuffer(const VkPhysicalDeviceHandler& physicalDevice,
-    const VkDevice& device,
-    const VkQueue& queue,
+void GraphicsBuffer::CopyToBuffer(const VkQueue& queue,
     const VkCommandPool& pool,
     void* srcData,
     VkDeviceSize size,
     uint32_t srcIndex,
     uint32_t dstIndex)
 {
-    StageBuffer copyBuffer(physicalDevice, device, size);
-    copyBuffer.CopyToBuffer(device, srcData, size);
+    StageBuffer copyBuffer(size);
+    copyBuffer.CopyToBuffer(srcData, size);
 
-    CommandBuffer cmdBuffer(_device, pool, queue);
+    CommandBuffer cmdBuffer(pool, queue);
     cmdBuffer.BeginSingleTime();
     {
         cmdBuffer.CopyBuffer(copyBuffer.Get(), _internal, size, srcIndex, dstIndex);
@@ -201,17 +197,17 @@ GraphicsBuffer::~GraphicsBuffer()
 {
     if(_internal != VK_NULL_HANDLE)
     {
-        vkDestroyBuffer(_device, _internal, nullptr);
+        vkDestroyBuffer(ApplicationInfo::Device(), _internal, nullptr);
     }
 
     if(_memoryInternal != VK_NULL_HANDLE)
     {
         if(_dataPtr != nullptr)
         {
-            vkUnmapMemory(_device, _memoryInternal);
+            vkUnmapMemory(ApplicationInfo::Device(), _memoryInternal);
             _dataPtr = nullptr;
         }
-        vkFreeMemory(_device, _memoryInternal, nullptr);
+        vkFreeMemory(ApplicationInfo::Device(), _memoryInternal, nullptr);
     }
 
 #ifdef M3VK_MEMORYLOG
@@ -227,7 +223,7 @@ GraphicsBuffer::GraphicsBuffer(GraphicsBuffer && other) noexcept
 
     _internal = other._internal;
     _memoryInternal = other._memoryInternal;
-    _device = other._device;
+
 
     other._internal = VK_NULL_HANDLE;
     other._memoryInternal = VK_NULL_HANDLE;
@@ -239,7 +235,7 @@ GraphicsBuffer& GraphicsBuffer::operator=(GraphicsBuffer&& other) noexcept
     {
         _internal = other._internal;
         _memoryInternal = other._memoryInternal;
-        _device = other._device;
+
         _dataPtr = other._dataPtr;
 
         other._internal = VK_NULL_HANDLE;
@@ -250,9 +246,7 @@ GraphicsBuffer& GraphicsBuffer::operator=(GraphicsBuffer&& other) noexcept
     return *this;
 }
 
-void GeometryBuffer::CopyToBuffer(const VkPhysicalDeviceHandler& physicalDevice,
-    const VkDevice& device,
-    const VkQueue& queue,
+void GeometryBuffer::CopyToBuffer(const VkQueue& queue,
     const VkCommandPool& cmdPool,
     void* srcData,
     VkDeviceSize size)
@@ -265,6 +259,6 @@ void GeometryBuffer::CopyToBuffer(const VkPhysicalDeviceHandler& physicalDevice,
 
     uint32_t index = 0;
 
-    GraphicsBuffer::CopyToBuffer(physicalDevice, device, queue, cmdPool, srcData, size, 0, _currentSize);
+    GraphicsBuffer::CopyToBuffer(queue, cmdPool, srcData, size, 0, _currentSize);
     _currentSize += size;
 }

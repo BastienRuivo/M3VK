@@ -3,8 +3,8 @@
 #include <cstdint>
 #include <sys/types.h>
 #include <vulkan/vulkan_core.h>
-
-#include "header/ProjectHelper.h"
+#include "header/QueueFamilyIds.h"
+#include "header/VkHandlers/VkDeviceHandler.h"
 #include "header/VkHandlers/VkPhysicalDeviceHandler.h"
 
 class ApplicationInfo
@@ -20,6 +20,9 @@ class ApplicationInfo
         return instance;
     }
 
+    static inline VkDevice Device() { ApplicationInfo::Get(); return ApplicationInfo::Get()._device; }
+    static inline VkPhysicalDevice PhysicalDevice() { return ApplicationInfo::Get()._physicalDevice; }
+
     struct Constant
     {
         static inline constexpr VkSampleCountFlagBits MaxMSAASample = VK_SAMPLE_COUNT_8_BIT;
@@ -30,37 +33,44 @@ class ApplicationInfo
         static inline constexpr int InputPrevent = 60;
     };
 
-    inline const ProjectHelper::QueueFamilyIds& GetQueueFamilyIds() const
+    static inline const QueueFamilyIds& GetQueueFamilyIds()
     {
-        return _queueFamilyIds;
+        return ApplicationInfo::Get()._queueFamilyIds;
     }
 
-    inline uint32_t GetGraphicsQueueId() const
+    static inline uint32_t GetGraphicsQueueId()
     {
-        return _queueFamilyIds.Graphics.value();
+        return ApplicationInfo::Get()._queueFamilyIds.Graphics.value();
     }
 
-    inline uint32_t GetPresentQueueId() const
+    static inline uint32_t GetPresentQueueId()
     {
-        return _queueFamilyIds.Present.value();
+        return ApplicationInfo::Get()._queueFamilyIds.Present.value();
     }
 
-    inline const VkPhysicalDeviceProperties& GetProperties() const
+    static inline const VkPhysicalDeviceProperties& GetProperties()
     {
-        return _properties;
+        return ApplicationInfo::Get()._properties;
     }
 
-    inline VkSampleCountFlagBits GetMsaaSample() const
+    static inline VkSampleCountFlagBits GetMsaaSample()
     {
-        return _msaaSample;
+        return ApplicationInfo::Get()._msaaSample;
     }
 
-    void SetPhysicalDeviceInformation(VkPhysicalDeviceProperties properties, const ProjectHelper::QueueFamilyIds& queueFamilyIds);
+    static uint32_t FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
 
     private:
+    void SetPhysicalDeviceInformation(VkPhysicalDevice physicalDevice, VkPhysicalDeviceProperties properties, const QueueFamilyIds& queueFamilyIds);
+
     ApplicationInfo() {}
     VkSampleCountFlagBits GetMaxUsableSampleCount(VkSampleCountFlagBits maxSample) const;
-    ProjectHelper::QueueFamilyIds _queueFamilyIds;
+    QueueFamilyIds _queueFamilyIds;
     VkPhysicalDeviceProperties _properties;
     VkSampleCountFlagBits  _msaaSample = VK_SAMPLE_COUNT_1_BIT;
+    VkPhysicalDevice _physicalDevice = VK_NULL_HANDLE;
+    VkDevice _device = VK_NULL_HANDLE;
+
+    friend class VkPhysicalDeviceHandler;
+    friend class VkDeviceHandler;
 };

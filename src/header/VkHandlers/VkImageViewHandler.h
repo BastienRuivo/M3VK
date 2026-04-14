@@ -7,8 +7,8 @@ class VkImageViewHandler
 {
     public:
     VkImageViewHandler() {};
-    VkImageViewHandler(VkDevice device, VkImage image, VkFormat format, uint32_t mipCount, VkImageAspectFlags aspectMask);
-    VkImageViewHandler(VkDevice device, VkImage image, VkFormat format, uint32_t mipCount);
+    VkImageViewHandler(VkImage image, VkFormat format, uint32_t mipCount, VkImageAspectFlags aspectMask);
+    VkImageViewHandler(VkImage image, VkFormat format, uint32_t mipCount);
     ~VkImageViewHandler();
 
     // VkHandles can be destroyed by one of the two object when copying, so we enable moving and disable copying.
@@ -31,6 +31,5 @@ class VkImageViewHandler
 
     private:
     VkImageView _internal = VK_NULL_HANDLE;
-    VkDevice _device = VK_NULL_HANDLE;
     VkFormat _format = VK_FORMAT_UNDEFINED;
 };

@@ -6,7 +6,7 @@
 class VkDeviceHandler
 {
     public:
-    VkDeviceHandler(VkPhysicalDevice physicalDevice, VkSurfaceKHR windowSurface, const std::vector<const char*>& deviceExtensions);
+    VkDeviceHandler(VkSurfaceKHR windowSurface, const std::vector<const char*>& deviceExtensions);
     ~VkDeviceHandler();
 
     // VkHandles can be destroyed by one of the two object when copying, so we enable moving and disable copying.

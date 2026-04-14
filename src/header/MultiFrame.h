@@ -7,6 +7,7 @@ template <typename T>
 class MultiFrameObject
 {
     public:
+    MultiFrameObject() {}
 
     template<typename... Args>
     MultiFrameObject(size_t maxFrameInCount, Args&&... args)
@@ -18,9 +19,12 @@ class MultiFrameObject
         }
     }
 
-    MultiFrameObject(size_t maxFrameInCount)
+
+    static MultiFrameObject WithCapacity(size_t maxFrameInCount)
     {
-        _internals.reserve(maxFrameInCount);
+        MultiFrameObject mfo;
+        mfo._internals.reserve(maxFrameInCount);
+        return mfo;
     }
 
     template<typename... Args>

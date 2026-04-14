@@ -5,13 +5,10 @@
 class Shader
 {
     public:
-    Shader(const VkDevice& device);
+    Shader();
     ~Shader();
 
     VkShaderModule CreateShaderModule(const std::vector<char>& shaderCode);
     VkShaderModule VertexShader;
     VkShaderModule FragmentShader;
-
-    private:
-    VkDevice _device;
 };

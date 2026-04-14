@@ -1,10 +1,11 @@
 #include "header/MeshRegistry.h"
 #include "header/ApplicationInfo.h"
-#include "header/VkHandlers/VkPhysicalDeviceHandler.h"
+#include "header/ProjectHelper.h"
+#include <stdexcept>
 
-MeshRegistry::MeshRegistry(VkDevice device, const VkPhysicalDeviceHandler& physicalDevice, uint32_t vertexBufferSize, uint32_t indexBufferSize)
-: _vertexBuffer(physicalDevice, device, vertexBufferSize, sizeof(Vertex), GraphicsBuffer::BufferType::VERTEX),
-    _indexBuffer(physicalDevice, device, indexBufferSize, sizeof(uint32_t), GraphicsBuffer::BufferType::INDEX)
+MeshRegistry::MeshRegistry(uint32_t vertexBufferSize, uint32_t indexBufferSize)
+: _vertexBuffer(vertexBufferSize, sizeof(Vertex), GraphicsBuffer::BufferType::VERTEX),
+    _indexBuffer(indexBufferSize, sizeof(uint32_t), GraphicsBuffer::BufferType::INDEX)
 {
 
 }
@@ -34,7 +35,7 @@ SubMesh MeshRegistry::AddFromObj(const std::string& path)
     return Add(vertices, indices);
 }
 
-void MeshRegistry::UploadAndRelease(const VkPhysicalDeviceHandler& physicalDevice, VkDevice device, VkQueue queue, VkCommandPool cmdPool)
+void MeshRegistry::UploadAndRelease(VkQueue queue, VkCommandPool cmdPool)
 {
     if(_cpuVertices.size() >= ApplicationInfo::Constant::VertexBufferMaxSize)
     {
@@ -48,8 +49,8 @@ void MeshRegistry::UploadAndRelease(const VkPhysicalDeviceHandler& physicalDevic
         throw std::runtime_error("Max index buffer size reached");
     }
 
-    _vertexBuffer.CopyToBuffer(physicalDevice, device, queue, cmdPool, _cpuVertices.data(), _cpuVertices.size() * sizeof(Vertex));
-    _indexBuffer.CopyToBuffer(physicalDevice, device, queue, cmdPool, _cpuIndices.data(), _cpuIndices.size() * sizeof(uint32_t));
+    _vertexBuffer.CopyToBuffer(queue, cmdPool, _cpuVertices.data(), _cpuVertices.size() * sizeof(Vertex));
+    _indexBuffer.CopyToBuffer(queue, cmdPool, _cpuIndices.data(), _cpuIndices.size() * sizeof(uint32_t));
 }
 
 void MeshRegistry::Bind(const CommandBuffer& cmdBuffer) const

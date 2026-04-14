@@ -24,5 +24,4 @@ class VkSamplerHandler
 
     private:
     VkSampler _internal = VK_NULL_HANDLE;
-    VkDevice _device = VK_NULL_HANDLE;
 };

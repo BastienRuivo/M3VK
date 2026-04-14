@@ -4,7 +4,6 @@
 #include <cstring>
 #include <filesystem>
 #include <fstream>
-#include <optional>
 #include <stdexcept>
 #include <unordered_map>
 #include <vector>
@@ -12,6 +11,7 @@
 #include <tiny_obj_loader.h>
 #include "DebugLayer.h"
 #include "glm/fwd.hpp"
+#include "header/ApplicationInfo.h"
 #include "header/Vertex.h"
 
 class ProjectHelper
@@ -38,54 +38,6 @@ class ProjectHelper
         return bytes;
     }
 
-    struct QueueFamilyIds
-    {
-        public:
-        std::optional<uint32_t> Graphics;
-        std::optional<uint32_t> Present;
-       // std::optional<uint32_t> Copy;
-
-        static bool AreAllQueueAvailable(const QueueFamilyIds& queueIds)
-        {
-            return queueIds.Graphics.has_value()
-                && queueIds.Present.has_value();
-                //&& queueIds.Copy.has_value();
-        }
-    };
-
-    static QueueFamilyIds QueryQueueFamilies(const VkPhysicalDevice& physicalDevice, const VkSurfaceKHR& windowSurface)
-    {
-        QueueFamilyIds queueIds;
-
-        uint32_t queueFamiliesCount = 0;
-
-        vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamiliesCount, nullptr);
-        std::vector<VkQueueFamilyProperties> families(queueFamiliesCount);
-        vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamiliesCount, families.data());
-
-        for(int i = 0; i < families.size(); ++i)
-        {
-            if(families[i].queueFlags & VK_QUEUE_GRAPHICS_BIT)
-            {
-                queueIds.Graphics = i;
-            }
-            // else if(families[i].queueFlags & VK_QUEUE_TRANSFER_BIT)
-            // {
-            //     queueIds.Copy = i;
-            // }
-
-            VkBool32 isPresentSupported = false;
-            vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, i, windowSurface, &isPresentSupported);
-
-            if(isPresentSupported)
-            {
-                queueIds.Present = i;
-            }
-        }
-
-        return queueIds;
-    }
-
     struct SwapChainSupportDetails
     {
         public:
@@ -99,29 +51,30 @@ class ProjectHelper
         }
     };
 
-    static SwapChainSupportDetails QuerySwapChainSupportDetail(const VkPhysicalDevice& device, const VkSurfaceKHR& windowSurface)
+    static SwapChainSupportDetails QuerySwapChainSupportDetail(VkPhysicalDevice physicalDevice, const VkSurfaceKHR& windowSurface)
     {
         SwapChainSupportDetails details;
 
-        vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, windowSurface, &details.Capabilities);
+        vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, windowSurface, &details.Capabilities);
 
         uint32_t formatCount = 0;
-        vkGetPhysicalDeviceSurfaceFormatsKHR(device, windowSurface, &formatCount, nullptr);
+        vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, windowSurface, &formatCount, nullptr);
         details.Formats.resize(formatCount);
-        vkGetPhysicalDeviceSurfaceFormatsKHR(device, windowSurface, &formatCount, details.Formats.data());
+        vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, windowSurface, &formatCount, details.Formats.data());
 
         uint32_t presentModeCount = 0;
-        vkGetPhysicalDeviceSurfacePresentModesKHR(device, windowSurface, &presentModeCount, nullptr);
+        vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, windowSurface, &presentModeCount, nullptr);
         if(presentModeCount > 0)
         {
             details.PresentsModes.resize(presentModeCount);
-            vkGetPhysicalDeviceSurfacePresentModesKHR(device, windowSurface, &presentModeCount, details.PresentsModes.data());
+            vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, windowSurface, &presentModeCount, details.PresentsModes.data());
         }
         return details;
     }
 
-    static void CopyBufferToBuffer(const VkDevice& device, const VkQueue queue, const VkCommandPool& cmdPool, const VkBuffer& src, VkDeviceSize srcOffset, const VkBuffer& dst, VkDeviceSize dstOffset, VkDeviceSize size)
+    static void CopyBufferToBuffer(const VkQueue queue, const VkCommandPool& cmdPool, const VkBuffer& src, VkDeviceSize srcOffset, const VkBuffer& dst, VkDeviceSize dstOffset, VkDeviceSize size)
     {
+        VkDevice device = ApplicationInfo::Device();
         VkCommandBufferAllocateInfo allocInfo
         {
             .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
@@ -131,7 +84,7 @@ class ProjectHelper
         };
 
         VkCommandBuffer cmdBuffer;
-        vkAllocateCommandBuffers(device, &allocInfo, &cmdBuffer);
+        vkAllocateCommandBuffers(ApplicationInfo::Device(),&allocInfo, &cmdBuffer);
 
         VkCommandBufferBeginInfo beginInfo
         {
@@ -162,13 +115,13 @@ class ProjectHelper
         vkQueueSubmit(queue, 1, &submitInfo, VK_NULL_HANDLE);
         vkQueueWaitIdle(queue);
 
-        vkFreeCommandBuffers(device, cmdPool, 1, &cmdBuffer);
+        vkFreeCommandBuffers(device,cmdPool, 1, &cmdBuffer);
     }
 
-    static bool IsFormatSupported(VkPhysicalDevice physicalDevice, VkFormat format, VkImageTiling tiling, VkFormatFeatureFlags features)
+    static bool IsFormatSupported(VkFormat format, VkImageTiling tiling, VkFormatFeatureFlags features)
     {
         VkFormatProperties props;
-        vkGetPhysicalDeviceFormatProperties(physicalDevice, format, &props);
+        vkGetPhysicalDeviceFormatProperties(ApplicationInfo::PhysicalDevice(), format, &props);
 
         if(tiling == VK_IMAGE_TILING_LINEAR && (props.linearTilingFeatures & features) == features) {
             return true;

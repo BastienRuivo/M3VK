@@ -17,11 +17,11 @@ struct SubMesh
 class MeshRegistry
 {
     public:
-    MeshRegistry(VkDevice device, const VkPhysicalDeviceHandler& physicalDevice, uint32_t vertexBufferSize = ApplicationInfo::Constant::VertexBufferMaxSize, uint32_t indexBufferSize = ApplicationInfo::Constant::IndexBufferMaxSize);
+    MeshRegistry(uint32_t vertexBufferSize = ApplicationInfo::Constant::VertexBufferMaxSize, uint32_t indexBufferSize = ApplicationInfo::Constant::IndexBufferMaxSize);
 
     SubMesh Add(std::span<const Vertex> vertices, std::span<const uint32_t> indices);
     SubMesh AddFromObj(const std::string& path);
-    void UploadAndRelease(const VkPhysicalDeviceHandler& physicalDevice, VkDevice device, VkQueue queue, VkCommandPool cmdPool);
+    void UploadAndRelease(VkQueue queue, VkCommandPool cmdPool);
 
     void Bind(const CommandBuffer& cmdBuffer) const;
 

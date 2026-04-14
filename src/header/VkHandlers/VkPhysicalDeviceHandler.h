@@ -1,6 +1,6 @@
 #pragma once
 
-#include "header/ProjectHelper.h"
+#include "header/QueueFamilyIds.h"
 #include <cstdint>
 #include <vector>
 #include <vulkan/vulkan_core.h>
@@ -17,7 +17,7 @@ class VkPhysicalDeviceHandler
         return _internal;
     }
 
-    int ScoreDeviceSuitability(VkPhysicalDevice physicalDevice, VkSurfaceKHR windowSurface, const std::vector<const char *>& deviceExtensions, VkPhysicalDeviceProperties& deviceProperties, ProjectHelper::QueueFamilyIds& familyIds) const;
+    int ScoreDeviceSuitability(VkPhysicalDevice physicalDevice, VkSurfaceKHR windowSurface, const std::vector<const char *>& deviceExtensions, VkPhysicalDeviceProperties& deviceProperties, QueueFamilyIds& familyIds) const;
     bool CheckDeviceExtensionSupport(VkPhysicalDevice physicalDevice, const std::vector<const char *>& deviceExtensions) const;
     uint32_t FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) const;
 

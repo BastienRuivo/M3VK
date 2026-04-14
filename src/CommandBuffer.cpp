@@ -1,10 +1,12 @@
 #include "header/CommandBuffer.h"
+#include "header/ApplicationInfo.h"
 #include "header/GraphicsBuffer.h"
+#include "header/ProjectHelper.h"
 #include <cstdint>
 #include <stdexcept>
 #include <vulkan/vulkan_core.h>
 
-CommandBuffer::CommandBuffer(VkDevice device, VkCommandPool pool, VkQueue queue) : _device(device), _pool(pool), _queue(queue)
+CommandBuffer::CommandBuffer(VkCommandPool pool, VkQueue queue) : _pool(pool), _queue(queue)
 {
 #ifdef M3VK_MEMORYLOG
     DebugLayer::Log(DebugLayer::LogType::CREATE, "CommandBuffer Creation !");
@@ -17,7 +19,7 @@ CommandBuffer::CommandBuffer(VkDevice device, VkCommandPool pool, VkQueue queue)
         .commandBufferCount = 1
     };
 
-    if(vkAllocateCommandBuffers(_device, &allocateInfo, &_internal) != VK_SUCCESS)
+    if(vkAllocateCommandBuffers(ApplicationInfo::Device(), &allocateInfo, &_internal) != VK_SUCCESS)
     {
         throw std::runtime_error("Can't create main command buffer");
     }
@@ -27,7 +29,7 @@ CommandBuffer::~CommandBuffer()
 {
     if(_internal == VK_NULL_HANDLE) return;
 
-    vkFreeCommandBuffers(_device, _pool, 1, &_internal);
+    vkFreeCommandBuffers(ApplicationInfo::Device(), _pool, 1, &_internal);
 
 #ifdef M3VK_MEMORYLOG
     DebugLayer::Log(DebugLayer::LogType::DESTROY, "CommandBuffer Destroyed !");
@@ -155,7 +157,7 @@ void CommandBuffer::WaitCompletion()
 }
 
 CommandBuffer::CommandBuffer(CommandBuffer&& other) noexcept
-: _device(other._device), _pool(other._pool), _queue(other._queue), _internal(other._internal)
+: _pool(other._pool), _queue(other._queue), _internal(other._internal)
 {
     other._internal = VK_NULL_HANDLE;
 }
@@ -258,7 +260,7 @@ CommandBuffer& CommandBuffer::operator=(CommandBuffer&& other) noexcept
 {
     if(this != &other)
     {
-        _device = other._device;
+
         _internal = other._internal;
         _pool = other._pool;
         _queue = other._queue;

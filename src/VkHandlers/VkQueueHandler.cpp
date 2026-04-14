@@ -8,7 +8,7 @@
 #include "header/DebugLayer.h"
 #endif
 
-VkQueueHandler::VkQueueHandler(VkDevice device, VkQueueHandler::QueueTypeEnum queueType)
+VkQueueHandler::VkQueueHandler(VkQueueHandler::QueueTypeEnum queueType)
 {
 #ifdef M3VK_MEMORYLOG
     DebugLayer::Log(DebugLayer::LogType::CREATE, "VkQueueHandler Creation !");
@@ -23,7 +23,7 @@ VkQueueHandler::VkQueueHandler(VkDevice device, VkQueueHandler::QueueTypeEnum qu
         default: throw std::runtime_error("Unimplemented graphics queue type");
     }
 
-    vkGetDeviceQueue(device, family, 0, &_internal);
+    vkGetDeviceQueue(ApplicationInfo::Device(),family, 0, &_internal);
     _queueFamilyIndex = family;
     _type = queueType;
 }

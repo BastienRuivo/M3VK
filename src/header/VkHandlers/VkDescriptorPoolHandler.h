@@ -8,8 +8,8 @@ class VkDescriptorPoolHandler
 {
     public:
 
-    VkDescriptorPoolHandler(VkDevice device, std::initializer_list<VkDescriptorPoolSize> poolSizes, uint32_t maxSets);
-    VkDescriptorPoolHandler(VkDevice device, const VkDescriptorPoolSize* poolSizes, uint32_t poolSizesCount, uint32_t maxSets);
+    VkDescriptorPoolHandler(std::initializer_list<VkDescriptorPoolSize> poolSizes, uint32_t maxSets);
+    VkDescriptorPoolHandler(const VkDescriptorPoolSize* poolSizes, uint32_t poolSizesCount, uint32_t maxSets);
     ~VkDescriptorPoolHandler();
 
     // VkHandles can be destroyed by one of the two object when copying, so we enable moving and disable copying.
@@ -27,5 +27,4 @@ class VkDescriptorPoolHandler
 
     private:
     VkDescriptorPool _internal = VK_NULL_HANDLE;
-    VkDevice _device = VK_NULL_HANDLE;
 };

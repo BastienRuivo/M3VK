@@ -5,7 +5,7 @@
 class VkFenceHandler
 {
     public:
-    VkFenceHandler(VkDevice device);
+    VkFenceHandler();
     ~VkFenceHandler();
 
     // VkHandles can be destroyed by one of the two object when copying, so we enable moving and disable copying.
@@ -26,5 +26,4 @@ class VkFenceHandler
 
     private:
     VkFence _internal = VK_NULL_HANDLE;
-    VkDevice _device = VK_NULL_HANDLE;
 };

@@ -1,4 +1,6 @@
 #include "header/ApplicationInfo.h"
+#include "header/QueueFamilyIds.h"
+#include <stdexcept>
 #include <vulkan/vulkan_core.h>
 
 VkSampleCountFlagBits ApplicationInfo::GetMaxUsableSampleCount(VkSampleCountFlagBits maxSample) const
@@ -14,9 +16,27 @@ VkSampleCountFlagBits ApplicationInfo::GetMaxUsableSampleCount(VkSampleCountFlag
     else return VK_SAMPLE_COUNT_1_BIT;
 }
 
-void ApplicationInfo::SetPhysicalDeviceInformation(VkPhysicalDeviceProperties properties, const ProjectHelper::QueueFamilyIds& queueFamilyIds)
+void ApplicationInfo::SetPhysicalDeviceInformation(VkPhysicalDevice physicalDevice, VkPhysicalDeviceProperties properties, const QueueFamilyIds& queueFamilyIds)
 {
+    _physicalDevice = physicalDevice;
     _properties = properties;
     _queueFamilyIds = queueFamilyIds;
     _msaaSample = GetMaxUsableSampleCount(Constant::MaxMSAASample);
+}
+
+uint32_t ApplicationInfo::FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties)
+{
+    VkPhysicalDeviceMemoryProperties memoryProperties;
+    vkGetPhysicalDeviceMemoryProperties(Get()._physicalDevice, &memoryProperties);
+
+    for (uint32_t memoryType = 0; memoryType < memoryProperties.memoryTypeCount; ++memoryType)
+    {
+        // is suitable for buffer & writable by CPU
+        if((typeFilter & (1 << memoryType)) && ((memoryProperties.memoryTypes[memoryType].propertyFlags & properties) == properties))
+        {
+            return memoryType;
+        }
+    }
+
+    throw std::runtime_error("Can't find suitable memory type for buffer");
 }

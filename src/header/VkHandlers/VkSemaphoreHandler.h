@@ -5,7 +5,7 @@
 class VkSemaphoreHandler
 {
     public:
-    VkSemaphoreHandler(VkDevice device);
+    VkSemaphoreHandler();
     ~VkSemaphoreHandler();
 
     // VkHandles can be destroyed by one of the two object when copying, so we enable moving and disable copying.
@@ -23,5 +23,4 @@ class VkSemaphoreHandler
 
     private:
     VkSemaphore _internal = VK_NULL_HANDLE;
-    VkDevice _device = VK_NULL_HANDLE;
 };

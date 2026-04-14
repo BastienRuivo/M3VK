@@ -2,6 +2,7 @@
 #include "header/ApplicationInfo.h"
 #include "header/ProjectHelper.h"
 #include "header/DebugLayer.h"
+#include "header/QueueFamilyIds.h"
 #include <cstdint>
 #include <stdexcept>
 #include <vulkan/vulkan_core.h>
@@ -55,7 +56,7 @@ uint32_t VkPhysicalDeviceHandler::FindMemoryType(uint32_t typeFilter, VkMemoryPr
     throw std::runtime_error("Can't find suitable memory type for buffer");
 }
 
-int VkPhysicalDeviceHandler::ScoreDeviceSuitability(VkPhysicalDevice physicalDevice, VkSurfaceKHR windowSurface, const std::vector<const char *>& deviceExtensions, VkPhysicalDeviceProperties& deviceProperties, ProjectHelper::QueueFamilyIds& familyIds) const
+int VkPhysicalDeviceHandler::ScoreDeviceSuitability(VkPhysicalDevice physicalDevice, VkSurfaceKHR windowSurface, const std::vector<const char *>& deviceExtensions, VkPhysicalDeviceProperties& deviceProperties, QueueFamilyIds& familyIds) const
 {
     vkGetPhysicalDeviceProperties(physicalDevice, &deviceProperties);
 
@@ -66,14 +67,14 @@ int VkPhysicalDeviceHandler::ScoreDeviceSuitability(VkPhysicalDevice physicalDev
     int score = 0;
 
 
-    familyIds = ProjectHelper::QueryQueueFamilies(physicalDevice, windowSurface);
+    familyIds = QueueFamilyIds::QueryQueueFamilies(physicalDevice, windowSurface);
 
     bool areAllRequiredExtensionsSupported = CheckDeviceExtensionSupport(physicalDevice, deviceExtensions);
 
     ProjectHelper::SwapChainSupportDetails swapChainDetails = ProjectHelper::QuerySwapChainSupportDetail(physicalDevice, windowSurface);
 
     // Mandatory feature, if any return 0 and this will be the only way to have 0 score meaning there's no suitable GPU
-    if(!ProjectHelper::QueueFamilyIds::AreAllQueueAvailable(familyIds)
+    if(!QueueFamilyIds::AreAllQueueAvailable(familyIds)
         || !areAllRequiredExtensionsSupported
         || !swapChainDetails.CheckSwapChainSupportAdequate()
         || !deviceFeatures.samplerAnisotropy)
@@ -111,13 +112,13 @@ VkPhysicalDeviceHandler::VkPhysicalDeviceHandler(VkInstance instance, VkSurfaceK
     std::vector<VkPhysicalDevice> physicalDevices(deviceCount);
     vkEnumeratePhysicalDevices(instance, &deviceCount, physicalDevices.data());
 
-    ProjectHelper::QueueFamilyIds queueFamilyIds;
+    QueueFamilyIds queueFamilyIds;
     VkPhysicalDeviceProperties properties;
 
     int bestScore = 0;
     for(const VkPhysicalDevice& physicalDevice : physicalDevices)
     {
-        ProjectHelper::QueueFamilyIds localQueueIds;
+        QueueFamilyIds localQueueIds;
         VkPhysicalDeviceProperties localProperties;
         int score = ScoreDeviceSuitability(physicalDevice, windowSurface, deviceExtensions, localProperties, localQueueIds);
         if(score > bestScore)
@@ -134,7 +135,7 @@ VkPhysicalDeviceHandler::VkPhysicalDeviceHandler(VkInstance instance, VkSurfaceK
         throw std::runtime_error("Failed to find a suitable GPU on this device");
     }
 
-    ApplicationInfo::Get().SetPhysicalDeviceInformation(properties, queueFamilyIds);
+    ApplicationInfo::Get().SetPhysicalDeviceInformation(_internal, properties, queueFamilyIds);
 }
 
 VkPhysicalDeviceHandler::~VkPhysicalDeviceHandler()

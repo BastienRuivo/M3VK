@@ -13,7 +13,7 @@ class VkQueueHandler
         Copy
     };
 
-    VkQueueHandler(VkDevice device, QueueTypeEnum queueType);
+    VkQueueHandler(QueueTypeEnum queueType);
     ~VkQueueHandler();
 
     // VkHandles can be destroyed by one of the two object when copying, so we enable moving and disable copying.

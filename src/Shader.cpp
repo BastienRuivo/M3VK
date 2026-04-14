@@ -1,5 +1,6 @@
 #include "./header/Shader.h"
-#include "./header/ProjectHelper.h"
+#include "header/ApplicationInfo.h"
+#include "header/ProjectHelper.h"
 
 #ifdef M3VK_MEMORYLOG
 #include "header/DebugLayer.h"
@@ -11,8 +12,8 @@
 
 Shader::~Shader()
 {
-    vkDestroyShaderModule(_device, VertexShader, nullptr);
-    vkDestroyShaderModule(_device, FragmentShader, nullptr);
+    vkDestroyShaderModule(ApplicationInfo::Device(), VertexShader, nullptr);
+    vkDestroyShaderModule(ApplicationInfo::Device(), FragmentShader, nullptr);
 
 #ifdef M3VK_MEMORYLOG
     DebugLayer::Log(DebugLayer::LogType::DESTROY, "Shader Destroyed !");
@@ -29,7 +30,7 @@ VkShaderModule Shader::CreateShaderModule(const std::vector<char>& shaderCode)
     };
 
     VkShaderModule module{};
-    if(vkCreateShaderModule(_device, &createInfo, nullptr, &module) != VK_SUCCESS)
+    if(vkCreateShaderModule(ApplicationInfo::Device(), &createInfo, nullptr, &module) != VK_SUCCESS)
     {
         throw std::runtime_error("Can't compile shader code");
     }
@@ -37,7 +38,7 @@ VkShaderModule Shader::CreateShaderModule(const std::vector<char>& shaderCode)
     return module;
 }
 
-Shader::Shader(const VkDevice& device)
+Shader::Shader()
 {
 #ifdef M3VK_MEMORYLOG
     DebugLayer::Log(DebugLayer::LogType::CREATE, "Shader Creation !");
@@ -46,7 +47,7 @@ Shader::Shader(const VkDevice& device)
     std::vector<char> vertex = ProjectHelper::ReadFile(std::string(SHADER_DIRECTORY) + "helloTriangle.vert.spv");
     std::vector<char> fragment = ProjectHelper::ReadFile(std::string(SHADER_DIRECTORY) + "helloTriangle.frag.spv");
 
-    _device = device;
+
 
     VertexShader = CreateShaderModule(vertex);
     FragmentShader = CreateShaderModule(fragment);
