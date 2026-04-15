@@ -2,6 +2,7 @@
 
 #include "header/GPUImage.h"
 #include "header/MultiFrame.h"
+#include "header/VkHandlers/VkImageViewHandler.h"
 #include <vector>
 #include <vulkan/vk_platform.h>
 #include <vulkan/vulkan_core.h>
@@ -13,21 +14,8 @@
 class SwapChain
 {
     public:
-    class SwapChainImage : public GPUImage
-    {
-        public:
-        SwapChainImage(VkImage swapChainImage, VkFormat format, uint32_t width, uint32_t height);
 
-        ~SwapChainImage() override = default;
-
-        SwapChainImage(const SwapChainImage&)            = delete;
-        SwapChainImage& operator=(const SwapChainImage&) = delete;
-
-        SwapChainImage(SwapChainImage&&) noexcept;
-        SwapChainImage& operator=(SwapChainImage&&) noexcept;
-    };
-
-    MultiFrameHandler<SwapChainImage> Images;
+    MultiFrameHandler<ImageReference> Images;
     SwapChain(const Window & window, VkSurfaceKHR windowSurface);
     ~SwapChain();
 
@@ -38,11 +26,10 @@ class SwapChain
     inline VkFormat GetImageFormat() const { return _imageFormat; }
     inline VkExtent2D GetExtent() const { return _extent; }
     inline VkSwapchainKHR Get() const { return _internal; }
-
-    inline VkImageView GetView(uint32_t index) const { return Images.Get(index).GetView(); }
-
+    inline VkImageView View(uint32_t index) const { return Images.Get(index).View; }
 
     private:
+    MultiFrameHandler<VkImageViewHandler> _viewHandlers;
 
     VkFormat _imageFormat = VK_FORMAT_UNDEFINED;
     VkExtent2D _extent;

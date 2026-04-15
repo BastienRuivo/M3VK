@@ -5,6 +5,7 @@
 #include "header/GraphicsBuffer.h"
 #include "header/VkHandlers/VkImageViewHandler.h"
 #include <cmath>
+#include <cstddef>
 #include <cstdint>
 #include <stdexcept>
 #include <vulkan/vulkan_core.h>
@@ -14,9 +15,9 @@
 #include "header/DebugLayer.h"
 #endif
 
-void GPUImage::TransitionLayoutCommand(const CommandBuffer& cmdBuffer, VkImageLayout oldLayout, VkImageLayout newLayout) const
+void ImageHelper::TransitionLayoutCommand(const CommandBuffer& cmdBuffer, const ImageReference& image, VkImageLayout oldLayout, VkImageLayout newLayout)
 {
-    cmdBuffer.TransitionImageLayout(_internal, _format, _mipCount, oldLayout, newLayout);
+    cmdBuffer.TransitionImageLayout(image.Image, image.Format, image.MipCount, oldLayout, newLayout);
 }
 
 /* --- GPU Allocated Image --- */
@@ -49,23 +50,18 @@ GPUAllocatedImage::GPUAllocatedImage(uint32_t width, uint32_t height, VkSampleCo
 #ifdef M3VK_MEMORYLOG
     DebugLayer::Log(DebugLayer::LogType::CREATE, "GPUImage Create !");
 #endif
-    _width = width;
-    _height = height;
-    _format = format;
-    _mipCount = mipCount;
-
     VkImageCreateInfo createInfo
     {
         .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
         .imageType = VK_IMAGE_TYPE_2D,
-        .format = _format,
+        .format = format,
         .extent
         {
             .width = static_cast<uint32_t>(width),
             .height = static_cast<uint32_t>(height),
             .depth = 1
         },
-        .mipLevels = _mipCount,
+        .mipLevels = mipCount,
         .arrayLayers = 1,
         .samples = msaaSampleCount,
         .tiling = tiling, // Optimal tiling data, if need to write / acces directly to the texture need LINEAR wich is classical row column
@@ -74,13 +70,15 @@ GPUAllocatedImage::GPUAllocatedImage(uint32_t width, uint32_t height, VkSampleCo
         .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
     };
 
-    if(vkCreateImage(ApplicationInfo::Device(), &createInfo, nullptr, &_internal) != VK_SUCCESS)
+    VkImage image = VK_NULL_HANDLE;
+
+    if(vkCreateImage(ApplicationInfo::Device(), &createInfo, nullptr, &image) != VK_SUCCESS)
     {
         throw std::runtime_error("Failed to create GPU image !");
     }
 
     VkMemoryRequirements memRequirements;
-    vkGetImageMemoryRequirements(ApplicationInfo::Device(),_internal, &memRequirements);
+    vkGetImageMemoryRequirements(ApplicationInfo::Device(), image, &memRequirements);
 
     VkMemoryAllocateInfo allocInfo
     {
@@ -91,18 +89,28 @@ GPUAllocatedImage::GPUAllocatedImage(uint32_t width, uint32_t height, VkSampleCo
 
     if(vkAllocateMemory(ApplicationInfo::Device(), &allocInfo, nullptr, &_memoryInternal) != VK_SUCCESS)
     {
-        vkDestroyImage(ApplicationInfo::Device(), _internal, nullptr);
+        vkDestroyImage(ApplicationInfo::Device(), image, nullptr);
         throw  std::runtime_error("Can't allocate image memory !");
     }
 
-    if(vkBindImageMemory(ApplicationInfo::Device(), _internal, _memoryInternal, 0) != VK_SUCCESS)
+    if(vkBindImageMemory(ApplicationInfo::Device(), image, _memoryInternal, 0) != VK_SUCCESS)
     {
-        vkDestroyImage(ApplicationInfo::Device(), _internal, nullptr);
+        vkDestroyImage(ApplicationInfo::Device(), image, nullptr);
         vkFreeMemory(ApplicationInfo::Device(), _memoryInternal, nullptr);
         throw  std::runtime_error("Can't bind image memory !");
     }
 
-    _view = VkImageViewHandler(_internal, _format, _mipCount);
+    _view = VkImageViewHandler(image, format, mipCount);
+
+    _internal =
+    {
+        .Image = image,
+        .View = _view.Get(),
+        .Format = format,
+        .Width = static_cast<uint32_t>(width),
+        .Height = static_cast<uint32_t>(height),
+        .MipCount = mipCount
+    };
 }
 
 
@@ -111,7 +119,7 @@ void GPUAllocatedImage::TransitionLayout(VkCommandPool pool, VkQueue queue, VkIm
     CommandBuffer cmdBuffer(pool, queue);
     cmdBuffer.BeginSingleTime();
     {
-        TransitionLayoutCommand(cmdBuffer, oldLayout, newLayout);
+        ImageHelper::TransitionLayoutCommand(cmdBuffer, _internal, oldLayout, newLayout);
     }
     cmdBuffer.End();
     cmdBuffer.WaitCompletion();
@@ -126,7 +134,7 @@ void GPUAllocatedImage::CopyCPUtoGPUImage(const CPUImage & cpuImg, VkCommandPool
     CommandBuffer cmdBuffer(pool, queue);
     cmdBuffer.BeginSingleTime();
     {
-        TransitionLayoutCommand(cmdBuffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+        ImageHelper::TransitionLayoutCommand(cmdBuffer, _internal, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
         VkBufferImageCopy region
         {
@@ -153,7 +161,7 @@ void GPUAllocatedImage::CopyCPUtoGPUImage(const CPUImage & cpuImg, VkCommandPool
                 .depth = 1
             },
         };
-        cmdBuffer.CopyBufferToImage(stage.Get(), _internal, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &region, 1);
+        cmdBuffer.CopyBufferToImage(stage.Get(), _internal.Image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &region, 1);
 
         //TransitionLayoutCommand(cmdBuffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
         GenerateMipmapsCommand(cmdBuffer);
@@ -166,7 +174,7 @@ void GPUAllocatedImage::GenerateMipmapsCommand(const CommandBuffer& cmdBuffer) c
 {
     // Check if image format supports linear blitting
     VkFormatProperties formatProperties;
-    vkGetPhysicalDeviceFormatProperties(ApplicationInfo::PhysicalDevice(), _format, &formatProperties);
+    vkGetPhysicalDeviceFormatProperties(ApplicationInfo::PhysicalDevice(), _internal.Format, &formatProperties);
     if(!(formatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT))
     {
         // TODO Someday : software mipmapping and storing the mipmaps
@@ -178,7 +186,7 @@ void GPUAllocatedImage::GenerateMipmapsCommand(const CommandBuffer& cmdBuffer) c
         .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
         .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
         .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-        .image = _internal,
+        .image = _internal.Image,
         .subresourceRange
         {
             .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
@@ -189,10 +197,11 @@ void GPUAllocatedImage::GenerateMipmapsCommand(const CommandBuffer& cmdBuffer) c
         }
     };
 
-    int32_t mipWidth = _width;
-    int32_t mipHeight = _height;
+    int32_t mipWidth = _internal.Width;
+    int32_t mipHeight = _internal.Height;
 
-    for(uint32_t i = 1; i < _mipCount; ++i)
+    size_t mipCount = _internal.MipCount;
+    for(uint32_t i = 1; i < mipCount; ++i)
     {
         barrier.subresourceRange.baseMipLevel = i - 1;
         barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
@@ -231,7 +240,7 @@ void GPUAllocatedImage::GenerateMipmapsCommand(const CommandBuffer& cmdBuffer) c
 
         };
 
-        cmdBuffer.Blit(_internal, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, _internal, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blit, VK_FILTER_LINEAR);
+        cmdBuffer.Blit(_internal.Image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, _internal.Image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blit, VK_FILTER_LINEAR);
 
         barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
         barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
@@ -244,7 +253,7 @@ void GPUAllocatedImage::GenerateMipmapsCommand(const CommandBuffer& cmdBuffer) c
         if(mipHeight > 1) mipHeight /= 2;
     }
 
-    barrier.subresourceRange.baseMipLevel = _mipCount - 1;
+    barrier.subresourceRange.baseMipLevel = mipCount - 1;
     barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
     barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
     barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
@@ -256,9 +265,7 @@ void GPUAllocatedImage::GenerateMipmapsCommand(const CommandBuffer& cmdBuffer) c
 
 GPUAllocatedImage::~GPUAllocatedImage()
 {
-     if(_internal == VK_NULL_HANDLE) return;
-
-    vkDestroyImage(ApplicationInfo::Device(), _internal, nullptr);
+    vkDestroyImage(ApplicationInfo::Device(), _internal.Image, nullptr);
     vkFreeMemory(ApplicationInfo::Device(), _memoryInternal, nullptr);
 
 #ifdef M3VK_MEMORYLOG
@@ -268,34 +275,18 @@ GPUAllocatedImage::~GPUAllocatedImage()
 
 GPUAllocatedImage::GPUAllocatedImage(GPUAllocatedImage&& other) noexcept
 {
-    _internal = other._internal;
-    _memoryInternal = other._memoryInternal;
-
-    _format = other._format;
-    _width = other._width;
-    _height = other._height;
-    _mipCount = other._mipCount;
+    _internal = std::move(other._internal);
+    _memoryInternal = std::move(other._memoryInternal);
     _view = std::move(other._view);
-
-    other._internal = VK_NULL_HANDLE;
-    other._memoryInternal = VK_NULL_HANDLE;
 }
 
 GPUAllocatedImage& GPUAllocatedImage::operator=(GPUAllocatedImage&& other) noexcept
 {
     if(this != &other)
     {
-        _internal = other._internal;
-        _memoryInternal = other._memoryInternal;
-
-        _format = other._format;
-        _width = other._width;
-        _height = other._height;
-        _mipCount = other._mipCount;
+        _internal = std::move(other._internal);
+        _memoryInternal = std::move(other._memoryInternal);
         _view = std::move(other._view);
-
-        other._internal = VK_NULL_HANDLE;
-        other._memoryInternal = VK_NULL_HANDLE;
     }
     return *this;
 }

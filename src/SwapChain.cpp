@@ -1,9 +1,9 @@
 #include "./header/SwapChain.h"
 #include "./header/ProjectHelper.h"
 #include "header/ApplicationInfo.h"
+#include "header/GPUImage.h"
 #include "header/MultiFrame.h"
 #include "header/QueueFamilyIds.h"
-#include "header/VkHandlers/VkImageViewHandler.h"
 #include <GLFW/glfw3.h>
 #include <algorithm>
 #include <cstdint>
@@ -104,7 +104,7 @@ VkSurfaceFormatKHR SwapChain::SelectSwapSurfaceFormat(const std::vector<VkSurfac
 }
 
 SwapChain::SwapChain(const Window& window, VkSurfaceKHR windowSurface)
-: Images()
+: Images(), _viewHandlers()
 {
 #ifdef M3VK_MEMORYLOG
     DebugLayer::Log(DebugLayer::LogType::CREATE, "SwapChain Creation !");
@@ -176,9 +176,20 @@ SwapChain::SwapChain(const Window& window, VkSurfaceKHR windowSurface)
     vkGetSwapchainImagesKHR(ApplicationInfo::Device(), _internal, &imageCount, tempImages.data());
 
     Images.Reserve(imageCount);
+    _viewHandlers.Reserve(imageCount);
     for(int i = 0; i < imageCount; i++)
     {
-        Images.EmplaceBack(tempImages[i], format.format, extents.width, extents.height);
+        _viewHandlers.EmplaceBack(tempImages[i], format.format, 1);
+        ImageReference image
+        {
+            .Image = tempImages[i],
+            .View = _viewHandlers.GetInternal(i),
+            .Format = format.format,
+            .Width = extents.width,
+            .Height = extents.height,
+            .MipCount = 1,
+        };
+        Images.EmplaceBack(image);
     }
 
     _imageFormat = format.format;
@@ -192,37 +203,4 @@ SwapChain::~SwapChain()
 #ifdef M3VK_MEMORYLOG
     DebugLayer::Log(DebugLayer::LogType::DESTROY, "SwapChain Destruction !");
 #endif
-}
-
-SwapChain::SwapChainImage::SwapChainImage(VkImage swapChainImage, VkFormat format, uint32_t width, uint32_t height)
-{
-    _internal = swapChainImage;
-    _format = format;
-    _width = width;
-    _height = height;
-    _mipCount = 1;
-
-    _view = VkImageViewHandler(_internal, _format, 1);
-}
-
-SwapChain::SwapChainImage::SwapChainImage(SwapChainImage&& other) noexcept
-{
-    _internal = other._internal;
-    _format = other._format;
-    _width = other._width;
-    _height = other._height;
-    _view = std::move(other._view);
-}
-
-SwapChain::SwapChainImage& SwapChain::SwapChainImage::operator=(SwapChainImage&& other) noexcept
-{
-    if(this != &other)
-    {
-        _internal = other._internal;
-        _format = other._format;
-        _width = other._width;
-        _height = other._height;
-        _view = std::move(other._view);
-    }
-    return *this;
 }

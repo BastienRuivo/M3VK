@@ -1,6 +1,7 @@
 #pragma once
 
 
+#include "Material.h"
 #include "header/Camera.h"
 #include "header/DescriptorPool.h"
 #include "header/MeshRegistry.h"
@@ -92,15 +93,14 @@ class Application
 
     // Datas
     MeshRegistry _meshRegistry;
-    GPUAllocatedImage _modelImg0;
-    GPUAllocatedImage _modelImg1;
+    GPUAllocatedImage _vikingImg;
     VkSamplerHandler _sampler;
+
+    Material _vikingMtl;
 
     MultiFrameHandler<GraphicsBuffer> _cameraDataBuffer;
     MultiFrameObject<VkDescriptorSet> _descriptorSet;
     MultiFrameObject<VkDescriptorSet> CreateDescriptorSet();
-    VkDescriptorSet _textureDescriptorSet0;
-    VkDescriptorSet _textureDescriptorSet1;
 
     MultiFrameObject<CommandBuffer> _commandBuffer;
 

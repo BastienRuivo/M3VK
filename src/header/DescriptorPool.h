@@ -44,12 +44,12 @@ class DescriptorPool
         };
     }
 
-    static inline VkDescriptorImageInfo DescriptorImageInfo(const GPUImage& image, VkSampler sampler)
+    static inline VkDescriptorImageInfo DescriptorImageInfo(const ImageReference& image, VkSampler sampler)
     {
         return
         {
             .sampler = sampler,
-            .imageView = image.GetView(),
+            .imageView = image.View,
             .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
         };
     }

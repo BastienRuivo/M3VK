@@ -1,7 +1,9 @@
 #include "header/Application.h"
+#include "Material.h"
 #include "header/ApplicationInfo.h"
 #include "header/CommandBuffer.h"
 #include "header/DescriptorPool.h"
+#include "header/GPUImage.h"
 #include "header/GraphicsBuffer.h"
 #include "header/MeshRegistry.h"
 #include "header/MultiFrame.h"
@@ -218,10 +220,10 @@ void Application::RecordCommandBuffer(const CommandBuffer& cmdBuffer, uint32_t c
     VkRenderingAttachmentInfo colorAttachment
     {
         .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
-        .imageView = _colorBackBuffer->GetView(),
+        .imageView = _colorBackBuffer->View(),
         .imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
         .resolveMode = VK_RESOLVE_MODE_AVERAGE_BIT,
-        .resolveImageView = _swapChain->GetView(imageIndex),
+        .resolveImageView = _swapChain->View(imageIndex),
         .resolveImageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
         .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
         .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
@@ -231,7 +233,7 @@ void Application::RecordCommandBuffer(const CommandBuffer& cmdBuffer, uint32_t c
     VkRenderingAttachmentInfo depthAttachment
     {
         .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
-        .imageView = _depthBuffer->GetView(),
+        .imageView = _depthBuffer->View(),
         .imageLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
         .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
         .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
@@ -245,13 +247,13 @@ void Application::RecordCommandBuffer(const CommandBuffer& cmdBuffer, uint32_t c
         .imageView = VK_NULL_HANDLE,
     };
 
-    const SwapChain::SwapChainImage& backBuffer = _swapChain->Images.Get(imageIndex);
+    const ImageReference& backBuffer = _swapChain->Images.Get(imageIndex);
 
     cmdBuffer.Begin();
     {
-        _colorBackBuffer->TransitionLayoutCommand(cmdBuffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-        _depthBuffer->TransitionLayoutCommand(cmdBuffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
-        backBuffer.TransitionLayoutCommand(cmdBuffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+        ImageHelper::TransitionLayoutCommand(cmdBuffer, _colorBackBuffer->Get(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+        ImageHelper::TransitionLayoutCommand(cmdBuffer, _depthBuffer->Get(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
+        ImageHelper::TransitionLayoutCommand(cmdBuffer, backBuffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
         cmdBuffer.BeginRendering(renderArea, &colorAttachment, 1, depthAttachment, stencilAttachment);
         {
@@ -266,13 +268,13 @@ void Application::RecordCommandBuffer(const CommandBuffer& cmdBuffer, uint32_t c
             int i = 0;
             for(const auto& renderer : _renderers)
             {
-                cmdBuffer.BindDescriptorSets(_pipelineLayoutHandler.Get(), i == 0 ? _textureDescriptorSet0 : _textureDescriptorSet1, 1);
+                cmdBuffer.BindDescriptorSets(_pipelineLayoutHandler.Get(), _vikingMtl.DescriptorSet, 1);
                 renderer.Draw(cmdBuffer, _pipelineLayoutHandler.Get());
                 i++;
             }
         }
         cmdBuffer.EndRendering();
-        backBuffer.TransitionLayoutCommand(cmdBuffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+        ImageHelper::TransitionLayoutCommand(cmdBuffer, backBuffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
     }
     cmdBuffer.End();
 }
@@ -296,11 +298,7 @@ Application::Application() :
             VkDescriptorSetLayoutBinding{ 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT, nullptr },
         }
     ), ApplicationInfo::Constant::MaxFrameInCount),
-    _staticDescriptorPool(std::initializer_list<VkDescriptorSetLayoutBinding>(
-        {
-            VkDescriptorSetLayoutBinding{ 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr }
-        }
-    ), 255),
+    _staticDescriptorPool(Material::GetBindings(), 255),
     _pipelineLayoutHandler(std::initializer_list<VkDescriptorSetLayout>(
         {
             _dynamicDescriptorPool.Layout(),
@@ -328,9 +326,9 @@ Application::Application() :
     _depthBuffer(std::make_unique<GPUAllocatedImage>(_swapChain->GetExtent().width, _swapChain->GetExtent().height, ApplicationInfo::Get().GetMsaaSample(), 1, ApplicationInfo::Constant::DepthFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)),
 
     _cameraDataBuffer(ApplicationInfo::Constant::MaxFrameInCount, 1, sizeof(CameraData), GraphicsBuffer::UNIFORM),
-    _modelImg0(CPUImage("data/img/models/viking_room.png", STBI_rgb_alpha), _graphicsCommandPoolHandler.Get(), _graphicsQueueHandler.Get()),
-    _modelImg1(CPUImage("data/img/kirby.jpg", STBI_rgb_alpha), _graphicsCommandPoolHandler.Get(), _graphicsQueueHandler.Get()),
+    _vikingImg(CPUImage("data/img/models/viking_room.png", STBI_rgb_alpha), _graphicsCommandPoolHandler.Get(), _graphicsQueueHandler.Get()),
     _sampler(),
+    _vikingMtl(ImageHelper::ImageBinding(_vikingImg.Get(), _sampler.Get()), _staticDescriptorPool.Allocate()),
     _camera(glm::vec3(0.0f, 0.5f, 4.0f), glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, 1.0f, 0.0f), 45.0f, (float)_swapChain->GetExtent().width / (float)_swapChain->GetExtent().height, 0.1f, 100.0f),
     _meshRegistry(),
 
@@ -358,42 +356,13 @@ Application::Application() :
     SubMesh vikingRoom = _meshRegistry.AddFromObj("data/models/viking_room.obj");
     _renderers.emplace_back(vikingRoom, glm::vec3(-1.0f, 0.0f, 0.0f), ProjectHelper::EulerToQuat(glm::vec3(-90, -90, 0)), glm::vec3(1.0f));
 
-    SubMesh cube = _meshRegistry.AddFromObj("data/models/Crate1.obj");
-    _renderers.emplace_back(cube, glm::vec3(1.0f, 0.5f, 0.0f), ProjectHelper::EulerToQuat(glm::vec3(0, 0, 0)), glm::vec3(0.5f));
+    // SubMesh cube = _meshRegistry.AddFromObj("data/models/Crate1.obj");
+    // _renderers.emplace_back(cube, glm::vec3(1.0f, 0.5f, 0.0f), ProjectHelper::EulerToQuat(glm::vec3(0, 0, 0)), glm::vec3(0.5f));
 
 
     _meshRegistry.UploadAndRelease(_graphicsQueueHandler.Get(), _graphicsCommandPoolHandler.Get());
 
-    _textureDescriptorSet0 = _staticDescriptorPool.Allocate();
-    _textureDescriptorSet1 = _staticDescriptorPool.Allocate();
-
-    VkDescriptorImageInfo imageInfo0 = DescriptorPool::DescriptorImageInfo(_modelImg0, _sampler.Get());
-    VkDescriptorImageInfo imageInfo1 = DescriptorPool::DescriptorImageInfo(_modelImg1, _sampler.Get());
-
-    _staticDescriptorPool.UpdateDescriptorSet(std::initializer_list<VkWriteDescriptorSet>(
-        {
-            VkWriteDescriptorSet
-            {
-                .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-                .dstSet = _textureDescriptorSet0,
-                .dstBinding = 0,
-                .dstArrayElement = 0,
-                .descriptorCount = 1,
-                .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-                .pImageInfo = &imageInfo0,
-            },
-            VkWriteDescriptorSet
-            {
-                .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-                .dstSet = _textureDescriptorSet1,
-                .dstBinding = 0,
-                .dstArrayElement = 0,
-                .descriptorCount = 1,
-                .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-                .pImageInfo = &imageInfo1,
-            },
-        }
-    ), {});
+    _staticDescriptorPool.UpdateDescriptorSet(Material::GetDescriptorWrites(_vikingMtl), {});
 }
 
 void Application::MainLoop()
