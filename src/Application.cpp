@@ -1,6 +1,7 @@
 #include "header/Application.h"
-#include "Material.h"
+#include "header/Material.h"
 #include "header/ApplicationInfo.h"
+#include "header/CPUImage.h"
 #include "header/CommandBuffer.h"
 #include "header/DescriptorPool.h"
 #include "header/GPUImage.h"
@@ -268,7 +269,6 @@ void Application::RecordCommandBuffer(const CommandBuffer& cmdBuffer, uint32_t c
             int i = 0;
             for(const auto& renderer : _renderers)
             {
-                cmdBuffer.BindDescriptorSets(_pipelineLayoutHandler.Get(), _vikingMtl.DescriptorSet, 1);
                 renderer.Draw(cmdBuffer, _pipelineLayoutHandler.Get());
                 i++;
             }
@@ -326,10 +326,8 @@ Application::Application() :
     _depthBuffer(std::make_unique<GPUAllocatedImage>(_swapChain->GetExtent().width, _swapChain->GetExtent().height, ApplicationInfo::Get().GetMsaaSample(), 1, ApplicationInfo::Constant::DepthFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)),
 
     _cameraDataBuffer(ApplicationInfo::Constant::MaxFrameInCount, 1, sizeof(CameraData), GraphicsBuffer::UNIFORM),
-    _vikingImg(CPUImage("data/img/models/viking_room.png", STBI_rgb_alpha), _graphicsCommandPoolHandler.Get(), _graphicsQueueHandler.Get()),
     _sampler(),
-    _vikingMtl(ImageHelper::ImageBinding(_vikingImg.Get(), _sampler.Get()), _staticDescriptorPool.Allocate()),
-    _camera(glm::vec3(0.0f, 0.5f, 4.0f), glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, 1.0f, 0.0f), 45.0f, (float)_swapChain->GetExtent().width / (float)_swapChain->GetExtent().height, 0.1f, 100.0f),
+    _camera(glm::vec3(0.0f, 0.5f, 4.0f), glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, 1.0f, 0.0f), 45.0f, (float)_swapChain->GetExtent().width / (float)_swapChain->GetExtent().height, 0.1f, 1000.0f),
     _meshRegistry(),
 
     // Descriptor Sets & Execution
@@ -353,16 +351,40 @@ Application::Application() :
         _window.SetIcon(logo.Data(), logo.Width(), logo.Height());
     }
 
-    SubMesh vikingRoom = _meshRegistry.AddFromObj("data/models/viking_room.obj");
-    _renderers.emplace_back(vikingRoom, glm::vec3(-1.0f, 0.0f, 0.0f), ProjectHelper::EulerToQuat(glm::vec3(-90, -90, 0)), glm::vec3(1.0f));
+    SubMesh vikingRoom = _meshRegistry.AddFromObj("data/viking_room.obj");
+    {
+        auto& vikingImg = _images.emplace_back(CPUImage("data/viking_room.png", STBI_rgb_alpha), _graphicsCommandPoolHandler.Get(), _graphicsQueueHandler.Get());
+        auto& vikingMtl = _materials.emplace_back(ImageHelper::ImageBinding(vikingImg.Get(), _sampler.Get()), _staticDescriptorPool);
+        _renderers.emplace_back(vikingRoom, vikingMtl, glm::vec3(-1.0f, 0.0f, 0.0f), ProjectHelper::EulerToQuat(glm::vec3(-90, -90, 0)), glm::vec3(1.0f));
+    }
 
-    // SubMesh cube = _meshRegistry.AddFromObj("data/models/Crate1.obj");
-    // _renderers.emplace_back(cube, glm::vec3(1.0f, 0.5f, 0.0f), ProjectHelper::EulerToQuat(glm::vec3(0, 0, 0)), glm::vec3(0.5f));
+    {
+        auto& crateImg = _images.emplace_back(CPUImage("data/kirbo.png", STBI_rgb_alpha), _graphicsCommandPoolHandler.Get(), _graphicsQueueHandler.Get());
+        auto& crateMtl = _materials.emplace_back(ImageHelper::ImageBinding(crateImg.Get(), _sampler.Get()), _staticDescriptorPool);
+    }
 
+    {
+        auto& crateImg1 = _images.emplace_back(CPUImage("data/kirby.jpg", STBI_rgb_alpha), _graphicsCommandPoolHandler.Get(), _graphicsQueueHandler.Get());
+        auto& crateMtl1 = _materials.emplace_back(ImageHelper::ImageBinding(crateImg1.Get(), _sampler.Get()), _staticDescriptorPool);
+    }
+
+    {
+        auto& crateImg2 = _images.emplace_back(CPUImage("data/logo.png", STBI_rgb_alpha), _graphicsCommandPoolHandler.Get(), _graphicsQueueHandler.Get());
+        auto& crateMtl2 = _materials.emplace_back(ImageHelper::ImageBinding(crateImg2.Get(), _sampler.Get()), _staticDescriptorPool);
+    }
+
+    SubMesh cube = _meshRegistry.AddFromObj("data/Crate1.obj");
+
+    const int n = 10;
+    for(int i = 0; i < n; i++)
+    {
+        int randomMat = rand() % _materials.size();
+        float x = cos(2.0f * M_PI * i / n) * n * 0.5f;
+        float y = sin(2.0f * M_PI * i / n) * n * 0.5f;
+        _renderers.emplace_back(cube, _materials[randomMat], glm::vec3(x, 0.5f, y), ProjectHelper::EulerToQuat(glm::vec3(0, 0, 0)), glm::vec3(0.5f));
+    }
 
     _meshRegistry.UploadAndRelease(_graphicsQueueHandler.Get(), _graphicsCommandPoolHandler.Get());
-
-    _staticDescriptorPool.UpdateDescriptorSet(Material::GetDescriptorWrites(_vikingMtl), {});
 }
 
 void Application::MainLoop()

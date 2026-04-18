@@ -1,7 +1,7 @@
 #pragma once
 
 
-#include "Material.h"
+#include "header/Material.h"
 #include "header/Camera.h"
 #include "header/DescriptorPool.h"
 #include "header/MeshRegistry.h"
@@ -93,10 +93,7 @@ class Application
 
     // Datas
     MeshRegistry _meshRegistry;
-    GPUAllocatedImage _vikingImg;
     VkSamplerHandler _sampler;
-
-    Material _vikingMtl;
 
     MultiFrameHandler<GraphicsBuffer> _cameraDataBuffer;
     MultiFrameObject<VkDescriptorSet> _descriptorSet;
@@ -110,6 +107,8 @@ class Application
     MultiFrameHandler<VkFenceHandler>  _waitFence;
 
     std::vector<Renderer> _renderers;
+    std::vector<Material> _materials;
+    std::vector<GPUAllocatedImage> _images;
 
     bool _mouseLocked = true;
     float _inputPrevent = 0;

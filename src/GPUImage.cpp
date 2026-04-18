@@ -8,6 +8,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <stdexcept>
+#include <utility>
 #include <vulkan/vulkan_core.h>
 
 
@@ -275,8 +276,8 @@ GPUAllocatedImage::~GPUAllocatedImage()
 
 GPUAllocatedImage::GPUAllocatedImage(GPUAllocatedImage&& other) noexcept
 {
-    _internal = std::move(other._internal);
-    _memoryInternal = std::move(other._memoryInternal);
+    _internal = std::exchange(other._internal, {});
+    _memoryInternal = std::exchange(other._memoryInternal, VK_NULL_HANDLE);
     _view = std::move(other._view);
 }
 
@@ -284,8 +285,8 @@ GPUAllocatedImage& GPUAllocatedImage::operator=(GPUAllocatedImage&& other) noexc
 {
     if(this != &other)
     {
-        _internal = std::move(other._internal);
-        _memoryInternal = std::move(other._memoryInternal);
+        _internal = std::exchange(other._internal, {});
+        _memoryInternal = std::exchange(other._memoryInternal, VK_NULL_HANDLE);
         _view = std::move(other._view);
     }
     return *this;

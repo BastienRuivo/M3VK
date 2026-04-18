@@ -27,8 +27,8 @@ class DescriptorPool
 
     ~DescriptorPool();
 
-    std::vector<VkDescriptorSet> Allocate(uint32_t count);
-    VkDescriptorSet Allocate();
+    std::vector<VkDescriptorSet> Allocate(uint32_t count) const;
+    VkDescriptorSet Allocate() const;
 
     void UpdateDescriptorSet(std::span<const VkWriteDescriptorSet> writes, std::span<const VkCopyDescriptorSet> copies) const;
     inline VkDescriptorSetLayout Layout() const { return _layout; }
@@ -57,6 +57,6 @@ class DescriptorPool
     private:
     VkDescriptorSetLayout _layout;
     VkDescriptorPool _pool;
-    uint32_t _allocatedSets = 0;
+    mutable uint32_t _allocatedSets = 0;
     uint32_t _maxSets;
 };

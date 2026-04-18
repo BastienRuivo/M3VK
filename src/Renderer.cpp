@@ -1,16 +1,21 @@
 #include "header/Renderer.h"
-#include "glm/ext/vector_float3.hpp"
-#include "header/ProjectHelper.h"
+#include "header/Material.h"
+#include "header/MeshRegistry.h"
 
-void Renderer::AddMesh(const SubMesh& mesh)
+void Renderer::AddMesh(const SubMesh& mesh, const Material& material)
 {
     _meshes.push_back(mesh);
+    _materials.push_back(material);
 }
 
 void Renderer::Draw(const CommandBuffer& cmdBuffer, VkPipelineLayout layout) const
 {
-    for (const auto& mesh : _meshes)
+    for (int i = 0; i < _meshes.size(); i++)
     {
+        const SubMesh& mesh = _meshes[i];
+        const Material& material = _materials[i];
+
+        cmdBuffer.BindDescriptorSets(layout, *material.DescriptorSet, 1);
         cmdBuffer.PushConstants(layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(ObjectData), &_data);
         cmdBuffer.DrawIndexed(mesh.firstIndex, mesh.indexCount, mesh.vertexOffset);
     }

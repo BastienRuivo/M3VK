@@ -81,7 +81,7 @@ DescriptorPool& DescriptorPool::operator=(DescriptorPool&& other) noexcept
     return *this;
 }
 
-std::vector<VkDescriptorSet> DescriptorPool::Allocate(uint32_t count)
+std::vector<VkDescriptorSet> DescriptorPool::Allocate(uint32_t count) const
 {
     if(count + _allocatedSets > _maxSets)
     {
@@ -108,7 +108,7 @@ std::vector<VkDescriptorSet> DescriptorPool::Allocate(uint32_t count)
     return descriptorSets;
 }
 
-VkDescriptorSet DescriptorPool::Allocate()
+VkDescriptorSet DescriptorPool::Allocate() const
 {
     if(_allocatedSets + 1 > _maxSets)
     {
