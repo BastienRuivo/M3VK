@@ -313,7 +313,7 @@ Application::Application() :
     _graphicsPipelineHandler(_swapChain->GetExtent(), ApplicationInfo::Get().GetMsaaSample(), _pipelineLayoutHandler.Get(), _swapChain->GetImageFormat(), ApplicationInfo::Constant::DepthFormat),
 
     // Command pool
-    _graphicsCommandPoolHandler(_deviceHandler.Get()),
+    _graphicsCommandPoolHandler(),
 
     // Geometry & Data Buffers
     _colorBackBuffer(std::make_unique<GPUAllocatedImage>(_swapChain->GetExtent().width, _swapChain->GetExtent().height,
@@ -332,7 +332,7 @@ Application::Application() :
 
     // Descriptor Sets & Execution
     _descriptorSet(CreateDescriptorSet()),
-    _commandBuffer(ApplicationInfo::Constant::MaxFrameInCount, _graphicsCommandPoolHandler.Get(), _graphicsQueueHandler.Get()),
+    _commandBuffer(ApplicationInfo::Constant::MaxFrameInCount, _graphicsCommandPoolHandler.Internal(), _graphicsQueueHandler.Get()),
 
     // Synchronization
     _availableImageSemaphore(ApplicationInfo::Constant::MaxFrameInCount),
@@ -347,44 +347,25 @@ Application::Application() :
 
     //load logo
     {
-        CPUImage logo("data/img/logo.png", STBI_rgb_alpha);
+        CPUImage logo("data/logo.png", STBI_rgb_alpha);
         _window.SetIcon(logo.Data(), logo.Width(), logo.Height());
     }
 
-    SubMesh vikingRoom = _meshRegistry.AddFromObj("data/viking_room.obj");
+    auto& texture = _images.emplace_back(CPUImage("data/missing.png", STBI_rgb_alpha), _graphicsCommandPoolHandler.Internal(), _graphicsQueueHandler.Get());
+    _materials.emplace_back(ImageHelper::ImageBinding(texture.Get(), _sampler.Get()), _staticDescriptorPool);
+    int defaultMaterial = _materials.size() - 1;
+
+    Renderer gelano = ProjectHelper::Load3DModel("data/minecraft-chest/source/chest.fbx", _meshRegistry, _images, _materials, defaultMaterial, _staticDescriptorPool, _graphicsCommandPoolHandler.Internal(), _graphicsQueueHandler.Get(), _sampler.Get());
+    _renderers.push_back(std::move(gelano));
+
     {
-        auto& vikingImg = _images.emplace_back(CPUImage("data/viking_room.png", STBI_rgb_alpha), _graphicsCommandPoolHandler.Get(), _graphicsQueueHandler.Get());
+        SubMesh vikingRoom = _meshRegistry.AddFromObj("data/viking_room.obj");
+        auto& vikingImg = _images.emplace_back(CPUImage("data/viking_room.png", STBI_rgb_alpha), _graphicsCommandPoolHandler.Internal(), _graphicsQueueHandler.Get());
         auto& vikingMtl = _materials.emplace_back(ImageHelper::ImageBinding(vikingImg.Get(), _sampler.Get()), _staticDescriptorPool);
-        _renderers.emplace_back(vikingRoom, vikingMtl, glm::vec3(-1.0f, 0.0f, 0.0f), ProjectHelper::EulerToQuat(glm::vec3(-90, -90, 0)), glm::vec3(1.0f));
+        _renderers.emplace_back(vikingRoom, vikingMtl, glm::vec3(-4.0f, 0.0f, 0.0f), ProjectHelper::EulerToQuat(glm::vec3(0, 0, 0)), glm::vec3(1.0f));
     }
 
-    {
-        auto& crateImg = _images.emplace_back(CPUImage("data/kirbo.png", STBI_rgb_alpha), _graphicsCommandPoolHandler.Get(), _graphicsQueueHandler.Get());
-        auto& crateMtl = _materials.emplace_back(ImageHelper::ImageBinding(crateImg.Get(), _sampler.Get()), _staticDescriptorPool);
-    }
-
-    {
-        auto& crateImg1 = _images.emplace_back(CPUImage("data/kirby.jpg", STBI_rgb_alpha), _graphicsCommandPoolHandler.Get(), _graphicsQueueHandler.Get());
-        auto& crateMtl1 = _materials.emplace_back(ImageHelper::ImageBinding(crateImg1.Get(), _sampler.Get()), _staticDescriptorPool);
-    }
-
-    {
-        auto& crateImg2 = _images.emplace_back(CPUImage("data/logo.png", STBI_rgb_alpha), _graphicsCommandPoolHandler.Get(), _graphicsQueueHandler.Get());
-        auto& crateMtl2 = _materials.emplace_back(ImageHelper::ImageBinding(crateImg2.Get(), _sampler.Get()), _staticDescriptorPool);
-    }
-
-    SubMesh cube = _meshRegistry.AddFromObj("data/Crate1.obj");
-
-    const int n = 10;
-    for(int i = 0; i < n; i++)
-    {
-        int randomMat = rand() % _materials.size();
-        float x = cos(2.0f * M_PI * i / n) * n * 0.5f;
-        float y = sin(2.0f * M_PI * i / n) * n * 0.5f;
-        _renderers.emplace_back(cube, _materials[randomMat], glm::vec3(x, 0.5f, y), ProjectHelper::EulerToQuat(glm::vec3(0, 0, 0)), glm::vec3(0.5f));
-    }
-
-    _meshRegistry.UploadAndRelease(_graphicsQueueHandler.Get(), _graphicsCommandPoolHandler.Get());
+    _meshRegistry.UploadAndRelease(_graphicsQueueHandler.Get(), _graphicsCommandPoolHandler.Internal());
 }
 
 void Application::MainLoop()

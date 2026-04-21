@@ -1,13 +1,13 @@
-#include "header/VkHandlers/VkCommandPoolHandler.h"
+#include "header/VkHandlers/Handlers.h"
 #include "header/ApplicationInfo.h"
 #include <stdexcept>
-#include <vulkan/vulkan_core.h>
 
 #ifdef M3VK_MEMORYLOG
 #include "header/DebugLayer.h"
 #endif
 
-VkCommandPoolHandler::VkCommandPoolHandler(VkDevice device)
+VkCommandPoolHandler::VkCommandPoolHandler()
+: Handler<VkCommandPool>()
 {
 #ifdef M3VK_MEMORYLOG
     DebugLayer::Log(DebugLayer::LogType::CREATE, "VkCommandPoolHandler Creation !");
@@ -35,27 +35,4 @@ VkCommandPoolHandler::~VkCommandPoolHandler()
 #ifdef M3VK_MEMORYLOG
     DebugLayer::Log(DebugLayer::LogType::DESTROY, "VkCommandPoolHandler Destroyed !");
 #endif
-}
-
-VkCommandPoolHandler::VkCommandPoolHandler(VkCommandPoolHandler && other) noexcept
-{
-#ifdef M3VK_MEMORYLOG
-    DebugLayer::Log(DebugLayer::LogType::CREATE, "VkCommandPoolHandler Move Creation !");
-#endif
-
-    _internal = other._internal;
-
-    other._internal = VK_NULL_HANDLE;
-}
-
-VkCommandPoolHandler& VkCommandPoolHandler::operator=(VkCommandPoolHandler&& other) noexcept
-{
-    if(this != &other)
-    {
-        _internal = other._internal;
-
-        other._internal = VK_NULL_HANDLE;
-    }
-
-    return *this;
 }

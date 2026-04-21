@@ -30,7 +30,7 @@ SubMesh MeshRegistry::AddFromObj(const std::string& path)
     std::vector<Vertex> vertices;
     std::vector<uint32_t> indices;
 
-    ProjectHelper::LoadObj(path, vertices, indices);
+    ProjectHelper::LoadTinyObj(path, vertices, indices);
 
     return Add(vertices, indices);
 }

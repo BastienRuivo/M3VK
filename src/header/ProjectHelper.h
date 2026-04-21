@@ -5,15 +5,24 @@
 #include <filesystem>
 #include <fstream>
 #include <stdexcept>
+#include <string>
 #include <unordered_map>
 #include <vector>
 #include <vulkan/vulkan_core.h>
 #include <tiny_obj_loader.h>
 #include "DebugLayer.h"
+#include "assimp/Importer.hpp"
+#include "assimp/material.h"
+#include "assimp/postprocess.h"
+#include "assimp/scene.h"
 #include "glm/fwd.hpp"
 #include "header/ApplicationInfo.h"
+#include "header/CPUImage.h"
+#include "header/DescriptorPool.h"
+#include "header/GPUImage.h"
+#include "header/MeshRegistry.h"
+#include "header/Renderer.h"
 #include "header/Vertex.h"
-
 class ProjectHelper
 {
     public:
@@ -173,7 +182,7 @@ class ProjectHelper
         return glm::quat(glm::vec3(glm::radians(euler.x), glm::radians(euler.y), glm::radians(euler.z)));
     }
 
-    static void LoadObj(const std::string& path, std::vector<Vertex>& vertices, std::vector<uint32_t>& indices)
+    static void LoadTinyObj(const std::string& path, std::vector<Vertex>& vertices, std::vector<uint32_t>& indices)
     {
         tinyobj::attrib_t attrib;
         std::vector<tinyobj::shape_t> shapes;
@@ -224,5 +233,134 @@ class ProjectHelper
             }
         }
 
+    }
+
+    static Renderer Load3DModel(const std::string & modelPath, MeshRegistry & meshRegistry, std::vector<GPUAllocatedImage> & textures, std::vector<Material> & materials, int defaultMaterial, DescriptorPool& descriptorPool, VkCommandPool cmdPool, VkQueue queue, VkSampler sampler)
+    {
+        Assimp::Importer importer;
+
+        const aiScene* scene = importer.ReadFile(modelPath,
+            aiProcess_Triangulate |
+            aiProcess_JoinIdenticalVertices |
+            aiProcess_GenUVCoords |
+            aiProcess_FlipUVs);
+
+        if(scene == nullptr)
+        {
+            DebugLayer::Log(DebugLayer::LogType::ERROR, importer.GetErrorString());
+            DebugLayer::Log(DebugLayer::LogType::ERROR, "Can't open " + std::string(std::filesystem::current_path()) + "/" + modelPath);
+            throw std::runtime_error(importer.GetErrorString());
+        }
+
+        int materialOffset = materials.size();
+
+        for(unsigned int i = 0; i < scene->mNumMaterials; i++)
+        {
+            aiMaterial* material = scene->mMaterials[i];
+
+            aiTextureType textureTypes[] = {
+                aiTextureType_DIFFUSE,
+                aiTextureType_BASE_COLOR,
+                aiTextureType_UNKNOWN
+            };
+            aiTextureType textureType;
+            int textureCount = 0;
+
+            for(int j = 0; j < 3; j++)
+            {
+                aiTextureType type = textureTypes[j];
+                int count = material->GetTextureCount(type);
+
+                if(count > 0)
+                {
+                    textureType = type;
+                    textureCount = count;
+                    break;
+                }
+                else
+                {
+                    DebugLayer::Log(DebugLayer::LogType::WARNING, "No texture of type " + std::to_string(type) + " for material at path " + std::string(material->GetName().C_Str()));
+                }
+            }
+
+            if(textureCount == 0)
+            {
+                DebugLayer::Log(DebugLayer::LogType::WARNING, "No texture for material at path " + std::string(material->GetName().C_Str()));
+                Material material = materials[defaultMaterial];
+                materials.emplace_back(std::move(material));
+                continue;
+            }
+
+            for(int j = 0; j < textureCount; j++)
+            {
+                aiString path;
+                material->GetTexture(textureType, j, &path);
+
+                if(path.length > 0)
+                {
+                    std::filesystem::path texturePath(modelPath);
+                    texturePath = texturePath.remove_filename();
+
+                    std::string rawPath = std::string(path.C_Str());
+                    std::replace(rawPath.begin(), rawPath.end(), '\\', '/');
+
+                    texturePath = texturePath.append(rawPath);
+                    texturePath = texturePath.lexically_normal();
+
+                    if(!std::filesystem::exists(texturePath))
+                    {
+                        DebugLayer::Log(DebugLayer::LogType::WARNING, "Path does not exist " + texturePath.string());
+
+                        //print current path
+                        DebugLayer::Log(DebugLayer::LogType::WARNING, "Current path: " + std::string(std::filesystem::current_path().string()));
+
+                        auto& texture = textures.emplace_back(CPUImage("data/missing.png", STBI_rgb_alpha), cmdPool, queue);
+                        materials.emplace_back(ImageHelper::ImageBinding(texture.Get(), sampler), descriptorPool);
+                        continue;
+                    }
+
+                    auto& texture = textures.emplace_back(CPUImage(texturePath, STBI_rgb_alpha), cmdPool, queue);
+                    materials.emplace_back(ImageHelper::ImageBinding(texture.Get(), sampler), descriptorPool);
+                }
+                else
+                {
+                    DebugLayer::Log(DebugLayer::LogType::WARNING, "No texture for material at path " + std::string(path.C_Str()));
+                    Material material = materials[defaultMaterial];
+                    materials.emplace_back(std::move(material));
+                }
+            }
+        }
+
+        std::vector<SubMesh> subMeshes;
+
+        Renderer renderer({}, {}, glm::vec3(0.0f), glm::vec3(0.0f), glm::vec3(1.0f));
+
+        for(unsigned int i = 0; i < scene->mNumMeshes; i++)
+        {
+            aiMesh* mesh = scene->mMeshes[i];
+            std::vector<Vertex> vertices(mesh->mNumVertices);
+            std::vector<uint32_t> indices(mesh->mNumFaces * 3);
+
+            for(unsigned int j = 0; j < mesh->mNumVertices; j++)
+            {
+                vertices[j].pos = glm::vec3(mesh->mVertices[j].x, mesh->mVertices[j].y, mesh->mVertices[j].z);
+                vertices[j].texCoord = glm::vec2(mesh->mTextureCoords[0][j].x, mesh->mTextureCoords[0][j].y);
+            }
+
+            for(unsigned int j = 0; j < mesh->mNumFaces; j++)
+            {
+                aiFace face = mesh->mFaces[j];
+                indices[j * 3 + 0] = face.mIndices[0];
+                indices[j * 3 + 1] = face.mIndices[1];
+                indices[j * 3 + 2] = face.mIndices[2];
+            }
+
+            SubMesh submesh = meshRegistry.Add(vertices, indices);
+            subMeshes.push_back(submesh);
+
+            renderer.AddMesh(submesh, materials[materialOffset + i]);
+        }
+
+        return renderer;
     }
 };

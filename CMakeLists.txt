@@ -37,7 +37,32 @@ fetchcontent_declare(
     GIT_TAG        v2.0.0rc13
 )
 
-fetchcontent_makeavailable(glfw stb glm tinyobjloader)
+# Force internal dependencies to resolve "unzip.h" and "zlib.h" issues
+set(ASSIMP_BUILD_ZLIB ON CACHE INTERNAL "")
+set(ASSIMP_FORCE_INTERNAL_ZLIB ON CACHE INTERNAL "")
+set(ASSIMP_BUILD_MINIZIP ON CACHE INTERNAL "")
+set(CMAKE_POLICY_DEFAULT_CMP0074 NEW) # Respect ZLIB_ROOT if set
+
+# Disable unnecessary components to speed up the massive Assimp build
+set(ASSIMP_BUILD_TESTS OFF CACHE INTERNAL "")
+set(ASSIMP_INSTALL OFF CACHE INTERNAL "")
+set(ASSIMP_BUILD_ASSIMP_TOOLS OFF CACHE INTERNAL "")
+set(ASSIMP_BUILD_SAMPLES OFF CACHE INTERNAL "")
+set(ASSIMP_BUILD_CACHED_INTERFACES OFF CACHE INTERNAL "")
+
+# Only build the importers you actually use
+set(ASSIMP_BUILD_ALL_IMPORTERS_BY_DEFAULT OFF CACHE INTERNAL "")
+set(ASSIMP_BUILD_OBJ_IMPORTER ON CACHE INTERNAL "")
+set(ASSIMP_BUILD_GLTF_IMPORTER ON CACHE INTERNAL "")
+set(ASSIMP_BUILD_FBX_IMPORTER ON CACHE INTERNAL "")
+
+fetchcontent_declare(
+    assimp
+    GIT_REPOSITORY https://github.com/assimp/assimp.git
+    GIT_TAG        v6.0.4 # Use a stable tagged release
+)
+
+fetchcontent_makeavailable(glfw stb glm tinyobjloader assimp)
 
 # --- Interface Library Setup ---
 
@@ -94,6 +119,9 @@ add_custom_target(CompileShaders DEPENDS ${SPIRV_BINARY_FILES})
 file(GLOB_RECURSE SRC_FILES "${CMAKE_SOURCE_DIR}/src/*.cpp")
 file(GLOB_RECURSE HEADER_FILES "${CMAKE_SOURCE_DIR}/src/headers/*.h" "${CMAKE_SOURCE_DIR}/src/headers/*.hpp")
 
+# define data source directory
+add_definitions(-DDATA_SOURCE_DIR="data/")
+
 add_executable(${PROJECT_NAME} ${SRC_FILES} ${HEADER_FILES})
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE
@@ -116,8 +144,9 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     Vulkan::Vulkan
     glfw
     stb
-    glm_lib
+    glm::glm
     tinyobjloader
+    assimp::assimp
 )
 
 # --- Asset Management ---

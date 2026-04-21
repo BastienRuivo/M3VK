@@ -1,5 +1,6 @@
 #pragma once
 
+#include "header/GPUImage.h"
 #include "header/Material.h"
 #include "glm/ext/vector_float3.hpp"
 #include "glm/fwd.hpp"
