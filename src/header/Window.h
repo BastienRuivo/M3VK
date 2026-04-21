@@ -1,6 +1,5 @@
 #pragma once
 
-#define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
 class Window
@@ -25,7 +24,7 @@ class Window
         return glfwGetKey(_internal, key) == GLFW_PRESS;
     }
 
-    inline GLFWwindow* Get() const
+    inline GLFWwindow* Internal() const
     {
         return _internal;
     }

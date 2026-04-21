@@ -140,27 +140,8 @@ VkPhysicalDeviceHandler::VkPhysicalDeviceHandler(VkInstance instance, VkSurfaceK
 
 VkPhysicalDeviceHandler::~VkPhysicalDeviceHandler()
 {
+    _internal = VK_NULL_HANDLE;
 #ifdef M3VK_MEMORYLOG
     DebugLayer::Log(DebugLayer::LogType::DESTROY, "VkPhysicalDeviceHandler Destroyed !");
 #endif
-}
-
-VkPhysicalDeviceHandler::VkPhysicalDeviceHandler(VkPhysicalDeviceHandler && other) noexcept
-{
-#ifdef M3VK_MEMORYLOG
-    DebugLayer::Log(DebugLayer::LogType::CREATE, "VkPhysicalDeviceHandler Move Creation !");
-#endif
-
-    // Note : Since this is not allocated memory, no need to release the previous one
-    _internal = other._internal;
-}
-
-VkPhysicalDeviceHandler& VkPhysicalDeviceHandler::operator=(VkPhysicalDeviceHandler&& other) noexcept
-{
-    if(this != &other)
-    {
-        _internal = other._internal;
-    }
-
-    return *this;
 }

@@ -37,7 +37,7 @@ class GPUAllocatedImage
     void TransitionLayout(VkCommandPool pool, VkQueue queue, VkImageLayout oldLayout, VkImageLayout newLayout) const;
     void GenerateMipmapsCommand(const CommandBuffer& cmdBuffer) const;
 
-    inline ImageReference Get() const { return _internal; }
+    inline ImageReference Internal() const { return _internal; }
     inline VkImageView View() const { return _internal.View; }
     inline uint32_t Width() const { return _internal.Width; }
     inline uint32_t Height() const { return _internal.Height; }

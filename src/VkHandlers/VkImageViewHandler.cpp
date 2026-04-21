@@ -1,6 +1,7 @@
 #include "header/VkHandlers/VkImageViewHandler.h"
 #include "header/ApplicationInfo.h"
 #include "header/ProjectHelper.h"
+#include "header/VkHandlers/Handlers.h"
 #include <stdexcept>
 #include <vulkan/vulkan_core.h>
 
@@ -40,6 +41,7 @@ VkImageViewHandler::VkImageViewHandler(VkImage image, VkFormat format, uint32_t 
         throw std::runtime_error("Failed to create swap chain images !");
     }
 }
+
 VkImageViewHandler::~VkImageViewHandler()
 {
     if(_internal == VK_NULL_HANDLE) return;
@@ -51,27 +53,18 @@ VkImageViewHandler::~VkImageViewHandler()
 #endif
 }
 
-VkImageViewHandler::VkImageViewHandler(VkImageViewHandler && other) noexcept
+VkImageViewHandler::VkImageViewHandler(VkImageViewHandler&& other) noexcept
 {
-#ifdef M3VK_MEMORYLOG
-    DebugLayer::Log(DebugLayer::LogType::CREATE, "VkImageViewHandler Move Creation !");
-#endif
-
-    _internal = other._internal;
-    _format = other._format;
-    other._internal = VK_NULL_HANDLE;
-    other._format = VK_FORMAT_UNDEFINED;
+    _internal = std::exchange(other._internal, VK_NULL_HANDLE);
+    _format = std::exchange(other._format, VK_FORMAT_UNDEFINED);
 }
 
 VkImageViewHandler& VkImageViewHandler::operator=(VkImageViewHandler&& other) noexcept
 {
     if(this != &other)
     {
-        _internal = other._internal;
-        _format = other._format;
-        other._internal = VK_NULL_HANDLE;
-        other._format = VK_FORMAT_UNDEFINED;
+        _internal = std::exchange(other._internal, VK_NULL_HANDLE);
+        _format = std::exchange(other._format, VK_FORMAT_UNDEFINED);
     }
-
     return *this;
 }

@@ -315,12 +315,12 @@ class ProjectHelper
                         DebugLayer::Log(DebugLayer::LogType::WARNING, "Current path: " + std::string(std::filesystem::current_path().string()));
 
                         auto& texture = textures.emplace_back(CPUImage("data/missing.png", STBI_rgb_alpha), cmdPool, queue);
-                        materials.emplace_back(ImageHelper::ImageBinding(texture.Get(), sampler), descriptorPool);
+                        materials.emplace_back(ImageHelper::ImageBinding(texture.Internal(), sampler), descriptorPool);
                         continue;
                     }
 
                     auto& texture = textures.emplace_back(CPUImage(texturePath, STBI_rgb_alpha), cmdPool, queue);
-                    materials.emplace_back(ImageHelper::ImageBinding(texture.Get(), sampler), descriptorPool);
+                    materials.emplace_back(ImageHelper::ImageBinding(texture.Internal(), sampler), descriptorPool);
                 }
                 else
                 {

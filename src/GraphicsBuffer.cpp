@@ -187,7 +187,7 @@ void GraphicsBuffer::CopyToBuffer(const VkQueue& queue,
     CommandBuffer cmdBuffer(pool, queue);
     cmdBuffer.BeginSingleTime();
     {
-        cmdBuffer.CopyBuffer(copyBuffer.Get(), _internal, size, srcIndex, dstIndex);
+        cmdBuffer.CopyBuffer(copyBuffer.Internal(), _internal, size, srcIndex, dstIndex);
     }
     cmdBuffer.End();
     cmdBuffer.WaitCompletion();

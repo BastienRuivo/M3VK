@@ -183,7 +183,7 @@ SwapChain::SwapChain(const Window& window, VkSurfaceKHR windowSurface)
         ImageReference image
         {
             .Image = tempImages[i],
-            .View = _viewHandlers.GetInternal(i),
+            .View = _viewHandlers.Internal(i),
             .Format = format.format,
             .Width = extents.width,
             .Height = extents.height,

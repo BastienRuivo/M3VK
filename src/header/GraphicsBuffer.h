@@ -18,7 +18,7 @@ class StageBuffer
     StageBuffer& operator=(const StageBuffer&) = delete;
 
     void CopyToBuffer(void* srcData, VkDeviceSize copySize);
-    inline VkBuffer Get() const { return _internal; };
+    inline VkBuffer Internal() const { return _internal; };
 
     private:
     VkBuffer _internal = VK_NULL_HANDLE;
@@ -52,7 +52,7 @@ class GraphicsBuffer
         uint32_t srcIndex = 0,
         uint32_t dstIndex = 0);
 
-    VkBuffer Get() const { return _internal; }
+    VkBuffer Internal() const { return _internal; }
     BufferType GetType() const { return _type; }
 
     inline VkDeviceSize GetSize() const { return _count * _stride; }

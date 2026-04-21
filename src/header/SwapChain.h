@@ -6,7 +6,6 @@
 #include <vector>
 #include <vulkan/vk_platform.h>
 #include <vulkan/vulkan_core.h>
-#define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
 #include "header/Window.h"
@@ -25,7 +24,7 @@ class SwapChain
 
     inline VkFormat GetImageFormat() const { return _imageFormat; }
     inline VkExtent2D GetExtent() const { return _extent; }
-    inline VkSwapchainKHR Get() const { return _internal; }
+    inline VkSwapchainKHR Internal() const { return _internal; }
     inline VkImageView View(uint32_t index) const { return Images.Get(index).View; }
 
     private:

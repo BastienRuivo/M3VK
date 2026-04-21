@@ -106,7 +106,7 @@ GPUAllocatedImage::GPUAllocatedImage(uint32_t width, uint32_t height, VkSampleCo
     _internal =
     {
         .Image = image,
-        .View = _view.Get(),
+        .View = _view.Internal(),
         .Format = format,
         .Width = static_cast<uint32_t>(width),
         .Height = static_cast<uint32_t>(height),
@@ -162,7 +162,7 @@ void GPUAllocatedImage::CopyCPUtoGPUImage(const CPUImage & cpuImg, VkCommandPool
                 .depth = 1
             },
         };
-        cmdBuffer.CopyBufferToImage(stage.Get(), _internal.Image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &region, 1);
+        cmdBuffer.CopyBufferToImage(stage.Internal(), _internal.Image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &region, 1);
 
         //TransitionLayoutCommand(cmdBuffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
         GenerateMipmapsCommand(cmdBuffer);

@@ -131,15 +131,15 @@ void Application::RefreshSwapChain()
 {
     int width = 0, height = 0;
     while (width == 0 || height == 0) {
-        glfwGetFramebufferSize(_window.Get(), &width, &height);
+        glfwGetFramebufferSize(_window.Internal(), &width, &height);
         glfwPollEvents();
     }
 
-    vkDeviceWaitIdle(_deviceHandler.Get());
+    vkDeviceWaitIdle(ApplicationInfo::Device());
 
     // TODO : Swap chain is currently resetted the first frame beacause it is out of date
     _swapChain.reset();
-    _swapChain = std::make_unique<SwapChain>(_window, _windowSurfaceHandler.Get());
+    _swapChain = std::make_unique<SwapChain>(_window, _windowSurfaceHandler.Internal());
 
     _camera._aspect = static_cast<float>(_swapChain->GetExtent().width) / static_cast<float>(_swapChain->GetExtent().height);
 
@@ -161,7 +161,7 @@ void Application::DrawFrame()
 
     // Acquire image to draw on
     uint32_t imageIndex;
-    VkResult result = vkAcquireNextImageKHR(ApplicationInfo::Device(), _swapChain->Get(), UINT64_MAX, _availableImageSemaphore.GetInternal(_currentFrame), VK_NULL_HANDLE, &imageIndex);
+    VkResult result = vkAcquireNextImageKHR(ApplicationInfo::Device(), _swapChain->Internal(), UINT64_MAX, _availableImageSemaphore.Internal(_currentFrame), VK_NULL_HANDLE, &imageIndex);
 
     if(result == VK_ERROR_OUT_OF_DATE_KHR)
     {
@@ -182,14 +182,14 @@ void Application::DrawFrame()
     RecordCommandBuffer(_commandBuffer.Get(_currentFrame), _currentFrame, imageIndex);
 
     // stackallocs that can be cached.
-    VkSemaphore wait[] = {_availableImageSemaphore.GetInternal(_currentFrame)};
+    VkSemaphore wait[] = {_availableImageSemaphore.Internal(_currentFrame)};
     VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
-    VkSemaphore signalSemaphore[] = {_renderFinishedSemaphores.GetInternal(imageIndex)};
+    VkSemaphore signalSemaphore[] = {_renderFinishedSemaphores.Internal(imageIndex)};
 
-    _commandBuffer.Get(_currentFrame).Submit(wait, 1, waitStages, signalSemaphore, 1, _waitFence.GetInternal(_currentFrame));
+    _commandBuffer.Get(_currentFrame).Submit(wait, 1, waitStages, signalSemaphore, 1, _waitFence.Internal(_currentFrame));
 
     // actually present the frame
-    VkSwapchainKHR swapChain = _swapChain->Get();
+    VkSwapchainKHR swapChain = _swapChain->Internal();
     VkPresentInfoKHR presentInfo
     {
         .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
@@ -200,7 +200,7 @@ void Application::DrawFrame()
         .pImageIndices = &imageIndex
     };
 
-    result = vkQueuePresentKHR(_graphicsQueueHandler.Get(), &presentInfo);
+    result = vkQueuePresentKHR(_graphicsQueueHandler.Internal(), &presentInfo);
 
     if(result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)
     {
@@ -252,24 +252,24 @@ void Application::RecordCommandBuffer(const CommandBuffer& cmdBuffer, uint32_t c
 
     cmdBuffer.Begin();
     {
-        ImageHelper::TransitionLayoutCommand(cmdBuffer, _colorBackBuffer->Get(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-        ImageHelper::TransitionLayoutCommand(cmdBuffer, _depthBuffer->Get(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
+        ImageHelper::TransitionLayoutCommand(cmdBuffer, _colorBackBuffer->Internal(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+        ImageHelper::TransitionLayoutCommand(cmdBuffer, _depthBuffer->Internal(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
         ImageHelper::TransitionLayoutCommand(cmdBuffer, backBuffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
         cmdBuffer.BeginRendering(renderArea, &colorAttachment, 1, depthAttachment, stencilAttachment);
         {
-            cmdBuffer.BindPipeline(_graphicsPipelineHandler.Get(), VK_PIPELINE_BIND_POINT_GRAPHICS);
+            cmdBuffer.BindPipeline(_graphicsPipelineHandler.Internal(), VK_PIPELINE_BIND_POINT_GRAPHICS);
             cmdBuffer.SetViewport(0, 0, renderArea.extent.width, renderArea.extent.height);
             cmdBuffer.SetScissor(renderArea);
 
             _meshRegistry.Bind(cmdBuffer);
 
-            cmdBuffer.BindDescriptorSets(_pipelineLayoutHandler.Get(), _descriptorSet.Get(currentFrame), 0);
+            cmdBuffer.BindDescriptorSets(_pipelineLayoutHandler.Internal(), _descriptorSet.Get(currentFrame), 0);
 
             int i = 0;
             for(const auto& renderer : _renderers)
             {
-                renderer.Draw(cmdBuffer, _pipelineLayoutHandler.Get());
+                renderer.Draw(cmdBuffer, _pipelineLayoutHandler.Internal());
                 i++;
             }
         }
@@ -283,15 +283,15 @@ Application::Application() :
     // Core Window & Instance (The Foundation)
     _window(1920, 1080, "Window", this, Application::ResizeCallback, Application::MouseMoveCallback, Application::WindowFocusCallback),
     _instanceHandler(),
-    _vkDebugLayer(_instanceHandler.Get()),
-    _windowSurfaceHandler(_instanceHandler.Get(), _window.Get()),
-    _physicalDeviceHandler(_instanceHandler.Get(), _windowSurfaceHandler.Get(), _deviceExtensions),
-    _deviceHandler(_windowSurfaceHandler.Get(), _deviceExtensions),
+    _vkDebugLayer(_instanceHandler.Internal()),
+    _windowSurfaceHandler(_instanceHandler.Internal(), _window.Internal()),
+    _physicalDeviceHandler(_instanceHandler.Internal(), _windowSurfaceHandler.Internal(), _deviceExtensions),
+    _deviceHandler(_windowSurfaceHandler.Internal(), _deviceExtensions),
 
     // Queues & Swapchain
     _graphicsQueueHandler(VkQueueHandler::Graphics),
     _presentQueueHandler(VkQueueHandler::Present),
-    _swapChain(std::make_unique<SwapChain>(_window, _windowSurfaceHandler.Get())),
+    _swapChain(std::make_unique<SwapChain>(_window, _windowSurfaceHandler.Internal())),
 
     _dynamicDescriptorPool(std::initializer_list<VkDescriptorSetLayoutBinding>(
         {
@@ -310,7 +310,7 @@ Application::Application() :
             VkPushConstantRange{ VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(ObjectData) }
         }
     )),
-    _graphicsPipelineHandler(_swapChain->GetExtent(), ApplicationInfo::Get().GetMsaaSample(), _pipelineLayoutHandler.Get(), _swapChain->GetImageFormat(), ApplicationInfo::Constant::DepthFormat),
+    _graphicsPipelineHandler(_swapChain->GetExtent(), ApplicationInfo::Get().GetMsaaSample(), _pipelineLayoutHandler.Internal(), _swapChain->GetImageFormat(), ApplicationInfo::Constant::DepthFormat),
 
     // Command pool
     _graphicsCommandPoolHandler(),
@@ -332,7 +332,7 @@ Application::Application() :
 
     // Descriptor Sets & Execution
     _descriptorSet(CreateDescriptorSet()),
-    _commandBuffer(ApplicationInfo::Constant::MaxFrameInCount, _graphicsCommandPoolHandler.Internal(), _graphicsQueueHandler.Get()),
+    _commandBuffer(ApplicationInfo::Constant::MaxFrameInCount, _graphicsCommandPoolHandler.Internal(), _graphicsQueueHandler.Internal()),
 
     // Synchronization
     _availableImageSemaphore(ApplicationInfo::Constant::MaxFrameInCount),
@@ -351,21 +351,21 @@ Application::Application() :
         _window.SetIcon(logo.Data(), logo.Width(), logo.Height());
     }
 
-    auto& texture = _images.emplace_back(CPUImage("data/missing.png", STBI_rgb_alpha), _graphicsCommandPoolHandler.Internal(), _graphicsQueueHandler.Get());
-    _materials.emplace_back(ImageHelper::ImageBinding(texture.Get(), _sampler.Get()), _staticDescriptorPool);
+    auto& texture = _images.emplace_back(CPUImage("data/missing.png", STBI_rgb_alpha), _graphicsCommandPoolHandler.Internal(), _graphicsQueueHandler.Internal());
+    _materials.emplace_back(ImageHelper::ImageBinding(texture.Internal(), _sampler.Internal()), _staticDescriptorPool);
     int defaultMaterial = _materials.size() - 1;
 
-    Renderer gelano = ProjectHelper::Load3DModel("data/minecraft-chest/source/chest.fbx", _meshRegistry, _images, _materials, defaultMaterial, _staticDescriptorPool, _graphicsCommandPoolHandler.Internal(), _graphicsQueueHandler.Get(), _sampler.Get());
+    Renderer gelano = ProjectHelper::Load3DModel("data/minecraft-chest/source/chest.fbx", _meshRegistry, _images, _materials, defaultMaterial, _staticDescriptorPool, _graphicsCommandPoolHandler.Internal(), _graphicsQueueHandler.Internal(), _sampler.Internal());
     _renderers.push_back(std::move(gelano));
 
     {
         SubMesh vikingRoom = _meshRegistry.AddFromObj("data/viking_room.obj");
-        auto& vikingImg = _images.emplace_back(CPUImage("data/viking_room.png", STBI_rgb_alpha), _graphicsCommandPoolHandler.Internal(), _graphicsQueueHandler.Get());
-        auto& vikingMtl = _materials.emplace_back(ImageHelper::ImageBinding(vikingImg.Get(), _sampler.Get()), _staticDescriptorPool);
+        auto& vikingImg = _images.emplace_back(CPUImage("data/viking_room.png", STBI_rgb_alpha), _graphicsCommandPoolHandler.Internal(), _graphicsQueueHandler.Internal());
+        auto& vikingMtl = _materials.emplace_back(ImageHelper::ImageBinding(vikingImg.Internal(), _sampler.Internal()), _staticDescriptorPool);
         _renderers.emplace_back(vikingRoom, vikingMtl, glm::vec3(-4.0f, 0.0f, 0.0f), ProjectHelper::EulerToQuat(glm::vec3(0, 0, 0)), glm::vec3(1.0f));
     }
 
-    _meshRegistry.UploadAndRelease(_graphicsQueueHandler.Get(), _graphicsCommandPoolHandler.Internal());
+    _meshRegistry.UploadAndRelease(_graphicsQueueHandler.Internal(), _graphicsCommandPoolHandler.Internal());
 }
 
 void Application::MainLoop()
@@ -406,7 +406,7 @@ void Application::MainLoop()
         DrawFrame();
     }
 
-    vkDeviceWaitIdle(_deviceHandler.Get());
+    vkDeviceWaitIdle(ApplicationInfo::Device());
 }
 
 Application::~Application()

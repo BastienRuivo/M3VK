@@ -1,36 +1,24 @@
 #pragma once
 
 #include "header/QueueFamilyIds.h"
+#include "header/VkHandlers/Handlers.h"
 #include <cstdint>
 #include <vector>
 #include <vulkan/vulkan_core.h>
 
-class VkPhysicalDeviceHandler
+class VkPhysicalDeviceHandler : public Handler<VkPhysicalDevice>
 {
     public:
 
     VkPhysicalDeviceHandler(VkInstance instance, VkSurfaceKHR windowSurface, const std::vector<const char *>& deviceExtensions);
-    ~VkPhysicalDeviceHandler();
+    ~VkPhysicalDeviceHandler() override;
 
-    inline VkPhysicalDevice Get() const
-    {
-        return _internal;
-    }
+    VkPhysicalDeviceHandler(VkPhysicalDeviceHandler&& other) noexcept = default;
+    VkPhysicalDeviceHandler& operator=(VkPhysicalDeviceHandler&& other) noexcept = default;
 
     int ScoreDeviceSuitability(VkPhysicalDevice physicalDevice, VkSurfaceKHR windowSurface, const std::vector<const char *>& deviceExtensions, VkPhysicalDeviceProperties& deviceProperties, QueueFamilyIds& familyIds) const;
     bool CheckDeviceExtensionSupport(VkPhysicalDevice physicalDevice, const std::vector<const char *>& deviceExtensions) const;
     uint32_t FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) const;
-
-    // VkHandles can be destroyed by one of the two object when copying, so we enable moving and disable copying.
-    // technically *for now* you can vk call directly to drestroy the VK thingy inside with the Get, honestly don't care for now, if the user want to explicitly do that it's his business, not mine.
-    VkPhysicalDeviceHandler(VkPhysicalDeviceHandler&& other) noexcept;
-    VkPhysicalDeviceHandler& operator=(VkPhysicalDeviceHandler&& other) noexcept;
-
-    VkPhysicalDeviceHandler(const VkPhysicalDeviceHandler&) = delete;
-    VkPhysicalDeviceHandler& operator=(const VkPhysicalDeviceHandler&) = delete;
-
-    private:
-    VkPhysicalDevice _internal = VK_NULL_HANDLE;
 
     friend class ApplicationInfo;
 };

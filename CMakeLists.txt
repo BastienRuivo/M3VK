@@ -129,6 +129,7 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
     GLM_FORCE_RADIANS
     GLM_FORCE_DEPTH_ZERO_TO_ONE
     GLM_ENABLE_EXPERIMENTAL
+    GLFW_INCLUDE_VULKAN
 )
 
 add_dependencies(${PROJECT_NAME} CompileShaders)

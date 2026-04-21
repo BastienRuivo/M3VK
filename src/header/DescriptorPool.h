@@ -38,7 +38,7 @@ class DescriptorPool
     {
         return
         {
-            .buffer = buffer.Get(),
+            .buffer = buffer.Internal(),
             .offset = offset,
             .range = buffer.GetSize()
         };

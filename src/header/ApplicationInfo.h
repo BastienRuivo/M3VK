@@ -4,7 +4,7 @@
 #include <sys/types.h>
 #include <vulkan/vulkan_core.h>
 #include "header/QueueFamilyIds.h"
-#include "header/VkHandlers/VkDeviceHandler.h"
+#include "header/VkHandlers/Handlers.h"
 #include "header/VkHandlers/VkPhysicalDeviceHandler.h"
 
 class ApplicationInfo
