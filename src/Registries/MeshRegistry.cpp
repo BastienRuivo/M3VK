@@ -1,6 +1,5 @@
 #include "header/Registries/MeshRegistry.h"
 #include "header/ApplicationInfo.h"
-#include "header/ProjectHelper.h"
 #include <stdexcept>
 
 MeshRegistry::MeshRegistry(uint32_t vertexBufferSize, uint32_t indexBufferSize)
@@ -23,16 +22,6 @@ SubMesh MeshRegistry::Register(std::span<const Vertex> vertices, std::span<const
     _cpuIndices.insert(_cpuIndices.end(), indices.begin(), indices.end());
 
     return subMesh;
-}
-
-SubMesh MeshRegistry::RegisterFromPath(const std::string& path)
-{
-    std::vector<Vertex> vertices;
-    std::vector<uint32_t> indices;
-
-    ProjectHelper::LoadTinyObj(path, vertices, indices);
-
-    return Register(vertices, indices);
 }
 
 void MeshRegistry::UploadAndRelease(VkQueue queue, VkCommandPool cmdPool)

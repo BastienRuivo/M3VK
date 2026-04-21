@@ -6,10 +6,8 @@
 #include <fstream>
 #include <stdexcept>
 #include <string>
-#include <unordered_map>
 #include <vector>
 #include <vulkan/vulkan_core.h>
-#include <tiny_obj_loader.h>
 #include "DebugLayer.h"
 #include "assimp/Importer.hpp"
 #include "assimp/material.h"
@@ -182,59 +180,6 @@ class ProjectHelper
         return glm::quat(glm::vec3(glm::radians(euler.x), glm::radians(euler.y), glm::radians(euler.z)));
     }
 
-    static void LoadTinyObj(const std::string& path, std::vector<Vertex>& vertices, std::vector<uint32_t>& indices)
-    {
-        tinyobj::attrib_t attrib;
-        std::vector<tinyobj::shape_t> shapes;
-        std::vector<tinyobj::material_t> materials;
-        std::string err, warn;
-
-        if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn,&err, path.c_str()))
-        {
-            DebugLayer::Log(DebugLayer::LogType::ERROR, err);
-            throw std::runtime_error(err);
-        }
-
-        if (!warn.empty())
-        {
-            DebugLayer::Log(DebugLayer::LogType::WARNING, warn);
-        }
-
-        indices.reserve(shapes[0].mesh.indices.size());
-
-        std::unordered_map<Vertex, uint32_t> uniqueVertices{};
-
-        for(const auto& shape : shapes)
-        {
-            for (const auto& index : shape.mesh.indices)
-            {
-                Vertex vertex
-                {
-                    .pos =
-                    {
-                        attrib.vertices[3 * index.vertex_index + 0],
-                        attrib.vertices[3 * index.vertex_index + 1],
-                        attrib.vertices[3 * index.vertex_index + 2]
-                    },
-                    .texCoord =
-                    {
-                        attrib.texcoords[2 * index.texcoord_index + 0],
-                        1.0f - attrib.texcoords[2 * index.texcoord_index + 1]
-                    },
-                };
-
-                if(uniqueVertices.count(vertex) == 0)
-                {
-                    uniqueVertices[vertex] = static_cast<uint32_t>(vertices.size());
-                    vertices.push_back(vertex);
-                }
-
-                indices.push_back(uniqueVertices[vertex]);
-            }
-        }
-
-    }
-
     static Renderer Load3DModel(const std::string & modelPath, MeshRegistry & meshRegistry, std::vector<GPUAllocatedImage> & textures, std::vector<Material> & materials, int defaultMaterial, DescriptorPool& descriptorPool, VkCommandPool cmdPool, VkQueue queue, VkSampler sampler)
     {
         Assimp::Importer importer;
@@ -310,17 +255,14 @@ class ProjectHelper
                     if(!std::filesystem::exists(texturePath))
                     {
                         DebugLayer::Log(DebugLayer::LogType::WARNING, "Path does not exist " + texturePath.string());
-
-                        //print current path
-                        DebugLayer::Log(DebugLayer::LogType::WARNING, "Current path: " + std::string(std::filesystem::current_path().string()));
-
-                        auto& texture = textures.emplace_back(CPUImage("data/missing.png", STBI_rgb_alpha), cmdPool, queue);
-                        materials.emplace_back(ImageHelper::ImageBinding(texture.Internal(), sampler), descriptorPool);
-                        continue;
+                        Material material = materials[defaultMaterial];
+                        materials.emplace_back(std::move(material));
                     }
-
-                    auto& texture = textures.emplace_back(CPUImage(texturePath, STBI_rgb_alpha), cmdPool, queue);
-                    materials.emplace_back(ImageHelper::ImageBinding(texture.Internal(), sampler), descriptorPool);
+                    else
+                    {
+                        auto& texture = textures.emplace_back(CPUImage(texturePath, STBI_rgb_alpha), cmdPool, queue);
+                        materials.emplace_back(ImageHelper::ImageBinding(texture.Internal(), sampler), descriptorPool);
+                    }
                 }
                 else
                 {

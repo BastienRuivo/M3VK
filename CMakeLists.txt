@@ -30,13 +30,6 @@ fetchcontent_declare(
     GIT_TAG        1.0.3
 )
 
-# TinyOBJLoader
-fetchcontent_declare(
-    tinyobjloader
-    GIT_REPOSITORY https://github.com/tinyobjloader/tinyobjloader.git
-    GIT_TAG        v2.0.0rc13
-)
-
 # Force internal dependencies to resolve "unzip.h" and "zlib.h" issues
 set(ASSIMP_BUILD_ZLIB ON CACHE INTERNAL "")
 set(ASSIMP_FORCE_INTERNAL_ZLIB ON CACHE INTERNAL "")
@@ -53,7 +46,6 @@ set(ASSIMP_BUILD_CACHED_INTERFACES OFF CACHE INTERNAL "")
 # Only build the importers you actually use
 set(ASSIMP_BUILD_ALL_IMPORTERS_BY_DEFAULT OFF CACHE INTERNAL "")
 set(ASSIMP_BUILD_OBJ_IMPORTER ON CACHE INTERNAL "")
-set(ASSIMP_BUILD_GLTF_IMPORTER ON CACHE INTERNAL "")
 set(ASSIMP_BUILD_FBX_IMPORTER ON CACHE INTERNAL "")
 
 fetchcontent_declare(
@@ -62,7 +54,7 @@ fetchcontent_declare(
     GIT_TAG        v6.0.4 # Use a stable tagged release
 )
 
-fetchcontent_makeavailable(glfw stb glm tinyobjloader assimp)
+fetchcontent_makeavailable(glfw stb glm assimp)
 
 # --- Interface Library Setup ---
 
@@ -146,7 +138,6 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     glfw
     stb
     glm::glm
-    tinyobjloader
     assimp::assimp
 )
 

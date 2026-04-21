@@ -356,19 +356,12 @@ Application::Application() :
         _window.SetIcon(logo.Data(), logo.Width(), logo.Height());
     }
 
-    auto& texture = _images.emplace_back(CPUImage("data/missing.png", STBI_rgb_alpha), _graphicsCommandPoolHandler.Internal(), _graphicsQueueHandler.Internal());
+    auto& texture = _images.emplace_back(CPUImage("data/white.png", STBI_rgb_alpha), _graphicsCommandPoolHandler.Internal(), _graphicsQueueHandler.Internal());
     _materials.emplace_back(ImageHelper::ImageBinding(texture.Internal(), _sampler.Internal()), _staticDescriptorPool);
     int defaultMaterial = _materials.size() - 1;
 
-    Renderer gelano = ProjectHelper::Load3DModel("data/minecraft-chest/source/chest.fbx", meshRegistry, _images, _materials, defaultMaterial, _staticDescriptorPool, _graphicsCommandPoolHandler.Internal(), _graphicsQueueHandler.Internal(), _sampler.Internal());
-    _renderers.push_back(std::move(gelano));
-
-    {
-        SubMesh vikingRoom = meshRegistry.RegisterFromPath("data/viking_room.obj");
-        auto& vikingImg = _images.emplace_back(CPUImage("data/viking_room.png", STBI_rgb_alpha), _graphicsCommandPoolHandler.Internal(), _graphicsQueueHandler.Internal());
-        auto& vikingMtl = _materials.emplace_back(ImageHelper::ImageBinding(vikingImg.Internal(), _sampler.Internal()), _staticDescriptorPool);
-        _renderers.emplace_back(vikingRoom, vikingMtl, glm::vec3(-4.0f, 0.0f, 0.0f), ProjectHelper::EulerToQuat(glm::vec3(0, 0, 0)), glm::vec3(1.0f));
-    }
+    Renderer chest = ProjectHelper::Load3DModel("data/minecraft-chest/source/chest.fbx", meshRegistry, _images, _materials, defaultMaterial, _staticDescriptorPool, _graphicsCommandPoolHandler.Internal(), _graphicsQueueHandler.Internal(), _sampler.Internal());
+    _renderers.push_back(std::move(chest));
 
     for(auto& registry : _registries)
     {

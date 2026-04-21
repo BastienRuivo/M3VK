@@ -21,7 +21,6 @@ class MeshRegistry : public Registry
     MeshRegistry(uint32_t vertexBufferSize = ApplicationInfo::Constant::VertexBufferMaxSize, uint32_t indexBufferSize = ApplicationInfo::Constant::IndexBufferMaxSize);
 
     SubMesh Register(std::span<const Vertex> vertices, std::span<const uint32_t> indices);
-    SubMesh RegisterFromPath(const std::string& path);
 
     void UploadAndRelease(VkQueue queue, VkCommandPool cmdPool) override;
     void Bind(const CommandBuffer& cmdBuffer) const override;
