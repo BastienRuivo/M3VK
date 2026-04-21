@@ -3,6 +3,7 @@
 #include "header/ApplicationInfo.h"
 #include "header/CommandBuffer.h"
 #include "header/GraphicsBuffer.h"
+#include "header/Registries/Registry.h"
 #include "header/Vertex.h"
 #include <cstdint>
 #include <span>
@@ -14,16 +15,16 @@ struct SubMesh
     uint32_t vertexOffset;
 };
 
-class MeshRegistry
+class MeshRegistry : public Registry
 {
     public:
     MeshRegistry(uint32_t vertexBufferSize = ApplicationInfo::Constant::VertexBufferMaxSize, uint32_t indexBufferSize = ApplicationInfo::Constant::IndexBufferMaxSize);
 
-    SubMesh Add(std::span<const Vertex> vertices, std::span<const uint32_t> indices);
-    SubMesh AddFromObj(const std::string& path);
-    void UploadAndRelease(VkQueue queue, VkCommandPool cmdPool);
+    SubMesh Register(std::span<const Vertex> vertices, std::span<const uint32_t> indices);
+    SubMesh RegisterFromPath(const std::string& path);
 
-    void Bind(const CommandBuffer& cmdBuffer) const;
+    void UploadAndRelease(VkQueue queue, VkCommandPool cmdPool) override;
+    void Bind(const CommandBuffer& cmdBuffer) const override;
 
     private:
     std::vector<Vertex> _cpuVertices;

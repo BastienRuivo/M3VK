@@ -1,4 +1,4 @@
-#include "header/MeshRegistry.h"
+#include "header/Registries/MeshRegistry.h"
 #include "header/ApplicationInfo.h"
 #include "header/ProjectHelper.h"
 #include <stdexcept>
@@ -10,7 +10,7 @@ MeshRegistry::MeshRegistry(uint32_t vertexBufferSize, uint32_t indexBufferSize)
 
 }
 
-SubMesh MeshRegistry::Add(std::span<const Vertex> vertices, std::span<const uint32_t> indices)
+SubMesh MeshRegistry::Register(std::span<const Vertex> vertices, std::span<const uint32_t> indices)
 {
     SubMesh subMesh
     {
@@ -25,14 +25,14 @@ SubMesh MeshRegistry::Add(std::span<const Vertex> vertices, std::span<const uint
     return subMesh;
 }
 
-SubMesh MeshRegistry::AddFromObj(const std::string& path)
+SubMesh MeshRegistry::RegisterFromPath(const std::string& path)
 {
     std::vector<Vertex> vertices;
     std::vector<uint32_t> indices;
 
     ProjectHelper::LoadTinyObj(path, vertices, indices);
 
-    return Add(vertices, indices);
+    return Register(vertices, indices);
 }
 
 void MeshRegistry::UploadAndRelease(VkQueue queue, VkCommandPool cmdPool)

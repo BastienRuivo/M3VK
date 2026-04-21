@@ -20,7 +20,7 @@
 #include "header/CPUImage.h"
 #include "header/DescriptorPool.h"
 #include "header/GPUImage.h"
-#include "header/MeshRegistry.h"
+#include "header/Registries/MeshRegistry.h"
 #include "header/Renderer.h"
 #include "header/Vertex.h"
 class ProjectHelper
@@ -355,7 +355,7 @@ class ProjectHelper
                 indices[j * 3 + 2] = face.mIndices[2];
             }
 
-            SubMesh submesh = meshRegistry.Add(vertices, indices);
+            SubMesh submesh = meshRegistry.Register(vertices, indices);
             subMeshes.push_back(submesh);
 
             renderer.AddMesh(submesh, materials[materialOffset + i]);

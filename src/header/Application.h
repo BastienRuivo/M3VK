@@ -4,7 +4,7 @@
 #include "header/Material.h"
 #include "header/Camera.h"
 #include "header/DescriptorPool.h"
-#include "header/MeshRegistry.h"
+#include "header/Registries/Registry.h"
 #include "header/Renderer.h"
 #include "header/CommandBuffer.h"
 #include "header/MultiFrame.h"
@@ -83,7 +83,12 @@ class Application
     VkCommandPoolHandler _graphicsCommandPoolHandler;
 
     // Datas
-    MeshRegistry _meshRegistry;
+    std::array<std::unique_ptr<Registry>, 1> _registries;
+    enum class RegistryType
+    {
+        Mesh = 0
+    };
+
     VkSamplerHandler _sampler;
 
     MultiFrameHandler<GraphicsBuffer> _cameraDataBuffer;

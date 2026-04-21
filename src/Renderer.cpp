@@ -1,6 +1,6 @@
 #include "header/Renderer.h"
 #include "header/Material.h"
-#include "header/MeshRegistry.h"
+#include "header/Registries/MeshRegistry.h"
 
 void Renderer::AddMesh(const SubMesh& mesh, const Material& material)
 {

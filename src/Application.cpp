@@ -6,7 +6,7 @@
 #include "header/DescriptorPool.h"
 #include "header/GPUImage.h"
 #include "header/GraphicsBuffer.h"
-#include "header/MeshRegistry.h"
+#include "header/Registries/MeshRegistry.h"
 #include "header/MultiFrame.h"
 #include "header/ProjectHelper.h"
 #include "header/Renderer.h"
@@ -262,7 +262,10 @@ void Application::RecordCommandBuffer(const CommandBuffer& cmdBuffer, uint32_t c
             cmdBuffer.SetViewport(0, 0, renderArea.extent.width, renderArea.extent.height);
             cmdBuffer.SetScissor(renderArea);
 
-            _meshRegistry.Bind(cmdBuffer);
+            for(const auto& registry : _registries)
+            {
+                registry->Bind(cmdBuffer);
+            }
 
             cmdBuffer.BindDescriptorSets(_pipelineLayoutHandler.Internal(), _descriptorSet.Get(currentFrame), 0);
 
@@ -328,7 +331,7 @@ Application::Application() :
     _cameraDataBuffer(ApplicationInfo::Constant::MaxFrameInCount, 1, sizeof(CameraData), GraphicsBuffer::UNIFORM),
     _sampler(),
     _camera(glm::vec3(0.0f, 0.5f, 4.0f), glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, 1.0f, 0.0f), 45.0f, (float)_swapChain->GetExtent().width / (float)_swapChain->GetExtent().height, 0.1f, 1000.0f),
-    _meshRegistry(),
+    _registries({std::make_unique<MeshRegistry>()}),
 
     // Descriptor Sets & Execution
     _descriptorSet(CreateDescriptorSet()),
@@ -343,6 +346,8 @@ Application::Application() :
     DebugLayer::Log(DebugLayer::LogType::CREATE, "Application Creation !");
 #endif
 
+    MeshRegistry& meshRegistry = static_cast<MeshRegistry&>(*_registries[(size_t)RegistryType::Mesh]);
+
     _window.LockMouse(_mouseLocked);
 
     //load logo
@@ -355,17 +360,20 @@ Application::Application() :
     _materials.emplace_back(ImageHelper::ImageBinding(texture.Internal(), _sampler.Internal()), _staticDescriptorPool);
     int defaultMaterial = _materials.size() - 1;
 
-    Renderer gelano = ProjectHelper::Load3DModel("data/minecraft-chest/source/chest.fbx", _meshRegistry, _images, _materials, defaultMaterial, _staticDescriptorPool, _graphicsCommandPoolHandler.Internal(), _graphicsQueueHandler.Internal(), _sampler.Internal());
+    Renderer gelano = ProjectHelper::Load3DModel("data/minecraft-chest/source/chest.fbx", meshRegistry, _images, _materials, defaultMaterial, _staticDescriptorPool, _graphicsCommandPoolHandler.Internal(), _graphicsQueueHandler.Internal(), _sampler.Internal());
     _renderers.push_back(std::move(gelano));
 
     {
-        SubMesh vikingRoom = _meshRegistry.AddFromObj("data/viking_room.obj");
+        SubMesh vikingRoom = meshRegistry.RegisterFromPath("data/viking_room.obj");
         auto& vikingImg = _images.emplace_back(CPUImage("data/viking_room.png", STBI_rgb_alpha), _graphicsCommandPoolHandler.Internal(), _graphicsQueueHandler.Internal());
         auto& vikingMtl = _materials.emplace_back(ImageHelper::ImageBinding(vikingImg.Internal(), _sampler.Internal()), _staticDescriptorPool);
         _renderers.emplace_back(vikingRoom, vikingMtl, glm::vec3(-4.0f, 0.0f, 0.0f), ProjectHelper::EulerToQuat(glm::vec3(0, 0, 0)), glm::vec3(1.0f));
     }
 
-    _meshRegistry.UploadAndRelease(_graphicsQueueHandler.Internal(), _graphicsCommandPoolHandler.Internal());
+    for(auto& registry : _registries)
+    {
+        registry->UploadAndRelease(_graphicsQueueHandler.Internal(), _graphicsCommandPoolHandler.Internal());
+    }
 }
 
 void Application::MainLoop()

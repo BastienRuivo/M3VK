@@ -1,13 +1,11 @@
 #pragma once
 
-#include "header/GPUImage.h"
 #include "header/Material.h"
 #include "glm/ext/vector_float3.hpp"
 #include "glm/fwd.hpp"
 #include "header/Camera.h"
 #include "header/CommandBuffer.h"
-#include "header/MeshRegistry.h"
-#include <initializer_list>
+#include "header/Registries/MeshRegistry.h"
 #include <vector>
 
 struct ObjectData
