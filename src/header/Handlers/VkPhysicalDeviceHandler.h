@@ -1,7 +1,7 @@
 #pragma once
 
 #include "header/QueueFamilyIds.h"
-#include "header/VkHandlers/Handlers.h"
+#include "header/Handlers/Handlers.h"
 #include <cstdint>
 #include <vector>
 #include <vulkan/vulkan_core.h>

@@ -3,7 +3,7 @@
 #include "header/CPUImage.h"
 #include "header/CommandBuffer.h"
 #include "header/GraphicsBuffer.h"
-#include "header/VkHandlers/VkImageViewHandler.h"
+#include "header/Handlers/VkImageViewHandler.h"
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
