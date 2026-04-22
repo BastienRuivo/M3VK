@@ -2,7 +2,7 @@
 #include <iostream>
 #include <cstdlib>
 
-#include "header/Application.h"
+#include "application/Application.h"
 
 int main()
 {

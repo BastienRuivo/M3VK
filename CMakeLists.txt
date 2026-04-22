@@ -109,7 +109,7 @@ add_custom_target(CompileShaders DEPENDS ${SPIRV_BINARY_FILES})
 # --- Executable ---
 
 file(GLOB_RECURSE SRC_FILES "${CMAKE_SOURCE_DIR}/src/*.cpp")
-file(GLOB_RECURSE HEADER_FILES "${CMAKE_SOURCE_DIR}/src/headers/*.h" "${CMAKE_SOURCE_DIR}/src/headers/*.hpp")
+file(GLOB_RECURSE HEADER_FILES "${CMAKE_SOURCE_DIR}/header/*.h" "${CMAKE_SOURCE_DIR}/header/*.hpp")
 
 # define data source directory
 add_definitions(-DDATA_SOURCE_DIR="data/")
@@ -127,8 +127,8 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
 add_dependencies(${PROJECT_NAME} CompileShaders)
 
 target_include_directories(${PROJECT_NAME} PRIVATE
+    ${CMAKE_SOURCE_DIR}/header
     ${CMAKE_SOURCE_DIR}/src
-    ${CMAKE_SOURCE_DIR}/src/headers
     ${Vulkan_INCLUDE_DIRS}
 )
 
