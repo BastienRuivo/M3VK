@@ -1,8 +1,10 @@
 #include "asset/AssetHelper.h"
+#include "application/DebugLayer.h"
 #include "assimp/Importer.hpp"
 #include "assimp/material.h"
 #include "assimp/postprocess.h"
 #include "assimp/scene.h"
+#include <iostream>
 #include <span>
 #include <filesystem>
 #include <string>
@@ -38,6 +40,33 @@ std::filesystem::path GetTexturePath(const std::filesystem::path& modelPath)
     }
 
     return texturePath / "textures";
+}
+
+void DebugListMaterialTextures(aiMaterial* material) {
+    // Iterate through all possible Assimp texture types
+    for (unsigned int type = aiTextureType_NONE; type < AI_TEXTURE_TYPE_MAX; ++type) {
+        aiTextureType textureType = static_cast<aiTextureType>(type);
+        unsigned int count = material->GetTextureCount(textureType);
+
+        if (count > 0) {
+            for (unsigned int i = 0; i < count; ++i) {
+                aiString path;
+                if (material->GetTexture(textureType, i, &path) == AI_SUCCESS) {
+                    std::cout << "[Texture Found] Type: " << type
+                              << " | Index: " << i
+                              << " | Path: " << path.C_Str() << std::endl;
+                }
+            }
+        }
+    }
+
+    for (unsigned int i = 0; i < material->mNumProperties; ++i) {
+        aiMaterialProperty* prop = material->mProperties[i];
+        if (prop->mType == aiPTI_String) {
+            std::cout << "Property Key: " << prop->mKey.C_Str()
+                    << " | Value: " << prop->mData << std::endl;
+        }
+    }
 }
 
 Renderer AssetHelper::Load3DModel(const std::string & modelPath, MeshRegistry & meshRegistry, MaterialRegistry & materialRegistry, std::vector<GPUAllocatedImage> & textures, std::vector<Material> & materials, int defaultMaterial, DescriptorPool& descriptorPool, VkCommandPool cmdPool, VkQueue queue, VkSampler sampler)
@@ -82,6 +111,10 @@ Renderer AssetHelper::Load3DModel(const std::string & modelPath, MeshRegistry & 
         bool hasProperties = gpuMaterial != GPUMaterial::Default();
 
         bool hasTexture = false;
+
+#if M3VK_VERBOSE_LOG
+        DebugListMaterialTextures(material);
+#endif
 
         uint32_t textureCount = 0;
         aiTextureType textureType = SelectTextureType({{ aiTextureType::aiTextureType_DIFFUSE, aiTextureType::aiTextureType_BASE_COLOR, aiTextureType::aiTextureType_UNKNOWN }}, material, textureCount);

@@ -60,6 +60,24 @@ class Renderer
     //delta time
     void Update(float time, float dt);
 
+    void SetPosition(glm::vec3 position)
+    {
+        _position = position;
+        _data.localToWorldMatrix = glm::translate(glm::mat4(1.0f), _position) * glm::toMat4(_rotation) * glm::scale(glm::mat4(1.0f), _scale);
+    }
+
+    void SetRotation(glm::quat rotation)
+    {
+        _rotation = rotation;
+        _data.localToWorldMatrix = glm::translate(glm::mat4(1.0f), _position) * glm::toMat4(_rotation) * glm::scale(glm::mat4(1.0f), _scale);
+    }
+
+    void SetScale(glm::vec3 scale)
+    {
+        _scale = scale;
+        _data.localToWorldMatrix = glm::translate(glm::mat4(1.0f), _position) * glm::toMat4(_rotation) * glm::scale(glm::mat4(1.0f), _scale);
+    }
+
     private:
     std::vector<SubMesh> _meshes;
     std::vector<Material> _materials;
