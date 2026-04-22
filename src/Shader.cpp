@@ -1,6 +1,6 @@
 #include "./header/Shader.h"
 #include "header/ApplicationInfo.h"
-#include "header/ProjectHelper.h"
+#include "header/Helpers/ProjectHelper.h"
 
 #ifdef M3VK_MEMORYLOG
 #include "header/DebugLayer.h"

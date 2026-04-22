@@ -1,6 +1,6 @@
 #include "header/Handlers/VkPhysicalDeviceHandler.h"
 #include "header/ApplicationInfo.h"
-#include "header/ProjectHelper.h"
+#include "header/Helpers/ProjectHelper.h"
 #include "header/DebugLayer.h"
 #include "header/QueueFamilyIds.h"
 #include <cstdint>

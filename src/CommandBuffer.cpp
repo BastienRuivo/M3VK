@@ -1,7 +1,7 @@
 #include "header/CommandBuffer.h"
 #include "header/ApplicationInfo.h"
 #include "header/GraphicsBuffer.h"
-#include "header/ProjectHelper.h"
+#include "header/Helpers/ProjectHelper.h"
 #include <cstdint>
 #include <stdexcept>
 #include <vulkan/vulkan_core.h>

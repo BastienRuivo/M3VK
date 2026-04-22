@@ -9,7 +9,7 @@
 #include "header/Registries/MaterialRegistry.h"
 #include "header/Registries/MeshRegistry.h"
 #include "header/MultiFrame.h"
-#include "header/ProjectHelper.h"
+#include "header/Helpers/AssetImporter.h"
 #include "header/Registries/Registry.h"
 #include "header/Renderer.h"
 #include "header/SwapChain.h"
@@ -350,26 +350,21 @@ Application::Application() :
 #ifdef M3VK_MEMORYLOG
     DebugLayer::Log(DebugLayer::LogType::CREATE, "Application Creation !");
 #endif
-
-    MeshRegistry& meshRegistry = static_cast<MeshRegistry&>(*_registries[(size_t)RegistryType::Mesh]);
-    MaterialRegistry& materialRegistry = static_cast<MaterialRegistry&>(*_registries[(size_t)RegistryType::Material]);
-
-
     _window.LockMouse(_mouseLocked);
-
-    //load logo
     {
         CPUImage logo("data/logo.png", STBI_rgb_alpha);
         _window.SetIcon(logo.Data(), logo.Width(), logo.Height());
     }
 
-    auto& texture = _images.emplace_back(CPUImage("data/white.png", STBI_rgb_alpha), _graphicsCommandPoolHandler.Internal(), _graphicsQueueHandler.Internal());
+    MeshRegistry& meshRegistry = static_cast<MeshRegistry&>(*_registries[(size_t)RegistryType::Mesh]);
+    MaterialRegistry& materialRegistry = static_cast<MaterialRegistry&>(*_registries[(size_t)RegistryType::Material]);
 
+    auto& texture = _images.emplace_back(CPUImage("data/white.png", STBI_rgb_alpha), _graphicsCommandPoolHandler.Internal(), _graphicsQueueHandler.Internal());
     BufferHelper::BufferBinding defaultMaterialBinding = materialRegistry.Register({glm::vec4(1.0f, 1.0f, 1.0f, 1.0)});
     _materials.emplace_back(ImageHelper::ImageBinding(texture.Internal(), _sampler.Internal()), defaultMaterialBinding, _staticDescriptorPool);
     int defaultMaterial = _materials.size() - 1;
 
-    Renderer chest = ProjectHelper::Load3DModel("data/minecraft-chest/source/chest.fbx", meshRegistry, materialRegistry, _images, _materials, defaultMaterial, _staticDescriptorPool, _graphicsCommandPoolHandler.Internal(), _graphicsQueueHandler.Internal(), _sampler.Internal());
+    Renderer chest = AssetImporter::Load3DModel("data/minecraft-chest/source/chest.fbx", meshRegistry, materialRegistry, _images, _materials, defaultMaterial, _staticDescriptorPool, _graphicsCommandPoolHandler.Internal(), _graphicsQueueHandler.Internal(), _sampler.Internal());
     _renderers.push_back(std::move(chest));
 
     for(auto& registry : _registries)

@@ -1,6 +1,6 @@
 #include "header/Handlers/VkImageViewHandler.h"
 #include "header/ApplicationInfo.h"
-#include "header/ProjectHelper.h"
+#include "header/Helpers/ProjectHelper.h"
 #include "header/Handlers/Handlers.h"
 #include <stdexcept>
 #include <vulkan/vulkan_core.h>
