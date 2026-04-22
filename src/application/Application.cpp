@@ -348,7 +348,7 @@ Application::Application() :
     _waitFence(ApplicationInfo::Constant::MaxFrameInCount)
 {
 #ifdef M3VK_MEMORYLOG
-    DebugLayer::Log(DebugLayer::LogType::CREATE, "application/Application Creation !");
+    DebugLayer::Log(DebugLayer::LogType::CREATE, "Application Creation !");
 #endif
     _window.LockMouse(_mouseLocked);
     {
@@ -417,7 +417,7 @@ void Application::MainLoop()
 Application::~Application()
 {
 #ifdef M3VK_MEMORYLOG
-    DebugLayer::Log(DebugLayer::LogType::DESTROY, "application/Application Destroyed !");
+    DebugLayer::Log(DebugLayer::LogType::DESTROY, "Application Destroyed !");
 #endif
 
     _swapChain.reset();
