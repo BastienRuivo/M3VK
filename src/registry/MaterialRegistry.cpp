@@ -12,6 +12,12 @@ void MaterialRegistry::UploadAndRelease(VkQueue queue, VkCommandPool cmdPool)
         throw std::runtime_error("Max buffer size reached");
     }
 
+    if(_materials.size() == 0)
+    {
+        DebugLayer::Log(DebugLayer::LogType::WARNING, "No materials to upload");
+        return;
+    }
+
     _materialBuffer.CopyToBuffer(queue, cmdPool, _materials.data(), _materials.size() * sizeof(GPUMaterial));
     _materials.clear();
 }

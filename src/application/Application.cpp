@@ -1,4 +1,5 @@
 #include "application/Application.h"
+#include "rendering/GraphicsBuffer.h"
 #include "asset/Material.h"
 #include "application/ApplicationInfo.h"
 #include "asset/CPUImage.h"
@@ -8,8 +9,10 @@
 #include "rendering/GraphicsBuffer.h"
 #include "registry/MaterialRegistry.h"
 #include "registry/MeshRegistry.h"
+#include "rendering/ImageHelper.h"
 #include "rendering/MultiFrame.h"
 #include "asset/AssetHelper.h"
+#include "asset/MeshHelper.h"
 #include "registry/Registry.h"
 #include "rendering/Renderer.h"
 #include "rendering/SwapChain.h"
@@ -364,8 +367,42 @@ Application::Application() :
     _materials.emplace_back(ImageHelper::ImageBinding(texture.Internal(), _sampler.Internal()), defaultMaterialBinding, _staticDescriptorPool);
     int defaultMaterial = _materials.size() - 1;
 
+    BufferHelper::BufferBinding redMaterialBinding = materialRegistry.Register({glm::vec4(1.0f, 0.0f, 0.0f, 1.0f)});
+    _materials.emplace_back(ImageHelper::ImageBinding(texture.Internal(), _sampler.Internal()), redMaterialBinding, _staticDescriptorPool);
+
+    BufferHelper::BufferBinding greenMaterialBinding = materialRegistry.Register({glm::vec4(0.0f, 1.0f, 0.0f, 1.0f)});
+    _materials.emplace_back(ImageHelper::ImageBinding(texture.Internal(), _sampler.Internal()), greenMaterialBinding, _staticDescriptorPool);
+
+    BufferHelper::BufferBinding blueMaterialBinding = materialRegistry.Register({glm::vec4(0.0f, 0.0f, 1.0f, 1.0f)});
+    _materials.emplace_back(ImageHelper::ImageBinding(texture.Internal(), _sampler.Internal()), blueMaterialBinding, _staticDescriptorPool);
+
+    const float axisLength = 10.0f;
+    const float axisThickness = 0.00625f;
+
+    SubMesh cube = MeshHelper::CubeMesh(meshRegistry);
+    Renderer xAxis(cube, _materials[1],
+        glm::vec3(0.0f, 0.0f, 0.0f),
+        glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
+        glm::vec3(axisLength, axisThickness, axisThickness));
+    _renderers.push_back(std::move(xAxis));
+
+    Renderer yAxis(cube, _materials[3],
+        glm::vec3(0.0f, 0.0f, 0.0f),
+        glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
+        glm::vec3(axisThickness, axisLength, axisThickness));
+    _renderers.push_back(std::move(yAxis));
+
+
+    Renderer zAxis(cube, _materials[2],
+        glm::vec3(0.0f, 0.0f, 0.0f),
+        glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
+        glm::vec3(axisThickness, axisThickness, axisLength));
+    _renderers.push_back(std::move(zAxis));
+
     Renderer chest = AssetHelper::Load3DModel("data/minecraft-chest/source/chest.fbx", meshRegistry, materialRegistry, _images, _materials, defaultMaterial, _staticDescriptorPool, _graphicsCommandPoolHandler.Internal(), _graphicsQueueHandler.Internal(), _sampler.Internal());
     _renderers.push_back(std::move(chest));
+
+
 
     for(auto& registry : _registries)
     {

@@ -5,6 +5,7 @@
 #include "assimp/scene.h"
 #include <span>
 #include <filesystem>
+#include <string>
 
 aiTextureType AssetHelper::SelectTextureType(std::span<const aiTextureType> types, const aiMaterial* material, uint32_t& textureCount)
 {
@@ -20,15 +21,38 @@ aiTextureType AssetHelper::SelectTextureType(std::span<const aiTextureType> type
     return aiTextureType::aiTextureType_NONE;
 }
 
+std::filesystem::path GetTexturePath(const std::filesystem::path& modelPath)
+{
+    int pathIndex = 0;
+    const int modelRoot = 1;
+    std::filesystem::path texturePath;
+
+    for(const auto& path : modelPath)
+    {
+        texturePath /= path;
+        pathIndex++;
+        if(pathIndex == modelRoot + 1)
+        {
+            break;
+        }
+    }
+
+    return texturePath / "textures";
+}
+
 Renderer AssetHelper::Load3DModel(const std::string & modelPath, MeshRegistry & meshRegistry, MaterialRegistry & materialRegistry, std::vector<GPUAllocatedImage> & textures, std::vector<Material> & materials, int defaultMaterial, DescriptorPool& descriptorPool, VkCommandPool cmdPool, VkQueue queue, VkSampler sampler)
 {
     Assimp::Importer importer;
 
     const aiScene* scene = importer.ReadFile(modelPath,
-        aiProcess_Triangulate |
-        aiProcess_JoinIdenticalVertices |
-        aiProcess_GenUVCoords |
-        aiProcess_FlipUVs);
+        aiProcess_Triangulate
+        | aiProcess_JoinIdenticalVertices
+        | aiProcess_SortByPType
+        | aiProcess_GenUVCoords
+        | aiProcess_FlipUVs
+        | aiProcess_GlobalScale     // Handles FBX unit scaling (cm to m)
+        | aiProcess_PreTransformVertices // Collapses the node hierarchy into the verticess
+    );
 
     if(scene == nullptr)
     {
@@ -38,6 +62,7 @@ Renderer AssetHelper::Load3DModel(const std::string & modelPath, MeshRegistry & 
     }
 
     int materialOffset = materials.size();
+    std::filesystem::path textureRootPath = GetTexturePath(modelPath);
 
     for(unsigned int i = 0; i < scene->mNumMaterials; i++)
     {
@@ -68,13 +93,11 @@ Renderer AssetHelper::Load3DModel(const std::string & modelPath, MeshRegistry & 
 
             if(path.length > 0)
             {
-                std::filesystem::path texturePath(modelPath);
-                texturePath = texturePath.remove_filename();
-
-                std::string rawPath = std::string(path.C_Str());
+                std::string rawPath = path.C_Str();
                 std::replace(rawPath.begin(), rawPath.end(), '\\', '/');
-
-                texturePath = texturePath.append(rawPath);
+                std::filesystem::path texturePath(rawPath);
+                texturePath = texturePath.filename();
+                texturePath = textureRootPath / texturePath;
                 texturePath = texturePath.lexically_normal();
 
                 if(!std::filesystem::exists(texturePath))

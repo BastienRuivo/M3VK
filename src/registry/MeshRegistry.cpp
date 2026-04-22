@@ -38,6 +38,12 @@ void MeshRegistry::UploadAndRelease(VkQueue queue, VkCommandPool cmdPool)
         throw std::runtime_error("Max index buffer size reached");
     }
 
+    if(_cpuIndices.size() == 0 || _cpuVertices.size() == 0)
+    {
+        DebugLayer::Log(DebugLayer::LogType::WARNING, "No vertices or indices to upload");
+        return;
+    }
+
     _vertexBuffer.CopyToBuffer(queue, cmdPool, _cpuVertices.data(), _cpuVertices.size() * sizeof(Vertex));
     _indexBuffer.CopyToBuffer(queue, cmdPool, _cpuIndices.data(), _cpuIndices.size() * sizeof(uint32_t));
 
