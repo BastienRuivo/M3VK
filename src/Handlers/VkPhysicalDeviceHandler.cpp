@@ -4,9 +4,11 @@
 #include "header/DebugLayer.h"
 #include "header/QueueFamilyIds.h"
 #include <cstdint>
+#include <cstring>
 #include <stdexcept>
 #include <vulkan/vulkan_core.h>
 #include <vector>
+#include <string.h>
 
 bool VkPhysicalDeviceHandler::CheckDeviceExtensionSupport(VkPhysicalDevice device, const std::vector<const char *>& deviceExtensions) const
 {

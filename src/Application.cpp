@@ -9,7 +9,7 @@
 #include "header/Registries/MaterialRegistry.h"
 #include "header/Registries/MeshRegistry.h"
 #include "header/MultiFrame.h"
-#include "header/Helpers/AssetImporter.h"
+#include "header/Helpers/AssetHelper.h"
 #include "header/Registries/Registry.h"
 #include "header/Renderer.h"
 #include "header/SwapChain.h"
@@ -364,7 +364,7 @@ Application::Application() :
     _materials.emplace_back(ImageHelper::ImageBinding(texture.Internal(), _sampler.Internal()), defaultMaterialBinding, _staticDescriptorPool);
     int defaultMaterial = _materials.size() - 1;
 
-    Renderer chest = AssetImporter::Load3DModel("data/minecraft-chest/source/chest.fbx", meshRegistry, materialRegistry, _images, _materials, defaultMaterial, _staticDescriptorPool, _graphicsCommandPoolHandler.Internal(), _graphicsQueueHandler.Internal(), _sampler.Internal());
+    Renderer chest = AssetHelper::Load3DModel("data/minecraft-chest/source/chest.fbx", meshRegistry, materialRegistry, _images, _materials, defaultMaterial, _staticDescriptorPool, _graphicsCommandPoolHandler.Internal(), _graphicsQueueHandler.Internal(), _sampler.Internal());
     _renderers.push_back(std::move(chest));
 
     for(auto& registry : _registries)
