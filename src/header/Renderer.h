@@ -6,6 +6,7 @@
 #include "header/Camera.h"
 #include "header/CommandBuffer.h"
 #include "header/Registries/MeshRegistry.h"
+#include <cstdint>
 #include <vector>
 
 struct ObjectData
@@ -22,6 +23,9 @@ class Renderer
         _data.localToWorldMatrix = glm::translate(glm::mat4(1.0f), _position) * glm::toMat4(rotation) * glm::scale(glm::mat4(1.0f), _scale);
     }
     Renderer(SubMesh mesh, Material material, glm::vec3 position, glm::quat rotation, glm::vec3 scale) : Renderer(std::vector<SubMesh>(1, mesh), std::vector<Material>(1, material), position, rotation, scale)
+    {
+    }
+    Renderer(glm::vec3 position, glm::quat rotation, glm::vec3 scale) : Renderer(std::vector<SubMesh>(), std::vector<Material>(), position, rotation, scale)
     {
     }
 

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
 #include <sys/types.h>
 #include <vulkan/vulkan_core.h>
@@ -27,8 +28,9 @@ class ApplicationInfo
     {
         static inline constexpr VkSampleCountFlagBits MaxMSAASample = VK_SAMPLE_COUNT_8_BIT;
         static inline constexpr uint32_t MaxFrameInCount = 2;
-        static inline constexpr uint32_t VertexBufferMaxSize = 8388608; // 2^23
-        static inline constexpr uint32_t IndexBufferMaxSize = 8388608;
+        static inline constexpr size_t VertexBufferMaxSize = 8388608; // 2^23
+        static inline constexpr size_t IndexBufferMaxSize = 8388608;
+        static inline constexpr size_t MaterialBufferMaxSize = 256;
         static inline constexpr VkFormat DepthFormat = VK_FORMAT_D32_SFLOAT;
         static inline constexpr int InputPrevent = 60;
     };

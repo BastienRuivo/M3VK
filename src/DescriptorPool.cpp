@@ -138,3 +138,9 @@ void DescriptorPool::UpdateDescriptorSet(std::span<const VkWriteDescriptorSet> w
 {
     vkUpdateDescriptorSets(ApplicationInfo::Device(), static_cast<uint32_t>(writes.size()), writes.data(), static_cast<uint32_t>(copies.size()), copies.data());
 }
+
+void DescriptorPool::Free(VkDescriptorSet set) const
+{
+    vkFreeDescriptorSets(ApplicationInfo::Device(), _pool, 1, &set);
+    _allocatedSets--;
+}

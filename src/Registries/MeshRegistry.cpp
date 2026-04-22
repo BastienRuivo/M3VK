@@ -2,7 +2,7 @@
 #include "header/ApplicationInfo.h"
 #include <stdexcept>
 
-MeshRegistry::MeshRegistry(uint32_t vertexBufferSize, uint32_t indexBufferSize)
+MeshRegistry::MeshRegistry(size_t vertexBufferSize, size_t indexBufferSize)
 : _vertexBuffer(vertexBufferSize, sizeof(Vertex), GraphicsBuffer::BufferType::VERTEX),
     _indexBuffer(indexBufferSize, sizeof(uint32_t), GraphicsBuffer::BufferType::INDEX)
 {
@@ -40,6 +40,9 @@ void MeshRegistry::UploadAndRelease(VkQueue queue, VkCommandPool cmdPool)
 
     _vertexBuffer.CopyToBuffer(queue, cmdPool, _cpuVertices.data(), _cpuVertices.size() * sizeof(Vertex));
     _indexBuffer.CopyToBuffer(queue, cmdPool, _cpuIndices.data(), _cpuIndices.size() * sizeof(uint32_t));
+
+    _cpuVertices.clear();
+    _cpuIndices.clear();
 }
 
 void MeshRegistry::Bind(const CommandBuffer& cmdBuffer) const

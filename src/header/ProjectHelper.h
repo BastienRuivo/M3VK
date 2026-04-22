@@ -18,6 +18,7 @@
 #include "header/CPUImage.h"
 #include "header/DescriptorPool.h"
 #include "header/GPUImage.h"
+#include "header/Registries/MaterialRegistry.h"
 #include "header/Registries/MeshRegistry.h"
 #include "header/Renderer.h"
 #include "header/Vertex.h"
@@ -180,7 +181,21 @@ class ProjectHelper
         return glm::quat(glm::vec3(glm::radians(euler.x), glm::radians(euler.y), glm::radians(euler.z)));
     }
 
-    static Renderer Load3DModel(const std::string & modelPath, MeshRegistry & meshRegistry, std::vector<GPUAllocatedImage> & textures, std::vector<Material> & materials, int defaultMaterial, DescriptorPool& descriptorPool, VkCommandPool cmdPool, VkQueue queue, VkSampler sampler)
+    static aiTextureType SelectTextureType(std::span<const aiTextureType> types, const aiMaterial* material, uint32_t& textureCount)
+    {
+        for(const auto& type : types)
+        {
+            int count = material->GetTextureCount(type);
+            if(count > 0)
+            {
+                textureCount = count;
+                return type;
+            }
+        }
+        return aiTextureType::aiTextureType_NONE;
+    }
+
+    static Renderer Load3DModel(const std::string & modelPath, MeshRegistry & meshRegistry, MaterialRegistry & materialRegistry, std::vector<GPUAllocatedImage> & textures, std::vector<Material> & materials, int defaultMaterial, DescriptorPool& descriptorPool, VkCommandPool cmdPool, VkQueue queue, VkSampler sampler)
     {
         Assimp::Importer importer;
 
@@ -203,43 +218,28 @@ class ProjectHelper
         {
             aiMaterial* material = scene->mMaterials[i];
 
-            aiTextureType textureTypes[] = {
-                aiTextureType_DIFFUSE,
-                aiTextureType_BASE_COLOR,
-                aiTextureType_UNKNOWN
+            ImageHelper::ImageBinding albedoMap = materials[defaultMaterial].AlbedoMap;
+
+            // get base color value
+            aiColor4D color;
+            material->Get(AI_MATKEY_COLOR_DIFFUSE, color);
+
+            GPUMaterial gpuMaterial
+            {
+                .Albedo = glm::vec4(color.r, color.g, color.b, color.a)
             };
-            aiTextureType textureType;
-            int textureCount = 0;
 
-            for(int j = 0; j < 3; j++)
-            {
-                aiTextureType type = textureTypes[j];
-                int count = material->GetTextureCount(type);
+            bool hasProperties = gpuMaterial != GPUMaterial::Default();
 
-                if(count > 0)
-                {
-                    textureType = type;
-                    textureCount = count;
-                    break;
-                }
-                else
-                {
-                    DebugLayer::Log(DebugLayer::LogType::WARNING, "No texture of type " + std::to_string(type) + " for material at path " + std::string(material->GetName().C_Str()));
-                }
-            }
+            bool hasTexture = false;
 
-            if(textureCount == 0)
-            {
-                DebugLayer::Log(DebugLayer::LogType::WARNING, "No texture for material at path " + std::string(material->GetName().C_Str()));
-                Material material = materials[defaultMaterial];
-                materials.emplace_back(std::move(material));
-                continue;
-            }
+            uint32_t textureCount = 0;
+            aiTextureType textureType = SelectTextureType({{ aiTextureType::aiTextureType_DIFFUSE, aiTextureType::aiTextureType_BASE_COLOR, aiTextureType::aiTextureType_UNKNOWN }}, material, textureCount);
 
-            for(int j = 0; j < textureCount; j++)
+            if(textureCount > 0)
             {
                 aiString path;
-                material->GetTexture(textureType, j, &path);
+                material->GetTexture(textureType, 0, &path);
 
                 if(path.length > 0)
                 {
@@ -255,27 +255,35 @@ class ProjectHelper
                     if(!std::filesystem::exists(texturePath))
                     {
                         DebugLayer::Log(DebugLayer::LogType::WARNING, "Path does not exist " + texturePath.string());
-                        Material material = materials[defaultMaterial];
-                        materials.emplace_back(std::move(material));
+
                     }
                     else
                     {
                         auto& texture = textures.emplace_back(CPUImage(texturePath, STBI_rgb_alpha), cmdPool, queue);
-                        materials.emplace_back(ImageHelper::ImageBinding(texture.Internal(), sampler), descriptorPool);
+                        albedoMap = ImageHelper::ImageBinding(texture.Internal(), sampler);
+                        hasTexture = true;
                     }
                 }
                 else
                 {
-                    DebugLayer::Log(DebugLayer::LogType::WARNING, "No texture for material at path " + std::string(path.C_Str()));
-                    Material material = materials[defaultMaterial];
-                    materials.emplace_back(std::move(material));
+                    DebugLayer::Log(DebugLayer::LogType::WARNING, "No path found for texture" + std::to_string(i) + " of type " + std::to_string(textureType) + " for material " + std::to_string(i) + " of object " + modelPath);
                 }
+            }
+
+            if(!hasTexture && !hasProperties)
+            {
+                DebugLayer::Log(DebugLayer::LogType::WARNING, "Fallback to default material for material at index " + std::to_string(i) + " of object " + modelPath);
+                materials.emplace_back(materials[defaultMaterial]);
+            }
+            else
+            {
+                BufferHelper::BufferBinding binding = materialRegistry.Register(gpuMaterial);
+                materials.emplace_back(albedoMap, binding, descriptorPool);
             }
         }
 
         std::vector<SubMesh> subMeshes;
-
-        Renderer renderer({}, {}, glm::vec3(0.0f), glm::vec3(0.0f), glm::vec3(1.0f));
+        Renderer renderer(glm::vec3(0.0f), glm::vec3(0.0f), glm::vec3(1.0f));
 
         for(unsigned int i = 0; i < scene->mNumMeshes; i++)
         {

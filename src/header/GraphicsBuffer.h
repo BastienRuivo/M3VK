@@ -2,6 +2,7 @@
 
 #include "header/DebugLayer.h"
 #include <cstdint>
+#include <stdexcept>
 #include <vulkan/vulkan_core.h>
 
 class StageBuffer
@@ -33,8 +34,9 @@ class GraphicsBuffer
     {
         INDEX = 0,
         VERTEX = 1,
-        UNIFORM = 2,
-        STATIC_STORAGE = 3
+        DYNAMIC_UNIFORM = 2,
+        UNIFORM = 3,
+        STORAGE = 4
     };
     GraphicsBuffer(VkDeviceSize count, VkDeviceSize stride, BufferType type);
     ~GraphicsBuffer();
@@ -60,11 +62,34 @@ class GraphicsBuffer
     inline VkDeviceSize GetStride() const { return _stride; }
     inline void* GetDataPtr() const
     {
-        if(_type != BufferType::UNIFORM)
+        if(_type != BufferType::DYNAMIC_UNIFORM)
         {
             DebugLayer::Log(DebugLayer::LogType::ERROR, "Trying to get data pointer for non uniform buffer");
         }
         return _dataPtr;
+    }
+
+    inline VkDescriptorBufferInfo GetDescriptorBufferInfo(uint32_t index, uint32_t count) const
+    {
+        return
+        {
+            .buffer = _internal,
+            .offset = index * _stride,
+            .range = _stride * count
+        };
+    }
+
+    inline VkDescriptorType GetDescriptorType() const
+    {
+        switch (_type) {
+        case BufferType::DYNAMIC_UNIFORM:
+            return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+        case BufferType::UNIFORM:
+            return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        case BufferType::STORAGE:
+            return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        default: throw std::runtime_error("Unimplemented Descriptor Type");
+        }
     }
 
     protected:
@@ -94,3 +119,20 @@ class GeometryBuffer : public GraphicsBuffer
     private:
     VkDeviceSize _currentSize = 0;
 };
+
+namespace BufferHelper
+{
+    struct BufferBinding
+    {
+        VkDescriptorType DescriptorType;
+        VkBuffer Buffer;
+        VkDescriptorBufferInfo Descriptor;
+
+        BufferBinding(const GraphicsBuffer& buffer, uint32_t index, uint32_t count = 1)
+        {
+            Buffer = buffer.Internal();
+            DescriptorType = buffer.GetDescriptorType();
+            Descriptor = buffer.GetDescriptorBufferInfo(index, count);
+        }
+    };
+}

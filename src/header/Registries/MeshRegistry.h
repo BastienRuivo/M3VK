@@ -18,7 +18,7 @@ struct SubMesh
 class MeshRegistry : public Registry
 {
     public:
-    MeshRegistry(uint32_t vertexBufferSize = ApplicationInfo::Constant::VertexBufferMaxSize, uint32_t indexBufferSize = ApplicationInfo::Constant::IndexBufferMaxSize);
+    MeshRegistry(size_t vertexBufferSize = ApplicationInfo::Constant::VertexBufferMaxSize, size_t indexBufferSize = ApplicationInfo::Constant::IndexBufferMaxSize);
 
     SubMesh Register(std::span<const Vertex> vertices, std::span<const uint32_t> indices);
 

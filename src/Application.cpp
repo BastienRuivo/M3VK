@@ -6,9 +6,11 @@
 #include "header/DescriptorPool.h"
 #include "header/GPUImage.h"
 #include "header/GraphicsBuffer.h"
+#include "header/Registries/MaterialRegistry.h"
 #include "header/Registries/MeshRegistry.h"
 #include "header/MultiFrame.h"
 #include "header/ProjectHelper.h"
+#include "header/Registries/Registry.h"
 #include "header/Renderer.h"
 #include "header/SwapChain.h"
 #include "header/DebugLayer.h"
@@ -310,7 +312,7 @@ Application::Application() :
     ),
     std::initializer_list<VkPushConstantRange>(
         {
-            VkPushConstantRange{ VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(ObjectData) }
+            VkPushConstantRange{ VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(ObjectData) }
         }
     )),
     _graphicsPipelineHandler(_swapChain->GetExtent(), ApplicationInfo::Get().GetMsaaSample(), _pipelineLayoutHandler.Internal(), _swapChain->GetImageFormat(), ApplicationInfo::Constant::DepthFormat),
@@ -328,11 +330,14 @@ Application::Application() :
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)),
     _depthBuffer(std::make_unique<GPUAllocatedImage>(_swapChain->GetExtent().width, _swapChain->GetExtent().height, ApplicationInfo::Get().GetMsaaSample(), 1, ApplicationInfo::Constant::DepthFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)),
 
-    _cameraDataBuffer(ApplicationInfo::Constant::MaxFrameInCount, 1, sizeof(CameraData), GraphicsBuffer::UNIFORM),
+    _cameraDataBuffer(ApplicationInfo::Constant::MaxFrameInCount, 1, sizeof(CameraData), GraphicsBuffer::DYNAMIC_UNIFORM),
     _sampler(),
     _camera(glm::vec3(0.0f, 0.5f, 4.0f), glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, 1.0f, 0.0f), 45.0f, (float)_swapChain->GetExtent().width / (float)_swapChain->GetExtent().height, 0.1f, 1000.0f),
-    _registries({std::make_unique<MeshRegistry>()}),
-
+    _registries(
+        {
+            std::make_unique<MeshRegistry>(),
+            std::make_unique<MaterialRegistry>(),
+        }),
     // Descriptor Sets & Execution
     _descriptorSet(CreateDescriptorSet()),
     _commandBuffer(ApplicationInfo::Constant::MaxFrameInCount, _graphicsCommandPoolHandler.Internal(), _graphicsQueueHandler.Internal()),
@@ -347,6 +352,8 @@ Application::Application() :
 #endif
 
     MeshRegistry& meshRegistry = static_cast<MeshRegistry&>(*_registries[(size_t)RegistryType::Mesh]);
+    MaterialRegistry& materialRegistry = static_cast<MaterialRegistry&>(*_registries[(size_t)RegistryType::Material]);
+
 
     _window.LockMouse(_mouseLocked);
 
@@ -357,10 +364,12 @@ Application::Application() :
     }
 
     auto& texture = _images.emplace_back(CPUImage("data/white.png", STBI_rgb_alpha), _graphicsCommandPoolHandler.Internal(), _graphicsQueueHandler.Internal());
-    _materials.emplace_back(ImageHelper::ImageBinding(texture.Internal(), _sampler.Internal()), _staticDescriptorPool);
+
+    BufferHelper::BufferBinding defaultMaterialBinding = materialRegistry.Register({glm::vec4(1.0f, 1.0f, 1.0f, 1.0)});
+    _materials.emplace_back(ImageHelper::ImageBinding(texture.Internal(), _sampler.Internal()), defaultMaterialBinding, _staticDescriptorPool);
     int defaultMaterial = _materials.size() - 1;
 
-    Renderer chest = ProjectHelper::Load3DModel("data/minecraft-chest/source/chest.fbx", meshRegistry, _images, _materials, defaultMaterial, _staticDescriptorPool, _graphicsCommandPoolHandler.Internal(), _graphicsQueueHandler.Internal(), _sampler.Internal());
+    Renderer chest = ProjectHelper::Load3DModel("data/minecraft-chest/source/chest.fbx", meshRegistry, materialRegistry, _images, _materials, defaultMaterial, _staticDescriptorPool, _graphicsCommandPoolHandler.Internal(), _graphicsQueueHandler.Internal(), _sampler.Internal());
     _renderers.push_back(std::move(chest));
 
     for(auto& registry : _registries)

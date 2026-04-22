@@ -82,10 +82,11 @@ class Application
     VkCommandPoolHandler _graphicsCommandPoolHandler;
 
     // Datas
-    std::array<std::unique_ptr<Registry>, 1> _registries;
+    std::array<std::unique_ptr<Registry>, 2> _registries;
     enum class RegistryType
     {
-        Mesh = 0
+        Mesh = 0,
+        Material = 1
     };
 
     VkSamplerHandler _sampler;

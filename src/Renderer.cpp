@@ -1,6 +1,7 @@
 #include "header/Renderer.h"
 #include "header/Material.h"
 #include "header/Registries/MeshRegistry.h"
+#include <vulkan/vulkan_core.h>
 
 void Renderer::AddMesh(const SubMesh& mesh, const Material& material)
 {
@@ -16,7 +17,7 @@ void Renderer::Draw(const CommandBuffer& cmdBuffer, VkPipelineLayout layout) con
         const Material& material = _materials[i];
 
         cmdBuffer.BindDescriptorSets(layout, *material.DescriptorSet, 1);
-        cmdBuffer.PushConstants(layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(ObjectData), &_data);
+        cmdBuffer.PushConstants(layout, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(ObjectData), &_data);
         cmdBuffer.DrawIndexed(mesh.firstIndex, mesh.indexCount, mesh.vertexOffset);
     }
 }

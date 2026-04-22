@@ -107,7 +107,7 @@ void CommandBuffer::BindBuffer(const GraphicsBuffer& buffer) const
 
         default:
         {
-            throw std::runtime_error("UNIMPLEMENTED");
+            throw std::runtime_error("Unknown buffer type to bind : " + std::to_string(buffer.GetType()));
         }
     }
 }

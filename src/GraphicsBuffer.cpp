@@ -111,14 +111,35 @@ GraphicsBuffer::GraphicsBuffer(VkDeviceSize count, VkDeviceSize stride, BufferTy
     // mean it's a dst buffer, already in good memory shape but cant be writable directly by cpu
     VkBufferUsageFlags usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 
+    if(_type == DYNAMIC_UNIFORM || _type == UNIFORM || _type == STORAGE)
+    {
+         VkDeviceSize alignement = stride;
+
+        switch(_type) {
+            case UNIFORM:
+            case DYNAMIC_UNIFORM: alignement = ApplicationInfo::GetProperties().limits.minUniformBufferOffsetAlignment; break;
+            case STORAGE: alignement = ApplicationInfo::GetProperties().limits.minStorageBufferOffsetAlignment; break;
+            default:
+            {
+                throw std::runtime_error("Achievement get :: How did we get Here ? (Uknown Buffer Type)");
+            }
+        }
+
+        if(stride % alignement != 0)
+        {
+            DebugLayer::Log(DebugLayer::LogType::WARNING, "Stride is not multiple of alignement ! Alignement = " + std::to_string(alignement) + " Stride = " + std::to_string(stride));
+        }
+        _stride = (stride + alignement - 1) & ~(alignement - 1);
+    }
 
     VkDeviceSize size = _stride * _count;
 
     switch (_type) {
         case INDEX: usage |= VK_BUFFER_USAGE_INDEX_BUFFER_BIT; break;
         case VERTEX: usage |= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT; break;
-        case UNIFORM: usage |= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT; break;
-        case STATIC_STORAGE: usage |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT; break;
+        case UNIFORM:
+        case DYNAMIC_UNIFORM: usage |= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT; break;
+        case STORAGE: usage |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT; break;
         default:
         {
             throw std::runtime_error("Achievement get :: How did we get Here ? (Uknown Buffer Type)");
@@ -127,10 +148,11 @@ GraphicsBuffer::GraphicsBuffer(VkDeviceSize count, VkDeviceSize stride, BufferTy
 
     VkMemoryPropertyFlags properties;
     switch (_type) {
-        case STATIC_STORAGE:
+        case UNIFORM:
+        case STORAGE:
         case INDEX:
         case VERTEX: properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT; break; // Memory optimized for GPU access
-        case UNIFORM: properties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT; // Host = CPU so it mean it is visible and writable by it
+        case DYNAMIC_UNIFORM: properties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT; // Host = CPU so it mean it is visible and writable by it
     }
 
     VkBufferCreateInfo info
@@ -165,7 +187,7 @@ GraphicsBuffer::GraphicsBuffer(VkDeviceSize count, VkDeviceSize stride, BufferTy
 
     vkBindBufferMemory(ApplicationInfo::Device(),_internal, _memoryInternal, 0);
 
-    if(_type == UNIFORM)
+    if(_type == DYNAMIC_UNIFORM)
     {
         if(vkMapMemory(ApplicationInfo::Device(),_memoryInternal, 0, memRequirements.size, 0, &_dataPtr) != VK_SUCCESS)
         {
