@@ -1,4 +1,5 @@
 #include "rendering/GPUImage.h"
+#include "rendering/ImageHelper.h"
 #include "application/ApplicationInfo.h"
 #include "asset/CPUImage.h"
 #include "rendering/CommandBuffer.h"
@@ -15,11 +16,6 @@
 #ifdef M3VK_MEMORYLOG
 #include "application/DebugLayer.h"
 #endif
-
-void ImageHelper::TransitionLayoutCommand(const CommandBuffer& cmdBuffer, const ImageReference& image, VkImageLayout oldLayout, VkImageLayout newLayout)
-{
-    cmdBuffer.TransitionImageLayout(image.Image, image.Format, image.MipCount, oldLayout, newLayout);
-}
 
 /* --- GPU Allocated Image --- */
 

@@ -3,6 +3,7 @@
 #include "glm/ext/vector_float4.hpp"
 #include "application/ApplicationInfo.h"
 #include "registry/Registry.h"
+#include "rendering/BufferHelper.h"
 
 struct GPUMaterial
 {

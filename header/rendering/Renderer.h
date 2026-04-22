@@ -6,7 +6,6 @@
 #include "rendering/Camera.h"
 #include "rendering/CommandBuffer.h"
 #include "registry/MeshRegistry.h"
-#include <cstdint>
 #include <vector>
 
 struct ObjectData

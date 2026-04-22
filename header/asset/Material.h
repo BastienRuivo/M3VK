@@ -1,8 +1,8 @@
 #pragma once
 
 #include "rendering/DescriptorPool.h"
-#include "rendering/GPUImage.h"
-#include "rendering/GraphicsBuffer.h"
+#include "rendering/ImageHelper.h"
+#include "rendering/BufferHelper.h"
 #include <cstdint>
 #include <memory>
 #include <utility>
