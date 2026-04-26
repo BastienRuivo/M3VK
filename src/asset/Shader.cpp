@@ -44,8 +44,8 @@ Shader::Shader()
     DebugLayer::Log(DebugLayer::LogType::CREATE, "Shader Creation !");
 #endif
 
-    std::vector<char> vertex = ApplicationHelper::ReadFile(std::string(SHADER_DIRECTORY) + "helloTriangle.vert.spv");
-    std::vector<char> fragment = ApplicationHelper::ReadFile(std::string(SHADER_DIRECTORY) + "helloTriangle.frag.spv");
+    std::vector<char> vertex = ApplicationHelper::ReadFile(std::string(SHADER_DIRECTORY) + "Default.vert.spv");
+    std::vector<char> fragment = ApplicationHelper::ReadFile(std::string(SHADER_DIRECTORY) + "Default.frag.spv");
 
 
 

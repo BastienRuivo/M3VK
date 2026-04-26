@@ -4,10 +4,13 @@
 #include "assimp/material.h"
 #include "assimp/postprocess.h"
 #include "assimp/scene.h"
+#include <cstdint>
 #include <iostream>
 #include <span>
 #include <filesystem>
 #include <string>
+
+#include "libs/tinyddsloader.h"
 
 aiTextureType AssetHelper::SelectTextureType(std::span<const aiTextureType> types, const aiMaterial* material, uint32_t& textureCount)
 {
@@ -117,7 +120,7 @@ Renderer AssetHelper::Load3DModel(const std::string & modelPath, MeshRegistry & 
 #endif
 
         uint32_t textureCount = 0;
-        aiTextureType textureType = SelectTextureType({{ aiTextureType::aiTextureType_DIFFUSE, aiTextureType::aiTextureType_BASE_COLOR, aiTextureType::aiTextureType_UNKNOWN }}, material, textureCount);
+        aiTextureType textureType = SelectTextureType({{ aiTextureType::aiTextureType_BASE_COLOR, aiTextureType::aiTextureType_DIFFUSE, aiTextureType::aiTextureType_UNKNOWN }}, material, textureCount);
 
         if(textureCount > 0)
         {
@@ -137,6 +140,15 @@ Renderer AssetHelper::Load3DModel(const std::string & modelPath, MeshRegistry & 
                 {
                     DebugLayer::Log(DebugLayer::LogType::WARNING, "Path does not exist " + texturePath.string());
 
+                }
+                else if(texturePath.extension() == ".dds") // handle compressed textures directly
+                {
+                    tinyddsloader::DDSFile dds;
+                    auto ret = dds.Load(texturePath.string().c_str());
+                    if(ret != tinyddsloader::Result::Success)
+                    {
+                        DebugLayer::Log(DebugLayer::LogType::WARNING, "Failed to load compressed texture " + texturePath.string());
+                    }
                 }
                 else
                 {

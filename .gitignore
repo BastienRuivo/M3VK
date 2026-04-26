@@ -18,3 +18,5 @@ tools/
 
 # Ignore workspace
 M3VK.code-workspace
+
+data/Bistro_v5_2/**

@@ -28,13 +28,13 @@ void MeshRegistry::UploadAndRelease(VkQueue queue, VkCommandPool cmdPool)
 {
     if(_cpuVertices.size() >= ApplicationInfo::Constant::VertexBufferMaxSize)
     {
-        DebugLayer::Log(DebugLayer::LogType::ERROR, "Max vertex buffer size reached");
+        DebugLayer::Log(DebugLayer::LogType::ERROR, "Max vertex buffer size reached : " + std::to_string(_cpuVertices.size()) + "/" + std::to_string(ApplicationInfo::Constant::VertexBufferMaxSize));
         throw std::runtime_error("Max vertex buffer size reached");
     }
 
     if(_cpuIndices.size() >= ApplicationInfo::Constant::IndexBufferMaxSize)
     {
-        DebugLayer::Log(DebugLayer::LogType::ERROR, "Max index buffer size reached");
+        DebugLayer::Log(DebugLayer::LogType::ERROR, "Max index buffer size reached : " + std::to_string(_cpuIndices.size()) + "/" + std::to_string(ApplicationInfo::Constant::IndexBufferMaxSize));
         throw std::runtime_error("Max index buffer size reached");
     }
 

@@ -24,8 +24,7 @@ CPUImage::CPUImage(const std::string& path, int channelFormat)
         const char* reason = stbi_failure_reason();
         if (reason)
         {
-            DebugLayer::Log(DebugLayer::LogType::ERROR, std::filesystem::current_path().string() + "/" + path + " : " + reason);
-            DebugLayer::Log(DebugLayer::LogType::ERROR, std::string("Failed to load image ") +  path + " : " + reason);
+            DebugLayer::Log(DebugLayer::LogType::ERROR, "Failed to load texture image : " + std::filesystem::current_path().string() + "/" + path + " : " + reason);
         }
 
         throw std::runtime_error("Failed to load texture image");
