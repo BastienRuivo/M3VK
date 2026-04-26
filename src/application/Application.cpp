@@ -1,4 +1,5 @@
 #include "application/Application.h"
+#include "libs/tinyddsloader.h"
 #include "rendering/GraphicsBuffer.h"
 #include "asset/Material.h"
 #include "application/ApplicationInfo.h"
@@ -367,43 +368,72 @@ Application::Application() :
     _materials.emplace_back(ImageHelper::ImageBinding(texture.Internal(), _sampler.Internal()), defaultMaterialBinding, _staticDescriptorPool);
     int defaultMaterial = _materials.size() - 1;
 
-    BufferHelper::BufferBinding redMaterialBinding = materialRegistry.Register({glm::vec4(1.0f, 0.0f, 0.0f, 1.0f)});
-    _materials.emplace_back(ImageHelper::ImageBinding(texture.Internal(), _sampler.Internal()), redMaterialBinding, _staticDescriptorPool);
-
-    BufferHelper::BufferBinding greenMaterialBinding = materialRegistry.Register({glm::vec4(0.0f, 1.0f, 0.0f, 1.0f)});
-    _materials.emplace_back(ImageHelper::ImageBinding(texture.Internal(), _sampler.Internal()), greenMaterialBinding, _staticDescriptorPool);
-
-    BufferHelper::BufferBinding blueMaterialBinding = materialRegistry.Register({glm::vec4(0.0f, 0.0f, 1.0f, 1.0f)});
-    _materials.emplace_back(ImageHelper::ImageBinding(texture.Internal(), _sampler.Internal()), blueMaterialBinding, _staticDescriptorPool);
-
     const float axisLength = 10.0f;
     const float axisThickness = 0.00625f;
 
     SubMesh cube = MeshHelper::CubeMesh(meshRegistry);
-    Renderer xAxis(cube, _materials[1],
-        glm::vec3(0.0f, 0.0f, 0.0f),
-        glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
-        glm::vec3(axisLength, axisThickness, axisThickness));
-    _renderers.push_back(std::move(xAxis));
 
-    Renderer yAxis(cube, _materials[3],
-        glm::vec3(0.0f, 0.0f, 0.0f),
-        glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
-        glm::vec3(axisThickness, axisLength, axisThickness));
-    _renderers.push_back(std::move(yAxis));
+    {
+        BufferHelper::BufferBinding matBinding = materialRegistry.Register({glm::vec4(1.0f, 0.0f, 0.0f, 1.0f)});
+        const Material& mat = _materials.emplace_back(ImageHelper::ImageBinding(texture.Internal(), _sampler.Internal()), matBinding, _staticDescriptorPool);
+        Renderer xAxis(cube, mat,
+            glm::vec3(0.0f, 0.0f, 0.0f),
+            glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
+            glm::vec3(axisLength, axisThickness, axisThickness));
+        _renderers.push_back(std::move(xAxis));
+    }
 
+    {
+        BufferHelper::BufferBinding matBinding = materialRegistry.Register({glm::vec4(0.0f, 1.0f, 0.0f, 1.0f)});
+        const Material& mat = _materials.emplace_back(ImageHelper::ImageBinding(texture.Internal(), _sampler.Internal()), matBinding, _staticDescriptorPool);
+        Renderer yAxis(cube, mat,
+            glm::vec3(0.0f, 0.0f, 0.0f),
+            glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
+            glm::vec3(axisThickness, axisLength, axisThickness));
+        _renderers.push_back(std::move(yAxis));
+    }
 
-    Renderer zAxis(cube, _materials[2],
-        glm::vec3(0.0f, 0.0f, 0.0f),
-        glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
-        glm::vec3(axisThickness, axisThickness, axisLength));
-    _renderers.push_back(std::move(zAxis));
+    {
+        BufferHelper::BufferBinding matBinding = materialRegistry.Register({glm::vec4(0.0f, 0.0f, 1.0f, 1.0f)});
+        const auto & mat = _materials.emplace_back(ImageHelper::ImageBinding(texture.Internal(), _sampler.Internal()), matBinding, _staticDescriptorPool);
+        Renderer zAxis(cube, mat,
+            glm::vec3(0.0f, 0.0f, 0.0f),
+            glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
+            glm::vec3(axisThickness, axisThickness, axisLength));
+        _renderers.push_back(std::move(zAxis));
+    }
 
-    Renderer chest = AssetHelper::Load3DModel("data/minecraft-chest/source/chest.fbx", meshRegistry, materialRegistry, _images, _materials, defaultMaterial, _staticDescriptorPool, _graphicsCommandPoolHandler.Internal(), _graphicsQueueHandler.Internal(), _sampler.Internal());
-    _renderers.push_back(std::move(chest));
+    {
+        BufferHelper::BufferBinding blueMaterialBinding = materialRegistry.Register({glm::vec4(1.0f, 1.0f, 1.0f, 1.0f)});
+        const auto & mat = _materials.emplace_back(ImageHelper::ImageBinding(texture.Internal(), _sampler.Internal()), blueMaterialBinding, _staticDescriptorPool);
+        Renderer zAxis(cube, mat,
+            glm::vec3(0.0f, 0.0f, 0.0f),
+            glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
+            glm::vec3(axisThickness, axisThickness, axisLength));
+        _renderers.push_back(std::move(zAxis));
+    }
 
-    //Renderer bistroExterior = AssetHelper::Load3DModel("data/Bistro_v5_2/BistroExterior.fbx", meshRegistry, materialRegistry, _images, _materials, defaultMaterial, _staticDescriptorPool, _graphicsCommandPoolHandler.Internal(), _graphicsQueueHandler.Internal(), _sampler.Internal());
-    //_renderers.push_back(std::move(bistroExterior));
+    {
+        tinyddsloader::DDSFile ddsFile;
+        auto ret = ddsFile.Load("data/TestDDS.dds");
+        if(ret != tinyddsloader::Result::Success)
+        {
+            DebugLayer::Log(DebugLayer::LogType::ERROR, "Failed to load DDS");
+        }
+        auto& ddsTestTex = _images.emplace_back(ddsFile, _graphicsCommandPoolHandler.Internal(), _graphicsQueueHandler.Internal());
+        BufferHelper::BufferBinding matBinding = materialRegistry.Register({glm::vec4(1.0f, 1.0f, 1.0f, 1.0f)});
+        const auto & mat = _materials.emplace_back(ImageHelper::ImageBinding(ddsTestTex.Internal(), _sampler.Internal()), matBinding, _staticDescriptorPool);
+        Renderer ddsTest(cube, mat,
+            glm::vec3(0.0f, 0.0f, 0.0f),
+            glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
+            glm::vec3(1.0, 1.0, 1.0));
+        _renderers.push_back(std::move(ddsTest));
+    }
+    //Renderer chest = AssetHelper::Load3DModel("data/minecraft-chest/source/chest.fbx", meshRegistry, materialRegistry, _images, _materials, defaultMaterial, _staticDescriptorPool, _graphicsCommandPoolHandler.Internal(), _graphicsQueueHandler.Internal(), _sampler.Internal());
+    //_renderers.push_back(std::move(chest));
+
+    Renderer bistroExterior = AssetHelper::Load3DModel("data/Bistro_v5_2/BistroExterior.fbx", meshRegistry, materialRegistry, _images, _materials, defaultMaterial, _staticDescriptorPool, _graphicsCommandPoolHandler.Internal(), _graphicsQueueHandler.Internal(), _sampler.Internal());
+    _renderers.push_back(std::move(bistroExterior));
     for(auto& registry : _registries)
     {
         registry->UploadAndRelease(_graphicsQueueHandler.Internal(), _graphicsCommandPoolHandler.Internal());

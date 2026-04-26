@@ -18,7 +18,10 @@ class StageBuffer
     StageBuffer(const StageBuffer&) = delete;
     StageBuffer& operator=(const StageBuffer&) = delete;
 
-    void CopyToBuffer(void* srcData, VkDeviceSize copySize);
+    void* Map(VkDeviceSize offset, VkDeviceSize size);
+    void Unmap();
+
+    void MapAndCopyToBuffer(void* srcData, VkDeviceSize copySize);
     inline VkBuffer Internal() const { return _internal; };
 
     private:

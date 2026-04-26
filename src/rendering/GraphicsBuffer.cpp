@@ -55,7 +55,7 @@ StageBuffer::StageBuffer(VkDeviceSize size)
     }
 }
 
-void StageBuffer::CopyToBuffer(void* srcData, VkDeviceSize copySize)
+void StageBuffer::MapAndCopyToBuffer(void* srcData, VkDeviceSize copySize)
 {
     void* data;
     if(vkMapMemory(ApplicationInfo::Device(), _memoryInternal, 0, copySize, 0, &data) != VK_SUCCESS)
@@ -65,6 +65,22 @@ void StageBuffer::CopyToBuffer(void* srcData, VkDeviceSize copySize)
     memcpy(data, srcData, (size_t)copySize);
     vkUnmapMemory(ApplicationInfo::Device(), _memoryInternal);
 };
+
+void* StageBuffer::Map(VkDeviceSize offset, VkDeviceSize size)
+{
+    void* data;
+    if(vkMapMemory(ApplicationInfo::Device(), _memoryInternal, offset, size, 0, &data) != VK_SUCCESS)
+    {
+        throw std::runtime_error("Failed to map stage buffer memory");
+    }
+
+    return data;
+}
+
+void StageBuffer::Unmap()
+{
+    vkUnmapMemory(ApplicationInfo::Device(), _memoryInternal);
+}
 
 StageBuffer::~StageBuffer()
 {
@@ -204,7 +220,7 @@ void GraphicsBuffer::CopyToBuffer(const VkQueue& queue,
     uint32_t dstIndex)
 {
     StageBuffer copyBuffer(size);
-    copyBuffer.CopyToBuffer(srcData, size);
+    copyBuffer.MapAndCopyToBuffer(srcData, size);
 
     CommandBuffer cmdBuffer(pool, queue);
     cmdBuffer.BeginSingleTime();

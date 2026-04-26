@@ -5,9 +5,10 @@
 #include "rendering/CommandBuffer.h"
 #include "rendering/GraphicsBuffer.h"
 #include "handler/VkImageViewHandler.h"
+#include <array>
 #include <cmath>
-#include <cstddef>
 #include <cstdint>
+#include <cstring>
 #include <stdexcept>
 #include <utility>
 #include <vulkan/vulkan_core.h>
@@ -27,7 +28,72 @@ GPUAllocatedImage::GPUAllocatedImage(const CPUImage& cpuImg, VkCommandPool pool,
         VK_IMAGE_USAGE_TRANSFER_SRC_BIT |VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
 {
-    CopyToImage(cpuImg.Data(), cpuImg.Width(), cpuImg.Height(), cpuImg.Channels(), pool, queue);
+    UploadAndGenerateMip(cpuImg.Data(), cpuImg.Width(), cpuImg.Height(), cpuImg.Channels(), pool, queue);
+}
+
+GPUAllocatedImage::GPUAllocatedImage(const tinyddsloader::DDSFile& file, VkCommandPool pool, VkQueue queue)
+    : GPUAllocatedImage(file.GetWidth(),
+        file.GetHeight(),
+        file.GetMipCount(),
+        ImageHelper::DXGIToVkFormat(file.GetFormat()),
+        VK_IMAGE_TILING_OPTIMAL,
+        VK_IMAGE_USAGE_TRANSFER_SRC_BIT |VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
+{
+    VkDeviceSize totalSize = 0;
+    for (uint32_t i = 0; i < _internal.MipCount; i++) {
+        totalSize += file.GetImageData(i)->m_memSlicePitch;
+    }
+
+    StageBuffer stage(totalSize);
+    void* dstPtr = stage.Map(0, totalSize);
+
+    if(_internal.MipCount >= 16)
+    {
+        throw std::runtime_error("Too many mip levels !");
+    }
+
+    static std::array<VkBufferImageCopy, 16> copyRegions;
+
+    VkDeviceSize offset = 0;
+    for (uint32_t i = 0; i < _internal.MipCount; i++) {
+        auto imageData = file.GetImageData(i);
+
+        void* srcPtr = imageData->m_mem;
+        memcpy(dstPtr, srcPtr, imageData->m_memSlicePitch);
+
+        copyRegions[i] =
+        {
+            .bufferOffset = offset,
+            .imageSubresource =
+            {
+                .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                .mipLevel = i,
+                .baseArrayLayer = 0,
+                .layerCount = 1
+            },
+            .imageExtent
+            {
+                .width = static_cast<uint32_t>(imageData->m_width),
+                .height = static_cast<uint32_t>(imageData->m_height),
+                .depth = 1
+            }
+        };
+
+        offset += imageData->m_memSlicePitch;
+        dstPtr = (uint8_t*)dstPtr + imageData->m_memSlicePitch;
+    }
+    stage.Unmap();
+
+    CommandBuffer cmdBuffer(pool, queue);
+    cmdBuffer.BeginSingleTime();
+    {
+        ImageHelper::TransitionLayoutCommand(cmdBuffer, _internal, 0, _internal.MipCount, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+        cmdBuffer.CopyBufferToImage(stage.Internal(), _internal.Image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, copyRegions.data(), _internal.MipCount);
+        ImageHelper::TransitionLayoutCommand(cmdBuffer, _internal, 0, _internal.MipCount, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    }
+    cmdBuffer.End();
+    cmdBuffer.WaitCompletion();
 }
 
 GPUAllocatedImage::GPUAllocatedImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags imageUsageFlags, VkMemoryPropertyFlags memoryFlags)
@@ -122,22 +188,36 @@ void GPUAllocatedImage::TransitionLayout(VkCommandPool pool, VkQueue queue, VkIm
     cmdBuffer.WaitCompletion();
 }
 
-void GPUAllocatedImage::CopyToImage(void* data, uint32_t width, uint32_t height, uint32_t pixelStride, VkCommandPool pool, VkQueue queue)
+void GPUAllocatedImage::UploadAndGenerateMip(void* data, uint32_t width, uint32_t height, uint32_t pixelStride, VkCommandPool pool, VkQueue queue)
 {
     VkDeviceSize size = width * height * pixelStride;
     StageBuffer stage(size);
-    stage.CopyToBuffer(data, size);
+    stage.MapAndCopyToBuffer(data, size);
 
     CommandBuffer cmdBuffer(pool, queue);
     cmdBuffer.BeginSingleTime();
     {
-        ImageHelper::CopyToImageCommand(cmdBuffer, _internal, 0, stage.Internal(), width, height);
+        ImageHelper::CopyToImageCommand(cmdBuffer, _internal, 0, stage.Internal());
         ImageHelper::GenerateMipmapsCommand(cmdBuffer, _internal);
     }
     cmdBuffer.End();
     cmdBuffer.WaitCompletion();
 }
 
+void GPUAllocatedImage::Upload(void* data, uint32_t width, uint32_t height, uint32_t mipLevel, uint32_t pixelStride, VkCommandPool pool, VkQueue queue)
+{
+    VkDeviceSize size = width * height * pixelStride;
+    StageBuffer stage(size);
+    stage.MapAndCopyToBuffer(data, size);
+
+    CommandBuffer cmdBuffer(pool, queue);
+    cmdBuffer.BeginSingleTime();
+    {
+        ImageHelper::CopyToImageCommand(cmdBuffer, _internal, mipLevel, stage.Internal());
+    }
+    cmdBuffer.End();
+    cmdBuffer.WaitCompletion();
+}
 
 GPUAllocatedImage::~GPUAllocatedImage()
 {

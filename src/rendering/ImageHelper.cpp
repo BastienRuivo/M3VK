@@ -1,7 +1,9 @@
 #include "rendering/ImageHelper.h"
 #include "application/ApplicationInfo.h"
+#include "libs/tinyddsloader.h"
 #include "rendering/GPUImage.h"
 #include <cstdint>
+#include <vulkan/vulkan_core.h>
 
 void ImageHelper::TransitionLayoutCommand(const CommandBuffer& cmdBuffer, const ImageReference& image, VkImageLayout oldLayout, VkImageLayout newLayout)
 {
@@ -13,7 +15,7 @@ void ImageHelper::TransitionLayoutCommand(const CommandBuffer& cmdBuffer, const 
     cmdBuffer.TransitionImageLayout(image.Image, image.Format, mipLevel, mipCount, oldLayout, newLayout);
 }
 
-void ImageHelper::CopyToImageCommand(const CommandBuffer &cmdBuffer, const ImageReference &image, uint32_t mipLevel, VkBuffer srcData, uint32_t width, uint32_t height)
+void ImageHelper::CopyToImageCommand(const CommandBuffer &cmdBuffer, const ImageReference &image, uint32_t mipLevel, VkBuffer srcData)
 {
     ImageHelper::TransitionLayoutCommand(cmdBuffer, image, mipLevel, 1, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
@@ -37,8 +39,8 @@ void ImageHelper::CopyToImageCommand(const CommandBuffer &cmdBuffer, const Image
         },
         .imageExtent
         {
-            .width = static_cast<uint32_t>(width),
-            .height = static_cast<uint32_t>(height),
+            .width = static_cast<uint32_t>(image.Width),
+            .height = static_cast<uint32_t>(image.Height),
             .depth = 1
         },
     };
@@ -137,4 +139,32 @@ void ImageHelper::GenerateMipmapsCommand(const CommandBuffer& cmdBuffer, const I
     barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 
     cmdBuffer.Barrier(VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, nullptr, 0, nullptr, 0, &barrier, 1);
+}
+
+VkFormat ImageHelper::DXGIToVkFormat(tinyddsloader::DDSFile::DXGIFormat format)
+{
+    switch (format) {
+        case tinyddsloader::DDSFile::DXGIFormat::BC1_UNorm: return VK_FORMAT_BC1_RGBA_UNORM_BLOCK;
+        case tinyddsloader::DDSFile::DXGIFormat::BC1_UNorm_SRGB: return VK_FORMAT_BC1_RGBA_SRGB_BLOCK;
+
+        case tinyddsloader::DDSFile::DXGIFormat::BC2_UNorm: return VK_FORMAT_BC2_UNORM_BLOCK;
+        case tinyddsloader::DDSFile::DXGIFormat::BC2_UNorm_SRGB: return VK_FORMAT_BC2_SRGB_BLOCK;
+
+        case tinyddsloader::DDSFile::DXGIFormat::BC3_UNorm: return VK_FORMAT_BC3_UNORM_BLOCK;
+        case tinyddsloader::DDSFile::DXGIFormat::BC3_UNorm_SRGB: return VK_FORMAT_BC3_SRGB_BLOCK;
+
+        case tinyddsloader::DDSFile::DXGIFormat::BC4_UNorm: return VK_FORMAT_BC4_UNORM_BLOCK;
+        case tinyddsloader::DDSFile::DXGIFormat::BC4_SNorm: return VK_FORMAT_BC4_SNORM_BLOCK;
+
+        case tinyddsloader::DDSFile::DXGIFormat::BC5_UNorm: return VK_FORMAT_BC5_UNORM_BLOCK;
+        case tinyddsloader::DDSFile::DXGIFormat::BC5_SNorm: return VK_FORMAT_BC5_SNORM_BLOCK;
+
+        case tinyddsloader::DDSFile::DXGIFormat::BC6H_UF16: return VK_FORMAT_BC6H_UFLOAT_BLOCK;
+        case tinyddsloader::DDSFile::DXGIFormat::BC6H_SF16: return VK_FORMAT_BC6H_SFLOAT_BLOCK;
+
+        case tinyddsloader::DDSFile::DXGIFormat::BC7_UNorm: return VK_FORMAT_BC7_UNORM_BLOCK;
+        case tinyddsloader::DDSFile::DXGIFormat::BC7_UNorm_SRGB: return VK_FORMAT_BC7_SRGB_BLOCK;
+
+        default: return VK_FORMAT_UNDEFINED;
+    }
 }

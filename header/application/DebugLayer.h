@@ -6,7 +6,7 @@
 
 #include <vector>
 
-//#define M3VK_VERBOSE_LOG 1
+#define M3VK_VERBOSE_LOG 1
 //#define M3VK_MEMORYLOG 1
 
 static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(

@@ -9,6 +9,7 @@
 #include <span>
 #include <filesystem>
 #include <string>
+#include <sys/types.h>
 
 #include "libs/tinyddsloader.h"
 
@@ -47,33 +48,28 @@ std::filesystem::path GetTexturePath(const std::filesystem::path& modelPath)
 
 void DebugListMaterialTextures(aiMaterial* material) {
     // Iterate through all possible Assimp texture types
-    for (unsigned int type = aiTextureType_NONE; type < AI_TEXTURE_TYPE_MAX; ++type) {
+    for (unsigned int type = aiTextureType_NONE; type < AI_TEXTURE_TYPE_MAX; ++type)
+    {
         aiTextureType textureType = static_cast<aiTextureType>(type);
         unsigned int count = material->GetTextureCount(textureType);
 
-        if (count > 0) {
-            for (unsigned int i = 0; i < count; ++i) {
-                aiString path;
-                if (material->GetTexture(textureType, i, &path) == AI_SUCCESS) {
-                    std::cout << "[Texture Found] Type: " << type
-                              << " | Index: " << i
-                              << " | Path: " << path.C_Str() << std::endl;
-                }
+        for (unsigned int i = 0; i < count; ++i)
+        {
+            aiString path;
+            if (material->GetTexture(textureType, i, &path) == AI_SUCCESS)
+            {
+                DebugLayer::Log(DebugLayer::LogType::INFO, "[Texture Found] Type: " + std::to_string(type) + " | Index: " + std::to_string(i) + " | Path: " + path.C_Str());
             }
-        }
-    }
-
-    for (unsigned int i = 0; i < material->mNumProperties; ++i) {
-        aiMaterialProperty* prop = material->mProperties[i];
-        if (prop->mType == aiPTI_String) {
-            std::cout << "Property Key: " << prop->mKey.C_Str()
-                    << " | Value: " << prop->mData << std::endl;
         }
     }
 }
 
 Renderer AssetHelper::Load3DModel(const std::string & modelPath, MeshRegistry & meshRegistry, MaterialRegistry & materialRegistry, std::vector<GPUAllocatedImage> & textures, std::vector<Material> & materials, int defaultMaterial, DescriptorPool& descriptorPool, VkCommandPool cmdPool, VkQueue queue, VkSampler sampler)
 {
+    std::chrono::high_resolution_clock::time_point t1 = std::chrono::high_resolution_clock::now();
+
+    DebugLayer::Log(DebugLayer::LogType::INFO, "Loading model: " + modelPath);
+
     Assimp::Importer importer;
 
     const aiScene* scene = importer.ReadFile(modelPath,
@@ -96,6 +92,10 @@ Renderer AssetHelper::Load3DModel(const std::string & modelPath, MeshRegistry & 
     int materialOffset = materials.size();
     std::filesystem::path textureRootPath = GetTexturePath(modelPath);
 
+    std::chrono::high_resolution_clock::time_point t2 = std::chrono::high_resolution_clock::now();
+    DebugLayer::Log(DebugLayer::LogType::INFO, "Loaded model in " + std::to_string(std::chrono::duration_cast<std::chrono::seconds>(t2 - t1).count()) + "s");
+    DebugLayer::Log(DebugLayer::LogType::INFO, "Found " + std::to_string(scene->mNumMaterials) + " materials in model");
+
     for(unsigned int i = 0; i < scene->mNumMaterials; i++)
     {
         aiMaterial* material = scene->mMaterials[i];
@@ -116,7 +116,7 @@ Renderer AssetHelper::Load3DModel(const std::string & modelPath, MeshRegistry & 
         bool hasTexture = false;
 
 #if M3VK_VERBOSE_LOG
-        DebugListMaterialTextures(material);
+        //DebugListMaterialTextures(material);
 #endif
 
         uint32_t textureCount = 0;
@@ -149,6 +149,10 @@ Renderer AssetHelper::Load3DModel(const std::string & modelPath, MeshRegistry & 
                     {
                         DebugLayer::Log(DebugLayer::LogType::WARNING, "Failed to load compressed texture " + texturePath.string());
                     }
+
+                    auto& texture = textures.emplace_back(dds, cmdPool, queue);
+                    albedoMap = ImageHelper::ImageBinding(texture.Internal(), sampler);
+                    hasTexture = true;
                 }
                 else
                 {
@@ -175,14 +179,24 @@ Renderer AssetHelper::Load3DModel(const std::string & modelPath, MeshRegistry & 
         }
     }
 
+    std::chrono::high_resolution_clock::time_point t3 = std::chrono::high_resolution_clock::now();
+
+    DebugLayer::Log(DebugLayer::LogType::INFO, "Loaded materials in " + std::to_string(std::chrono::duration_cast<std::chrono::seconds>(t3 - t2).count()) + "s");
+
     std::vector<SubMesh> subMeshes;
     Renderer renderer(glm::vec3(0.0f), glm::vec3(0.0f), glm::vec3(1.0f));
 
+    uint32_t meshCount = scene->mNumMeshes;
+    uint32_t vertexCount = 0;
+    uint32_t indexCount = 0;
     for(unsigned int i = 0; i < scene->mNumMeshes; i++)
     {
         const aiMesh* mesh = scene->mMeshes[i];
         std::vector<Vertex> vertices(mesh->mNumVertices);
         std::vector<uint32_t> indices(mesh->mNumFaces * 3);
+
+        vertexCount += mesh->mNumVertices;
+        indexCount += mesh->mNumFaces * 3;
 
         for(unsigned int j = 0; j < mesh->mNumVertices; j++)
         {
@@ -203,6 +217,9 @@ Renderer AssetHelper::Load3DModel(const std::string & modelPath, MeshRegistry & 
 
         renderer.AddMesh(submesh, materials[materialOffset + i]);
     }
+
+    DebugLayer::Log(DebugLayer::LogType::INFO, "Loaded " + std::to_string(subMeshes.size()) + " submeshes with " + std::to_string(vertexCount) + " vertices and " + std::to_string(indexCount) + " indices in " + std::to_string(std::chrono::duration_cast<std::chrono::seconds>(t3 - t2).count()) + "s");
+    DebugLayer::Log(DebugLayer::LogType::INFO, "Loaded model in " + std::to_string(std::chrono::duration_cast<std::chrono::seconds>(t3 - t1).count()) + "s");
 
     return renderer;
 }

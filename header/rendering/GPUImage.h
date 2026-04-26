@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <stb_image.h>
 #include "asset/CPUImage.h"
+#include "libs/tinyddsloader.h"
 #include "rendering/CommandBuffer.h"
 #include "handler/VkImageViewHandler.h"
 #include <vulkan/vulkan_core.h>
@@ -22,6 +23,7 @@ class GPUAllocatedImage
     public:
 
     GPUAllocatedImage(const CPUImage& cpuImg, VkCommandPool pool, VkQueue queue);
+    GPUAllocatedImage(const tinyddsloader::DDSFile& file, VkCommandPool pool, VkQueue queue);
     GPUAllocatedImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags imageUsageFlags, VkMemoryPropertyFlags memoryFlags);
     GPUAllocatedImage(uint32_t width, uint32_t height, uint32_t mipCount, VkFormat format, VkImageTiling tiling, VkImageUsageFlags imageUsageFlags, VkMemoryPropertyFlags memoryFlags);
     GPUAllocatedImage(uint32_t width, uint32_t height, VkSampleCountFlagBits msaaSampleCount, uint32_t mipCount, VkFormat format, VkImageTiling tiling, VkImageUsageFlags imageUsageFlags, VkMemoryPropertyFlags memoryFlags);
@@ -33,7 +35,8 @@ class GPUAllocatedImage
     GPUAllocatedImage(const GPUAllocatedImage&) = delete;
     GPUAllocatedImage& operator=(const GPUAllocatedImage&) = delete;
 
-    void CopyToImage(void* data, uint32_t width, uint32_t height, uint32_t pixelStride, VkCommandPool pool, VkQueue queue);
+    void Upload(void* data, uint32_t width, uint32_t height, uint32_t mipLevel, uint32_t pixelStride, VkCommandPool pool, VkQueue queue);
+    void UploadAndGenerateMip(void* data, uint32_t width, uint32_t height, uint32_t pixelStride, VkCommandPool pool, VkQueue queue);
     void TransitionLayout(VkCommandPool pool, VkQueue queue, VkImageLayout oldLayout, VkImageLayout newLayout) const;
     void GenerateMipmapsCommand(const CommandBuffer& cmdBuffer) const;
 
