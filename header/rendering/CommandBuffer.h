@@ -30,19 +30,19 @@ class CommandBuffer
         VkSemaphore signalSemaphores[], int signalCount,
         VkFence fence = VK_NULL_HANDLE) const;
 
-    inline void BeginSingleTime()
+    inline void BeginSingleTime() const
     {
         Begin(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
     }
 
-    void WaitCompletion();
+    void WaitCompletion() const;
 
     // Todo: how to handle this properly (both need different params)
     void BindBuffer(const GraphicsBuffer& buffer) const;
     void SetScissor(int32_t x, int32_t y, uint32_t width, uint32_t height) const;
     void SetScissor(const VkRect2D& scissors) const;
     void SetViewport(uint32_t x, uint32_t y, uint32_t width, uint32_t height) const;
-    void TransitionImageLayout(VkImage img, VkFormat format, uint32_t mipCount, VkImageLayout oldLayout, VkImageLayout newLayout) const;
+    void TransitionImageLayout(VkImage img, VkFormat format, uint32_t mipLevel, uint32_t mipCount, VkImageLayout oldLayout, VkImageLayout newLayout) const;
 
     inline void BindDescriptorSets(const VkPipelineLayout& pipelineLayout, const VkDescriptorSet& set, uint32_t location) const
     {
@@ -85,7 +85,7 @@ class CommandBuffer
         vkCmdBlitImage(_internal, src, srcLayout, dst, dstLayout, regionCount, pRegions, filter);
     }
 
-    inline void CopyBufferToImage(VkBuffer buffer, VkImage image, VkImageLayout layout, VkBufferImageCopy* pRegions, int regionCount)
+    inline void CopyBufferToImage(VkBuffer buffer, VkImage image, VkImageLayout layout, VkBufferImageCopy* pRegions, int regionCount) const
     {
         vkCmdCopyBufferToImage(_internal, buffer, image, layout, regionCount, pRegions);
     }

@@ -33,7 +33,7 @@ class GPUAllocatedImage
     GPUAllocatedImage(const GPUAllocatedImage&) = delete;
     GPUAllocatedImage& operator=(const GPUAllocatedImage&) = delete;
 
-    void CopyCPUtoGPUImage(const CPUImage & cpuImg, VkCommandPool pool, VkQueue queue);
+    void CopyToImage(void* data, uint32_t width, uint32_t height, uint32_t pixelStride, VkCommandPool pool, VkQueue queue);
     void TransitionLayout(VkCommandPool pool, VkQueue queue, VkImageLayout oldLayout, VkImageLayout newLayout) const;
     void GenerateMipmapsCommand(const CommandBuffer& cmdBuffer) const;
 

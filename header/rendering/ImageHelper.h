@@ -1,6 +1,7 @@
 #pragma once
 
 #include "rendering/GPUImage.h"
+#include <cstdint>
 
 namespace ImageHelper
 {
@@ -23,4 +24,9 @@ namespace ImageHelper
     };
 
     void TransitionLayoutCommand(const CommandBuffer& cmdBuffer, const ImageReference& image, VkImageLayout oldLayout, VkImageLayout newLayout);
+    void TransitionLayoutCommand(const CommandBuffer& cmdBuffer, const ImageReference& image, uint32_t mipLevel, uint32_t mipCount, VkImageLayout oldLayout, VkImageLayout newLayout);
+
+    void CopyToImageCommand(const CommandBuffer& cmdBuffer, const ImageReference& image, uint32_t mipLevel, VkBuffer srcData, uint32_t width, uint32_t height);
+
+    void GenerateMipmapsCommand(const CommandBuffer& cmdBuffer, const ImageReference& image);
 }

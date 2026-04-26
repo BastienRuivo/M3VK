@@ -27,7 +27,7 @@ GPUAllocatedImage::GPUAllocatedImage(const CPUImage& cpuImg, VkCommandPool pool,
         VK_IMAGE_USAGE_TRANSFER_SRC_BIT |VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
 {
-    CopyCPUtoGPUImage(cpuImg, pool, queue);
+    CopyToImage(cpuImg.Data(), cpuImg.Width(), cpuImg.Height(), cpuImg.Channels(), pool, queue);
 }
 
 GPUAllocatedImage::GPUAllocatedImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags imageUsageFlags, VkMemoryPropertyFlags memoryFlags)
@@ -122,141 +122,20 @@ void GPUAllocatedImage::TransitionLayout(VkCommandPool pool, VkQueue queue, VkIm
     cmdBuffer.WaitCompletion();
 }
 
-void GPUAllocatedImage::CopyCPUtoGPUImage(const CPUImage & cpuImg, VkCommandPool pool, VkQueue queue)
+void GPUAllocatedImage::CopyToImage(void* data, uint32_t width, uint32_t height, uint32_t pixelStride, VkCommandPool pool, VkQueue queue)
 {
-    StageBuffer stage(cpuImg.Size());
-    stage.CopyToBuffer((void*)cpuImg.Data(), cpuImg.Size());
+    VkDeviceSize size = width * height * pixelStride;
+    StageBuffer stage(size);
+    stage.CopyToBuffer(data, size);
 
-    TransitionLayout(pool, queue, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
     CommandBuffer cmdBuffer(pool, queue);
     cmdBuffer.BeginSingleTime();
     {
-        ImageHelper::TransitionLayoutCommand(cmdBuffer, _internal, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-
-        VkBufferImageCopy region
-        {
-            .bufferOffset = 0,
-            .bufferRowLength = 0,
-            .bufferImageHeight = 0,
-            .imageSubresource
-            {
-                .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-                .mipLevel = 0,
-                .baseArrayLayer = 0,
-                .layerCount = 1
-            },
-            .imageOffset
-            {
-                .x = 0,
-                .y = 0,
-                .z = 0
-            },
-            .imageExtent
-            {
-                .width = static_cast<uint32_t>(cpuImg.Width()),
-                .height = static_cast<uint32_t>(cpuImg.Height()),
-                .depth = 1
-            },
-        };
-        cmdBuffer.CopyBufferToImage(stage.Internal(), _internal.Image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &region, 1);
-
-        //TransitionLayoutCommand(cmdBuffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-        GenerateMipmapsCommand(cmdBuffer);
+        ImageHelper::CopyToImageCommand(cmdBuffer, _internal, 0, stage.Internal(), width, height);
+        ImageHelper::GenerateMipmapsCommand(cmdBuffer, _internal);
     }
     cmdBuffer.End();
     cmdBuffer.WaitCompletion();
-}
-
-void GPUAllocatedImage::GenerateMipmapsCommand(const CommandBuffer& cmdBuffer) const
-{
-    // Check if image format supports linear blitting
-    VkFormatProperties formatProperties;
-    vkGetPhysicalDeviceFormatProperties(ApplicationInfo::PhysicalDevice(), _internal.Format, &formatProperties);
-    if(!(formatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT))
-    {
-        // TODO Someday : software mipmapping and storing the mipmaps
-        throw std::runtime_error("texture image format does not support linear blitting!");
-    }
-
-    VkImageMemoryBarrier barrier
-    {
-        .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-        .image = _internal.Image,
-        .subresourceRange
-        {
-            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-            .baseMipLevel = 0,
-            .levelCount = 1,
-            .baseArrayLayer = 0,
-            .layerCount = 1
-        }
-    };
-
-    int32_t mipWidth = _internal.Width;
-    int32_t mipHeight = _internal.Height;
-
-    size_t mipCount = _internal.MipCount;
-    for(uint32_t i = 1; i < mipCount; ++i)
-    {
-        barrier.subresourceRange.baseMipLevel = i - 1;
-        barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-        barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-        barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-        barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-
-        cmdBuffer.Barrier(VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, nullptr, 0, nullptr, 0, &barrier, 1);
-
-        VkImageBlit blit
-        {
-            .srcSubresource
-            {
-                .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-                .mipLevel = i - 1,
-                .baseArrayLayer = 0,
-                .layerCount = 1
-            },
-            .srcOffsets =
-            {
-                {0, 0, 0},
-                {mipWidth, mipHeight, 1}
-            },
-            .dstSubresource
-            {
-                .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-                .mipLevel = i,
-                .baseArrayLayer = 0,
-                .layerCount = 1
-            },
-            .dstOffsets =
-            {
-                {0, 0, 0},
-                {mipWidth > 1 ? mipWidth / 2 : 1, mipHeight > 1 ? mipHeight / 2 : 1, 1}
-            },
-
-        };
-
-        cmdBuffer.Blit(_internal.Image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, _internal.Image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blit, VK_FILTER_LINEAR);
-
-        barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-        barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-        barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-
-        cmdBuffer.Barrier(VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, nullptr, 0, nullptr, 0, &barrier, 1);
-
-        if(mipWidth > 1) mipWidth /= 2;
-        if(mipHeight > 1) mipHeight /= 2;
-    }
-
-    barrier.subresourceRange.baseMipLevel = mipCount - 1;
-    barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-    barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-    barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-
-    cmdBuffer.Barrier(VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, nullptr, 0, nullptr, 0, &barrier, 1);
 }
 
 

@@ -143,7 +143,7 @@ void CommandBuffer::SetViewport(uint32_t x, uint32_t y, uint32_t width, uint32_t
     vkCmdSetViewport(_internal, 0, 1, &viewport);
 }
 
-void CommandBuffer::WaitCompletion()
+void CommandBuffer::WaitCompletion() const
 {
     VkSubmitInfo submitInfo
     {
@@ -162,7 +162,7 @@ CommandBuffer::CommandBuffer(CommandBuffer&& other) noexcept
     other._internal = VK_NULL_HANDLE;
 }
 
-void CommandBuffer::TransitionImageLayout(VkImage img, VkFormat format, uint32_t mipCount, VkImageLayout oldLayout, VkImageLayout newLayout) const
+void CommandBuffer::TransitionImageLayout(VkImage img, VkFormat format, uint32_t mipLevel, uint32_t mipCount, VkImageLayout oldLayout, VkImageLayout newLayout) const
 {
     VkImageMemoryBarrier barrier
     {
@@ -177,7 +177,7 @@ void CommandBuffer::TransitionImageLayout(VkImage img, VkFormat format, uint32_t
         .subresourceRange
         {
             .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-            .baseMipLevel = 0,
+            .baseMipLevel = mipLevel,
             .levelCount = mipCount,
             .baseArrayLayer = 0,
             .layerCount = 1
