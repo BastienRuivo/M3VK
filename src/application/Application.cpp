@@ -413,24 +413,8 @@ Application::Application() :
         _renderers.push_back(std::move(zAxis));
     }
 
-    {
-        tinyddsloader::DDSFile ddsFile;
-        auto ret = ddsFile.Load("data/TestDDS.dds");
-        if(ret != tinyddsloader::Result::Success)
-        {
-            DebugLayer::Log(DebugLayer::LogType::ERROR, "Failed to load DDS");
-        }
-        auto& ddsTestTex = _images.emplace_back(ddsFile, _graphicsCommandPoolHandler.Internal(), _graphicsQueueHandler.Internal());
-        BufferHelper::BufferBinding matBinding = materialRegistry.Register({glm::vec4(1.0f, 1.0f, 1.0f, 1.0f)});
-        const auto & mat = _materials.emplace_back(ImageHelper::ImageBinding(ddsTestTex.Internal(), _sampler.Internal()), matBinding, _staticDescriptorPool);
-        Renderer ddsTest(cube, mat,
-            glm::vec3(0.0f, 0.0f, 0.0f),
-            glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
-            glm::vec3(1.0, 1.0, 1.0));
-        _renderers.push_back(std::move(ddsTest));
-    }
-    //Renderer chest = AssetHelper::Load3DModel("data/minecraft-chest/source/chest.fbx", meshRegistry, materialRegistry, _images, _materials, defaultMaterial, _staticDescriptorPool, _graphicsCommandPoolHandler.Internal(), _graphicsQueueHandler.Internal(), _sampler.Internal());
-    //_renderers.push_back(std::move(chest));
+    Renderer chest = AssetHelper::Load3DModel("data/minecraft-chest/source/chest.fbx", meshRegistry, materialRegistry, _images, _materials, defaultMaterial, _staticDescriptorPool, _graphicsCommandPoolHandler.Internal(), _graphicsQueueHandler.Internal(), _sampler.Internal());
+    _renderers.push_back(std::move(chest));
 
     Renderer bistroExterior = AssetHelper::Load3DModel("data/Bistro_v5_2/BistroExterior.fbx", meshRegistry, materialRegistry, _images, _materials, defaultMaterial, _staticDescriptorPool, _graphicsCommandPoolHandler.Internal(), _graphicsQueueHandler.Internal(), _sampler.Internal());
     _renderers.push_back(std::move(bistroExterior));

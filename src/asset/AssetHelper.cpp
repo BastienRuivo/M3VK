@@ -198,10 +198,12 @@ Renderer AssetHelper::Load3DModel(const std::string & modelPath, MeshRegistry & 
         vertexCount += mesh->mNumVertices;
         indexCount += mesh->mNumFaces * 3;
 
+        bool hasTexcoords = mesh->HasTextureCoords(0);
+
         for(unsigned int j = 0; j < mesh->mNumVertices; j++)
         {
             vertices[j].pos = glm::vec3(mesh->mVertices[j].x, mesh->mVertices[j].y, mesh->mVertices[j].z);
-            vertices[j].texCoord = glm::vec2(mesh->mTextureCoords[0][j].x, mesh->mTextureCoords[0][j].y);
+            vertices[j].texCoord = hasTexcoords ? glm::vec2(mesh->mTextureCoords[0][j].x, mesh->mTextureCoords[0][j].y) : glm::vec2(0.0f);
         }
 
         for(unsigned int j = 0; j < mesh->mNumFaces; j++)
