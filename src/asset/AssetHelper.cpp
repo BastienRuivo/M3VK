@@ -1,17 +1,22 @@
 #include "asset/AssetHelper.h"
 #include "application/DebugLayer.h"
 #include "assimp/Importer.hpp"
+#include "assimp/defs.h"
 #include "assimp/material.h"
 #include "assimp/postprocess.h"
 #include "assimp/scene.h"
 #include <cstdint>
-#include <iostream>
 #include <span>
 #include <filesystem>
 #include <string>
 #include <sys/types.h>
+#include <vulkan/vulkan_core.h>
 
+#include "assimp/types.h"
+#include "glm/ext/vector_float3.hpp"
 #include "libs/tinyddsloader.h"
+#include "rendering/GPUImage.h"
+#include "rendering/ImageHelper.h"
 
 aiTextureType AssetHelper::SelectTextureType(std::span<const aiTextureType> types, const aiMaterial* material, uint32_t& textureCount)
 {
@@ -44,6 +49,59 @@ std::filesystem::path GetTexturePath(const std::filesystem::path& modelPath)
     }
 
     return texturePath / "textures";
+}
+
+ImageHelper::ImageBinding AssetHelper::LoadTexture(const aiMaterial* material, std::vector<GPUAllocatedImage> & textures, const std::filesystem::path rootPath, std::span<const aiTextureType> types, bool& hasFoundTexture, const ImageHelper::ImageBinding & fallback, VkSampler sampler, VkCommandPool uploadPool, VkQueue uploadQueue)
+{
+    uint32_t textureCount = 0;
+    aiTextureType textureType = SelectTextureType(types, material, textureCount);
+
+    if(textureCount == 0) return fallback;
+
+
+    aiString path;
+    material->GetTexture(textureType, 0, &path);
+
+    if(path.length == 0)
+    {
+        DebugLayer::Log(DebugLayer::LogType::WARNING, "Found a texture with a 0 length path");
+        return fallback;
+    }
+
+
+    std::string rawPath = path.C_Str();
+    std::replace(rawPath.begin(), rawPath.end(), '\\', '/');
+    std::filesystem::path texturePath(rawPath);
+    texturePath = texturePath.filename();
+    texturePath = rootPath / texturePath;
+    texturePath = texturePath.lexically_normal();
+
+
+    if(!std::filesystem::exists(texturePath))
+    {
+        DebugLayer::Log(DebugLayer::LogType::WARNING, "Path does not exist " + texturePath.string());
+        return fallback;
+    }
+    else if(texturePath.extension() == ".dds") // handle compressed textures directly
+    {
+        tinyddsloader::DDSFile dds;
+        auto ret = dds.Load(texturePath.string().c_str());
+        if(ret != tinyddsloader::Result::Success)
+        {
+            DebugLayer::Log(DebugLayer::LogType::WARNING, "Failed to load compressed texture " + texturePath.string());
+            return fallback;
+        }
+
+        auto& texture = textures.emplace_back(dds, uploadPool, uploadQueue);
+        hasFoundTexture = true;
+        return ImageHelper::ImageBinding(texture.Internal(), sampler);
+    }
+    else
+    {
+        auto& texture = textures.emplace_back(CPUImage(texturePath, STBI_rgb_alpha), uploadPool, uploadQueue);
+        hasFoundTexture = true;
+        return ImageHelper::ImageBinding(texture.Internal(), sampler);
+    }
 }
 
 void DebugListMaterialTextures(aiMaterial* material) {
@@ -80,6 +138,7 @@ Renderer AssetHelper::Load3DModel(const std::string & modelPath, MeshRegistry & 
         | aiProcess_FlipUVs
         | aiProcess_GlobalScale     // Handles FBX unit scaling (cm to m)
         | aiProcess_PreTransformVertices // Collapses the node hierarchy into the verticess
+        | aiProcess_GenNormals
     );
 
     if(scene == nullptr)
@@ -100,72 +159,39 @@ Renderer AssetHelper::Load3DModel(const std::string & modelPath, MeshRegistry & 
     {
         aiMaterial* material = scene->mMaterials[i];
 
-        ImageHelper::ImageBinding albedoMap = materials[defaultMaterial].AlbedoMap;
+
 
         // get base color value
         aiColor4D color;
         material->Get(AI_MATKEY_COLOR_DIFFUSE, color);
 
+        ai_real metallic;
+        material->Get(AI_MATKEY_METALLIC_FACTOR, metallic);
+
+        ai_real roughness;
+        material->Get(AI_MATKEY_ROUGHNESS_FACTOR, roughness);
+
+
         GPUMaterial gpuMaterial
         {
-            .Albedo = glm::vec4(color.r, color.g, color.b, color.a)
+            .BaseColor = glm::vec4(static_cast<float>(color.r),
+                static_cast<float>(color.g),
+                static_cast<float>(color.b),
+                static_cast<float>(color.a)),
+            .Metallic = static_cast<float>(metallic),
+            .Roughness = static_cast<float>(roughness)
         };
 
         bool hasProperties = gpuMaterial != GPUMaterial::Default();
 
+#if M3VK_VERBOSE_LOG
+        DebugListMaterialTextures(material);
+#endif
         bool hasTexture = false;
 
-#if M3VK_VERBOSE_LOG
-        //DebugListMaterialTextures(material);
-#endif
-
-        uint32_t textureCount = 0;
-        aiTextureType textureType = SelectTextureType({{ aiTextureType::aiTextureType_BASE_COLOR, aiTextureType::aiTextureType_DIFFUSE, aiTextureType::aiTextureType_UNKNOWN }}, material, textureCount);
-
-        if(textureCount > 0)
-        {
-            aiString path;
-            material->GetTexture(textureType, 0, &path);
-
-            if(path.length > 0)
-            {
-                std::string rawPath = path.C_Str();
-                std::replace(rawPath.begin(), rawPath.end(), '\\', '/');
-                std::filesystem::path texturePath(rawPath);
-                texturePath = texturePath.filename();
-                texturePath = textureRootPath / texturePath;
-                texturePath = texturePath.lexically_normal();
-
-                if(!std::filesystem::exists(texturePath))
-                {
-                    DebugLayer::Log(DebugLayer::LogType::WARNING, "Path does not exist " + texturePath.string());
-
-                }
-                else if(texturePath.extension() == ".dds") // handle compressed textures directly
-                {
-                    tinyddsloader::DDSFile dds;
-                    auto ret = dds.Load(texturePath.string().c_str());
-                    if(ret != tinyddsloader::Result::Success)
-                    {
-                        DebugLayer::Log(DebugLayer::LogType::WARNING, "Failed to load compressed texture " + texturePath.string());
-                    }
-
-                    auto& texture = textures.emplace_back(dds, cmdPool, queue);
-                    albedoMap = ImageHelper::ImageBinding(texture.Internal(), sampler);
-                    hasTexture = true;
-                }
-                else
-                {
-                    auto& texture = textures.emplace_back(CPUImage(texturePath, STBI_rgb_alpha), cmdPool, queue);
-                    albedoMap = ImageHelper::ImageBinding(texture.Internal(), sampler);
-                    hasTexture = true;
-                }
-            }
-            else
-            {
-                DebugLayer::Log(DebugLayer::LogType::WARNING, "No path found for texture" + std::to_string(i) + " of type " + std::to_string(textureType) + " for material " + std::to_string(i) + " of object " + modelPath);
-            }
-        }
+        ImageHelper::ImageBinding baseColorTex = LoadTexture(material, textures, textureRootPath, {{ aiTextureType::aiTextureType_BASE_COLOR, aiTextureType::aiTextureType_DIFFUSE }}, hasTexture, materials[defaultMaterial].BaseColorTex, sampler, cmdPool, queue);
+        ImageHelper::ImageBinding normalMapTex = LoadTexture(material, textures, textureRootPath, {{ aiTextureType::aiTextureType_NORMALS }}, hasTexture, materials[defaultMaterial].NormalMapTex, sampler, cmdPool, queue);
+        ImageHelper::ImageBinding mraoTex = LoadTexture(material, textures, textureRootPath, {{ aiTextureType::aiTextureType_AMBIENT_OCCLUSION }}, hasTexture, materials[defaultMaterial].MRAOTex, sampler, cmdPool, queue);
 
         if(!hasTexture && !hasProperties)
         {
@@ -175,7 +201,7 @@ Renderer AssetHelper::Load3DModel(const std::string & modelPath, MeshRegistry & 
         else
         {
             BufferHelper::BufferBinding binding = materialRegistry.Register(gpuMaterial);
-            materials.emplace_back(albedoMap, binding, descriptorPool);
+            materials.emplace_back(baseColorTex, normalMapTex, mraoTex, binding, descriptorPool);
         }
     }
 
@@ -199,10 +225,21 @@ Renderer AssetHelper::Load3DModel(const std::string & modelPath, MeshRegistry & 
         indexCount += mesh->mNumFaces * 3;
 
         bool hasTexcoords = mesh->HasTextureCoords(0);
+        bool hasNormals = mesh->HasNormals();
 
         for(unsigned int j = 0; j < mesh->mNumVertices; j++)
         {
             vertices[j].pos = glm::vec3(mesh->mVertices[j].x, mesh->mVertices[j].y, mesh->mVertices[j].z);
+
+            if(hasNormals)
+            {
+                vertices[j].normal = glm::vec3(mesh->mNormals[j].x, mesh->mNormals[j].y, mesh->mNormals[j].z);
+            }
+            else
+            {
+                // TODO: Compute smooth normal in this case
+                vertices[j].normal = glm::vec3(0, 1, 0);
+            }
             vertices[j].texCoord = hasTexcoords ? glm::vec2(mesh->mTextureCoords[0][j].x, mesh->mTextureCoords[0][j].y) : glm::vec2(0.0f);
         }
 

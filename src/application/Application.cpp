@@ -1,5 +1,4 @@
 #include "application/Application.h"
-#include "libs/tinyddsloader.h"
 #include "rendering/GraphicsBuffer.h"
 #include "asset/Material.h"
 #include "application/ApplicationInfo.h"
@@ -288,6 +287,22 @@ void Application::RecordCommandBuffer(const CommandBuffer& cmdBuffer, uint32_t c
     cmdBuffer.End();
 }
 
+uint32_t Application::LoadDefaultMaterial()
+{
+    MaterialRegistry& materialRegistry = static_cast<MaterialRegistry&>(*_registries[(size_t)RegistryType::Material]);
+
+    auto& baseColorTex = _images.emplace_back(CPUImage("data/default/BaseColor.png", STBI_rgb_alpha), _graphicsCommandPoolHandler.Internal(), _graphicsQueueHandler.Internal());
+    ImageHelper::ImageBinding baseColorBind = ImageHelper::ImageBinding(baseColorTex.Internal(), _sampler.Internal());
+    auto& normalMapTex = _images.emplace_back(CPUImage("data/default/BaseNormal.png", STBI_rgb), _graphicsCommandPoolHandler.Internal(), _graphicsQueueHandler.Internal());
+    ImageHelper::ImageBinding normalBind = ImageHelper::ImageBinding(normalMapTex.Internal(), _sampler.Internal());
+    auto& mraoTex = _images.emplace_back(CPUImage("data/default/BaseMRAO.png", STBI_rgb), _graphicsCommandPoolHandler.Internal(), _graphicsQueueHandler.Internal());
+    ImageHelper::ImageBinding mraoBind = ImageHelper::ImageBinding(mraoTex.Internal(), _sampler.Internal());
+
+    BufferHelper::BufferBinding defaultMaterialBinding = materialRegistry.Register(GPUMaterial::Default());
+    _materials.emplace_back(baseColorBind, normalBind, mraoBind, defaultMaterialBinding, _staticDescriptorPool);
+    return _materials.size() - 1;
+}
+
 Application::Application() :
     // Core Window & Instance (The Foundation)
     _window(1920, 1080, "Window", this, Application::ResizeCallback, Application::MouseMoveCallback, Application::WindowFocusCallback),
@@ -363,10 +378,7 @@ Application::Application() :
     MeshRegistry& meshRegistry = static_cast<MeshRegistry&>(*_registries[(size_t)RegistryType::Mesh]);
     MaterialRegistry& materialRegistry = static_cast<MaterialRegistry&>(*_registries[(size_t)RegistryType::Material]);
 
-    auto& texture = _images.emplace_back(CPUImage("data/white.png", STBI_rgb_alpha), _graphicsCommandPoolHandler.Internal(), _graphicsQueueHandler.Internal());
-    BufferHelper::BufferBinding defaultMaterialBinding = materialRegistry.Register({glm::vec4(1.0f, 1.0f, 1.0f, 1.0)});
-    _materials.emplace_back(ImageHelper::ImageBinding(texture.Internal(), _sampler.Internal()), defaultMaterialBinding, _staticDescriptorPool);
-    int defaultMaterial = _materials.size() - 1;
+    uint32_t defaultMaterial = LoadDefaultMaterial();
 
     const float axisLength = 10.0f;
     const float axisThickness = 0.00625f;
@@ -375,7 +387,7 @@ Application::Application() :
 
     {
         BufferHelper::BufferBinding matBinding = materialRegistry.Register({glm::vec4(1.0f, 0.0f, 0.0f, 1.0f)});
-        const Material& mat = _materials.emplace_back(ImageHelper::ImageBinding(texture.Internal(), _sampler.Internal()), matBinding, _staticDescriptorPool);
+        const Material& mat = _materials.emplace_back(_materials[defaultMaterial].BaseColorTex, _materials[defaultMaterial].NormalMapTex, _materials[defaultMaterial].MRAOTex, matBinding, _staticDescriptorPool);
         Renderer xAxis(cube, mat,
             glm::vec3(0.0f, 0.0f, 0.0f),
             glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
@@ -385,7 +397,7 @@ Application::Application() :
 
     {
         BufferHelper::BufferBinding matBinding = materialRegistry.Register({glm::vec4(0.0f, 1.0f, 0.0f, 1.0f)});
-        const Material& mat = _materials.emplace_back(ImageHelper::ImageBinding(texture.Internal(), _sampler.Internal()), matBinding, _staticDescriptorPool);
+        const Material& mat = _materials.emplace_back(_materials[defaultMaterial].BaseColorTex, _materials[defaultMaterial].NormalMapTex, _materials[defaultMaterial].MRAOTex, matBinding, _staticDescriptorPool);
         Renderer yAxis(cube, mat,
             glm::vec3(0.0f, 0.0f, 0.0f),
             glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
@@ -395,7 +407,7 @@ Application::Application() :
 
     {
         BufferHelper::BufferBinding matBinding = materialRegistry.Register({glm::vec4(0.0f, 0.0f, 1.0f, 1.0f)});
-        const auto & mat = _materials.emplace_back(ImageHelper::ImageBinding(texture.Internal(), _sampler.Internal()), matBinding, _staticDescriptorPool);
+        const auto & mat = _materials.emplace_back(_materials[defaultMaterial].BaseColorTex, _materials[defaultMaterial].NormalMapTex, _materials[defaultMaterial].MRAOTex, matBinding, _staticDescriptorPool);
         Renderer zAxis(cube, mat,
             glm::vec3(0.0f, 0.0f, 0.0f),
             glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
@@ -405,7 +417,7 @@ Application::Application() :
 
     {
         BufferHelper::BufferBinding blueMaterialBinding = materialRegistry.Register({glm::vec4(1.0f, 1.0f, 1.0f, 1.0f)});
-        const auto & mat = _materials.emplace_back(ImageHelper::ImageBinding(texture.Internal(), _sampler.Internal()), blueMaterialBinding, _staticDescriptorPool);
+        const auto & mat = _materials.emplace_back(_materials[defaultMaterial].BaseColorTex, _materials[defaultMaterial].NormalMapTex, _materials[defaultMaterial].MRAOTex, blueMaterialBinding, _staticDescriptorPool);
         Renderer zAxis(cube, mat,
             glm::vec3(0.0f, 0.0f, 0.0f),
             glm::quat(1.0f, 0.0f, 0.0f, 0.0f),

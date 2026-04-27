@@ -12,15 +12,17 @@
 struct Material
 {
     public:
-    ImageHelper::ImageBinding AlbedoMap;
+    ImageHelper::ImageBinding BaseColorTex;
+    ImageHelper::ImageBinding NormalMapTex;
+    ImageHelper::ImageBinding MRAOTex;
+
     BufferHelper::BufferBinding PropertyBuffer;
     std::shared_ptr<VkDescriptorSet> DescriptorSet;
 
-    Material( const ImageHelper::ImageBinding& albedoMap, const BufferHelper::BufferBinding& propertyBuffer,
+    Material( const ImageHelper::ImageBinding& baseColorTex, const ImageHelper::ImageBinding& normalMapTex, const ImageHelper::ImageBinding& mraoTex, const BufferHelper::BufferBinding& propertyBuffer,
         const DescriptorPool& materialPool )
-    : AlbedoMap(albedoMap), PropertyBuffer(propertyBuffer)
+    : BaseColorTex(baseColorTex), NormalMapTex(normalMapTex), MRAOTex(mraoTex), PropertyBuffer(propertyBuffer)
     {
-        AlbedoMap = albedoMap;
         DescriptorSet = std::shared_ptr<VkDescriptorSet>(
             new VkDescriptorSet(materialPool.Allocate()),
             [&pool = materialPool](VkDescriptorSet* descriptorSet)
@@ -32,8 +34,8 @@ struct Material
         materialPool.UpdateDescriptorSet(Material::GetDescriptorWrites(*this), {});
     }
 
-    Material( const Material& other ) : AlbedoMap(other.AlbedoMap), DescriptorSet(other.DescriptorSet), PropertyBuffer(other.PropertyBuffer) {}
-    Material( Material&& other ) noexcept : AlbedoMap(std::move(other.AlbedoMap)), DescriptorSet(std::move(other.DescriptorSet)), PropertyBuffer(std::move(other.PropertyBuffer)) {}
+    Material( const Material& other ) : BaseColorTex(other.BaseColorTex), NormalMapTex(other.NormalMapTex), MRAOTex(other.MRAOTex), DescriptorSet(other.DescriptorSet), PropertyBuffer(other.PropertyBuffer) {}
+    Material( Material&& other ) noexcept : BaseColorTex(std::move(other.BaseColorTex)), NormalMapTex(std::move(other.NormalMapTex)), MRAOTex(std::move(other.MRAOTex)), DescriptorSet(std::move(other.DescriptorSet)), PropertyBuffer(std::move(other.PropertyBuffer)) {}
 
     static std::vector<VkDescriptorSetLayoutBinding> GetBindings()
     {
@@ -42,6 +44,20 @@ struct Material
         {{
                 .binding = binding++,
                 .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+                .descriptorCount = 1,
+                .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
+                .pImmutableSamplers = nullptr
+            },
+            {
+                .binding = binding++,
+                .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                .descriptorCount = 1,
+                .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
+                .pImmutableSamplers = nullptr
+            },
+            {
+                .binding = binding++,
+                .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
                 .descriptorCount = 1,
                 .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
                 .pImmutableSamplers = nullptr
@@ -79,10 +95,32 @@ struct Material
                 .dstArrayElement = 0,
                 .descriptorCount = 1,
                 .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-                .pImageInfo = &material.AlbedoMap.Descriptor,
+                .pImageInfo = &material.BaseColorTex.Descriptor,
                 .pBufferInfo = nullptr,
                 .pTexelBufferView = nullptr
             },
+            {
+                .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                .dstSet = *material.DescriptorSet,
+                .dstBinding = binding++,
+                .dstArrayElement = 0,
+                .descriptorCount = 1,
+                .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                .pImageInfo = &material.NormalMapTex.Descriptor,
+                .pBufferInfo = nullptr,
+                .pTexelBufferView = nullptr
+            },
+            {
+                .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+                .dstSet = *material.DescriptorSet,
+                .dstBinding = binding++,
+                .dstArrayElement = 0,
+                .descriptorCount = 1,
+                .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+                .pImageInfo = &material.MRAOTex.Descriptor,
+                .pBufferInfo = nullptr,
+                .pTexelBufferView = nullptr
+            }
         };
     }
 };

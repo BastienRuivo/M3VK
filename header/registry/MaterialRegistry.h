@@ -1,5 +1,6 @@
 #pragma once
 
+#include "glm/ext/vector_float3.hpp"
 #include "glm/ext/vector_float4.hpp"
 #include "application/ApplicationInfo.h"
 #include "registry/Registry.h"
@@ -7,19 +8,23 @@
 
 struct GPUMaterial
 {
-    alignas(16)glm::vec4 Albedo;
+    alignas(16) glm::vec4 BaseColor;
+    alignas(4) float Metallic;
+    alignas(4) float Roughness;
 
     static GPUMaterial Default()
     {
         return
         {
-            .Albedo = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f)
+            .BaseColor = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f),
+            .Metallic = 0.0f,
+            .Roughness = 1.0f
         };
     }
 
     bool operator==(const GPUMaterial& other) const
     {
-        return Albedo == other.Albedo;
+        return BaseColor == other.BaseColor;
     }
 };
 

@@ -124,6 +124,7 @@ class Application
     void UpdateCameraData(uint32_t currentImage);
     void RecordCommandBuffer(const CommandBuffer& cmdBuffer, uint32_t currentFrame, uint32_t imageIndex);
     void DrawFrame();
+    uint32_t LoadDefaultMaterial();
 
     // Utils
     static inline const std::vector<const char*> _deviceExtensions = {
