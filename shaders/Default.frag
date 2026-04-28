@@ -26,4 +26,5 @@ layout(location = 0) out vec4 outColor;
 void main()
 {
     outColor = texture(BaseColorTex, vTexcoords) * _Material.BaseColor;
+    if(outColor.a < 0.1) discard;
 }

@@ -425,11 +425,11 @@ Application::Application() :
         _renderers.push_back(std::move(zAxis));
     }
 
-    Renderer chest = AssetHelper::Load3DModel("data/minecraft-chest/source/chest.fbx", meshRegistry, materialRegistry, _images, _materials, defaultMaterial, _staticDescriptorPool, _graphicsCommandPoolHandler.Internal(), _graphicsQueueHandler.Internal(), _sampler.Internal());
-    _renderers.push_back(std::move(chest));
+    //Renderer chest = AssetHelper::Load3DModel("data/minecraft-chest/source/chest.fbx", meshRegistry, materialRegistry, _images, _materials, defaultMaterial, _staticDescriptorPool, _graphicsCommandPoolHandler.Internal(), _graphicsQueueHandler.Internal(), _sampler.Internal());
+    //_renderers.push_back(std::move(chest));
 
-    //Renderer bistroExterior = AssetHelper::Load3DModel("data/Bistro_v5_2/BistroExterior.fbx", meshRegistry, materialRegistry, _images, _materials, defaultMaterial, _staticDescriptorPool, _graphicsCommandPoolHandler.Internal(), _graphicsQueueHandler.Internal(), _sampler.Internal());
-    //_renderers.push_back(std::move(bistroExterior));
+    Renderer bistroExterior = AssetHelper::Load3DModel("data/Bistro_v5_2/BistroExterior.fbx", meshRegistry, materialRegistry, _images, _materials, defaultMaterial, _staticDescriptorPool, _graphicsCommandPoolHandler.Internal(), _graphicsQueueHandler.Internal(), _sampler.Internal());
+    _renderers.push_back(std::move(bistroExterior));
     for(auto& registry : _registries)
     {
         registry->UploadAndRelease(_graphicsQueueHandler.Internal(), _graphicsCommandPoolHandler.Internal());
@@ -452,12 +452,14 @@ void Application::MainLoop()
 
         float speed = _camera.speed * deltaTime;
 
+        if(_window.IsKeyPressed(GLFW_KEY_LEFT_SHIFT)) speed *= 10.0;
+
         if(_window.IsKeyPressed(GLFW_KEY_W)) _camera.position += speed * _camera.Front();
         if(_window.IsKeyPressed(GLFW_KEY_S)) _camera.position -= speed * _camera.Front();
         if(_window.IsKeyPressed(GLFW_KEY_A)) _camera.position -= speed * glm::normalize(glm::cross(_camera.Front(), _camera.Up()));
         if(_window.IsKeyPressed(GLFW_KEY_D)) _camera.position += speed * glm::normalize(glm::cross(_camera.Front(), _camera.Up()));
-        if(_window.IsKeyPressed(GLFW_KEY_SPACE)) _camera.position += speed * _camera.Up();
-        if(_window.IsKeyPressed(GLFW_KEY_LEFT_SHIFT)) _camera.position -= speed * _camera.Up();
+        if(_window.IsKeyPressed(GLFW_KEY_E)) _camera.position += speed * _camera.Up();
+        if(_window.IsKeyPressed(GLFW_KEY_Q)) _camera.position -= speed * _camera.Up();
 
         if(_window.IsKeyPressed(GLFW_KEY_ESCAPE)) shouldClose = true;
 
