@@ -71,7 +71,7 @@ VkFormat CPUImage::GetGPUFormat() const
     switch (_channels)
     {
         case STBI_rgb_alpha: return VK_FORMAT_R8G8B8A8_SRGB;
-        case STBI_rgb: return VK_FORMAT_R8G8B8_SRGB;
+        case STBI_rgb: return VK_FORMAT_R8G8B8A8_SRGB; //24 bit texture are  not supported everywhere
         default: throw std::runtime_error("Unimplemented Color Format");
     }
 }
