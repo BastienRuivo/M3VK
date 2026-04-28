@@ -2,6 +2,7 @@
 #include "application/ApplicationInfo.h"
 #include "libs/tinyddsloader.h"
 #include "rendering/GPUImage.h"
+#include <cmath>
 #include <cstdint>
 #include <vulkan/vulkan_core.h>
 
@@ -166,5 +167,19 @@ VkFormat ImageHelper::DXGIToVkFormat(tinyddsloader::DDSFile::DXGIFormat format)
         case tinyddsloader::DDSFile::DXGIFormat::BC7_UNorm_SRGB: return VK_FORMAT_BC7_SRGB_BLOCK;
 
         default: return VK_FORMAT_UNDEFINED;
+    }
+}
+
+uint32_t ImageHelper::GetMipCount(uint32_t width, uint32_t height) {
+    return static_cast<uint32_t>(std::floor(std::log2(std::max(width, height)))) + 1;
+}
+
+uint32_t ImageHelper::GetBytePerPixel(VkFormat format)
+{
+    switch (format)
+    {
+        case VK_FORMAT_R8G8B8A8_SRGB: return 4;
+        case VK_FORMAT_R8G8B8A8_UNORM: return 4;
+        default: return 0;
     }
 }

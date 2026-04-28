@@ -6,6 +6,10 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 include(FetchContent)
+enable_language(ISPC)
+find_program(ISPC_BIN ispc REQUIRED)
+set(ISPC_COMPILER_LOCATION ${ISPC_BIN} CACHE PATH "Path to ISPC compiler for texcomp")
+set(ISPC_COMPILER_TARGET "avx2" CACHE STRING "Target ISA")
 
 # --- Dependencies ---
 
@@ -54,7 +58,13 @@ fetchcontent_declare(
     GIT_TAG        v6.0.4 # Use a stable tagged release
 )
 
-fetchcontent_makeavailable(glfw stb glm assimp)
+fetchcontent_declare(
+    ispc_texcomp_repo
+    GIT_REPOSITORY https://github.com/BeardyKing/ispc_texture_compressor_cmake.git
+    GIT_TAG        master
+)
+
+fetchcontent_makeavailable(glfw stb glm assimp ispc_texcomp_repo)
 
 # --- Interface Library Setup ---
 
@@ -139,6 +149,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     stb
     glm::glm
     assimp::assimp
+    ispc_texture_compressor
 )
 
 # --- Asset Management ---

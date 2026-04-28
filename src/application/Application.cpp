@@ -322,7 +322,7 @@ Application::Application() :
             VkDescriptorSetLayoutBinding{ 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT, nullptr },
         }
     ), ApplicationInfo::Constant::MaxFrameInCount),
-    _staticDescriptorPool(Material::GetBindings(), 255),
+    _staticDescriptorPool(Material::GetBindings(), 1024),
     _pipelineLayoutHandler(std::initializer_list<VkDescriptorSetLayout>(
         {
             _dynamicDescriptorPool.Layout(),
@@ -425,11 +425,15 @@ Application::Application() :
         _renderers.push_back(std::move(zAxis));
     }
 
-    //Renderer chest = AssetHelper::Load3DModel("data/minecraft-chest/source/chest.fbx", meshRegistry, materialRegistry, _images, _materials, defaultMaterial, _staticDescriptorPool, _graphicsCommandPoolHandler.Internal(), _graphicsQueueHandler.Internal(), _sampler.Internal());
-    //_renderers.push_back(std::move(chest));
+    Renderer chest = AssetHelper::Load3DModel("data/minecraft-chest/source/chest.fbx", meshRegistry, materialRegistry, _images, _materials, defaultMaterial, _staticDescriptorPool, _graphicsCommandPoolHandler.Internal(), _graphicsQueueHandler.Internal(), _sampler.Internal());
+    _renderers.push_back(std::move(chest));
 
-    Renderer bistroExterior = AssetHelper::Load3DModel("data/Bistro_v5_2/BistroExterior.fbx", meshRegistry, materialRegistry, _images, _materials, defaultMaterial, _staticDescriptorPool, _graphicsCommandPoolHandler.Internal(), _graphicsQueueHandler.Internal(), _sampler.Internal());
-    _renderers.push_back(std::move(bistroExterior));
+    // Renderer bistroExterior = AssetHelper::Load3DModel("data/Bistro_v5_2/BistroExterior.fbx", meshRegistry, materialRegistry, _images, _materials, defaultMaterial, _staticDescriptorPool, _graphicsCommandPoolHandler.Internal(), _graphicsQueueHandler.Internal(), _sampler.Internal());
+    // _renderers.push_back(std::move(bistroExterior));
+
+    // Renderer bistroInterior = AssetHelper::Load3DModel("data/Bistro_v5_2/BistroInterior.fbx", meshRegistry, materialRegistry, _images, _materials, defaultMaterial, _staticDescriptorPool, _graphicsCommandPoolHandler.Internal(), _graphicsQueueHandler.Internal(), _sampler.Internal());
+    // _renderers.push_back(std::move(bistroInterior));
+
     for(auto& registry : _registries)
     {
         registry->UploadAndRelease(_graphicsQueueHandler.Internal(), _graphicsCommandPoolHandler.Internal());

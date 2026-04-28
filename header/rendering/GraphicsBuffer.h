@@ -9,7 +9,14 @@ class StageBuffer
 {
     friend class GraphicsBuffer;
     public:
-    StageBuffer(VkDeviceSize size);
+
+    enum Usage
+    {
+        Upload,
+        Readback
+    };
+
+    StageBuffer(VkDeviceSize size, Usage usage);
     ~StageBuffer();
 
     StageBuffer(StageBuffer&& other) noexcept;
@@ -22,11 +29,13 @@ class StageBuffer
     void Unmap();
 
     void MapAndCopyToBuffer(void* srcData, VkDeviceSize copySize);
+    void MapAndCopyToData(void* dstData, VkDeviceSize copySize);
     inline VkBuffer Internal() const { return _internal; };
 
     private:
     VkBuffer _internal = VK_NULL_HANDLE;
     VkDeviceMemory _memoryInternal = VK_NULL_HANDLE;
+    Usage _usage;
 };
 
 

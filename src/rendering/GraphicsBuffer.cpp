@@ -7,13 +7,13 @@
 #include <stdexcept>
 #include <vulkan/vulkan_core.h>
 
-StageBuffer::StageBuffer(VkDeviceSize size)
+StageBuffer::StageBuffer(VkDeviceSize size, Usage bufferUsage)
 {
 #ifdef M3VK_MEMORYLOG
     DebugLayer::Log(DebugLayer::LogType::CREATE, "StageBuffer creation !");
 #endif
 
-    VkBufferUsageFlags usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+    VkBufferUsageFlags usage = bufferUsage == Upload ? VK_BUFFER_USAGE_TRANSFER_SRC_BIT : VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 
     VkBufferCreateInfo info
     {
@@ -65,6 +65,17 @@ void StageBuffer::MapAndCopyToBuffer(void* srcData, VkDeviceSize copySize)
     memcpy(data, srcData, (size_t)copySize);
     vkUnmapMemory(ApplicationInfo::Device(), _memoryInternal);
 };
+
+void StageBuffer::MapAndCopyToData(void* dstData, VkDeviceSize copySize)
+{
+    void* data;
+    if(vkMapMemory(ApplicationInfo::Device(), _memoryInternal, 0, copySize, 0, &data) != VK_SUCCESS)
+    {
+        throw std::runtime_error("Failed to map stage buffer memory");
+    }
+    memcpy(dstData, data, (size_t)copySize);
+    vkUnmapMemory(ApplicationInfo::Device(), _memoryInternal);
+}
 
 void* StageBuffer::Map(VkDeviceSize offset, VkDeviceSize size)
 {
@@ -219,7 +230,7 @@ void GraphicsBuffer::CopyToBuffer(const VkQueue& queue,
     uint32_t srcIndex,
     uint32_t dstIndex)
 {
-    StageBuffer copyBuffer(size);
+    StageBuffer copyBuffer(size, StageBuffer::Usage::Upload);
     copyBuffer.MapAndCopyToBuffer(srcData, size);
 
     CommandBuffer cmdBuffer(pool, queue);

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
 #include <stb_image.h>
 #include "asset/CPUImage.h"
@@ -16,6 +17,7 @@ struct ImageReference
     uint32_t Width = 0;
     uint32_t Height = 0;
     uint32_t MipCount = 0;
+    size_t Size = 0;
 };
 
 class GPUAllocatedImage
@@ -35,7 +37,6 @@ class GPUAllocatedImage
     GPUAllocatedImage(const GPUAllocatedImage&) = delete;
     GPUAllocatedImage& operator=(const GPUAllocatedImage&) = delete;
 
-    void Upload(void* data, uint32_t width, uint32_t height, uint32_t mipLevel, uint32_t pixelStride, VkCommandPool pool, VkQueue queue);
     void UploadAndGenerateMip(void* data, uint32_t width, uint32_t height, uint32_t pixelStride, VkCommandPool pool, VkQueue queue);
     void TransitionLayout(VkCommandPool pool, VkQueue queue, VkImageLayout oldLayout, VkImageLayout newLayout) const;
     void GenerateMipmapsCommand(const CommandBuffer& cmdBuffer) const;

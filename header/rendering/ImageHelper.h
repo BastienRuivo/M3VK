@@ -33,4 +33,6 @@ namespace ImageHelper
     void GenerateMipmapsCommand(const CommandBuffer& cmdBuffer, const ImageReference& image);
 
     VkFormat DXGIToVkFormat(tinyddsloader::DDSFile::DXGIFormat dxgiFormat);
+    uint32_t GetMipCount(uint32_t width, uint32_t height);
+    uint32_t GetBytePerPixel(VkFormat format);
 }

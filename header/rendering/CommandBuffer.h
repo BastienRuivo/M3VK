@@ -90,6 +90,11 @@ class CommandBuffer
         vkCmdCopyBufferToImage(_internal, buffer, image, layout, regionCount, pRegions);
     }
 
+    inline void CopyImageToBuffer(VkImage image, VkImageLayout layout, VkBuffer buffer, VkBufferImageCopy* pRegions, int regionCount) const
+    {
+        vkCmdCopyImageToBuffer(_internal, image, layout, buffer, regionCount, pRegions);
+    }
+
     inline void CopyBuffer(VkBuffer src, VkBuffer dst, VkDeviceSize size, VkBufferCopy* pRegions, int regionCount)
     {
         vkCmdCopyBuffer(_internal, src, dst, regionCount, pRegions);

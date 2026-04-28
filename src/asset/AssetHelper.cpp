@@ -1,10 +1,7 @@
 #include "asset/AssetHelper.h"
 #include "application/DebugLayer.h"
-#include "assimp/Importer.hpp"
-#include "assimp/defs.h"
+#include "asset/AssetExporter.h"
 #include "assimp/material.h"
-#include "assimp/postprocess.h"
-#include "assimp/scene.h"
 #include <cstdint>
 #include <span>
 #include <filesystem>
@@ -14,8 +11,10 @@
 
 #include "assimp/types.h"
 #include "glm/ext/vector_float3.hpp"
-#include "libs/tinyddsloader.h"
+#include "rendering/BufferHelper.h"
+#include "rendering/CommandBuffer.h"
 #include "rendering/GPUImage.h"
+#include "rendering/GraphicsBuffer.h"
 #include "rendering/ImageHelper.h"
 
 aiTextureType AssetHelper::SelectTextureType(std::span<const aiTextureType> types, const aiMaterial* material, uint32_t& textureCount)
@@ -32,7 +31,7 @@ aiTextureType AssetHelper::SelectTextureType(std::span<const aiTextureType> type
     return aiTextureType::aiTextureType_NONE;
 }
 
-std::filesystem::path GetTexturePath(const std::filesystem::path& modelPath)
+std::filesystem::path AssetHelper::GetTexturePath(const std::filesystem::path& modelPath)
 {
     int pathIndex = 0;
     const int modelRoot = 1;
@@ -51,60 +50,66 @@ std::filesystem::path GetTexturePath(const std::filesystem::path& modelPath)
     return texturePath / "textures";
 }
 
-ImageHelper::ImageBinding AssetHelper::LoadTexture(const aiMaterial* material, std::vector<GPUAllocatedImage> & textures, const std::filesystem::path rootPath, std::span<const aiTextureType> types, bool& hasFoundTexture, const ImageHelper::ImageBinding & fallback, VkSampler sampler, VkCommandPool uploadPool, VkQueue uploadQueue)
+ImageHelper::ImageBinding AssetHelper::LoadTexture(AssetExporter& exporter, uint32_t textureIndex, std::vector<GPUAllocatedImage> & textures, VkSampler sampler, VkCommandPool uploadPool, VkQueue uploadQueue)
 {
-    uint32_t textureCount = 0;
-    aiTextureType textureType = SelectTextureType(types, material, textureCount);
+    auto & texture = exporter.Textures[textureIndex];
+    GPUAllocatedImage gpuTexture(texture.Width, texture.Height, texture.MipCount, texture.Format,
+    VK_IMAGE_TILING_OPTIMAL,
+    VK_IMAGE_USAGE_TRANSFER_SRC_BIT |VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
-    if(textureCount == 0) return fallback;
+    VkBufferImageCopy copyRegion[16];
 
-
-    aiString path;
-    material->GetTexture(textureType, 0, &path);
-
-    if(path.length == 0)
+    uint32_t offset = 0;
+    for (uint32_t i = 0; i < texture.MipCount; i++)
     {
-        DebugLayer::Log(DebugLayer::LogType::WARNING, "Found a texture with a 0 length path");
-        return fallback;
-    }
-
-
-    std::string rawPath = path.C_Str();
-    std::replace(rawPath.begin(), rawPath.end(), '\\', '/');
-    std::filesystem::path texturePath(rawPath);
-    texturePath = texturePath.filename();
-    texturePath = rootPath / texturePath;
-    texturePath = texturePath.lexically_normal();
-
-
-    if(!std::filesystem::exists(texturePath))
-    {
-        DebugLayer::Log(DebugLayer::LogType::WARNING, "Path does not exist " + texturePath.string());
-        return fallback;
-    }
-    else if(texturePath.extension() == ".dds") // handle compressed textures directly
-    {
-        tinyddsloader::DDSFile dds;
-        auto ret = dds.Load(texturePath.string().c_str());
-        if(ret != tinyddsloader::Result::Success)
+        auto& mip = exporter.Textures[textureIndex + i];
+        copyRegion[i] =
         {
-            DebugLayer::Log(DebugLayer::LogType::WARNING, "Failed to load compressed texture " + texturePath.string());
-            return fallback;
-        }
+            .bufferOffset = offset,
+            .imageSubresource =
+            {
+                .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                .mipLevel = i,
+                .baseArrayLayer = 0,
+                .layerCount = 1
+            },
+            .imageOffset =
+            {
+                .x = 0,
+                .y = 0,
+                .z = 0
+            },
+            .imageExtent =
+            {
+                .width = static_cast<uint32_t>(mip.Width),
+                .height = static_cast<uint32_t>(mip.Height),
+                .depth = 1
+            }
+        };
+        offset += mip.Size;
+    }
 
-        auto& texture = textures.emplace_back(dds, uploadPool, uploadQueue);
-        hasFoundTexture = true;
-        return ImageHelper::ImageBinding(texture.Internal(), sampler);
-    }
-    else
+    StageBuffer stagingBuffer(offset, StageBuffer::Usage::Upload);
+    stagingBuffer.MapAndCopyToBuffer(exporter.TextureDatas.data() + texture.Offset, offset);
+
+    CommandBuffer cmdBuffer(uploadPool, uploadQueue);
+    cmdBuffer.BeginSingleTime();
     {
-        auto& texture = textures.emplace_back(CPUImage(texturePath, STBI_rgb_alpha), uploadPool, uploadQueue);
-        hasFoundTexture = true;
-        return ImageHelper::ImageBinding(texture.Internal(), sampler);
+
+        ImageHelper::TransitionLayoutCommand(cmdBuffer, gpuTexture.Internal(), 0, texture.MipCount, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+        cmdBuffer.CopyBufferToImage(stagingBuffer.Internal(), gpuTexture.Internal().Image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, copyRegion, texture.MipCount);
+        ImageHelper::TransitionLayoutCommand(cmdBuffer, gpuTexture.Internal(), 0, texture.MipCount, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
     }
+    cmdBuffer.End();
+    cmdBuffer.WaitCompletion();
+
+    ImageHelper::ImageBinding binding = ImageHelper::ImageBinding(gpuTexture.Internal(), sampler);
+    textures.push_back(std::move(gpuTexture));
+    return binding;
 }
 
-void DebugListMaterialTextures(aiMaterial* material) {
+void AssetHelper::DebugListMaterialTextures(aiMaterial* material) {
     // Iterate through all possible Assimp texture types
     for (unsigned int type = aiTextureType_NONE; type < AI_TEXTURE_TYPE_MAX; ++type)
     {
@@ -122,143 +127,45 @@ void DebugListMaterialTextures(aiMaterial* material) {
     }
 }
 
-Renderer AssetHelper::Load3DModel(const std::string & modelPath, MeshRegistry & meshRegistry, MaterialRegistry & materialRegistry, std::vector<GPUAllocatedImage> & textures, std::vector<Material> & materials, int defaultMaterial, DescriptorPool& descriptorPool, VkCommandPool cmdPool, VkQueue queue, VkSampler sampler)
+Renderer AssetHelper::Load3DModel(const std::string & modelPath, MeshRegistry & meshRegistry, MaterialRegistry & materialRegistry, std::vector<GPUAllocatedImage> & textures, std::vector<Material> & materials, int defaultMaterial, DescriptorPool& descriptorPool, VkCommandPool uploadPool, VkQueue uploadQueue, VkSampler sampler)
 {
-    std::chrono::high_resolution_clock::time_point t1 = std::chrono::high_resolution_clock::now();
-
-    DebugLayer::Log(DebugLayer::LogType::INFO, "Loading model: " + modelPath);
-
-    Assimp::Importer importer;
-
-    const aiScene* scene = importer.ReadFile(modelPath,
-        aiProcess_Triangulate
-        | aiProcess_JoinIdenticalVertices
-        | aiProcess_SortByPType
-        | aiProcess_GenUVCoords
-        | aiProcess_FlipUVs
-        | aiProcess_GlobalScale     // Handles FBX unit scaling (cm to m)
-        | aiProcess_PreTransformVertices // Collapses the node hierarchy into the verticess
-        | aiProcess_GenNormals
-    );
-
-    if(scene == nullptr)
-    {
-        DebugLayer::Log(DebugLayer::LogType::ERROR, importer.GetErrorString());
-        DebugLayer::Log(DebugLayer::LogType::ERROR, "Can't open " + std::string(std::filesystem::current_path()) + "/" + modelPath);
-        throw std::runtime_error(importer.GetErrorString());
-    }
+    AssetExporter exporter = AssetExporter::Load3DModel(modelPath, uploadPool, uploadQueue);
+    AssetExporter::Write(exporter);
 
     int materialOffset = materials.size();
     std::filesystem::path textureRootPath = GetTexturePath(modelPath);
 
-    std::chrono::high_resolution_clock::time_point t2 = std::chrono::high_resolution_clock::now();
-    DebugLayer::Log(DebugLayer::LogType::INFO, "Loaded model in " + std::to_string(std::chrono::duration_cast<std::chrono::seconds>(t2 - t1).count()) + "s");
-    DebugLayer::Log(DebugLayer::LogType::INFO, "Found " + std::to_string(scene->mNumMaterials) + " materials in model");
-
-    for(unsigned int i = 0; i < scene->mNumMaterials; i++)
+    for(unsigned int i = 0; i < exporter.Header.MaterialCount; i++)
     {
-        aiMaterial* material = scene->mMaterials[i];
+        const auto & material = exporter.Materials[i];
+        GPUMaterial gpuMaterial = material.MaterialProperties;
 
+        BufferHelper::BufferBinding materialBinding = materialRegistry.Register(gpuMaterial);
+        ImageHelper::ImageBinding baseColorBinding = material.BaseColorTexId == UINT32_MAX ? materials[defaultMaterial].BaseColorTex : LoadTexture(exporter, material.BaseColorTexId, textures, sampler, uploadPool, uploadQueue);
+        ImageHelper::ImageBinding normalBinding = material.NormalMapTexId == UINT32_MAX ? materials[defaultMaterial].NormalMapTex : LoadTexture(exporter, material.NormalMapTexId, textures, sampler, uploadPool, uploadQueue);
+        ImageHelper::ImageBinding mraoBinding = material.MRAOTexId == UINT32_MAX ? materials[defaultMaterial].MRAOTex : LoadTexture(exporter, material.MRAOTexId, textures, sampler, uploadPool, uploadQueue);
 
-
-        // get base color value
-        aiColor4D color;
-        material->Get(AI_MATKEY_COLOR_DIFFUSE, color);
-
-        ai_real metallic;
-        material->Get(AI_MATKEY_METALLIC_FACTOR, metallic);
-
-        ai_real roughness;
-        material->Get(AI_MATKEY_ROUGHNESS_FACTOR, roughness);
-
-
-        GPUMaterial gpuMaterial
-        {
-            .BaseColor = glm::vec4(static_cast<float>(color.r),
-                static_cast<float>(color.g),
-                static_cast<float>(color.b),
-                static_cast<float>(color.a)),
-            .Metallic = static_cast<float>(metallic),
-            .Roughness = static_cast<float>(roughness)
-        };
-
-        bool hasProperties = gpuMaterial != GPUMaterial::Default();
-
-#if M3VK_VERBOSE_LOG
-        DebugListMaterialTextures(material);
-#endif
-        bool hasTexture = false;
-
-        ImageHelper::ImageBinding baseColorTex = LoadTexture(material, textures, textureRootPath, {{ aiTextureType::aiTextureType_BASE_COLOR, aiTextureType::aiTextureType_DIFFUSE }}, hasTexture, materials[defaultMaterial].BaseColorTex, sampler, cmdPool, queue);
-        ImageHelper::ImageBinding normalMapTex = LoadTexture(material, textures, textureRootPath, {{ aiTextureType::aiTextureType_NORMALS }}, hasTexture, materials[defaultMaterial].NormalMapTex, sampler, cmdPool, queue);
-        ImageHelper::ImageBinding mraoTex = LoadTexture(material, textures, textureRootPath, {{ aiTextureType::aiTextureType_AMBIENT_OCCLUSION }}, hasTexture, materials[defaultMaterial].MRAOTex, sampler, cmdPool, queue);
-
-        if(!hasTexture && !hasProperties)
-        {
-            DebugLayer::Log(DebugLayer::LogType::WARNING, "Fallback to default material for material at index " + std::to_string(i) + " of object " + modelPath);
-            materials.emplace_back(materials[defaultMaterial]);
-        }
-        else
-        {
-            BufferHelper::BufferBinding binding = materialRegistry.Register(gpuMaterial);
-            materials.emplace_back(baseColorTex, normalMapTex, mraoTex, binding, descriptorPool);
-        }
+        materials.emplace_back(baseColorBinding, normalBinding, mraoBinding, materialBinding, descriptorPool);
     }
 
     std::chrono::high_resolution_clock::time_point t3 = std::chrono::high_resolution_clock::now();
 
-    DebugLayer::Log(DebugLayer::LogType::INFO, "Loaded materials in " + std::to_string(std::chrono::duration_cast<std::chrono::seconds>(t3 - t2).count()) + "s");
-
     std::vector<SubMesh> subMeshes;
     Renderer renderer(glm::vec3(0.0f), glm::vec3(0.0f), glm::vec3(1.0f));
 
-    uint32_t meshCount = scene->mNumMeshes;
-    uint32_t vertexCount = 0;
-    uint32_t indexCount = 0;
-    for(unsigned int i = 0; i < scene->mNumMeshes; i++)
+    uint32_t meshCount = exporter.Header.SubMeshCount;
+    for(unsigned int i = 0; i < meshCount; i++)
     {
-        const aiMesh* mesh = scene->mMeshes[i];
-        std::vector<Vertex> vertices(mesh->mNumVertices);
-        std::vector<uint32_t> indices(mesh->mNumFaces * 3);
+        const auto & mesh = exporter.SubMeshes[i];
 
-        vertexCount += mesh->mNumVertices;
-        indexCount += mesh->mNumFaces * 3;
-
-        bool hasTexcoords = mesh->HasTextureCoords(0);
-        bool hasNormals = mesh->HasNormals();
-
-        for(unsigned int j = 0; j < mesh->mNumVertices; j++)
-        {
-            vertices[j].pos = glm::vec3(mesh->mVertices[j].x, mesh->mVertices[j].y, mesh->mVertices[j].z);
-
-            if(hasNormals)
-            {
-                vertices[j].normal = glm::vec3(mesh->mNormals[j].x, mesh->mNormals[j].y, mesh->mNormals[j].z);
-            }
-            else
-            {
-                // TODO: Compute smooth normal in this case
-                vertices[j].normal = glm::vec3(0, 1, 0);
-            }
-            vertices[j].texCoord = hasTexcoords ? glm::vec2(mesh->mTextureCoords[0][j].x, mesh->mTextureCoords[0][j].y) : glm::vec2(0.0f);
-        }
-
-        for(unsigned int j = 0; j < mesh->mNumFaces; j++)
-        {
-            aiFace face = mesh->mFaces[j];
-            indices[j * 3 + 0] = face.mIndices[0];
-            indices[j * 3 + 1] = face.mIndices[1];
-            indices[j * 3 + 2] = face.mIndices[2];
-        }
+        std::span<const Vertex> vertices(exporter.VertexDatas.data() + mesh.VertexOffset, mesh.VertexCount);
+        std::span<const uint32_t> indices(exporter.IndexDatas.data() + mesh.IndexOffset, mesh.IndexCount);
 
         SubMesh submesh = meshRegistry.Register(vertices, indices);
         subMeshes.push_back(submesh);
 
         renderer.AddMesh(submesh, materials[materialOffset + i]);
     }
-
-    DebugLayer::Log(DebugLayer::LogType::INFO, "Loaded " + std::to_string(subMeshes.size()) + " submeshes with " + std::to_string(vertexCount) + " vertices and " + std::to_string(indexCount) + " indices in " + std::to_string(std::chrono::duration_cast<std::chrono::seconds>(t3 - t2).count()) + "s");
-    DebugLayer::Log(DebugLayer::LogType::INFO, "Loaded model in " + std::to_string(std::chrono::duration_cast<std::chrono::seconds>(t3 - t1).count()) + "s");
 
     return renderer;
 }
