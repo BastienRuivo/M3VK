@@ -293,9 +293,9 @@ uint32_t Application::LoadDefaultMaterial()
 
     auto& baseColorTex = _images.emplace_back(CPUImage("data/default/BaseColor.png", STBI_rgb_alpha), _graphicsCommandPoolHandler.Internal(), _graphicsQueueHandler.Internal());
     ImageHelper::ImageBinding baseColorBind = ImageHelper::ImageBinding(baseColorTex.Internal(), _sampler.Internal());
-    auto& normalMapTex = _images.emplace_back(CPUImage("data/default/BaseNormal.png", STBI_rgb), _graphicsCommandPoolHandler.Internal(), _graphicsQueueHandler.Internal());
+    auto& normalMapTex = _images.emplace_back(CPUImage("data/default/BaseNormal.png", STBI_rgb_alpha), _graphicsCommandPoolHandler.Internal(), _graphicsQueueHandler.Internal());
     ImageHelper::ImageBinding normalBind = ImageHelper::ImageBinding(normalMapTex.Internal(), _sampler.Internal());
-    auto& mraoTex = _images.emplace_back(CPUImage("data/default/BaseMRAO.png", STBI_rgb), _graphicsCommandPoolHandler.Internal(), _graphicsQueueHandler.Internal());
+    auto& mraoTex = _images.emplace_back(CPUImage("data/default/BaseMRAO.png", STBI_rgb_alpha), _graphicsCommandPoolHandler.Internal(), _graphicsQueueHandler.Internal());
     ImageHelper::ImageBinding mraoBind = ImageHelper::ImageBinding(mraoTex.Internal(), _sampler.Internal());
 
     BufferHelper::BufferBinding defaultMaterialBinding = materialRegistry.Register(GPUMaterial::Default());
@@ -428,8 +428,8 @@ Application::Application() :
     Renderer chest = AssetHelper::Load3DModel("data/minecraft-chest/source/chest.fbx", meshRegistry, materialRegistry, _images, _materials, defaultMaterial, _staticDescriptorPool, _graphicsCommandPoolHandler.Internal(), _graphicsQueueHandler.Internal(), _sampler.Internal());
     _renderers.push_back(std::move(chest));
 
-    Renderer bistroExterior = AssetHelper::Load3DModel("data/Bistro_v5_2/BistroExterior.fbx", meshRegistry, materialRegistry, _images, _materials, defaultMaterial, _staticDescriptorPool, _graphicsCommandPoolHandler.Internal(), _graphicsQueueHandler.Internal(), _sampler.Internal());
-    _renderers.push_back(std::move(bistroExterior));
+    //Renderer bistroExterior = AssetHelper::Load3DModel("data/Bistro_v5_2/BistroExterior.fbx", meshRegistry, materialRegistry, _images, _materials, defaultMaterial, _staticDescriptorPool, _graphicsCommandPoolHandler.Internal(), _graphicsQueueHandler.Internal(), _sampler.Internal());
+    //_renderers.push_back(std::move(bistroExterior));
     for(auto& registry : _registries)
     {
         registry->UploadAndRelease(_graphicsQueueHandler.Internal(), _graphicsCommandPoolHandler.Internal());
