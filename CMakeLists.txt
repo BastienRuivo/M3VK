@@ -6,10 +6,20 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 include(FetchContent)
+
 enable_language(ISPC)
 find_program(ISPC_BIN ispc REQUIRED)
-set(ISPC_COMPILER_LOCATION ${ISPC_BIN} CACHE PATH "Path to ISPC compiler for texcomp")
-set(ISPC_COMPILER_TARGET "avx2" CACHE STRING "Target ISA")
+
+set(ISPC_WRAPPER "${CMAKE_BINARY_DIR}/ispc_wrapper.sh")
+file(WRITE ${ISPC_WRAPPER} "#!/bin/sh\n${ISPC_BIN} --pic \"$@\"\n")
+execute_process(COMMAND chmod +x ${ISPC_WRAPPER})
+
+set(ISPC_COMPILER_LOCATION "${ISPC_WRAPPER}" CACHE PATH "Path to ISPC wrapper" FORCE)
+
+set(ISPC_COMPILER_TARGET "avx2" CACHE STRING "Target ISA" FORCE)
+set(CMAKE_ISPC_COMPILER_TARGET "avx2" CACHE STRING "Target ISA" FORCE)
+
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 # --- Dependencies ---
 
@@ -34,20 +44,17 @@ fetchcontent_declare(
     GIT_TAG        1.0.3
 )
 
-# Force internal dependencies to resolve "unzip.h" and "zlib.h" issues
 set(ASSIMP_BUILD_ZLIB ON CACHE INTERNAL "")
 set(ASSIMP_FORCE_INTERNAL_ZLIB ON CACHE INTERNAL "")
 set(ASSIMP_BUILD_MINIZIP ON CACHE INTERNAL "")
 set(CMAKE_POLICY_DEFAULT_CMP0074 NEW) # Respect ZLIB_ROOT if set
 
-# Disable unnecessary components to speed up the massive Assimp build
 set(ASSIMP_BUILD_TESTS OFF CACHE INTERNAL "")
 set(ASSIMP_INSTALL OFF CACHE INTERNAL "")
 set(ASSIMP_BUILD_ASSIMP_TOOLS OFF CACHE INTERNAL "")
 set(ASSIMP_BUILD_SAMPLES OFF CACHE INTERNAL "")
 set(ASSIMP_BUILD_CACHED_INTERFACES OFF CACHE INTERNAL "")
 
-# Only build the importers you actually use
 set(ASSIMP_BUILD_ALL_IMPORTERS_BY_DEFAULT OFF CACHE INTERNAL "")
 set(ASSIMP_BUILD_OBJ_IMPORTER ON CACHE INTERNAL "")
 set(ASSIMP_BUILD_FBX_IMPORTER ON CACHE INTERNAL "")

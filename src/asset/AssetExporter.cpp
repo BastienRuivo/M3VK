@@ -3,7 +3,6 @@
 #include <cstdio>
 
 #include "asset/AssetExporter.h"
-#include "application/ApplicationInfo.h"
 #include "application/DebugLayer.h"
 #include "asset/AssetHelper.h"
 #include "asset/CPUImage.h"
@@ -20,10 +19,44 @@
 #include <cstdint>
 #include <cstring>
 #include <string>
+#include <sys/stat.h>
+#include <vector>
 #include <vulkan/vulkan_core.h>
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include <stb_image_write.h>
+
+#include <ispc_texcomp.h>
+
+size_t BC7Compress(void* data, uint32_t size, std::vector<std::byte> &textureDatas, uint32_t width, uint32_t height, uint32_t depth, uint32_t channels)
+{
+    uint32_t blockXCount = (width + 3) / 4;
+    uint32_t blockYCount = (height + 3) / 4;
+
+    bc7_enc_settings settings;
+    GetProfile_ultrafast(&settings);
+
+    rgba_surface surface
+    {
+        .ptr = static_cast<uint8_t *>(data),
+        .width = static_cast<int32_t>(width),
+        .height = static_cast<int32_t>(height),
+        .stride = static_cast<int32_t>(width * channels)
+    };
+
+    uint32_t offset = static_cast<uint32_t>(textureDatas.size());
+
+    uint32_t compressedSize = blockXCount * blockYCount * 16;
+    textureDatas.resize(textureDatas.size() + compressedSize);
+
+    int gain = (1.0f - (compressedSize / static_cast<float>(width * height * channels))) * 100;
+
+    DebugLayer::Log(DebugLayer::LogType::INFO, "Compressing texture " + std::to_string(width) + "x" + std::to_string(height) + "x" + std::to_string(depth) + " with " + std::to_string(channels) + " channels with a gain of " + std::to_string(gain) + "%");
+
+    uint8_t* blockData = (uint8_t*)textureDatas.data() + offset;
+    CompressBlocksBC7(&surface, blockData, &settings);
+    return compressedSize;
+}
 
 uint32_t AssetExporter::LoadTexture(const aiMaterial* material, const std::filesystem::path rootPath, std::span<const aiTextureType> types, std::vector<std::byte>& textureDatas, std::vector<TextureExport>& textures, VkCommandPool uploadPool, VkQueue uploadQueue)
 {
@@ -202,7 +235,8 @@ uint32_t AssetExporter::LoadTexture(const aiMaterial* material, const std::files
         mip0.Size = mip0.Width * mip0.Height * bytePerPixel;
         textures[textureIndex] = mip0;
 
-        textureDatas.resize(textureDatas.size() + size);
+        std::byte * uncompressedData = new std::byte[size];
+
         void* data = textureDatas.data() + mip0.Offset;
 
         StageBuffer stagingBuffer(size, StageBuffer::Usage::Readback);
@@ -217,7 +251,21 @@ uint32_t AssetExporter::LoadTexture(const aiMaterial* material, const std::files
         cmdBuffer.End();
         cmdBuffer.WaitCompletion();
 
-        stagingBuffer.MapAndCopyToData(data, size);
+        stagingBuffer.MapAndCopyToData(uncompressedData, size);
+
+        size_t compressedOffset = mip0.Offset;
+        for(uint32_t i = 0; i < mip0.MipCount; i++)
+        {
+            auto & texture = textures[textureIndex + i];
+            size_t compressedSize = BC7Compress(uncompressedData + texture.Offset, texture.Size, textureDatas, texture.Width, texture.Height, 1, ImageHelper::GetBytePerPixel(texture.Format));
+
+            texture.Format = VK_FORMAT_BC7_SRGB_BLOCK;
+            texture.Offset = compressedOffset;
+            texture.Size = compressedSize;
+
+            compressedOffset += compressedSize;
+        }
+
         return textureIndex;
     }
 }
@@ -231,7 +279,7 @@ AssetExporter AssetExporter::Load3DModel(const std::string & modelPath, VkComman
 
         DebugLayer::Log(DebugLayer::LogType::INFO, "Loading model: " + modelPath + " from " + exporter.ExportPath.string());
 
-    if(AssetExporter::Load(exporter))
+    if(AssetExporter::Load(exporter) && false)
     {
         std::chrono::high_resolution_clock::time_point t2 = std::chrono::high_resolution_clock::now();
         DebugLayer::Log(DebugLayer::LogType::INFO, "Loaded model: " + modelPath + " in " + std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count()) + "ms");
