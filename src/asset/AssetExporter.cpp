@@ -113,11 +113,9 @@ uint32_t AssetExporter::LoadTexture(AssetExporter& exporter, const aiMaterial* m
         }
 
         auto mip0Data = file.GetImageData(0);
-        uint32_t textureIndex = static_cast<uint32_t>(textureDatas.size());
         TextureExport mip0
         {
-            .Type = static_cast<uint32_t>(type),
-            .Offset = textureIndex,
+            .Offset = textureDatas.size(),
             .Size = mip0Data->m_memSlicePitch,
             .Width = mip0Data->m_width,
             .Height = mip0Data->m_height,
@@ -132,6 +130,7 @@ uint32_t AssetExporter::LoadTexture(AssetExporter& exporter, const aiMaterial* m
             return false;
         }
 
+        uint32_t textureIndex = textures.size();
         textures.resize(textureIndex + mip0.MipCount);
 
         VkDeviceSize totalSize = 0;
@@ -154,6 +153,7 @@ uint32_t AssetExporter::LoadTexture(AssetExporter& exporter, const aiMaterial* m
 
             TextureExport mip
             {
+                .Type = type,
                 .Offset = mip0.Offset + offset,
                 .Size = fileData->m_memSlicePitch,
                 .Width = fileData->m_width,

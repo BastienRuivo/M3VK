@@ -164,7 +164,7 @@ Renderer AssetHelper::Load3DModel(const std::string & modelPath, MeshRegistry & 
         SubMesh submesh = meshRegistry.Register(vertices, indices);
         subMeshes.push_back(submesh);
 
-        renderer.AddMesh(submesh, materials[materialOffset + i]);
+        renderer.AddMesh(submesh, materials[materialOffset + mesh.MaterialIndex]);
     }
 
     return renderer;
