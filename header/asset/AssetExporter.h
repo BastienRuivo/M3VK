@@ -11,12 +11,20 @@
 
 #define VERSION 0
 
+enum TextureType
+{
+    BaseColor = 0,
+    NormalMap = 1,
+    MRAO = 2
+};
+
 struct TextureExport
 {
-    size_t Offset;
-    size_t Size;
-    size_t Width;
-    size_t Height;
+    uint32_t Type;
+    uint32_t Offset;
+    uint32_t Size;
+    uint32_t Width;
+    uint32_t Height;
     VkFormat Format;
     uint32_t MipCount;
 };
@@ -62,12 +70,16 @@ struct AssetExporter
     std::vector<Vertex> VertexDatas;
     std::vector<uint32_t> IndexDatas;
 
+    std::vector<std::byte> UncompressedDataCache;
+
     AssetExporter() = default;
     AssetExporter(AssetExporter&& other) noexcept;
     AssetExporter& operator=(AssetExporter&& other) noexcept;
 
+    static VkFormat TextureTypeToFormat(TextureType type);
+
     static AssetExporter Load3DModel(const std::string & modelPath, VkCommandPool uploadPool, VkQueue uploadQueue);
-    static uint32_t LoadTexture(const aiMaterial* material, const std::filesystem::path rootPath, std::span<const aiTextureType> types, std::vector<std::byte>& textureDatas, std::vector<TextureExport>& textures, VkCommandPool uploadPool, VkQueue uploadQueue);
+    static uint32_t LoadTexture(AssetExporter& exporter, const aiMaterial* material, const std::filesystem::path rootPath, TextureType type, std::span<const aiTextureType> types, std::vector<std::byte>& textureDatas, std::vector<TextureExport>& textures, VkCommandPool uploadPool, VkQueue uploadQueue);
     static void Write(const AssetExporter& exporter);
     static bool Load(AssetExporter& exporter);
     static void Clear(AssetExporter& exporter);

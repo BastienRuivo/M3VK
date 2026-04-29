@@ -17,6 +17,7 @@
 #include "rendering/ImageHelper.h"
 #include <cstddef>
 #include <cstdint>
+#include <cstdlib>
 #include <cstring>
 #include <string>
 #include <sys/stat.h>
@@ -28,7 +29,22 @@
 
 #include <ispc_texcomp.h>
 
-size_t BC7Compress(void* data, uint32_t size, std::vector<std::byte> &textureDatas, uint32_t width, uint32_t height, uint32_t depth, uint32_t channels)
+VkFormat AssetExporter::TextureTypeToFormat(TextureType type)
+{
+    switch (type)
+    {
+    case TextureType::BaseColor:
+        return VK_FORMAT_BC7_SRGB_BLOCK;
+    case TextureType::NormalMap:
+        return VK_FORMAT_BC7_UNORM_BLOCK;
+    case TextureType::MRAO:
+        return VK_FORMAT_BC7_UNORM_BLOCK;
+    default:
+        return VK_FORMAT_UNDEFINED;
+    };
+}
+
+uint32_t BC7Compress(void* data, uint32_t size, std::vector<std::byte> &textureDatas, uint32_t width, uint32_t height, uint32_t depth, uint32_t channels)
 {
     uint32_t blockXCount = (width + 3) / 4;
     uint32_t blockYCount = (height + 3) / 4;
@@ -58,7 +74,7 @@ size_t BC7Compress(void* data, uint32_t size, std::vector<std::byte> &textureDat
     return compressedSize;
 }
 
-uint32_t AssetExporter::LoadTexture(const aiMaterial* material, const std::filesystem::path rootPath, std::span<const aiTextureType> types, std::vector<std::byte>& textureDatas, std::vector<TextureExport>& textures, VkCommandPool uploadPool, VkQueue uploadQueue)
+uint32_t AssetExporter::LoadTexture(AssetExporter& exporter, const aiMaterial* material, const std::filesystem::path rootPath, TextureType type, std::span<const aiTextureType> types, std::vector<std::byte>& textureDatas, std::vector<TextureExport>& textures, VkCommandPool uploadPool, VkQueue uploadQueue)
 {
     uint32_t textureCount = 0;
     aiTextureType textureType = AssetHelper::SelectTextureType(types, material, textureCount);
@@ -81,7 +97,6 @@ uint32_t AssetExporter::LoadTexture(const aiMaterial* material, const std::files
     texturePath = rootPath / texturePath;
     texturePath = texturePath.lexically_normal();
 
-
     if(!std::filesystem::exists(texturePath))
     {
         DebugLayer::Log(DebugLayer::LogType::WARNING, "Path does not exist " + texturePath.string());
@@ -98,9 +113,11 @@ uint32_t AssetExporter::LoadTexture(const aiMaterial* material, const std::files
         }
 
         auto mip0Data = file.GetImageData(0);
+        uint32_t textureIndex = static_cast<uint32_t>(textureDatas.size());
         TextureExport mip0
         {
-            .Offset = textureDatas.size(),
+            .Type = static_cast<uint32_t>(type),
+            .Offset = textureIndex,
             .Size = mip0Data->m_memSlicePitch,
             .Width = mip0Data->m_width,
             .Height = mip0Data->m_height,
@@ -115,7 +132,6 @@ uint32_t AssetExporter::LoadTexture(const aiMaterial* material, const std::files
             return false;
         }
 
-        uint32_t textureIndex = textures.size();
         textures.resize(textureIndex + mip0.MipCount);
 
         VkDeviceSize totalSize = 0;
@@ -160,7 +176,7 @@ uint32_t AssetExporter::LoadTexture(const aiMaterial* material, const std::files
 
         TextureExport mip0
         {
-            .Offset = textureDatas.size(),
+            .Offset = 0,
             .Size = 0,
             .Width = (uint32_t)image.Width(),
             .Height = (uint32_t)image.Height(),
@@ -183,7 +199,7 @@ uint32_t AssetExporter::LoadTexture(const aiMaterial* material, const std::files
         VkBufferImageCopy region[16];
         uint32_t curentWidth = mip0.Width;
         uint32_t currentHeight = mip0.Height;
-        size_t size = 0;
+        uint32_t size = 0;
 
         uint32_t bytePerPixel = ImageHelper::GetBytePerPixel(mip0.Format);
 
@@ -219,7 +235,7 @@ uint32_t AssetExporter::LoadTexture(const aiMaterial* material, const std::files
             {
                 textures[textureIndex + i] =
                 {
-                    .Offset = mip0.Offset + size,
+                    .Offset = size,
                     .Size = curentWidth * currentHeight * bytePerPixel,
                     .Width = curentWidth,
                     .Height = currentHeight,
@@ -235,9 +251,7 @@ uint32_t AssetExporter::LoadTexture(const aiMaterial* material, const std::files
         mip0.Size = mip0.Width * mip0.Height * bytePerPixel;
         textures[textureIndex] = mip0;
 
-        std::byte * uncompressedData = new std::byte[size];
-
-        void* data = textureDatas.data() + mip0.Offset;
+        if(exporter.UncompressedDataCache.size() < size) exporter.UncompressedDataCache.resize(size);
 
         StageBuffer stagingBuffer(size, StageBuffer::Usage::Readback);
 
@@ -251,15 +265,16 @@ uint32_t AssetExporter::LoadTexture(const aiMaterial* material, const std::files
         cmdBuffer.End();
         cmdBuffer.WaitCompletion();
 
-        stagingBuffer.MapAndCopyToData(uncompressedData, size);
+        stagingBuffer.MapAndCopyToData(exporter.UncompressedDataCache.data(), size);
 
-        size_t compressedOffset = mip0.Offset;
+        uint32_t compressedOffset = mip0.Offset;
         for(uint32_t i = 0; i < mip0.MipCount; i++)
         {
             auto & texture = textures[textureIndex + i];
-            size_t compressedSize = BC7Compress(uncompressedData + texture.Offset, texture.Size, textureDatas, texture.Width, texture.Height, 1, ImageHelper::GetBytePerPixel(texture.Format));
+            std::byte* uncompressedTextureData = exporter.UncompressedDataCache.data() + texture.Offset;
+            uint32_t compressedSize = BC7Compress(uncompressedTextureData, texture.Size, textureDatas, texture.Width, texture.Height, 1, ImageHelper::GetBytePerPixel(texture.Format));
 
-            texture.Format = VK_FORMAT_BC7_SRGB_BLOCK;
+            texture.Format = AssetExporter::TextureTypeToFormat(type);
             texture.Offset = compressedOffset;
             texture.Size = compressedSize;
 
@@ -342,9 +357,9 @@ AssetExporter AssetExporter::Load3DModel(const std::string & modelPath, VkComman
             .Roughness = static_cast<float>(roughness)
         };
 
-        uint32_t baseColorID = AssetExporter::LoadTexture(material, textureRootPath, {{ aiTextureType::aiTextureType_BASE_COLOR, aiTextureType::aiTextureType_DIFFUSE }}, exporter.TextureDatas, exporter.Textures, uploadPool, uploadQueue);
-        uint32_t normalMapID = AssetExporter::LoadTexture(material, textureRootPath, {{ aiTextureType::aiTextureType_NORMALS }}, exporter.TextureDatas, exporter.Textures, uploadPool, uploadQueue);
-        uint32_t mraoID = AssetExporter::LoadTexture(material, textureRootPath, {{ aiTextureType::aiTextureType_AMBIENT_OCCLUSION }}, exporter.TextureDatas, exporter.Textures, uploadPool, uploadQueue);
+        uint32_t baseColorID = AssetExporter::LoadTexture(exporter, material, textureRootPath, TextureType::BaseColor, {{ aiTextureType::aiTextureType_BASE_COLOR, aiTextureType::aiTextureType_DIFFUSE }}, exporter.TextureDatas, exporter.Textures, uploadPool, uploadQueue);
+        uint32_t normalMapID = AssetExporter::LoadTexture(exporter, material, textureRootPath, TextureType::NormalMap, {{ aiTextureType::aiTextureType_NORMALS }}, exporter.TextureDatas, exporter.Textures, uploadPool, uploadQueue);
+        uint32_t mraoID = AssetExporter::LoadTexture(exporter, material, textureRootPath, TextureType::MRAO, {{ aiTextureType::aiTextureType_AMBIENT_OCCLUSION }}, exporter.TextureDatas, exporter.Textures, uploadPool, uploadQueue);
 
         exporter.Materials[i]  =
         {

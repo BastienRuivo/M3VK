@@ -425,14 +425,17 @@ Application::Application() :
         _renderers.push_back(std::move(zAxis));
     }
 
-    Renderer chest = AssetHelper::Load3DModel("data/minecraft-chest/source/chest.fbx", meshRegistry, materialRegistry, _images, _materials, defaultMaterial, _staticDescriptorPool, _graphicsCommandPoolHandler.Internal(), _graphicsQueueHandler.Internal(), _sampler.Internal());
-    _renderers.push_back(std::move(chest));
+    //Renderer chest = AssetHelper::Load3DModel("data/minecraft-chest/source/chest.fbx", meshRegistry, materialRegistry, _images, _materials, defaultMaterial, _staticDescriptorPool, _graphicsCommandPoolHandler.Internal(), _graphicsQueueHandler.Internal(), _sampler.Internal());
+    //_renderers.push_back(std::move(chest));
 
     // Renderer bistroExterior = AssetHelper::Load3DModel("data/Bistro_v5_2/BistroExterior.fbx", meshRegistry, materialRegistry, _images, _materials, defaultMaterial, _staticDescriptorPool, _graphicsCommandPoolHandler.Internal(), _graphicsQueueHandler.Internal(), _sampler.Internal());
     // _renderers.push_back(std::move(bistroExterior));
 
     // Renderer bistroInterior = AssetHelper::Load3DModel("data/Bistro_v5_2/BistroInterior.fbx", meshRegistry, materialRegistry, _images, _materials, defaultMaterial, _staticDescriptorPool, _graphicsCommandPoolHandler.Internal(), _graphicsQueueHandler.Internal(), _sampler.Internal());
     // _renderers.push_back(std::move(bistroInterior));
+
+    Renderer bathroom = AssetHelper::Load3DModel("data/stanford_dragon_pbr/scene.gltf", meshRegistry, materialRegistry, _images, _materials, defaultMaterial, _staticDescriptorPool, _graphicsCommandPoolHandler.Internal(), _graphicsQueueHandler.Internal(), _sampler.Internal());
+    _renderers.push_back(std::move(bathroom));
 
     for(auto& registry : _registries)
     {
