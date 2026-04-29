@@ -294,7 +294,7 @@ AssetExporter AssetExporter::Load3DModel(const std::string & modelPath, VkComman
 
         DebugLayer::Log(DebugLayer::LogType::INFO, "Loading model: " + modelPath + " from " + exporter.ExportPath.string());
 
-    if(AssetExporter::Load(exporter) && false)
+    if(AssetExporter::Load(exporter))
     {
         std::chrono::high_resolution_clock::time_point t2 = std::chrono::high_resolution_clock::now();
         DebugLayer::Log(DebugLayer::LogType::INFO, "Loaded model: " + modelPath + " in " + std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count()) + "ms");
