@@ -136,7 +136,6 @@ uint32_t AssetExporter::LoadTexture(const aiMaterial* material, const std::files
         };
 
         size_t offset = textureDatas.size();
-        textureDatas.resize(textureDatas.size() + image.Internal().Size);
 
         if(mip0.MipCount > 16)
         {
@@ -147,8 +146,6 @@ uint32_t AssetExporter::LoadTexture(const aiMaterial* material, const std::files
 
         uint32_t textureIndex = textures.size();
         textures.resize(textures.size() + mip0.MipCount);
-
-        uint32_t optimalOffsetAlignment = ApplicationInfo::GetProperties().limits.optimalBufferCopyOffsetAlignment;
 
         VkBufferImageCopy region[16];
         uint32_t curentWidth = mip0.Width;
@@ -205,6 +202,7 @@ uint32_t AssetExporter::LoadTexture(const aiMaterial* material, const std::files
         mip0.Size = mip0.Width * mip0.Height * bytePerPixel;
         textures[textureIndex] = mip0;
 
+        textureDatas.resize(textureDatas.size() + size);
         void* data = textureDatas.data() + mip0.Offset;
 
         StageBuffer stagingBuffer(size, StageBuffer::Usage::Readback);
