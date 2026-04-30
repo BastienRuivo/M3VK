@@ -56,7 +56,7 @@ ImageHelper::ImageBinding AssetHelper::LoadTexture(AssetImporter& importer, Pool
         offset += mip.Size;
     }
 
-    if(!uploadBuffer.CanAllocate(offset))
+    if(!uploadBuffer.CanAllocate(offset) || commandCount >= 16)
     {
         Upload(commands, commandCount, uploadBuffer, textures, uploadQueue, uploadPool);
         uploadBuffer.Clear();
@@ -119,7 +119,7 @@ Renderer AssetHelper::Load3DModel(const std::string & modelPath, MeshRegistry & 
     DebugLayer::Log(DebugLayer::LogType::INFO, "AssetImporter load time: " + std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count()) + "ms");
 
     {
-        PoolStageBuffer uploadBuffer(4096 * 4096, StageBuffer::Usage::Upload);
+        PoolStageBuffer uploadBuffer(4096 * 4096 * 4, StageBuffer::Usage::Upload);
         uploadBuffer.Map();
         std::array<AssetHelper::UploadCommand, 16> uploadCommands;
         uint32_t uploadCommandCount = 0;
