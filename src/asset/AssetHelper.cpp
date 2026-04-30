@@ -119,10 +119,14 @@ Renderer AssetHelper::Load3DModel(const std::string & modelPath, MeshRegistry & 
     DebugLayer::Log(DebugLayer::LogType::INFO, "AssetImporter load time: " + std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count()) + "ms");
 
     {
-        PoolStageBuffer uploadBuffer(1024 * 1024 * 16, StageBuffer::Usage::Upload);
+        PoolStageBuffer uploadBuffer(4096 * 4096, StageBuffer::Usage::Upload);
         uploadBuffer.Map();
         std::array<AssetHelper::UploadCommand, 16> uploadCommands;
         uint32_t uploadCommandCount = 0;
+
+        ImageHelper::ImageBinding defaultBaseColor = materials[defaultMaterial].BaseColorTex;
+        ImageHelper::ImageBinding defaultNormal = materials[defaultMaterial].NormalMapTex;
+        ImageHelper::ImageBinding defaultMRAO = materials[defaultMaterial].MRAOTex;
 
         int materialOffset = materials.size();
         for(unsigned int i = 0; i < importer.Header.MaterialCount; i++)
@@ -131,9 +135,9 @@ Renderer AssetHelper::Load3DModel(const std::string & modelPath, MeshRegistry & 
             MaterialProperties gpuMaterial = material.MatProperties;
 
             BufferHelper::BufferBinding materialBinding = materialRegistry.Register(gpuMaterial);
-            ImageHelper::ImageBinding baseColorBinding = material.BaseColorTexId == UINT32_MAX ? materials[defaultMaterial].BaseColorTex : LoadTexture(importer, uploadBuffer, uploadCommands.data(), uploadCommandCount, material.BaseColorTexId, textures, sampler, uploadPool, uploadQueue);
-            ImageHelper::ImageBinding normalBinding = material.NormalMapTexId == UINT32_MAX ? materials[defaultMaterial].NormalMapTex : LoadTexture(importer, uploadBuffer, uploadCommands.data(), uploadCommandCount, material.NormalMapTexId, textures, sampler, uploadPool, uploadQueue);
-            ImageHelper::ImageBinding mraoBinding = material.MRAOTexId == UINT32_MAX ? materials[defaultMaterial].MRAOTex : LoadTexture(importer, uploadBuffer, uploadCommands.data(), uploadCommandCount, material.MRAOTexId, textures, sampler, uploadPool, uploadQueue);
+            ImageHelper::ImageBinding baseColorBinding = material.BaseColorTexId == UINT32_MAX ? defaultBaseColor: LoadTexture(importer, uploadBuffer, uploadCommands.data(), uploadCommandCount, material.BaseColorTexId, textures, sampler, uploadPool, uploadQueue);
+            ImageHelper::ImageBinding normalBinding = material.NormalMapTexId == UINT32_MAX ? defaultNormal : LoadTexture(importer, uploadBuffer, uploadCommands.data(), uploadCommandCount, material.NormalMapTexId, textures, sampler, uploadPool, uploadQueue);
+            ImageHelper::ImageBinding mraoBinding = material.MRAOTexId == UINT32_MAX ? defaultMRAO : LoadTexture(importer, uploadBuffer, uploadCommands.data(), uploadCommandCount, material.MRAOTexId, textures, sampler, uploadPool, uploadQueue);
 
             materials.emplace_back(baseColorBinding, normalBinding, mraoBinding, materialBinding, descriptorPool);
         }
