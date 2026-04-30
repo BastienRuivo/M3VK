@@ -5,13 +5,13 @@
 #include "registry/Registry.h"
 #include "rendering/BufferHelper.h"
 
-struct GPUMaterial
+struct MaterialProperties
 {
     alignas(16) glm::vec4 BaseColor;
     alignas(4) float Metallic;
     alignas(4) float Roughness;
 
-    static GPUMaterial Default()
+    static MaterialProperties Default()
     {
         return
         {
@@ -21,7 +21,7 @@ struct GPUMaterial
         };
     }
 
-    bool operator==(const GPUMaterial& other) const
+    bool operator==(const MaterialProperties& other) const
     {
         return BaseColor == other.BaseColor;
     }
@@ -32,12 +32,12 @@ class MaterialRegistry : public Registry
     public:
     MaterialRegistry(size_t materialBufferSize = ApplicationInfo::Constant::MaterialBufferMaxSize);
 
-    BufferHelper::BufferBinding Register(GPUMaterial material);
+    BufferHelper::BufferBinding Register(MaterialProperties material);
 
     void UploadAndRelease(VkQueue queue, VkCommandPool cmdPool) override;
     void Bind(const CommandBuffer& cmdBuffer) const override;
 
     private:
-    std::vector<GPUMaterial> _materials;
+    std::vector<MaterialProperties> _materials;
     GeometryBuffer _materialBuffer;
 };

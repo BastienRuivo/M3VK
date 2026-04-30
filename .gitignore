@@ -19,4 +19,4 @@ tools/
 # Ignore workspace
 M3VK.code-workspace
 
-data/Bistro_v5_2/**
+*.m3vkasset

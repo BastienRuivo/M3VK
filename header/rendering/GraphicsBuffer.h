@@ -17,7 +17,7 @@ class StageBuffer
     };
 
     StageBuffer(VkDeviceSize size, Usage usage);
-    ~StageBuffer();
+    virtual~StageBuffer();
 
     StageBuffer(StageBuffer&& other) noexcept;
     StageBuffer& operator=(StageBuffer&& other) noexcept;
@@ -28,16 +28,42 @@ class StageBuffer
     void* Map(VkDeviceSize offset, VkDeviceSize size);
     void Unmap();
 
-    void MapAndCopyToBuffer(void* srcData, VkDeviceSize copySize);
-    void MapAndCopyToData(void* dstData, VkDeviceSize copySize);
-    inline VkBuffer Internal() const { return _internal; };
+    void MapAndCopyToBuffer(void* srcData, VkDeviceSize offset, VkDeviceSize copySize);
+    void MapAndCopyToData(void* dstData, VkDeviceSize offset, VkDeviceSize copySize);
 
-    private:
+    inline VkBuffer Internal() const { return _internal; };
+    inline VkDeviceMemory MemoryInternal() const { return _memoryInternal; };
+    inline Usage Usage() const { return _usage; };
+    inline VkDeviceSize Capacity() const { return _capacity; };
+
+    protected:
     VkBuffer _internal = VK_NULL_HANDLE;
     VkDeviceMemory _memoryInternal = VK_NULL_HANDLE;
-    Usage _usage;
+    void* _data = nullptr;
+
+    enum Usage _usage;
+    VkDeviceSize _capacity = 0;
 };
 
+class PoolStageBuffer : protected StageBuffer
+{
+    public:
+    PoolStageBuffer(VkDeviceSize size, enum Usage usage) : StageBuffer(size, usage), _offset(0) {}
+    ~PoolStageBuffer() {}
+
+    inline VkDeviceSize Offset() const { return _offset; }
+
+    void Map();
+    void Unmap();
+    void CopyToBuffer(void* srcData, VkDeviceSize copySize);
+    void Clear();
+
+    inline bool CanAllocate(VkDeviceSize size) const { return _offset + size <= _capacity; }
+    inline VkBuffer Internal() const { return StageBuffer::Internal(); }
+
+    private:
+    uint32_t _offset = 0;
+};
 
 class GraphicsBuffer
 {

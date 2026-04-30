@@ -1,6 +1,5 @@
 #include "rendering/ImageHelper.h"
 #include "application/ApplicationInfo.h"
-#include "libs/tinyddsloader.h"
 #include "rendering/GPUImage.h"
 #include <cmath>
 #include <cstdint>
@@ -140,34 +139,6 @@ void ImageHelper::GenerateMipmapsCommand(const CommandBuffer& cmdBuffer, const I
     barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 
     cmdBuffer.Barrier(VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, nullptr, 0, nullptr, 0, &barrier, 1);
-}
-
-VkFormat ImageHelper::DXGIToVkFormat(tinyddsloader::DDSFile::DXGIFormat format)
-{
-    switch (format) {
-        case tinyddsloader::DDSFile::DXGIFormat::BC1_UNorm: return VK_FORMAT_BC1_RGBA_UNORM_BLOCK;
-        case tinyddsloader::DDSFile::DXGIFormat::BC1_UNorm_SRGB: return VK_FORMAT_BC1_RGBA_SRGB_BLOCK;
-
-        case tinyddsloader::DDSFile::DXGIFormat::BC2_UNorm: return VK_FORMAT_BC2_UNORM_BLOCK;
-        case tinyddsloader::DDSFile::DXGIFormat::BC2_UNorm_SRGB: return VK_FORMAT_BC2_SRGB_BLOCK;
-
-        case tinyddsloader::DDSFile::DXGIFormat::BC3_UNorm: return VK_FORMAT_BC3_UNORM_BLOCK;
-        case tinyddsloader::DDSFile::DXGIFormat::BC3_UNorm_SRGB: return VK_FORMAT_BC3_SRGB_BLOCK;
-
-        case tinyddsloader::DDSFile::DXGIFormat::BC4_UNorm: return VK_FORMAT_BC4_UNORM_BLOCK;
-        case tinyddsloader::DDSFile::DXGIFormat::BC4_SNorm: return VK_FORMAT_BC4_SNORM_BLOCK;
-
-        case tinyddsloader::DDSFile::DXGIFormat::BC5_UNorm: return VK_FORMAT_BC5_UNORM_BLOCK;
-        case tinyddsloader::DDSFile::DXGIFormat::BC5_SNorm: return VK_FORMAT_BC5_SNORM_BLOCK;
-
-        case tinyddsloader::DDSFile::DXGIFormat::BC6H_UF16: return VK_FORMAT_BC6H_UFLOAT_BLOCK;
-        case tinyddsloader::DDSFile::DXGIFormat::BC6H_SF16: return VK_FORMAT_BC6H_SFLOAT_BLOCK;
-
-        case tinyddsloader::DDSFile::DXGIFormat::BC7_UNorm: return VK_FORMAT_BC7_UNORM_BLOCK;
-        case tinyddsloader::DDSFile::DXGIFormat::BC7_UNorm_SRGB: return VK_FORMAT_BC7_SRGB_BLOCK;
-
-        default: return VK_FORMAT_UNDEFINED;
-    }
 }
 
 uint32_t ImageHelper::GetMipCount(uint32_t width, uint32_t height) {

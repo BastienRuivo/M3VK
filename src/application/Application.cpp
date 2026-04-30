@@ -2,7 +2,6 @@
 #include "rendering/GraphicsBuffer.h"
 #include "asset/Material.h"
 #include "application/ApplicationInfo.h"
-#include "asset/CPUImage.h"
 #include "rendering/CommandBuffer.h"
 #include "rendering/DescriptorPool.h"
 #include "rendering/GPUImage.h"
@@ -29,6 +28,7 @@
 #include <initializer_list>
 #include <memory>
 #include <stdexcept>
+#include "asset/CPUImage.h"
 
 #ifdef M3VK_VERBOSE_LOG
 #include <string>
@@ -291,14 +291,14 @@ uint32_t Application::LoadDefaultMaterial()
 {
     MaterialRegistry& materialRegistry = static_cast<MaterialRegistry&>(*_registries[(size_t)RegistryType::Material]);
 
-    auto& baseColorTex = _images.emplace_back(CPUImage("data/default/BaseColor.png", STBI_rgb_alpha), _graphicsCommandPoolHandler.Internal(), _graphicsQueueHandler.Internal());
+    auto& baseColorTex = _images.emplace_back(AssetHelper::ImageFromCPU(CPUImage("data/default/BaseColor.png", STBI_rgb_alpha), _graphicsCommandPoolHandler.Internal(), _graphicsQueueHandler.Internal()));
     ImageHelper::ImageBinding baseColorBind = ImageHelper::ImageBinding(baseColorTex.Internal(), _sampler.Internal());
-    auto& normalMapTex = _images.emplace_back(CPUImage("data/default/BaseNormal.png", STBI_rgb_alpha), _graphicsCommandPoolHandler.Internal(), _graphicsQueueHandler.Internal());
+    auto& normalMapTex = _images.emplace_back(AssetHelper::ImageFromCPU(CPUImage("data/default/BaseNormal.png", STBI_rgb_alpha), _graphicsCommandPoolHandler.Internal(), _graphicsQueueHandler.Internal()));
     ImageHelper::ImageBinding normalBind = ImageHelper::ImageBinding(normalMapTex.Internal(), _sampler.Internal());
-    auto& mraoTex = _images.emplace_back(CPUImage("data/default/BaseMRAO.png", STBI_rgb_alpha), _graphicsCommandPoolHandler.Internal(), _graphicsQueueHandler.Internal());
+    auto& mraoTex = _images.emplace_back(AssetHelper::ImageFromCPU(CPUImage("data/default/BaseMRAO.png", STBI_rgb_alpha), _graphicsCommandPoolHandler.Internal(), _graphicsQueueHandler.Internal()));
     ImageHelper::ImageBinding mraoBind = ImageHelper::ImageBinding(mraoTex.Internal(), _sampler.Internal());
 
-    BufferHelper::BufferBinding defaultMaterialBinding = materialRegistry.Register(GPUMaterial::Default());
+    BufferHelper::BufferBinding defaultMaterialBinding = materialRegistry.Register(MaterialProperties::Default());
     _materials.emplace_back(baseColorBind, normalBind, mraoBind, defaultMaterialBinding, _staticDescriptorPool);
     return _materials.size() - 1;
 }
@@ -425,15 +425,15 @@ Application::Application() :
         _renderers.push_back(std::move(zAxis));
     }
 
-    Renderer bistroExterior = AssetHelper::Load3DModel("data/Bistro_v5_2/BistroExterior.fbx", meshRegistry, materialRegistry, _images, _materials, defaultMaterial, _staticDescriptorPool, _graphicsCommandPoolHandler.Internal(), _graphicsQueueHandler.Internal(), _sampler.Internal());
+    Renderer bistroExterior = AssetHelper::Load3DModel("data/BistroExterior.m3vkasset", meshRegistry, materialRegistry, _images, _materials, defaultMaterial, _staticDescriptorPool, _graphicsCommandPoolHandler.Internal(), _graphicsQueueHandler.Internal(), _sampler.Internal());
     _renderers.push_back(std::move(bistroExterior));
 
-    Renderer bistroInterior = AssetHelper::Load3DModel("data/Bistro_v5_2/BistroInterior.fbx", meshRegistry, materialRegistry, _images, _materials, defaultMaterial, _staticDescriptorPool, _graphicsCommandPoolHandler.Internal(), _graphicsQueueHandler.Internal(), _sampler.Internal());
-    _renderers.push_back(std::move(bistroInterior));
+    // Renderer bistroInterior = AssetHelper::Load3DModel("data/BistroInterior.m3vkasset", meshRegistry, materialRegistry, _images, _materials, defaultMaterial, _staticDescriptorPool, _graphicsCommandPoolHandler.Internal(), _graphicsQueueHandler.Internal(), _sampler.Internal());
+    // _renderers.push_back(std::move(bistroInterior));
 
-    Renderer dragon = AssetHelper::Load3DModel("data/stanford_dragon_pbr/scene.gltf", meshRegistry, materialRegistry, _images, _materials, defaultMaterial, _staticDescriptorPool, _graphicsCommandPoolHandler.Internal(), _graphicsQueueHandler.Internal(), _sampler.Internal());
-    dragon.SetScale(glm::vec3(0.05));
-    _renderers.push_back(std::move(dragon));
+    // Renderer dragon = AssetHelper::Load3DModel("data/StanfordDragon.m3vkasset", meshRegistry, materialRegistry, _images, _materials, defaultMaterial, _staticDescriptorPool, _graphicsCommandPoolHandler.Internal(), _graphicsQueueHandler.Internal(), _sampler.Internal());
+    // dragon.SetScale(glm::vec3(0.05));
+    //_renderers.push_back(std::move(dragon));
 
     for(auto& registry : _registries)
     {

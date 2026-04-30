@@ -1,13 +1,15 @@
 #include "rendering/GraphicsBuffer.h"
 #include "application/ApplicationInfo.h"
 #include "rendering/CommandBuffer.h"
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
 #include <stdexcept>
 #include <vulkan/vulkan_core.h>
 
-StageBuffer::StageBuffer(VkDeviceSize size, Usage bufferUsage)
+StageBuffer::StageBuffer(VkDeviceSize size, enum Usage bufferUsage)
+: _capacity(size)
 {
 #ifdef M3VK_MEMORYLOG
     DebugLayer::Log(DebugLayer::LogType::CREATE, "StageBuffer creation !");
@@ -18,7 +20,7 @@ StageBuffer::StageBuffer(VkDeviceSize size, Usage bufferUsage)
     VkBufferCreateInfo info
     {
         .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-        .size = size,
+        .size = _capacity,
         .usage = usage,
         .sharingMode = VK_SHARING_MODE_EXCLUSIVE
     };
@@ -55,10 +57,10 @@ StageBuffer::StageBuffer(VkDeviceSize size, Usage bufferUsage)
     }
 }
 
-void StageBuffer::MapAndCopyToBuffer(void* srcData, VkDeviceSize copySize)
+void StageBuffer::MapAndCopyToBuffer(void* srcData, VkDeviceSize offset, VkDeviceSize copySize)
 {
     void* data;
-    if(vkMapMemory(ApplicationInfo::Device(), _memoryInternal, 0, copySize, 0, &data) != VK_SUCCESS)
+    if(vkMapMemory(ApplicationInfo::Device(), _memoryInternal, offset, copySize, 0, &data) != VK_SUCCESS)
     {
         throw std::runtime_error("Failed to map stage buffer memory");
     }
@@ -66,10 +68,10 @@ void StageBuffer::MapAndCopyToBuffer(void* srcData, VkDeviceSize copySize)
     vkUnmapMemory(ApplicationInfo::Device(), _memoryInternal);
 };
 
-void StageBuffer::MapAndCopyToData(void* dstData, VkDeviceSize copySize)
+void StageBuffer::MapAndCopyToData(void* dstData, VkDeviceSize offset, VkDeviceSize copySize)
 {
     void* data;
-    if(vkMapMemory(ApplicationInfo::Device(), _memoryInternal, 0, copySize, 0, &data) != VK_SUCCESS)
+    if(vkMapMemory(ApplicationInfo::Device(), _memoryInternal, offset, copySize, 0, &data) != VK_SUCCESS)
     {
         throw std::runtime_error("Failed to map stage buffer memory");
     }
@@ -77,24 +79,28 @@ void StageBuffer::MapAndCopyToData(void* dstData, VkDeviceSize copySize)
     vkUnmapMemory(ApplicationInfo::Device(), _memoryInternal);
 }
 
-void* StageBuffer::Map(VkDeviceSize offset, VkDeviceSize size)
+void* StageBuffer::Map(VkDeviceSize offset = 0, VkDeviceSize size = VK_WHOLE_SIZE)
 {
-    void* data;
-    if(vkMapMemory(ApplicationInfo::Device(), _memoryInternal, offset, size, 0, &data) != VK_SUCCESS)
+    if(vkMapMemory(ApplicationInfo::Device(), _memoryInternal, offset, size, 0, &_data) != VK_SUCCESS)
     {
         throw std::runtime_error("Failed to map stage buffer memory");
     }
 
-    return data;
+    return _data;
 }
 
 void StageBuffer::Unmap()
 {
     vkUnmapMemory(ApplicationInfo::Device(), _memoryInternal);
+    _data = nullptr;
 }
 
 StageBuffer::~StageBuffer()
 {
+    if(_data != nullptr)
+    {
+        vkUnmapMemory(ApplicationInfo::Device(), _memoryInternal);
+    }
     vkDestroyBuffer(ApplicationInfo::Device(), _internal, nullptr);
     vkFreeMemory(ApplicationInfo::Device(), _memoryInternal, nullptr);
 #ifdef M3VK_MEMORYLOG
@@ -127,6 +133,40 @@ StageBuffer& StageBuffer::operator=(StageBuffer&& other) noexcept
     }
 
     return *this;
+}
+
+void PoolStageBuffer::Map()
+{
+    StageBuffer::Map();
+}
+
+void PoolStageBuffer::Unmap()
+{
+    StageBuffer::Unmap();
+}
+
+void PoolStageBuffer::CopyToBuffer(void* srcData, VkDeviceSize copySize)
+{
+    if(_data == nullptr)
+    {
+        throw std::runtime_error("Buffer is not mapped !");
+    }
+
+    if(!CanAllocate(copySize))
+    {
+        throw std::runtime_error("Buffer is full !");
+    }
+
+    std::byte* data = static_cast<std::byte*>(_data) + _offset;
+    memcpy(data, srcData, (size_t)copySize);
+    _offset += copySize;
+    uint32_t stride = ApplicationInfo::GetProperties().limits.minUniformBufferOffsetAlignment;
+    _offset = std::ceil(_offset / (float)stride) * stride;
+}
+
+void PoolStageBuffer::Clear()
+{
+    _offset = 0;
 }
 
 GraphicsBuffer::GraphicsBuffer(VkDeviceSize count, VkDeviceSize stride, BufferType type)
@@ -231,7 +271,7 @@ void GraphicsBuffer::CopyToBuffer(const VkQueue& queue,
     uint32_t dstIndex)
 {
     StageBuffer copyBuffer(size, StageBuffer::Usage::Upload);
-    copyBuffer.MapAndCopyToBuffer(srcData, size);
+    copyBuffer.MapAndCopyToBuffer(srcData, 0, size);
 
     CommandBuffer cmdBuffer(pool, queue);
     cmdBuffer.BeginSingleTime();

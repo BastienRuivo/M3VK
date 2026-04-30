@@ -3,8 +3,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <stb_image.h>
-#include "asset/CPUImage.h"
-#include "libs/tinyddsloader.h"
 #include "rendering/CommandBuffer.h"
 #include "handler/VkImageViewHandler.h"
 #include <vulkan/vulkan_core.h>
@@ -24,8 +22,6 @@ class GPUAllocatedImage
 {
     public:
 
-    GPUAllocatedImage(const CPUImage& cpuImg, VkCommandPool pool, VkQueue queue);
-    GPUAllocatedImage(const tinyddsloader::DDSFile& file, VkCommandPool pool, VkQueue queue);
     GPUAllocatedImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags imageUsageFlags, VkMemoryPropertyFlags memoryFlags);
     GPUAllocatedImage(uint32_t width, uint32_t height, uint32_t mipCount, VkFormat format, VkImageTiling tiling, VkImageUsageFlags imageUsageFlags, VkMemoryPropertyFlags memoryFlags);
     GPUAllocatedImage(uint32_t width, uint32_t height, VkSampleCountFlagBits msaaSampleCount, uint32_t mipCount, VkFormat format, VkImageTiling tiling, VkImageUsageFlags imageUsageFlags, VkMemoryPropertyFlags memoryFlags);

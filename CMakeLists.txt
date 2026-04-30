@@ -7,20 +7,6 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 include(FetchContent)
 
-enable_language(ISPC)
-find_program(ISPC_BIN ispc REQUIRED)
-
-set(ISPC_WRAPPER "${CMAKE_BINARY_DIR}/ispc_wrapper.sh")
-file(WRITE ${ISPC_WRAPPER} "#!/bin/sh\n${ISPC_BIN} --pic \"$@\"\n")
-execute_process(COMMAND chmod +x ${ISPC_WRAPPER})
-
-set(ISPC_COMPILER_LOCATION "${ISPC_WRAPPER}" CACHE PATH "Path to ISPC wrapper" FORCE)
-
-set(ISPC_COMPILER_TARGET "avx2" CACHE STRING "Target ISA" FORCE)
-set(CMAKE_ISPC_COMPILER_TARGET "avx2" CACHE STRING "Target ISA" FORCE)
-
-set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-
 # --- Dependencies ---
 
 # GLFW
@@ -44,35 +30,7 @@ fetchcontent_declare(
     GIT_TAG        1.0.3
 )
 
-set(ASSIMP_BUILD_ZLIB ON CACHE INTERNAL "")
-set(ASSIMP_FORCE_INTERNAL_ZLIB ON CACHE INTERNAL "")
-set(ASSIMP_BUILD_MINIZIP ON CACHE INTERNAL "")
-set(CMAKE_POLICY_DEFAULT_CMP0074 NEW) # Respect ZLIB_ROOT if set
-
-set(ASSIMP_BUILD_TESTS OFF CACHE INTERNAL "")
-set(ASSIMP_INSTALL OFF CACHE INTERNAL "")
-set(ASSIMP_BUILD_ASSIMP_TOOLS OFF CACHE INTERNAL "")
-set(ASSIMP_BUILD_SAMPLES OFF CACHE INTERNAL "")
-set(ASSIMP_BUILD_CACHED_INTERFACES OFF CACHE INTERNAL "")
-
-set(ASSIMP_BUILD_ALL_IMPORTERS_BY_DEFAULT OFF CACHE INTERNAL "")
-set(ASSIMP_BUILD_OBJ_IMPORTER ON CACHE INTERNAL "")
-set(ASSIMP_BUILD_FBX_IMPORTER ON CACHE INTERNAL "")
-set(ASSIMP_BUILD_GLTF_IMPORTER ON CACHE INTERNAL "")
-
-fetchcontent_declare(
-    assimp
-    GIT_REPOSITORY https://github.com/assimp/assimp.git
-    GIT_TAG        v6.0.4 # Use a stable tagged release
-)
-
-fetchcontent_declare(
-    ispc_texcomp_repo
-    GIT_REPOSITORY https://github.com/BeardyKing/ispc_texture_compressor_cmake.git
-    GIT_TAG        master
-)
-
-fetchcontent_makeavailable(glfw stb glm assimp ispc_texcomp_repo)
+fetchcontent_makeavailable(glfw stb glm)
 
 # --- Interface Library Setup ---
 
@@ -156,8 +114,6 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     glfw
     stb
     glm::glm
-    assimp::assimp
-    ispc_texture_compressor
 )
 
 # --- Asset Management ---

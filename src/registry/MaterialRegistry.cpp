@@ -18,7 +18,7 @@ void MaterialRegistry::UploadAndRelease(VkQueue queue, VkCommandPool cmdPool)
         return;
     }
 
-    _materialBuffer.CopyToBuffer(queue, cmdPool, _materials.data(), _materials.size() * sizeof(GPUMaterial));
+    _materialBuffer.CopyToBuffer(queue, cmdPool, _materials.data(), _materials.size() * sizeof(MaterialProperties));
     _materials.clear();
 }
 
@@ -28,12 +28,12 @@ void MaterialRegistry::Bind(const CommandBuffer& cmdBuffer) const
 }
 
 MaterialRegistry::MaterialRegistry(size_t materialBufferSize)
-: _materialBuffer(materialBufferSize, sizeof(GPUMaterial), GraphicsBuffer::BufferType::STORAGE)
+: _materialBuffer(materialBufferSize, sizeof(MaterialProperties), GraphicsBuffer::BufferType::STORAGE)
 {
 
 }
 
-BufferHelper::BufferBinding MaterialRegistry::Register(GPUMaterial material)
+BufferHelper::BufferBinding MaterialRegistry::Register(MaterialProperties material)
 {
     _materials.push_back(material);
     BufferHelper::BufferBinding binding = BufferHelper::BufferBinding(_materialBuffer, _materials.size() - 1);
