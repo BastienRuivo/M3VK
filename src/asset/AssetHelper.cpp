@@ -16,6 +16,7 @@
 #include "rendering/GPUImage.h"
 #include "rendering/GraphicsBuffer.h"
 #include "rendering/ImageHelper.h"
+#include "rendering/Renderer.h"
 
 void Upload(AssetHelper::UploadCommand* commands, uint32_t commandCount, PoolStageBuffer& buffer, std::vector<GPUAllocatedImage> & textures, VkQueue queue, VkCommandPool pool)
 {
@@ -111,7 +112,11 @@ Renderer AssetHelper::Load3DModel(const std::string & modelPath, MeshRegistry & 
 
     std::chrono::high_resolution_clock::time_point t1 = std::chrono::high_resolution_clock::now();
 
-    AssetImporter::Load(importer, modelPath);
+    if(!AssetImporter::Load(importer, modelPath))
+    {
+        return Renderer(glm::vec3(0.0f), glm::vec3(0.0f), glm::vec3(1.0f));
+    }
+
 
     std::chrono::high_resolution_clock::time_point t2 = std::chrono::high_resolution_clock::now();
 

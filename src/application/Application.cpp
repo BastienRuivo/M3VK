@@ -428,16 +428,15 @@ Application::Application() :
     Renderer bistroExterior = AssetHelper::Load3DModel("data/BistroExterior.m3vkasset", meshRegistry, materialRegistry, _images, _materials, defaultMaterial, _staticDescriptorPool, _graphicsCommandPoolHandler.Internal(), _graphicsQueueHandler.Internal(), _sampler.Internal());
     _renderers.push_back(std::move(bistroExterior));
 
-    // Renderer poder = AssetHelper::Load3DModel("data/poder.m3vkasset", meshRegistry, materialRegistry, _images, _materials, defaultMaterial, _staticDescriptorPool, _graphicsCommandPoolHandler.Internal(), _graphicsQueueHandler.Internal(), _sampler.Internal());
-    // poder.SetPosition(glm::vec3(1, 1, 1));
-    // _renderers.push_back(std::move(poder));
-
     // Renderer bistroInterior = AssetHelper::Load3DModel("data/BistroInterior.m3vkasset", meshRegistry, materialRegistry, _images, _materials, defaultMaterial, _staticDescriptorPool, _graphicsCommandPoolHandler.Internal(), _graphicsQueueHandler.Internal(), _sampler.Internal());
     // _renderers.push_back(std::move(bistroInterior));
 
+    // Renderer bistroWine = AssetHelper::Load3DModel("data/BistroInterior_Wine.m3vkasset", meshRegistry, materialRegistry, _images, _materials, defaultMaterial, _staticDescriptorPool, _graphicsCommandPoolHandler.Internal(), _graphicsQueueHandler.Internal(), _sampler.Internal());
+    // _renderers.push_back(std::move(bistroWine));
+
     // Renderer dragon = AssetHelper::Load3DModel("data/StanfordDragon.m3vkasset", meshRegistry, materialRegistry, _images, _materials, defaultMaterial, _staticDescriptorPool, _graphicsCommandPoolHandler.Internal(), _graphicsQueueHandler.Internal(), _sampler.Internal());
     // dragon.SetScale(glm::vec3(0.05));
-    //_renderers.push_back(std::move(dragon));
+    // _renderers.push_back(std::move(dragon));
 
     for(auto& registry : _registries)
     {

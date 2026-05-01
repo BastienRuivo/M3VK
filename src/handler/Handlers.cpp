@@ -67,10 +67,20 @@ VkDeviceHandler::VkDeviceHandler(VkSurfaceKHR windowSurface, const std::vector<c
         queueCreateInfos.push_back(queueCreateInfo);
     }
 
+    // enable bindless support
+    VkPhysicalDeviceDescriptorIndexingFeatures descriptorIndexingFeatures
+    {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES,
+        .pNext = nullptr,
+        .descriptorBindingPartiallyBound = VK_TRUE,
+        .runtimeDescriptorArray = VK_TRUE
+    };
+
     VkPhysicalDeviceDynamicRenderingFeatures dynamicRenderingFeatures
     {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES,
-        .dynamicRendering = VK_TRUE
+        .pNext = &descriptorIndexingFeatures,
+        .dynamicRendering = VK_TRUE,
     };
 
     VkPhysicalDeviceFeatures deviceFeatures
