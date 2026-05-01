@@ -338,7 +338,6 @@ Application::Application() :
 
     // Command pool
     _graphicsCommandPoolHandler(ApplicationInfo::GetGraphicsQueueId()),
-    _transferCommandPoolHandler(ApplicationInfo::GetTransferQueueId()),
 
     // Geometry & Data Buffers
     _colorBackBuffer(std::make_unique<GPUAllocatedImage>(_swapChain->GetExtent().width, _swapChain->GetExtent().height,
