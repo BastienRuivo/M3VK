@@ -50,6 +50,11 @@ class ApplicationInfo
         return ApplicationInfo::Get()._queueFamilyIds.Present.value();
     }
 
+    static inline uint32_t GetTransferQueueId()
+    {
+        return ApplicationInfo::Get()._queueFamilyIds.Transfer.value();
+    }
+
     static inline const VkPhysicalDeviceProperties& GetProperties()
     {
         return ApplicationInfo::Get()._properties;

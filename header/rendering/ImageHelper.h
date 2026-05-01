@@ -30,6 +30,7 @@ namespace ImageHelper
     void CopyToImageCommand(const CommandBuffer& cmdBuffer, const ImageReference& image, uint32_t mipLevel, VkBuffer srcData);
 
     void GenerateMipmapsCommand(const CommandBuffer& cmdBuffer, const ImageReference& image);
+    VkImageMemoryBarrier TransitionLayoutBarrier(const ImageReference& image, uint32_t mipLevel, uint32_t mipCount, VkPipelineStageFlags& sourceStage, VkPipelineStageFlags& destinationStage, VkImageLayout oldLayout, VkImageLayout newLayout);
 
     uint32_t GetMipCount(uint32_t width, uint32_t height);
     uint32_t GetBytePerPixel(VkFormat format);

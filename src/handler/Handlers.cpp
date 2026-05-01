@@ -9,8 +9,8 @@
 #include "asset/Shader.h"
 #include "asset/Vertex.h"
 
-VkCommandPoolHandler::VkCommandPoolHandler()
-: Handler<VkCommandPool>()
+VkCommandPoolHandler::VkCommandPoolHandler(uint32_t queueFamilyIndex)
+: Handler<VkCommandPool>(), _queueFamilyIndex(queueFamilyIndex)
 {
 #ifdef M3VK_MEMORYLOG
     DebugLayer::Log(DebugLayer::LogType::CREATE, "VkCommandPoolHandler Creation !");
@@ -20,7 +20,7 @@ VkCommandPoolHandler::VkCommandPoolHandler()
     {
         .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
         .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
-        .queueFamilyIndex = ApplicationInfo::Get().GetGraphicsQueueId()
+        .queueFamilyIndex = _queueFamilyIndex
     };
 
     if(vkCreateCommandPool(ApplicationInfo::Device(), &poolInfo, nullptr, &_internal) != VK_SUCCESS)
@@ -51,7 +51,7 @@ VkDeviceHandler::VkDeviceHandler(VkSurfaceKHR windowSurface, const std::vector<c
     {
         ApplicationInfo::Get().GetGraphicsQueueId(),
         ApplicationInfo::Get().GetPresentQueueId(),
-        //QueueFamilyId.Copy.value()
+        ApplicationInfo::Get().GetTransferQueueId()
     };
 
     float queuePriority = 1.0f;
@@ -547,6 +547,7 @@ VkQueueHandler::VkQueueHandler(VkQueueHandler::QueueTypeEnum queueType)
     {
         case Present: family = ApplicationInfo::Get().GetPresentQueueId(); break;
         case Graphics: family = ApplicationInfo::Get().GetGraphicsQueueId(); break;
+        case Transfer: family = ApplicationInfo::Get().GetTransferQueueId(); break;
         default: throw std::runtime_error("Unimplemented graphics queue type");
     }
 

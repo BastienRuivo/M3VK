@@ -1,6 +1,7 @@
 #pragma once
 
 #include "GLFW/glfw3.h"
+#include <cstdint>
 #include <span>
 #include <utility>
 #include <vector>
@@ -52,11 +53,16 @@ protected:
 class VkCommandPoolHandler : public Handler<VkCommandPool>
 {
 public:
-    VkCommandPoolHandler();
+    VkCommandPoolHandler(uint32_t queueFamilyIndex);
     ~VkCommandPoolHandler() override;
 
     VkCommandPoolHandler(VkCommandPoolHandler&& other) noexcept = default;
     VkCommandPoolHandler& operator=(VkCommandPoolHandler&& other) noexcept = default;
+
+    inline uint32_t QueueFamilyIndex() const { return _queueFamilyIndex; }
+
+    private:
+    uint32_t _queueFamilyIndex;
 };
 
 class VkDeviceHandler : public Handler<VkDevice>
@@ -132,7 +138,7 @@ public:
     {
         Graphics,
         Present,
-        Copy
+        Transfer
     };
     VkQueueHandler(QueueTypeEnum queueType);
     ~VkQueueHandler() override;

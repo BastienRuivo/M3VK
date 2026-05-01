@@ -12,13 +12,12 @@ struct QueueFamilyIds
     public:
     std::optional<uint32_t> Graphics;
     std::optional<uint32_t> Present;
-    // std::optional<uint32_t> Copy;
+    std::optional<uint32_t> Transfer; // fallback to Graphics if not available
 
     static bool AreAllQueueAvailable(const QueueFamilyIds& queueIds)
     {
         return queueIds.Graphics.has_value()
             && queueIds.Present.has_value();
-            //&& queueIds.Copy.has_value();
     }
 
     static QueueFamilyIds QueryQueueFamilies(VkPhysicalDevice physicalDevice, VkSurfaceKHR windowSurface)
@@ -37,10 +36,11 @@ struct QueueFamilyIds
             {
                 queueIds.Graphics = i;
             }
-            // else if(families[i].queueFlags & VK_QUEUE_TRANSFER_BIT)
-            // {
-            //     queueIds.Copy = i;
-            // }
+
+            if(families[i].queueFlags & VK_QUEUE_TRANSFER_BIT)
+            {
+                queueIds.Transfer = i;
+            }
 
             VkBool32 isPresentSupported = false;
             vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, i, windowSurface, &isPresentSupported);

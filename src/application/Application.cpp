@@ -337,7 +337,8 @@ Application::Application() :
     _graphicsPipelineHandler(_swapChain->GetExtent(), ApplicationInfo::Get().GetMsaaSample(), _pipelineLayoutHandler.Internal(), _swapChain->GetImageFormat(), ApplicationInfo::Constant::DepthFormat),
 
     // Command pool
-    _graphicsCommandPoolHandler(),
+    _graphicsCommandPoolHandler(ApplicationInfo::GetGraphicsQueueId()),
+    _transferCommandPoolHandler(ApplicationInfo::GetTransferQueueId()),
 
     // Geometry & Data Buffers
     _colorBackBuffer(std::make_unique<GPUAllocatedImage>(_swapChain->GetExtent().width, _swapChain->GetExtent().height,
