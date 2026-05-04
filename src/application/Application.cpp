@@ -478,11 +478,12 @@ Application::Application() :
     AssetHelper::Load3DModel("data/MinecraftChest.m3vkasset", meshRegistry, materialRegistry, _graphicsCommandPoolHandler.Internal(), _graphicsQueueHandler.Internal(), _sampler.Internal());
 
     InstanceData instance = {
-        .modelMatrix = ApplicationHelper::TranslateRotateScale(glm::vec3(2.0f, 0.0f, 0.0f),
-            glm::vec3(0.0f, 0.0f, 0.0f),
+        .modelMatrix = ApplicationHelper::TranslateRotateScale(glm::vec3(3.0f, 0.0f, 0.0f),
+            glm::vec3(0.0f, 90.0f, 0.0f),
             glm::vec3(1.0f, 1.0f, 1.0f)),
         .materialId = materialRegistry.MaterialsCount() - 1,
     };
+    meshRegistry.RegisterInstance(instance);
 
     // for(uint32_t i = 0; i < 100; ++i)
     // {
