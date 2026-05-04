@@ -475,8 +475,6 @@ Application::Application() :
         meshRegistry.RegisterInstance(instance);
     }
 
-    AssetHelper::Load3DModel("data/MinecraftChest.m3vkasset", meshRegistry, materialRegistry, _graphicsCommandPoolHandler.Internal(), _graphicsQueueHandler.Internal(), _sampler.Internal());
-
     // for(uint32_t i = 0; i < 100; ++i)
     // {
     //     float red = (rand() / (float)RAND_MAX);
@@ -486,16 +484,26 @@ Application::Application() :
     //     uint32_t matBinding = materialRegistry.RegisterMaterial(defaultMat);
     // }
 
-    // for(uint32_t i = 0; i < 300000; ++i)
+    // float sample = 1000000;
+    // float tr = 80.0f;
+
+    // for(uint32_t i = 0; i < sample; ++i)
     // {
     //     uint32_t matBinding = rand() % materialRegistry.MaterialsCount();
 
-    //     // rand float 100
-    //     float x = (rand() / (float)RAND_MAX) * 80 - 40;
-    //     float y = (rand() / (float)RAND_MAX) * 80 - 40;
-    //     float z = (rand() / (float)RAND_MAX) * 80 - 40;
+    //     float x = (rand() / (float)RAND_MAX) * 2.0f - 1.0f;
+    //     float y = (rand() / (float)RAND_MAX) * 2.0f - 1.0f;
+    //     float z = (rand() / (float)RAND_MAX) * 2.0f - 1.0f;
 
-    //     float scale = (rand() / (float)RAND_MAX) * 25;
+    //     float norm = sqrtf(x*x + y*y + z*z);
+
+    //     float radius = (rand() / (float)RAND_MAX) * tr;
+
+    //     x = (x / norm) * radius;
+    //     y = (y / norm) * radius;
+    //     z = (z / norm) * radius;
+
+    //     float scale = radius / tr * 25.0f;
     //     InstanceData instance = {
     //         .modelMatrix = ApplicationHelper::TranslateRotateScale(glm::vec3(x, y, z),
     //             glm::vec3(0.0f, 0.0f, 0.0f),
@@ -504,6 +512,8 @@ Application::Application() :
     //     };
     //     meshRegistry.RegisterInstance(instance);
     // }
+
+    AssetHelper::Load3DModel("data/BistroExterior.m3vkasset", meshRegistry, materialRegistry, _graphicsCommandPoolHandler.Internal(), _graphicsQueueHandler.Internal(), _sampler.Internal());
 
     for(auto& registry : _registries)
     {

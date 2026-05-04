@@ -7,7 +7,7 @@
 MeshRegistry::MeshRegistry(size_t vertexBufferSize, size_t indexBufferSize, size_t indirectBufferSize)
 : _vertexBuffer(vertexBufferSize, sizeof(Vertex), GraphicsBuffer::BufferType::VERTEX),
     _indexBuffer(indexBufferSize, sizeof(uint32_t), GraphicsBuffer::BufferType::INDEX),
-    _indirectBuffer(indirectBufferSize, sizeof(VkDrawIndexedIndirectCommand), GraphicsBuffer::BufferType::INDIRECT_DRAW),
+    _indirectBuffer(indirectBufferSize, sizeof(DrawIndexedIndirectPadded), GraphicsBuffer::BufferType::INDIRECT_DRAW),
     _instanceDataBuffer(indirectBufferSize, sizeof(InstanceData), GraphicsBuffer::BufferType::STORAGE)
 {
 }
@@ -23,7 +23,7 @@ uint32_t MeshRegistry::RegisterMesh(std::span<const Vertex> vertices, std::span<
 
     _cpuVertices.insert(_cpuVertices.end(), vertices.begin(), vertices.end());
     _cpuIndices.insert(_cpuIndices.end(), indices.begin(), indices.end());
-    _cpuIndirectCommands.push_back(VkDrawIndexedIndirectCommand
+    _cpuIndirectCommands.push_back(DrawIndexedIndirectPadded
     {
         .indexCount = subMesh.indexCount,
         .instanceCount = 0,
@@ -42,7 +42,7 @@ uint32_t MeshRegistry::RegisterInstance(InstanceData instances)
     return static_cast<uint32_t>(_cpuInstances.size() - 1);
 }
 
-VkDrawIndexedIndirectCommand& MeshRegistry::RegisterIndirectCommand(VkDrawIndexedIndirectCommand command)
+DrawIndexedIndirectPadded& MeshRegistry::RegisterIndirectCommand(DrawIndexedIndirectPadded command)
 {
     _cpuIndirectCommands.push_back(command);
     return _cpuIndirectCommands.back();
@@ -60,10 +60,10 @@ void MeshRegistry::UploadAndRelease(VkQueue queue, VkCommandPool cmdPool)
         return;
     }
 
-    _vertexBuffer.CopyToBuffer(queue, cmdPool, _cpuVertices.data(), _cpuVertices.size() * sizeof(Vertex));
-    _indexBuffer.CopyToBuffer(queue, cmdPool, _cpuIndices.data(), _cpuIndices.size() * sizeof(uint32_t));
-    _indirectBuffer.CopyToBuffer(queue, cmdPool, _cpuIndirectCommands.data(), _cpuIndirectCommands.size() * sizeof(VkDrawIndexedIndirectCommand));
-    _instanceDataBuffer.CopyToBuffer(queue, cmdPool, _cpuInstances.data(), _cpuInstances.size() * sizeof(InstanceData));
+    _vertexBuffer.CopyToBuffer(queue, cmdPool, _cpuVertices.data(), _cpuVertices.size() * _vertexBuffer.GetStride());
+    _indexBuffer.CopyToBuffer(queue, cmdPool, _cpuIndices.data(), _cpuIndices.size() * _indexBuffer.GetStride());
+    _indirectBuffer.CopyToBuffer(queue, cmdPool, _cpuIndirectCommands.data(), _cpuIndirectCommands.size() * _indirectBuffer.GetStride());
+    _instanceDataBuffer.CopyToBuffer(queue, cmdPool, _cpuInstances.data(), _cpuInstances.size() * _instanceDataBuffer.GetStride());
 
     _cpuVertices.clear();
     _cpuIndices.clear();
@@ -79,5 +79,5 @@ void MeshRegistry::Bind(const CommandBuffer& cmdBuffer, VkPipelineLayout layout)
 
 void MeshRegistry::Draw(const CommandBuffer& cmdBuffer, VkPipelineLayout layout) const
 {
-    vkCmdDrawIndexedIndirect(cmdBuffer.GetInternal(), _indirectBuffer.Internal(), 0, static_cast<uint32_t>(_indirectBuffer.GetCurrentIndex()), sizeof(VkDrawIndexedIndirectCommand));
+    vkCmdDrawIndexedIndirect(cmdBuffer.GetInternal(), _indirectBuffer.Internal(), 0, static_cast<uint32_t>(_indirectBuffer.GetCurrentIndex()), _indirectBuffer.GetStride());
 }

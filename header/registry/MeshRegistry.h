@@ -25,6 +25,15 @@ struct InstanceData
     uint32_t pad2;
 };
 
+struct DrawIndexedIndirectPadded {
+    uint32_t    indexCount;
+    uint32_t    instanceCount;
+    uint32_t    firstIndex;
+    int32_t     vertexOffset;
+    uint32_t    firstInstance;
+    uint32_t pad0[3];
+};
+
 class MeshRegistry : public Registry
 {
     public:
@@ -32,7 +41,7 @@ class MeshRegistry : public Registry
 
     uint32_t RegisterMesh(std::span<const Vertex> vertices, std::span<const uint32_t> indices);
     uint32_t RegisterInstance(InstanceData instance);
-    VkDrawIndexedIndirectCommand& RegisterIndirectCommand(VkDrawIndexedIndirectCommand command);
+    DrawIndexedIndirectPadded& RegisterIndirectCommand(DrawIndexedIndirectPadded command);
 
     void UploadAndRelease(VkQueue queue, VkCommandPool cmdPool) override;
     void Bind(const CommandBuffer& cmdBuffer, VkPipelineLayout layout) const override;
@@ -44,7 +53,7 @@ class MeshRegistry : public Registry
     std::vector<Vertex> _cpuVertices;
     std::vector<uint32_t> _cpuIndices;
     std::vector<InstanceData> _cpuInstances;
-    std::vector<VkDrawIndexedIndirectCommand> _cpuIndirectCommands;
+    std::vector<DrawIndexedIndirectPadded> _cpuIndirectCommands;
 
     GeometryBuffer _vertexBuffer;
     GeometryBuffer _indexBuffer;

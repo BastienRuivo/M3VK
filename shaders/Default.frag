@@ -37,5 +37,7 @@ void main()
 
     vec4 baseColor = texture(uTextures[material.BaseColorTexIndex], vTexcoords) * material.BaseColor;
 
+    if(baseColor.a < 0.5) discard;
+
     outColor = baseColor;
 }
