@@ -4,6 +4,7 @@
 
 #include "asset/AssetImporter.h"
 #include "application/DebugLayer.h"
+#include "registry/MaterialRegistry.h"
 #include <cstddef>
 #include <cstdint>
 #include <string>
@@ -70,7 +71,7 @@ bool AssetImporter::Load(AssetImporter& importer, const std::filesystem::path& p
 
     // DATAS
     importer.Materials.resize(importer.Header.MaterialCount);
-    fread(importer.Materials.data(), sizeof(MaterialImport), importer.Header.MaterialCount, file);
+    fread(importer.Materials.data(), sizeof(MaterialProperties), importer.Header.MaterialCount, file);
 
     importer.Textures.resize(importer.Header.TextureCount);
     fread(importer.Textures.data(), sizeof(TextureImport), importer.Header.TextureCount, file);

@@ -1,58 +1,83 @@
 #include "registry/MeshRegistry.h"
 #include "application/ApplicationInfo.h"
-#include <stdexcept>
+#include <cassert>
+#include <cstdint>
+#include <vulkan/vulkan_core.h>
 
-MeshRegistry::MeshRegistry(size_t vertexBufferSize, size_t indexBufferSize)
+MeshRegistry::MeshRegistry(size_t vertexBufferSize, size_t indexBufferSize, size_t indirectBufferSize)
 : _vertexBuffer(vertexBufferSize, sizeof(Vertex), GraphicsBuffer::BufferType::VERTEX),
-    _indexBuffer(indexBufferSize, sizeof(uint32_t), GraphicsBuffer::BufferType::INDEX)
+    _indexBuffer(indexBufferSize, sizeof(uint32_t), GraphicsBuffer::BufferType::INDEX),
+    _indirectBuffer(indirectBufferSize, sizeof(VkDrawIndexedIndirectCommand), GraphicsBuffer::BufferType::INDIRECT_DRAW),
+    _instanceDataBuffer(indirectBufferSize, sizeof(InstanceData), GraphicsBuffer::BufferType::STORAGE)
 {
-
 }
 
-SubMesh MeshRegistry::Register(std::span<const Vertex> vertices, std::span<const uint32_t> indices)
+uint32_t MeshRegistry::RegisterMesh(std::span<const Vertex> vertices, std::span<const uint32_t> indices)
 {
-    SubMesh subMesh
+    MeshHandle subMesh
     {
         .firstIndex = static_cast<uint32_t>(_cpuIndices.size()),
         .indexCount = static_cast<uint32_t>(indices.size()),
-        .vertexOffset = static_cast<uint32_t>(_cpuVertices.size())
+        .firstVertex = static_cast<uint32_t>(_cpuVertices.size())
     };
 
     _cpuVertices.insert(_cpuVertices.end(), vertices.begin(), vertices.end());
     _cpuIndices.insert(_cpuIndices.end(), indices.begin(), indices.end());
+    _cpuIndirectCommands.push_back(VkDrawIndexedIndirectCommand
+    {
+        .indexCount = subMesh.indexCount,
+        .instanceCount = 0,
+        .firstIndex = subMesh.firstIndex,
+        .vertexOffset = static_cast<int32_t>(subMesh.firstVertex),
+        .firstInstance = static_cast<uint32_t>(_cpuInstances.size())
+    });
 
-    return subMesh;
+    return static_cast<uint32_t>(_cpuIndirectCommands.size() - 1);
+}
+
+uint32_t MeshRegistry::RegisterInstance(InstanceData instances)
+{
+    _cpuInstances.push_back(instances);
+    _cpuIndirectCommands.back().instanceCount++;
+    return static_cast<uint32_t>(_cpuInstances.size() - 1);
+}
+
+VkDrawIndexedIndirectCommand& MeshRegistry::RegisterIndirectCommand(VkDrawIndexedIndirectCommand command)
+{
+    _cpuIndirectCommands.push_back(command);
+    return _cpuIndirectCommands.back();
 }
 
 void MeshRegistry::UploadAndRelease(VkQueue queue, VkCommandPool cmdPool)
 {
-    if(_cpuVertices.size() >= ApplicationInfo::Constant::VertexBufferMaxSize)
-    {
-        DebugLayer::Log(DebugLayer::LogType::ERROR, "Max vertex buffer size reached : " + std::to_string(_cpuVertices.size()) + "/" + std::to_string(ApplicationInfo::Constant::VertexBufferMaxSize));
-        throw std::runtime_error("Max vertex buffer size reached");
-    }
+    assert(_cpuVertices.size() <= ApplicationInfo::Constant::VertexBufferMaxSize);
+    assert(_cpuIndices.size() <= ApplicationInfo::Constant::IndexBufferMaxSize);
+    assert(_cpuInstances.size() <= ApplicationInfo::Constant::DrawIndirectBufferMaxSize);
 
-    if(_cpuIndices.size() >= ApplicationInfo::Constant::IndexBufferMaxSize)
+    if(_cpuIndices.size() == 0 || _cpuVertices.size() == 0 || _cpuInstances.size() == 0)
     {
-        DebugLayer::Log(DebugLayer::LogType::ERROR, "Max index buffer size reached : " + std::to_string(_cpuIndices.size()) + "/" + std::to_string(ApplicationInfo::Constant::IndexBufferMaxSize));
-        throw std::runtime_error("Max index buffer size reached");
-    }
-
-    if(_cpuIndices.size() == 0 || _cpuVertices.size() == 0)
-    {
-        DebugLayer::Log(DebugLayer::LogType::WARNING, "No vertices or indices to upload");
+        DebugLayer::Log(DebugLayer::LogType::WARNING, "No vertices or indices or instances to upload");
         return;
     }
 
     _vertexBuffer.CopyToBuffer(queue, cmdPool, _cpuVertices.data(), _cpuVertices.size() * sizeof(Vertex));
     _indexBuffer.CopyToBuffer(queue, cmdPool, _cpuIndices.data(), _cpuIndices.size() * sizeof(uint32_t));
+    _indirectBuffer.CopyToBuffer(queue, cmdPool, _cpuIndirectCommands.data(), _cpuIndirectCommands.size() * sizeof(VkDrawIndexedIndirectCommand));
+    _instanceDataBuffer.CopyToBuffer(queue, cmdPool, _cpuInstances.data(), _cpuInstances.size() * sizeof(InstanceData));
 
     _cpuVertices.clear();
     _cpuIndices.clear();
+    _cpuIndirectCommands.clear();
+    _cpuInstances.clear();
 }
 
-void MeshRegistry::Bind(const CommandBuffer& cmdBuffer) const
+void MeshRegistry::Bind(const CommandBuffer& cmdBuffer, VkPipelineLayout layout) const
 {
     cmdBuffer.BindBuffer(_vertexBuffer);
     cmdBuffer.BindBuffer(_indexBuffer);
+}
+
+void MeshRegistry::Draw(const CommandBuffer& cmdBuffer, VkPipelineLayout layout) const
+{
+    vkCmdDrawIndexedIndirect(cmdBuffer.GetInternal(), _indirectBuffer.Internal(), 0, static_cast<uint32_t>(_indirectBuffer.GetCurrentIndex()), sizeof(VkDrawIndexedIndirectCommand));
 }

@@ -9,7 +9,7 @@ public:
     Registry() = default;
     virtual ~Registry() = default;
     virtual void UploadAndRelease(VkQueue queue, VkCommandPool cmdPool) = 0;
-    virtual void Bind(const CommandBuffer& cmdBuffer) const {}
+    virtual void Bind(const CommandBuffer& cmdBuffer, VkPipelineLayout layout) const {}
 
     //delete copy constructors
     Registry(const Registry&) = delete;

@@ -1,5 +1,10 @@
 #include "registry/MaterialRegistry.h"
+#include "application/ApplicationInfo.h"
+#include "rendering/DescriptorPool.h"
+#include "rendering/GPUImage.h"
 #include "rendering/GraphicsBuffer.h"
+#include "rendering/ImageHelper.h"
+#include <cstdint>
 #include <stdexcept>
 #include <vulkan/vulkan_core.h>
 
@@ -22,20 +27,74 @@ void MaterialRegistry::UploadAndRelease(VkQueue queue, VkCommandPool cmdPool)
     _materials.clear();
 }
 
-void MaterialRegistry::Bind(const CommandBuffer& cmdBuffer) const
+void MaterialRegistry::Bind(const CommandBuffer& cmdBuffer, VkPipelineLayout layout) const
 {
-    //cmdBuffer.BindBuffer(_materialBuffer);
+    cmdBuffer.BindDescriptorSets(layout, _bindlessTextureSet, 1);
 }
 
-MaterialRegistry::MaterialRegistry(size_t materialBufferSize)
-: _materialBuffer(materialBufferSize, sizeof(MaterialProperties), GraphicsBuffer::BufferType::STORAGE)
-{
-
-}
-
-BufferHelper::BufferBinding MaterialRegistry::Register(MaterialProperties material)
+uint32_t MaterialRegistry::RegisterMaterial(MaterialProperties material)
 {
     _materials.push_back(material);
-    BufferHelper::BufferBinding binding = BufferHelper::BufferBinding(_materialBuffer, _materials.size() - 1);
-    return binding;
+    return _materials.size() - 1;
+}
+
+MaterialRegistry::MaterialRegistry(DescriptorPool& pool, uint32_t layoutIndex, uint32_t maxTexturesCount)
+    :   _maxTexturesCount(maxTexturesCount),
+        _textureIndicesState(std::vector<int32_t>(_maxTexturesCount, -1)),
+        _lastFreeTextureIndex(0),
+        _materialBuffer(ApplicationInfo::Constant::MaterialBufferMaxSize, MaterialProperties::Stride(), GraphicsBuffer::BufferType::STORAGE)
+{
+    _bindlessTextureSet = pool.AllocateBindless(0, ApplicationInfo::Constant::MaxTextureCount);
+}
+
+MaterialRegistry::~MaterialRegistry()
+{
+}
+
+uint32_t MaterialRegistry::RegisterTexture(GPUAllocatedImage&& image, VkSampler sampler)
+{
+    ImageHelper::ImageBinding binding = ImageHelper::ImageBinding(image.Internal(), sampler);
+    _textures.emplace_back(std::move(image));
+
+    uint32_t textureIndex = 0;
+    bool textureFound = false;
+    for (uint32_t i = _lastFreeTextureIndex; i < _textureIndicesState.size() + _lastFreeTextureIndex; i++)
+    {
+        if (_textureIndicesState[i % _textureIndicesState.size()] == -1)
+        {
+            textureIndex = i;
+            textureFound = true;
+            break;
+        }
+    }
+
+    if (!textureFound)
+    {
+        throw std::runtime_error("BindlessTextureManager is full");
+    }
+
+    VkWriteDescriptorSet write =
+    {
+        .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+        .dstSet = _bindlessTextureSet.set,
+        .dstBinding = 0,
+        .dstArrayElement = textureIndex,
+        .descriptorCount = 1,
+        .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+        .pImageInfo = &binding.Descriptor,
+        .pBufferInfo = nullptr,
+        .pTexelBufferView = nullptr
+    };
+
+    DescriptorHelper::UpdateDescriptorSet(std::span(&write, 1), {});
+
+    _textureIndicesState[textureIndex] = textureIndex;
+    _lastFreeTextureIndex = (textureIndex + 1) % _maxTexturesCount;
+    return textureIndex;
+}
+
+uint32_t MaterialRegistry::RemoveTexture(uint32_t textureIndex)
+{
+    _textureIndicesState[textureIndex] = -1;
+    return textureIndex;
 }

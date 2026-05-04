@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <cstring>
 #include <stdexcept>
+#include <utility>
 #include <vulkan/vulkan_core.h>
 
 StageBuffer::StageBuffer(VkDeviceSize size, enum Usage bufferUsage)
@@ -178,13 +179,15 @@ GraphicsBuffer::GraphicsBuffer(VkDeviceSize count, VkDeviceSize stride, BufferTy
     // mean it's a dst buffer, already in good memory shape but cant be writable directly by cpu
     VkBufferUsageFlags usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 
-    if(_type == DYNAMIC_UNIFORM || _type == UNIFORM || _type == STORAGE)
+    if(_type == DYNAMIC_UNIFORM || _type == UNIFORM || _type == STORAGE || _type == INDIRECT_DRAW)
     {
          VkDeviceSize alignement = stride;
 
         switch(_type) {
             case UNIFORM:
             case DYNAMIC_UNIFORM: alignement = ApplicationInfo::GetProperties().limits.minUniformBufferOffsetAlignment; break;
+
+            case INDIRECT_DRAW:
             case STORAGE: alignement = ApplicationInfo::GetProperties().limits.minStorageBufferOffsetAlignment; break;
             default:
             {
@@ -206,6 +209,7 @@ GraphicsBuffer::GraphicsBuffer(VkDeviceSize count, VkDeviceSize stride, BufferTy
         case VERTEX: usage |= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT; break;
         case UNIFORM:
         case DYNAMIC_UNIFORM: usage |= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT; break;
+        case INDIRECT_DRAW: usage |= VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT; break;
         case STORAGE: usage |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT; break;
         default:
         {
@@ -215,11 +219,16 @@ GraphicsBuffer::GraphicsBuffer(VkDeviceSize count, VkDeviceSize stride, BufferTy
 
     VkMemoryPropertyFlags properties;
     switch (_type) {
+        case INDIRECT_DRAW:
         case UNIFORM:
         case STORAGE:
         case INDEX:
         case VERTEX: properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT; break; // Memory optimized for GPU access
-        case DYNAMIC_UNIFORM: properties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT; // Host = CPU so it mean it is visible and writable by it
+        case DYNAMIC_UNIFORM: properties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT; break; // Host = CPU so it mean it is visible and writable by it
+        default:
+        {
+            throw std::runtime_error("Achievement get :: How did we get Here ? (Uknown Buffer Type)");
+        }
     }
 
     VkBufferCreateInfo info
@@ -350,4 +359,21 @@ void GeometryBuffer::CopyToBuffer(const VkQueue& queue,
 
     GraphicsBuffer::CopyToBuffer(queue, cmdPool, srcData, size, 0, _currentSize);
     _currentSize += size;
+}
+
+GeometryBuffer::GeometryBuffer(GeometryBuffer&& other) noexcept
+    : GraphicsBuffer(std::move(other)),
+      _currentSize(std::exchange(other._currentSize, 0))
+{
+
+}
+
+GeometryBuffer& GeometryBuffer::operator=(GeometryBuffer&& other) noexcept
+{
+    if(this != &other)
+    {
+        GraphicsBuffer::operator=(std::move(other));
+        _currentSize = std::exchange(other._currentSize, 0);
+    }
+    return *this;
 }

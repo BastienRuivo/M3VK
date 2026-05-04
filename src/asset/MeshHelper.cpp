@@ -1,8 +1,9 @@
 #include "asset/MeshHelper.h"
 #include "asset/Vertex.h"
 #include "registry/MeshRegistry.h"
+#include <cstdint>
 
-SubMesh MeshHelper::CubeMesh(MeshRegistry& meshRegistry)
+uint32_t MeshHelper::CubeMesh(MeshRegistry& meshRegistry)
 {
     std::array<Vertex, 24> vertices
     {
@@ -10,126 +11,150 @@ SubMesh MeshHelper::CubeMesh(MeshRegistry& meshRegistry)
         Vertex
         {
             .pos = {-0.5f, 0.5f, -0.5f},
+            .normal = {0.0f, 1.0f, 0.0f},
             .texCoord = {0.0f, 0.0f}
         },
         Vertex
         {
             .pos = {0.5f, 0.5f, -0.5f},
+            .normal = {0.0f, 1.0f, 0.0f},
             .texCoord = {1.0f, 0.0f}
         },
         Vertex
         {
             .pos = {0.5f, 0.5f, 0.5f},
+            .normal = {0.0f, 1.0f, 0.0f},
             .texCoord = {1.0f, 1.0f}
         },
         Vertex
         {
             .pos = {-0.5f, 0.5f, 0.5f},
+            .normal = {0.0f, 1.0f, 0.0f},
             .texCoord = {0.0f, 1.0f}
         },
         // bottom
         Vertex
         {
             .pos = {-0.5f, -0.5f, -0.5f},
+            .normal = {0.0f, -1.0f, 0.0f},
             .texCoord = {0.0f, 0.0f}
         },
         Vertex
         {
             .pos = {0.5f, -0.5f, -0.5f},
+            .normal = {0.0f, -1.0f, 0.0f},
             .texCoord = {1.0f, 0.0f}
         },
         Vertex
         {
             .pos = {0.5f, -0.5f, 0.5f},
+            .normal = {0.0f, -1.0f, 0.0f},
             .texCoord = {1.0f, 1.0f}
         },
         Vertex
         {
             .pos = {-0.5f, -0.5f, 0.5f},
+            .normal = {0.0f, -1.0f, 0.0f},
             .texCoord = {0.0f, 1.0f}
         },
         // front
         Vertex
         {
             .pos = {-0.5f, 0.5f, 0.5f},
+            .normal = {0.0f, 0.0f, 1.0f},
             .texCoord = {0.0f, 0.0f}
         },
         Vertex
         {
             .pos = {0.5f, 0.5f, 0.5f},
+            .normal = {0.0f, 0.0f, 1.0f},
             .texCoord = {1.0f, 0.0f}
         },
         Vertex
         {
             .pos = {0.5f, -0.5f, 0.5f},
+            .normal = {0.0f, 0.0f, 1.0f},
             .texCoord = {1.0f, 1.0f}
         },
         Vertex
         {
             .pos = {-0.5f, -0.5f, 0.5f},
+            .normal = {0.0f, 0.0f, 1.0f},
             .texCoord = {0.0f, 1.0f}
         },
         // back
         Vertex
         {
             .pos = {-0.5f, 0.5f, -0.5f},
+            .normal = {0.0f, 0.0f, -1.0f},
             .texCoord = {0.0f, 0.0f}
         },
         Vertex
         {
             .pos = {0.5f, 0.5f, -0.5f},
+            .normal = {0.0f, 0.0f, -1.0f},
             .texCoord = {1.0f, 0.0f}
         },
         Vertex
         {
             .pos = {0.5f, -0.5f, -0.5f},
+            .normal = {0.0f, 0.0f, -1.0f},
             .texCoord = {1.0f, 1.0f}
         },
         Vertex
         {
             .pos = {-0.5f, -0.5f, -0.5f},
+            .normal = {0.0f, 0.0f, -1.0f},
             .texCoord = {0.0f, 1.0f}
         },
         // left
         Vertex
         {
             .pos = {-0.5f, 0.5f, -0.5f},
+            .normal = {-1.0f, 0.0f, 0.0f},
             .texCoord = {0.0f, 0.0f}
         },
         Vertex
         {
             .pos = {-0.5f, 0.5f, 0.5f},
+            .normal = {-1.0f, 0.0f, 0.0f},
             .texCoord = {1.0f, 0.0f}
         },
         Vertex
         {
             .pos = {-0.5f, -0.5f, 0.5f},
+            .normal = {-1.0f, 0.0f, 0.0f},
             .texCoord = {1.0f, 1.0f}
         },
         Vertex
         {
             .pos = {-0.5f, -0.5f, -0.5f},
+            .normal = {-1.0f, 0.0f, 0.0f},
             .texCoord = {0.0f, 1.0f}
         },
         // right
         Vertex
         {
             .pos = {0.5f, 0.5f, -0.5f},
+            .normal = {1.0f, 0.0f, 0.0f},
             .texCoord = {0.0f, 0.0f}
         },
         Vertex
         {
             .pos = {0.5f, 0.5f, 0.5f},
+            .normal = {1.0f, 0.0f, 0.0f},
             .texCoord = {1.0f, 0.0f}
         },
         Vertex
         {
             .pos = {0.5f, -0.5f, 0.5f},
+            .normal = {1.0f, 0.0f, 0.0f},
             .texCoord = {1.0f, 1.0f}
         },
         Vertex
         {
             .pos = {0.5f, -0.5f, -0.5f},
+            .normal = {1.0f, 0.0f, 0.0f},
             .texCoord = {0.0f, 1.0f}
         },
     };
@@ -144,5 +169,5 @@ SubMesh MeshHelper::CubeMesh(MeshRegistry& meshRegistry)
         20, 21, 22, 22, 23, 20 // right
     };
 
-    return meshRegistry.Register(vertices, indices);
+    return meshRegistry.RegisterMesh(vertices, indices);
 }

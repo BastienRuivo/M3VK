@@ -1,11 +1,9 @@
 #pragma once
 
 
-#include "asset/Material.h"
 #include "rendering/Camera.h"
 #include "rendering/DescriptorPool.h"
 #include "registry/Registry.h"
-#include "rendering/Renderer.h"
 #include "rendering/CommandBuffer.h"
 #include "rendering/MultiFrame.h"
 #include "handler/Handlers.h"
@@ -69,9 +67,15 @@ class Application
 
     // used for object sharing data between cpu and gpu -> due to race condition we need one copy for each frame
     DescriptorPool _dynamicDescriptorPool;
-
-    // used for static data where we can reuse the same descriptor between frames
     DescriptorPool _staticDescriptorPool;
+    DescriptorSetHandle _materialInstancesSet;
+
+    std::array<std::unique_ptr<Registry>, 2> _registries;
+    enum class RegistryType
+    {
+        Mesh = 0,
+        Material = 1
+    };
 
     VkPipelineLayoutHandler _pipelineLayoutHandler;
     VkPipelineHandler _graphicsPipelineHandler;
@@ -82,18 +86,12 @@ class Application
     VkCommandPoolHandler _graphicsCommandPoolHandler;
 
     // Datas
-    std::array<std::unique_ptr<Registry>, 2> _registries;
-    enum class RegistryType
-    {
-        Mesh = 0,
-        Material = 1
-    };
 
     VkSamplerHandler _sampler;
 
     MultiFrameHandler<GraphicsBuffer> _cameraDataBuffer;
-    MultiFrameObject<VkDescriptorSet> _descriptorSet;
-    MultiFrameObject<VkDescriptorSet> CreateDescriptorSet();
+    MultiFrameObject<DescriptorSetHandle> _descriptorSet;
+    MultiFrameObject<DescriptorSetHandle> CreateDescriptorSet();
 
     MultiFrameObject<CommandBuffer> _commandBuffer;
 
@@ -101,10 +99,6 @@ class Application
     MultiFrameHandler<VkSemaphoreHandler> _availableImageSemaphore;
     MultiFrameHandler<VkSemaphoreHandler> _renderFinishedSemaphores;
     MultiFrameHandler<VkFenceHandler>  _waitFence;
-
-    std::vector<Renderer> _renderers;
-    std::vector<Material> _materials;
-    std::vector<GPUAllocatedImage> _images;
 
     bool _mouseLocked = true;
     float _inputPrevent = 0;

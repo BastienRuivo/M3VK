@@ -1,7 +1,8 @@
 #pragma once
 
 #include "registry/MeshRegistry.h"
+#include <cstdint>
 namespace MeshHelper
 {
-    SubMesh CubeMesh(MeshRegistry& meshRegistry);
+    uint32_t CubeMesh(MeshRegistry& meshRegistry);
 };

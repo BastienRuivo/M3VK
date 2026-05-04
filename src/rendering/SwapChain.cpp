@@ -1,6 +1,7 @@
 #include "rendering/SwapChain.h"
 #include "application/ApplicationHelper.h"
 #include "application/ApplicationInfo.h"
+#include "application/DebugLayer.h"
 #include "rendering/GPUImage.h"
 #include "rendering/MultiFrame.h"
 #include "rendering/QueueFamilyIds.h"
@@ -11,6 +12,8 @@
 #include <stdexcept>
 #include <vector>
 #include <vulkan/vulkan_core.h>
+
+#include "application/DebugLayer.h"
 
 
 VkExtent2D SwapChain::SelectSwapExtents(const Window& window, const VkSurfaceCapabilitiesKHR& Capabilities) const

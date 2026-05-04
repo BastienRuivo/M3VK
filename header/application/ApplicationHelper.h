@@ -1,5 +1,6 @@
 #pragma once
 
+#include "glm/ext/matrix_float4x4.hpp"
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -29,4 +30,5 @@ namespace ApplicationHelper
     bool HasStencilComponent(VkFormat format);
     uint32_t GetFormatSize(VkFormat format);
     glm::quat EulerToQuat(glm::vec3 euler);
+    glm::mat4 TranslateRotateScale(glm::vec3 position, glm::vec3 rotation, glm::vec3 scale);
 };

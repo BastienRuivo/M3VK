@@ -67,13 +67,23 @@ VkDeviceHandler::VkDeviceHandler(VkSurfaceKHR windowSurface, const std::vector<c
         queueCreateInfos.push_back(queueCreateInfo);
     }
 
+    VkPhysicalDeviceVulkan11Features vulkan11Features
+    {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES,
+        .shaderDrawParameters = VK_TRUE
+    };
+
     // enable bindless support
     VkPhysicalDeviceDescriptorIndexingFeatures descriptorIndexingFeatures
     {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES,
-        .pNext = nullptr,
-        .descriptorBindingPartiallyBound = VK_TRUE,
-        .runtimeDescriptorArray = VK_TRUE
+        .pNext = &vulkan11Features,
+
+        .shaderSampledImageArrayNonUniformIndexing = VK_TRUE, // different instance in the same wave can access different textures
+        .descriptorBindingSampledImageUpdateAfterBind = VK_TRUE, // descriptor can be updated while bound
+        .descriptorBindingPartiallyBound = VK_TRUE, // slot can be empty
+        .descriptorBindingVariableDescriptorCount = VK_TRUE, // actual count set at all location
+        .runtimeDescriptorArray = VK_TRUE, // unsized array in shaders
     };
 
     VkPhysicalDeviceDynamicRenderingFeatures dynamicRenderingFeatures
@@ -86,6 +96,8 @@ VkDeviceHandler::VkDeviceHandler(VkSurfaceKHR windowSurface, const std::vector<c
     VkPhysicalDeviceFeatures deviceFeatures
     {
         .sampleRateShading = VK_TRUE,
+        .multiDrawIndirect = VK_TRUE,
+        .drawIndirectFirstInstance = VK_TRUE,
         .samplerAnisotropy = VK_TRUE,
     };
 

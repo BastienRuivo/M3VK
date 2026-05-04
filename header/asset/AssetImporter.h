@@ -28,14 +28,6 @@ struct TextureImport
     uint32_t MipCount;
 };
 
-struct MaterialImport
-{
-    uint32_t BaseColorTexId;
-    uint32_t NormalMapTexId;
-    uint32_t MRAOTexId;
-    MaterialProperties MatProperties;
-};
-
 struct SubMeshImport
 {
     uint32_t MaterialIndex;
@@ -60,7 +52,7 @@ struct AssetImporter
     uint32_t Version;
     AssetHeader Header;
 
-    std::vector<MaterialImport> Materials;
+    std::vector<MaterialProperties> Materials;
     std::vector<TextureImport> Textures;
     std::vector<SubMeshImport> SubMeshes;
     std::vector<std::byte> TextureDatas;

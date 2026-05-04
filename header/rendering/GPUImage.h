@@ -3,7 +3,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <stb_image.h>
-#include "rendering/CommandBuffer.h"
 #include "handler/VkImageViewHandler.h"
 #include <vulkan/vulkan_core.h>
 
@@ -35,7 +34,6 @@ class GPUAllocatedImage
 
     void UploadAndGenerateMip(void* data, uint32_t width, uint32_t height, uint32_t pixelStride, VkCommandPool pool, VkQueue queue);
     void TransitionLayout(VkCommandPool pool, VkQueue queue, VkImageLayout oldLayout, VkImageLayout newLayout) const;
-    void GenerateMipmapsCommand(const CommandBuffer& cmdBuffer) const;
 
     inline ImageReference Internal() const { return _internal; }
     inline VkImageView View() const { return _internal.View; }

@@ -74,7 +74,9 @@ class GraphicsBuffer
         VERTEX = 1,
         DYNAMIC_UNIFORM = 2,
         UNIFORM = 3,
-        STORAGE = 4
+        STORAGE = 4,
+        INDIRECT_DRAW = 5,
+        COUNT
     };
     GraphicsBuffer(VkDeviceSize count, VkDeviceSize stride, BufferType type);
     ~GraphicsBuffer();
@@ -144,6 +146,12 @@ class GeometryBuffer : public GraphicsBuffer
 {
     public:
     using GraphicsBuffer::GraphicsBuffer;
+
+    GeometryBuffer(const GeometryBuffer&) = delete;
+    GeometryBuffer& operator=(const GeometryBuffer&) = delete;
+
+    GeometryBuffer(GeometryBuffer&& other) noexcept;
+    GeometryBuffer& operator=(GeometryBuffer&& other) noexcept;
 
     void CopyToBuffer(const VkQueue& queue,
         const VkCommandPool& cmdPool,

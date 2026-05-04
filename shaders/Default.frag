@@ -1,30 +1,42 @@
 #version 450
+#extension GL_EXT_nonuniform_qualifier : enable
 
-layout(push_constant, std430) uniform ObjectData
+#define UINT32_MAX 0xffffffff
+
+struct MaterialProperties
 {
-    mat4 localToWorldMatrix;
-} _Instance;
+    uint BaseColorTexIndex;
+    uint NormalTexIndex;
+    uint MetallicRoughnessTexIndex;
+
+    vec4 BaseColor;
+    float Metallic;
+    float Roughness;
+};
+
+layout(set = 1, binding = 0) uniform sampler2D uTextures[];
+//ssbo
+layout(set = 2, binding = 0) readonly buffer MaterialData
+{
+    MaterialProperties _Material[];
+};
+
+#define SampleTexture(texIndex, texcoords, fallback) texIndex == UINT32_MAX ? fallback : texture(uTextures[texIndex], texcoords)
 
 
 //inputs
-layout(location = 0) in vec3 vNormal;
-layout(location = 1) in vec2 vTexcoords;
-
-//ssbo
-layout(set = 1, binding = 0) readonly buffer MaterialData
-{
-    vec4 BaseColor;
-} _Material;
-
-layout(set = 1, binding = 1) uniform sampler2D BaseColorTex;
-layout(set = 1, binding = 2) uniform sampler2D NormalMapTex;
-layout(set = 1, binding = 3) uniform sampler2D MRAOTex;
+layout(location = 0) flat in uint vMaterialIndex;
+layout(location = 1) in vec3 vNormal;
+layout(location = 2) in vec2 vTexcoords;
 
 // output
 layout(location = 0) out vec4 outColor;
 
 void main()
 {
-    outColor = texture(BaseColorTex, vTexcoords) * _Material.BaseColor;
-    if(outColor.a < 0.1) discard;
+    MaterialProperties material = _Material[vMaterialIndex];
+
+    vec4 baseColor = SampleTexture(material.BaseColorTexIndex, vTexcoords, vec4(1.0)) * material.BaseColor;
+
+    outColor = baseColor;
 }

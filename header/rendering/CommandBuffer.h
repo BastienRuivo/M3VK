@@ -1,5 +1,6 @@
 #pragma once
 
+#include "rendering/DescriptorPool.h"
 #include "rendering/GraphicsBuffer.h"
 #include <cstdint>
 #include <vulkan/vulkan_core.h>
@@ -44,9 +45,9 @@ class CommandBuffer
     void SetViewport(uint32_t x, uint32_t y, uint32_t width, uint32_t height) const;
     void TransitionImageLayout(VkImage img, VkFormat format, uint32_t mipLevel, uint32_t mipCount, VkImageLayout oldLayout, VkImageLayout newLayout) const;
 
-    inline void BindDescriptorSets(const VkPipelineLayout& pipelineLayout, const VkDescriptorSet& set, uint32_t location) const
+    inline void BindDescriptorSets(const VkPipelineLayout& pipelineLayout, const DescriptorSetHandle& setHandle, uint32_t location) const
     {
-        vkCmdBindDescriptorSets(_internal, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, location, 1, &set, 0, nullptr);
+        vkCmdBindDescriptorSets(_internal, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, location, 1, &setHandle.set, 0, nullptr);
     }
 
     inline void DrawIndexed(uint32_t firstIndex, uint32_t indexCount, uint32_t vertexOffset) const
