@@ -1,6 +1,7 @@
 #pragma once
 
 #include "asset/Vertex.h"
+#include "glm/ext/vector_float3.hpp"
 #include "registry/MaterialRegistry.h"
 #include <cstddef>
 #include <cstdint>
@@ -8,7 +9,7 @@
 #include <vector>
 #include <vulkan/vulkan_core.h>
 
-#define VERSION 0
+#define VERSION 2
 
 enum TextureType
 {
@@ -35,6 +36,8 @@ struct SubMeshImport
     uint32_t VertexCount;
     uint32_t IndexOffset;
     uint32_t IndexCount;
+    glm::vec3 AABBMin;
+    glm::vec3 AABBMax;
 };
 
 struct AssetHeader

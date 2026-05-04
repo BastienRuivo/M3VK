@@ -34,6 +34,10 @@ void MaterialRegistry::Bind(const CommandBuffer& cmdBuffer, VkPipelineLayout lay
 
 uint32_t MaterialRegistry::RegisterMaterial(MaterialProperties material)
 {
+    material.BaseColorTexId = material.BaseColorTexId == UINT32_MAX ? _materials[0].BaseColorTexId : material.BaseColorTexId;
+    material.NormalMapTexId = material.NormalMapTexId == UINT32_MAX ? _materials[0].NormalMapTexId : material.NormalMapTexId;
+    material.MRAOTexId = material.MRAOTexId == UINT32_MAX ? _materials[0].MRAOTexId : material.MRAOTexId;
+
     _materials.push_back(material);
     return _materials.size() - 1;
 }

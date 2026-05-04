@@ -21,7 +21,6 @@ layout(set = 2, binding = 0) readonly buffer MaterialData
     MaterialProperties _Material[];
 };
 
-#define SampleTexture(texIndex, texcoords, fallback) texIndex == UINT32_MAX ? fallback : texture(uTextures[texIndex], texcoords)
 
 
 //inputs
@@ -36,7 +35,7 @@ void main()
 {
     MaterialProperties material = _Material[vMaterialIndex];
 
-    vec4 baseColor = SampleTexture(material.BaseColorTexIndex, vTexcoords, vec4(1.0)) * material.BaseColor;
+    vec4 baseColor = texture(uTextures[material.BaseColorTexIndex], vTexcoords) * material.BaseColor;
 
     outColor = baseColor;
 }

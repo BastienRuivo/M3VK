@@ -477,14 +477,6 @@ Application::Application() :
 
     AssetHelper::Load3DModel("data/MinecraftChest.m3vkasset", meshRegistry, materialRegistry, _graphicsCommandPoolHandler.Internal(), _graphicsQueueHandler.Internal(), _sampler.Internal());
 
-    InstanceData instance = {
-        .modelMatrix = ApplicationHelper::TranslateRotateScale(glm::vec3(3.0f, 0.0f, 0.0f),
-            glm::vec3(0.0f, 90.0f, 0.0f),
-            glm::vec3(1.0f, 1.0f, 1.0f)),
-        .materialId = materialRegistry.MaterialsCount() - 1,
-    };
-    meshRegistry.RegisterInstance(instance);
-
     // for(uint32_t i = 0; i < 100; ++i)
     // {
     //     float red = (rand() / (float)RAND_MAX);
@@ -494,14 +486,14 @@ Application::Application() :
     //     uint32_t matBinding = materialRegistry.RegisterMaterial(defaultMat);
     // }
 
-    // for(uint32_t i = 0; i < 100000; ++i)
+    // for(uint32_t i = 0; i < 300000; ++i)
     // {
     //     uint32_t matBinding = rand() % materialRegistry.MaterialsCount();
 
     //     // rand float 100
-    //     float x = (rand() / (float)RAND_MAX) * 80;
-    //     float y = (rand() / (float)RAND_MAX) * 80;
-    //     float z = (rand() / (float)RAND_MAX) * 80;
+    //     float x = (rand() / (float)RAND_MAX) * 80 - 40;
+    //     float y = (rand() / (float)RAND_MAX) * 80 - 40;
+    //     float z = (rand() / (float)RAND_MAX) * 80 - 40;
 
     //     float scale = (rand() / (float)RAND_MAX) * 25;
     //     InstanceData instance = {
