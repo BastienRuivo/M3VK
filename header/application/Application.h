@@ -52,15 +52,15 @@ class Application
 
     // RAII is first in last out order
     Window _window;
-    VkInstanceHandler _instanceHandler;
+    VkInstanceHandler _instance;
     DebugLayer _vkDebugLayer;
-    VkSurfaceHandler _windowSurfaceHandler;
+    VkSurfaceHandler _windowSurface;
     // Implicitly linked to instance, see wtd later
-    VkPhysicalDeviceHandler _physicalDeviceHandler;
-    VkDeviceHandler _deviceHandler;
+    VkPhysicalDeviceHandler _physicalDevice;
+    VkDeviceHandler _device;
     //Implicitly linked to device, see wtd later
-    VkQueueHandler _graphicsQueueHandler;
-    VkQueueHandler _presentQueueHandler;
+    VkQueueHandler _graphicsComputeQueue;
+    VkQueueHandler _presentQueue;
 
     // Dynamic lifetime
     std::unique_ptr<SwapChain> _swapChain;
@@ -77,13 +77,13 @@ class Application
         Material = 1
     };
 
-    VkPipelineLayoutHandler _pipelineLayoutHandler;
-    VkPipelineHandler _graphicsPipelineHandler;
+    VkPipelineLayoutHandler _pipelineLayout;
+    VkPipelineHandler _graphicsPipeline;
 
     std::unique_ptr<GPUAllocatedImage> _colorBackBuffer;
     std::unique_ptr<GPUAllocatedImage> _depthBuffer;
 
-    VkCommandPoolHandler _graphicsCommandPoolHandler;
+    VkCommandPoolHandler _graphicsCommandPool;
 
     // Datas
 

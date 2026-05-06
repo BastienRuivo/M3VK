@@ -12,10 +12,6 @@
 VkCommandPoolHandler::VkCommandPoolHandler(uint32_t queueFamilyIndex)
 : Handler<VkCommandPool>(), _queueFamilyIndex(queueFamilyIndex)
 {
-#ifdef M3VK_MEMORYLOG
-    DebugLayer::Log(DebugLayer::LogType::CREATE, "VkCommandPoolHandler Creation !");
-#endif
-
     VkCommandPoolCreateInfo poolInfo
     {
         .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
@@ -34,18 +30,10 @@ VkCommandPoolHandler::~VkCommandPoolHandler()
     if(_internal == VK_NULL_HANDLE) return;
 
     vkDestroyCommandPool(ApplicationInfo::Device(), _internal, nullptr);
-
-#ifdef M3VK_MEMORYLOG
-    DebugLayer::Log(DebugLayer::LogType::DESTROY, "VkCommandPoolHandler Destroyed !");
-#endif
 }
 
 VkDeviceHandler::VkDeviceHandler(VkSurfaceKHR windowSurface, const std::vector<const char*>& deviceExtensions)
 {
-#ifdef M3VK_MEMORYLOG
-    DebugLayer::Log(DebugLayer::LogType::CREATE, "VkDeviceHandler Creation !");
-#endif
-
     std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
     std::set<uint32_t> uniqueQueueIds =
     {
@@ -130,19 +118,10 @@ VkDeviceHandler::~VkDeviceHandler()
     if(_internal == VK_NULL_HANDLE) return;
 
     vkDestroyDevice(_internal, nullptr);
-
-#ifdef M3VK_MEMORYLOG
-    DebugLayer::Log(DebugLayer::LogType::DESTROY, "VkDeviceHandler Destroyed !");
-#endif
 }
 
 VkFenceHandler::VkFenceHandler()
 {
-#ifdef M3VK_MEMORYLOG
-    DebugLayer::Log(DebugLayer::LogType::CREATE, "VkFenceHandler Creation !");
-#endif
-
-
     VkFenceCreateInfo fenceCreateInfo
     {
         .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
@@ -161,10 +140,6 @@ VkFenceHandler::~VkFenceHandler()
     if(_internal == VK_NULL_HANDLE) return;
 
     vkDestroyFence(ApplicationInfo::Device(), _internal, nullptr);
-
-#ifdef M3VK_MEMORYLOG
-    DebugLayer::Log(DebugLayer::LogType::DESTROY, "VkFenceHandler Destroyed !");
-#endif
 }
 
 void VkFenceHandler::Wait(uint64_t timeout) const
@@ -179,11 +154,6 @@ void VkFenceHandler::Reset() const
 
 VkSemaphoreHandler::VkSemaphoreHandler()
 {
-#ifdef M3VK_MEMORYLOG
-    DebugLayer::Log(DebugLayer::LogType::CREATE, "VkSemaphoreHandler Creation !");
-#endif
-
-
     VkSemaphoreCreateInfo semaphoreCreateInfo{};
     semaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
@@ -198,18 +168,10 @@ VkSemaphoreHandler::~VkSemaphoreHandler()
     if(_internal == VK_NULL_HANDLE) return;
 
     vkDestroySemaphore(ApplicationInfo::Device(), _internal, nullptr);
-
-#ifdef M3VK_MEMORYLOG
-    DebugLayer::Log(DebugLayer::LogType::DESTROY, "VkSemaphoreHandler Destroyed !");
-#endif
 }
 
 VkInstanceHandler::VkInstanceHandler()
 {
-#ifdef M3VK_MEMORYLOG
-    DebugLayer::Log(DebugLayer::LogType::CREATE, "VkInstanceHandler creation !");
-#endif
-
     VkApplicationInfo appInfo
     {
         .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
@@ -306,18 +268,12 @@ VkInstanceHandler::~VkInstanceHandler()
     if(_internal == VK_NULL_HANDLE) return;
 
     vkDestroyInstance(_internal, nullptr);
-
-#ifdef M3VK_MEMORYLOG
-    DebugLayer::Log(DebugLayer::LogType::DESTROY, "VkInstanceHandler Destroyed !");
-#endif
 }
 
 VkPipelineHandler::VkPipelineHandler(const VkExtent2D& appExtent, VkSampleCountFlagBits msaaSampleCount, VkPipelineLayout pipelineLayout, VkFormat swapChainFormat, VkFormat depthFormat)
 {
-#ifdef M3VK_MEMORYLOG
-    DebugLayer::Log(DebugLayer::LogType::CREATE, "VkPipelineHandler Creation !");
-#endif
-    Shader shader;
+    Shader vertex(std::string(SHADER_DIRECTORY) + "Default.vert.spv", 0);
+    Shader fragment(std::string(SHADER_DIRECTORY) + "Default.frag.spv", 0);
 
     VkPipelineShaderStageCreateInfo shadersStagesCreateInfo[2] = {
         {},
@@ -326,15 +282,16 @@ VkPipelineHandler::VkPipelineHandler(const VkExtent2D& appExtent, VkSampleCountF
 
     shadersStagesCreateInfo[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     shadersStagesCreateInfo[0].stage = VK_SHADER_STAGE_VERTEX_BIT;
-    shadersStagesCreateInfo[0].module = shader.VertexShader;
+    shadersStagesCreateInfo[0].module = vertex.Internal();
     shadersStagesCreateInfo[0].pName = "main";
 
     shadersStagesCreateInfo[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     shadersStagesCreateInfo[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-    shadersStagesCreateInfo[1].module = shader.FragmentShader;
+    shadersStagesCreateInfo[1].module = fragment.Internal();
     shadersStagesCreateInfo[1].pName = "main";
 
-    std::vector<VkDynamicState> dynamicStates = {
+    std::vector<VkDynamicState> dynamicStates =
+    {
         VK_DYNAMIC_STATE_VIEWPORT,
         VK_DYNAMIC_STATE_SCISSOR
     };
@@ -510,19 +467,10 @@ VkPipelineHandler::~VkPipelineHandler()
 {
     if(_internal == VK_NULL_HANDLE) return;
     vkDestroyPipeline(ApplicationInfo::Device(), _internal, nullptr);
-
-#ifdef M3VK_MEMORYLOG
-    DebugLayer::Log(DebugLayer::LogType::DESTROY, "VkPipelineHandler Destroyed !");
-#endif
 }
 
 VkPipelineLayoutHandler::VkPipelineLayoutHandler( std::span<const VkDescriptorSetLayout> descriptorLayouts, std::span<const VkPushConstantRange> pushConstantRanges)
 {
-#ifdef M3VK_MEMORYLOG
-    DebugLayer::Log(DebugLayer::LogType::CREATE, "VkPipelineLayoutHandler Creation !");
-#endif
-
-
     VkPipelineLayoutCreateInfo layoutCreateInfo
     {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
@@ -541,18 +489,10 @@ VkPipelineLayoutHandler::~VkPipelineLayoutHandler()
 {
     if(_internal == VK_NULL_HANDLE) return;
     vkDestroyPipelineLayout(ApplicationInfo::Device(), _internal, nullptr);
-
-#ifdef M3VK_MEMORYLOG
-    DebugLayer::Log(DebugLayer::LogType::DESTROY, "VkPipelineLayoutHandler Destroyed !");
-#endif
 }
 
 VkQueueHandler::VkQueueHandler(VkQueueHandler::QueueTypeEnum queueType)
 {
-#ifdef M3VK_MEMORYLOG
-    DebugLayer::Log(DebugLayer::LogType::CREATE, "VkQueueHandler Creation !");
-#endif
-
     uint32_t family;
 
     switch (queueType)
@@ -570,9 +510,6 @@ VkQueueHandler::VkQueueHandler(VkQueueHandler::QueueTypeEnum queueType)
 
 VkQueueHandler::~VkQueueHandler()
 {
-#ifdef M3VK_MEMORYLOG
-    DebugLayer::Log(DebugLayer::LogType::DESTROY, "VkQueueHandler Destroyed !");
-#endif
 }
 
 VkQueueHandler::VkQueueHandler(VkQueueHandler && other) noexcept
@@ -595,10 +532,6 @@ VkQueueHandler& VkQueueHandler::operator=(VkQueueHandler&& other) noexcept
 
 VkSamplerHandler::VkSamplerHandler()
 {
-#ifdef M3VK_MEMORYLOG
-    DebugLayer::Log(DebugLayer::LogType::CREATE, "VkSamplerHandler Creation !");
-#endif
-
     VkSamplerCreateInfo createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
 
@@ -637,18 +570,10 @@ VkSamplerHandler::~VkSamplerHandler()
     if(_internal == VK_NULL_HANDLE) return;
 
     vkDestroySampler(ApplicationInfo::Device(), _internal, nullptr);
-
-#ifdef M3VK_MEMORYLOG
-    DebugLayer::Log(DebugLayer::LogType::DESTROY, "VkSamplerHandler Destroyed !");
-#endif
 }
 
 VkSurfaceHandler::VkSurfaceHandler(VkInstance instance, GLFWwindow* pWindow)
 {
-#ifdef M3VK_MEMORYLOG
-    DebugLayer::Log(DebugLayer::LogType::CREATE, "VkSurfaceHandler creation !");
-#endif
-
     _instance = instance;
     if(glfwCreateWindowSurface(_instance, pWindow, nullptr, &_internal) != VK_SUCCESS)
     {
@@ -659,9 +584,6 @@ VkSurfaceHandler::VkSurfaceHandler(VkInstance instance, GLFWwindow* pWindow)
 VkSurfaceHandler::~VkSurfaceHandler()
 {
     if(_internal == VK_NULL_HANDLE) return;
-    vkDestroySurfaceKHR(_instance, _internal, nullptr);
 
-#ifdef M3VK_MEMORYLOG
-    DebugLayer::Log(DebugLayer::LogType::DESTROY, "VkSurfaceHandler Destroyed !");
-#endif
+    vkDestroySurfaceKHR(_instance, _internal, nullptr);
 }

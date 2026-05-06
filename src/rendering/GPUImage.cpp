@@ -9,11 +9,6 @@
 #include <utility>
 #include <vulkan/vulkan_core.h>
 
-
-#ifdef M3VK_MEMORYLOG
-#include "application/DebugLayer.h"
-#endif
-
 GPUAllocatedImage::GPUAllocatedImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags imageUsageFlags, VkMemoryPropertyFlags memoryFlags)
 : GPUAllocatedImage(width, height, ImageHelper::GetMipCount(width, height), format, tiling, imageUsageFlags, memoryFlags)
 {
@@ -28,9 +23,6 @@ GPUAllocatedImage::GPUAllocatedImage(uint32_t width, uint32_t height, uint32_t m
 
 GPUAllocatedImage::GPUAllocatedImage(uint32_t width, uint32_t height, VkSampleCountFlagBits msaaSampleCount, uint32_t mipCount, VkFormat format, VkImageTiling tiling, VkImageUsageFlags imageUsageFlags, VkMemoryPropertyFlags memoryFlags)
 {
-#ifdef M3VK_MEMORYLOG
-    DebugLayer::Log(DebugLayer::LogType::CREATE, "GPUImage Create !");
-#endif
     VkImageCreateInfo createInfo
     {
         .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
@@ -127,10 +119,6 @@ GPUAllocatedImage::~GPUAllocatedImage()
 {
     vkDestroyImage(ApplicationInfo::Device(), _internal.Image, nullptr);
     vkFreeMemory(ApplicationInfo::Device(), _memoryInternal, nullptr);
-
-#ifdef M3VK_MEMORYLOG
-    DebugLayer::Log(DebugLayer::LogType::DESTROY, "GPUImage Destroyed !");
-#endif
 }
 
 GPUAllocatedImage::GPUAllocatedImage(GPUAllocatedImage&& other) noexcept

@@ -98,10 +98,6 @@ int VkPhysicalDeviceHandler::ScoreDeviceSuitability(VkPhysicalDevice physicalDev
 
 VkPhysicalDeviceHandler::VkPhysicalDeviceHandler(VkInstance instance, VkSurfaceKHR windowSurface, const std::vector<const char *>& deviceExtensions)
 {
-#ifdef M3VK_MEMORYLOG
-    DebugLayer::Log(DebugLayer::LogType::CREATE, "VkPhysicalDeviceHandler Creation !");
-#endif
-
     _internal = VK_NULL_HANDLE;
     uint32_t deviceCount = 0;
     vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
@@ -143,7 +139,4 @@ VkPhysicalDeviceHandler::VkPhysicalDeviceHandler(VkInstance instance, VkSurfaceK
 VkPhysicalDeviceHandler::~VkPhysicalDeviceHandler()
 {
     _internal = VK_NULL_HANDLE;
-#ifdef M3VK_MEMORYLOG
-    DebugLayer::Log(DebugLayer::LogType::DESTROY, "VkPhysicalDeviceHandler Destroyed !");
-#endif
 }

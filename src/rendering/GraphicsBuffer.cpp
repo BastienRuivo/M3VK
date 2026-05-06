@@ -12,10 +12,6 @@
 StageBuffer::StageBuffer(VkDeviceSize size, enum Usage bufferUsage)
 : _capacity(size)
 {
-#ifdef M3VK_MEMORYLOG
-    DebugLayer::Log(DebugLayer::LogType::CREATE, "StageBuffer creation !");
-#endif
-
     VkBufferUsageFlags usage = bufferUsage == Upload ? VK_BUFFER_USAGE_TRANSFER_SRC_BIT : VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 
     VkBufferCreateInfo info
@@ -104,17 +100,10 @@ StageBuffer::~StageBuffer()
     }
     vkDestroyBuffer(ApplicationInfo::Device(), _internal, nullptr);
     vkFreeMemory(ApplicationInfo::Device(), _memoryInternal, nullptr);
-#ifdef M3VK_MEMORYLOG
-    DebugLayer::Log(DebugLayer::LogType::DESTROY, "StageBuffer Destroyed !");
-#endif
 }
 
 StageBuffer::StageBuffer(StageBuffer && other) noexcept
 {
-#ifdef M3VK_MEMORYLOG
-    DebugLayer::Log(DebugLayer::LogType::CREATE, "StageBuffer Move Creation !");
-#endif
-
     _internal = other._internal;
     _memoryInternal = other._memoryInternal;
 
@@ -173,9 +162,6 @@ void PoolStageBuffer::Clear()
 GraphicsBuffer::GraphicsBuffer(VkDeviceSize count, VkDeviceSize stride, BufferType type)
 : _type(type), _stride(stride), _count(count)
 {
-#ifdef M3VK_MEMORYLOG
-    DebugLayer::Log(DebugLayer::LogType::CREATE, "GraphicsBuffer Creation !");
-#endif
     // mean it's a dst buffer, already in good memory shape but cant be writable directly by cpu
     VkBufferUsageFlags usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 
@@ -307,18 +293,10 @@ GraphicsBuffer::~GraphicsBuffer()
         }
         vkFreeMemory(ApplicationInfo::Device(), _memoryInternal, nullptr);
     }
-
-#ifdef M3VK_MEMORYLOG
-    DebugLayer::Log(DebugLayer::LogType::DESTROY, "GraphicsBuffer Destroyed !");
-#endif
 }
 
 GraphicsBuffer::GraphicsBuffer(GraphicsBuffer && other) noexcept
 {
-#ifdef M3VK_MEMORYLOG
-    DebugLayer::Log(DebugLayer::LogType::CREATE, "GraphicsBuffer Move Creation !");
-#endif
-
     _internal = other._internal;
     _memoryInternal = other._memoryInternal;
 

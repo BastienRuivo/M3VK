@@ -1,10 +1,6 @@
 #include "application/Window.h"
 #include "GLFW/glfw3.h"
 
-#ifdef M3VK_MEMORYLOG
-#include "application/DebugLayer.h"
-#endif
-
 void Window::SetIcon(unsigned char* pixels, int width, int height)
 {
     GLFWimage image;
@@ -16,10 +12,6 @@ void Window::SetIcon(unsigned char* pixels, int width, int height)
 
 Window::Window(int width, int height, const char* title, void* resizeObject, GLFWframebuffersizefun resizeCallback, GLFWcursorposfun mouseCallback, GLFWwindowfocusfun focusCallback)
 {
-#ifdef M3VK_MEMORYLOG
-    DebugLayer::Log(DebugLayer::LogType::CREATE, "Window Creation !");
-#endif
-
     _width = width;
     _height = height;
     _title = title;
@@ -63,10 +55,6 @@ Window::~Window()
 {
     glfwDestroyWindow(_internal);
     glfwTerminate();
-
-#ifdef M3VK_MEMORYLOG
-    DebugLayer::Log(DebugLayer::LogType::DESTROY, "Window Destroyed !");
-#endif
 }
 
 void Window::LockMouse(bool lock)

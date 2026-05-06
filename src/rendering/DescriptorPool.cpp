@@ -4,28 +4,17 @@
 #include <utility>
 #include <vector>
 
-#ifdef M3VK_MEMORYLOG
-#include "application/DebugLayer.h"
-#endif
-
 #include <stdexcept>
 #include <vulkan/vulkan_core.h>
 
 DescriptorPool::DescriptorPool(std::vector<VkDescriptorSetLayout>&& layouts, VkDescriptorPool pool, uint32_t maxSets)
 : _maxSets(maxSets), _layouts(std::move(layouts)), _pool(pool)
 {
-#ifdef M3VK_MEMORYLOG
-    DebugLayer::Log(DebugLayer::LogType::CREATE, "DescriptorPool Creation !");
-#endif
-
     _allocatedSets = 0;
 }
 
 DescriptorPool::~DescriptorPool()
 {
-#ifdef M3VK_MEMORYLOG
-        DebugLayer::Log(DebugLayer::LogType::DESTROY, "DescriptorPool Destroyed !");
-#endif
     for(auto& layout : _layouts)
     {
         vkDestroyDescriptorSetLayout(ApplicationInfo::Device(), layout, nullptr);

@@ -11,9 +11,6 @@
 
 CPUImage::CPUImage(const std::string& path, int channelFormat)
 {
-#ifdef M3VK_MEMORYLOG
-    DebugLayer::Log(DebugLayer::LogType::CREATE, "CPUImage Create !");
-#endif
     _data = stbi_load(path.c_str(), &_width, &_height, &_channels, channelFormat);
 
     _channels = channelFormat;
@@ -35,9 +32,6 @@ CPUImage::~CPUImage()
 {
     stbi_image_free(_data);
     _width = _height = _channels = 0;
-#ifdef M3VK_MEMORYLOG
-    DebugLayer::Log(DebugLayer::LogType::DESTROY, "GPUImage Destroyed !");
-#endif
 }
 
 CPUImage::CPUImage(CPUImage&& other) noexcept

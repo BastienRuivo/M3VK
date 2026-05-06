@@ -4,19 +4,11 @@
 #include <stdexcept>
 #include <vulkan/vulkan_core.h>
 
-#ifdef M3VK_MEMORYLOG
-#include "application/DebugLayer.h"
-#endif
-
 VkImageViewHandler::VkImageViewHandler(VkImage image, VkFormat format, uint32_t mipCount) :
     VkImageViewHandler(image, format, mipCount, ApplicationHelper::GetImageAspectFlags(format)) {}
 
 VkImageViewHandler::VkImageViewHandler(VkImage image, VkFormat format, uint32_t mipCount, VkImageAspectFlags aspectMask)
 {
-#ifdef M3VK_MEMORYLOG
-    DebugLayer::Log(DebugLayer::LogType::CREATE, "VkImageViewHandler Creation !");
-#endif
-
     VkImageViewCreateInfo createInfo
     {
         .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
@@ -44,10 +36,6 @@ VkImageViewHandler::~VkImageViewHandler()
     if(_internal == VK_NULL_HANDLE) return;
 
     vkDestroyImageView(ApplicationInfo::Device(), _internal, nullptr);
-
-#ifdef M3VK_MEMORYLOG
-    DebugLayer::Log(DebugLayer::LogType::DESTROY, "VkImageViewHandler Destroyed !");
-#endif
 }
 
 VkImageViewHandler::VkImageViewHandler(VkImageViewHandler&& other) noexcept

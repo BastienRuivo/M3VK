@@ -44,7 +44,7 @@ class ApplicationInfo
 
     static inline uint32_t GetGraphicsQueueId()
     {
-        return ApplicationInfo::Get()._queueFamilyIds.Graphics.value();
+        return ApplicationInfo::Get()._queueFamilyIds.GraphicsCompute.value();
     }
 
     static inline uint32_t GetPresentQueueId()

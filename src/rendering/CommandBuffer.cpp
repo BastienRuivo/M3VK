@@ -7,9 +7,6 @@
 
 CommandBuffer::CommandBuffer(VkCommandPool pool, VkQueue queue) : _pool(pool), _queue(queue)
 {
-#ifdef M3VK_MEMORYLOG
-    DebugLayer::Log(DebugLayer::LogType::CREATE, "CommandBuffer Creation !");
-#endif
     VkCommandBufferAllocateInfo allocateInfo
     {
         .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
@@ -29,10 +26,6 @@ CommandBuffer::~CommandBuffer()
     if(_internal == VK_NULL_HANDLE) return;
 
     vkFreeCommandBuffers(ApplicationInfo::Device(), _pool, 1, &_internal);
-
-#ifdef M3VK_MEMORYLOG
-    DebugLayer::Log(DebugLayer::LogType::DESTROY, "CommandBuffer Destroyed !");
-#endif
 }
 
 void CommandBuffer::Begin(VkCommandBufferUsageFlags flags) const

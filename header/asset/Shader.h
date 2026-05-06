@@ -1,14 +1,23 @@
 #pragma once
 
+#include <filesystem>
 #include <vector>
 #include <vulkan/vulkan_core.h>
 class Shader
 {
     public:
-    Shader();
+    Shader(const std::filesystem::path& path, VkShaderStageFlags stageFlags);
     ~Shader();
 
-    VkShaderModule CreateShaderModule(const std::vector<char>& shaderCode);
-    VkShaderModule VertexShader;
-    VkShaderModule FragmentShader;
+    Shader(const Shader&) = delete;
+    Shader& operator=(const Shader&) = delete;
+
+    Shader(Shader&& other) noexcept;
+    Shader& operator=(Shader&& other) noexcept;
+
+    VkShaderModule CreateShaderModule();
+    inline VkShaderModule Internal() const { return _internal; }
+
+    private:
+    VkShaderModule _internal;
 };

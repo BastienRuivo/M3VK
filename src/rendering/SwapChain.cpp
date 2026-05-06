@@ -109,10 +109,6 @@ VkSurfaceFormatKHR SwapChain::SelectSwapSurfaceFormat(const std::vector<VkSurfac
 SwapChain::SwapChain(const Window& window, VkSurfaceKHR windowSurface)
 : Images(), _viewHandlers()
 {
-#ifdef M3VK_MEMORYLOG
-    DebugLayer::Log(DebugLayer::LogType::CREATE, "SwapChain Creation !");
-#endif
-
     ApplicationHelper::SwapChainSupportDetails details = ApplicationHelper::QuerySwapChainSupportDetail(ApplicationInfo::PhysicalDevice(), windowSurface);
 
     VkSurfaceFormatKHR format = SelectSwapSurfaceFormat(details.Formats);
@@ -142,9 +138,9 @@ SwapChain::SwapChain(const Window& window, VkSurfaceKHR windowSurface)
 
     QueueFamilyIds queueIds = QueueFamilyIds::QueryQueueFamilies(ApplicationInfo::PhysicalDevice(), windowSurface);
 
-    uint32_t queueFamilyIndices[] = {queueIds.Graphics.value(), queueIds.Present.value()};
+    uint32_t queueFamilyIndices[] = {queueIds.GraphicsCompute.value(), queueIds.Present.value()};
 
-    if(queueIds.Graphics != queueIds.Present)
+    if(queueIds.GraphicsCompute != queueIds.Present)
     {
         // image = multiple queue mode and can be accessed anywhere, but slower
         createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
@@ -202,8 +198,4 @@ SwapChain::SwapChain(const Window& window, VkSurfaceKHR windowSurface)
 SwapChain::~SwapChain()
 {
     vkDestroySwapchainKHR(ApplicationInfo::Device(), _internal, nullptr);
-
-#ifdef M3VK_MEMORYLOG
-    DebugLayer::Log(DebugLayer::LogType::DESTROY, "SwapChain Destruction !");
-#endif
 }

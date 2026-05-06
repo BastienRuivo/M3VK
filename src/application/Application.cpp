@@ -34,10 +34,6 @@
 #include <string>
 #endif
 
-#ifdef M3VK_MEMORYLOG
-#include <string>
-#endif
-
 #include <vulkan/vulkan_core.h>
 
 #include <glm/glm.hpp>
@@ -145,7 +141,7 @@ void Application::RefreshSwapChain()
 
     // TODO : Swap chain is currently resetted the first frame beacause it is out of date
     _swapChain.reset();
-    _swapChain = std::make_unique<SwapChain>(_window, _windowSurfaceHandler.Internal());
+    _swapChain = std::make_unique<SwapChain>(_window, _windowSurface.Internal());
 
     _camera._aspect = static_cast<float>(_swapChain->GetExtent().width) / static_cast<float>(_swapChain->GetExtent().height);
 
@@ -206,7 +202,7 @@ void Application::DrawFrame()
         .pImageIndices = &imageIndex
     };
 
-    result = vkQueuePresentKHR(_graphicsQueueHandler.Internal(), &presentInfo);
+    result = vkQueuePresentKHR(_graphicsComputeQueue.Internal(), &presentInfo);
 
     if(result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)
     {
@@ -264,21 +260,21 @@ void Application::RecordCommandBuffer(const CommandBuffer& cmdBuffer, uint32_t c
 
         cmdBuffer.BeginRendering(renderArea, &colorAttachment, 1, depthAttachment, stencilAttachment);
         {
-            cmdBuffer.BindPipeline(_graphicsPipelineHandler.Internal(), VK_PIPELINE_BIND_POINT_GRAPHICS);
+            cmdBuffer.BindPipeline(_graphicsPipeline.Internal(), VK_PIPELINE_BIND_POINT_GRAPHICS);
             cmdBuffer.SetViewport(0, 0, renderArea.extent.width, renderArea.extent.height);
             cmdBuffer.SetScissor(renderArea);
 
             for(const auto& registry : _registries)
             {
-                registry->Bind(cmdBuffer, _pipelineLayoutHandler.Internal());
+                registry->Bind(cmdBuffer, _pipelineLayout.Internal());
             }
 
-            cmdBuffer.BindDescriptorSets(_pipelineLayoutHandler.Internal(), _descriptorSet.Get(currentFrame), 0);
-            cmdBuffer.BindDescriptorSets(_pipelineLayoutHandler.Internal(), _materialInstancesSet, 2);
+            cmdBuffer.BindDescriptorSets(_pipelineLayout.Internal(), _descriptorSet.Get(currentFrame), 0);
+            cmdBuffer.BindDescriptorSets(_pipelineLayout.Internal(), _materialInstancesSet, 2);
 
             auto& meshRegistry = static_cast<MeshRegistry&>(*_registries[(size_t)RegistryType::Mesh]);
 
-            meshRegistry.Draw(cmdBuffer, _pipelineLayoutHandler.Internal());
+            meshRegistry.Draw(cmdBuffer, _pipelineLayout.Internal());
 
         }
         cmdBuffer.EndRendering();
@@ -291,13 +287,13 @@ uint32_t Application::LoadDefaultMaterial()
 {
     MaterialRegistry& materialRegistry = static_cast<MaterialRegistry&>(*_registries[(size_t)RegistryType::Material]);
 
-    GPUAllocatedImage baseColorTex = GPUAllocatedImage(AssetHelper::ImageFromCPU(CPUImage("data/default/BaseColor.png", STBI_rgb_alpha), _graphicsCommandPoolHandler.Internal(), _graphicsQueueHandler.Internal()));
+    GPUAllocatedImage baseColorTex = GPUAllocatedImage(AssetHelper::ImageFromCPU(CPUImage("data/default/BaseColor.png", STBI_rgb_alpha), _graphicsCommandPool.Internal(), _graphicsComputeQueue.Internal()));
     uint32_t baseIndex = materialRegistry.RegisterTexture(std::move(baseColorTex), _sampler.Internal());
 
-    GPUAllocatedImage normalMapTex = GPUAllocatedImage(AssetHelper::ImageFromCPU(CPUImage("data/default/BaseNormal.png", STBI_rgb_alpha), _graphicsCommandPoolHandler.Internal(), _graphicsQueueHandler.Internal()));
+    GPUAllocatedImage normalMapTex = GPUAllocatedImage(AssetHelper::ImageFromCPU(CPUImage("data/default/BaseNormal.png", STBI_rgb_alpha), _graphicsCommandPool.Internal(), _graphicsComputeQueue.Internal()));
     uint32_t normalIndex = materialRegistry.RegisterTexture(std::move(normalMapTex), _sampler.Internal());
 
-    GPUAllocatedImage mraoTex = GPUAllocatedImage(AssetHelper::ImageFromCPU(CPUImage("data/default/BaseMRAO.png", STBI_rgb_alpha), _graphicsCommandPoolHandler.Internal(), _graphicsQueueHandler.Internal()));
+    GPUAllocatedImage mraoTex = GPUAllocatedImage(AssetHelper::ImageFromCPU(CPUImage("data/default/BaseMRAO.png", STBI_rgb_alpha), _graphicsCommandPool.Internal(), _graphicsComputeQueue.Internal()));
     uint32_t mraoIndex = materialRegistry.RegisterTexture(std::move(mraoTex), _sampler.Internal());
 
     MaterialProperties matProperties = MaterialProperties::Default();
@@ -311,16 +307,16 @@ uint32_t Application::LoadDefaultMaterial()
 Application::Application() :
     // Core Window & Instance (The Foundation)
     _window(1920, 1080, "Window", this, Application::ResizeCallback, Application::MouseMoveCallback, Application::WindowFocusCallback),
-    _instanceHandler(),
-    _vkDebugLayer(_instanceHandler.Internal()),
-    _windowSurfaceHandler(_instanceHandler.Internal(), _window.Internal()),
-    _physicalDeviceHandler(_instanceHandler.Internal(), _windowSurfaceHandler.Internal(), _deviceExtensions),
-    _deviceHandler(_windowSurfaceHandler.Internal(), _deviceExtensions),
+    _instance(),
+    _vkDebugLayer(_instance.Internal()),
+    _windowSurface(_instance.Internal(), _window.Internal()),
+    _physicalDevice(_instance.Internal(), _windowSurface.Internal(), _deviceExtensions),
+    _device(_windowSurface.Internal(), _deviceExtensions),
 
     // Queues & Swapchain
-    _graphicsQueueHandler(VkQueueHandler::Graphics),
-    _presentQueueHandler(VkQueueHandler::Present),
-    _swapChain(std::make_unique<SwapChain>(_window, _windowSurfaceHandler.Internal())),
+    _graphicsComputeQueue(VkQueueHandler::Graphics),
+    _presentQueue(VkQueueHandler::Present),
+    _swapChain(std::make_unique<SwapChain>(_window, _windowSurface.Internal())),
 
     _dynamicDescriptorPool(DescriptorPool::Builder()
         .AddLayout(
@@ -353,7 +349,7 @@ Application::Application() :
             std::make_unique<MeshRegistry>(),
             std::make_unique<MaterialRegistry>(_staticDescriptorPool, 0),
         }),
-    _pipelineLayoutHandler(std::initializer_list<VkDescriptorSetLayout>(
+    _pipelineLayout(std::initializer_list<VkDescriptorSetLayout>(
         {
             _dynamicDescriptorPool.Layout(0),
             _staticDescriptorPool.Layout(0),
@@ -365,10 +361,10 @@ Application::Application() :
         //     VkPushConstantRange{ VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(ObjectData) }
         // }
     )),
-    _graphicsPipelineHandler(_swapChain->GetExtent(), ApplicationInfo::Get().GetMsaaSample(), _pipelineLayoutHandler.Internal(), _swapChain->GetImageFormat(), ApplicationInfo::Constant::DepthFormat),
+    _graphicsPipeline(_swapChain->GetExtent(), ApplicationInfo::Get().GetMsaaSample(), _pipelineLayout.Internal(), _swapChain->GetImageFormat(), ApplicationInfo::Constant::DepthFormat),
 
     // Command pool
-    _graphicsCommandPoolHandler(ApplicationInfo::GetGraphicsQueueId()),
+    _graphicsCommandPool(ApplicationInfo::GetGraphicsQueueId()),
 
     // Geometry & Data Buffers
     _colorBackBuffer(std::make_unique<GPUAllocatedImage>(_swapChain->GetExtent().width, _swapChain->GetExtent().height,
@@ -385,16 +381,13 @@ Application::Application() :
     _camera(glm::vec3(0.0f, 0.5f, 4.0f), glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, 1.0f, 0.0f), 45.0f, (float)_swapChain->GetExtent().width / (float)_swapChain->GetExtent().height, 0.1f, 1000.0f),
     // Descriptor Sets & Execution
     _descriptorSet(CreateDescriptorSet()),
-    _commandBuffer(ApplicationInfo::Constant::MaxFrameInCount, _graphicsCommandPoolHandler.Internal(), _graphicsQueueHandler.Internal()),
+    _commandBuffer(ApplicationInfo::Constant::MaxFrameInCount, _graphicsCommandPool.Internal(), _graphicsComputeQueue.Internal()),
 
     // Synchronization
     _availableImageSemaphore(ApplicationInfo::Constant::MaxFrameInCount),
     _renderFinishedSemaphores(_swapChain->Images.Size()),
     _waitFence(ApplicationInfo::Constant::MaxFrameInCount)
 {
-#ifdef M3VK_MEMORYLOG
-    DebugLayer::Log(DebugLayer::LogType::CREATE, "Application Creation !");
-#endif
     _window.LockMouse(_mouseLocked);
     {
         CPUImage logo("data/logo.png", STBI_rgb_alpha);
@@ -513,11 +506,11 @@ Application::Application() :
     //     meshRegistry.RegisterInstance(instance);
     // }
 
-    AssetHelper::Load3DModel("data/BistroExterior.m3vkasset", meshRegistry, materialRegistry, _graphicsCommandPoolHandler.Internal(), _graphicsQueueHandler.Internal(), _sampler.Internal());
+    AssetHelper::Load3DModel("data/BistroExterior.m3vkasset", meshRegistry, materialRegistry, _graphicsCommandPool.Internal(), _graphicsComputeQueue.Internal(), _sampler.Internal());
 
     for(auto& registry : _registries)
     {
-        registry->UploadAndRelease(_graphicsQueueHandler.Internal(), _graphicsCommandPoolHandler.Internal());
+        registry->UploadAndRelease(_graphicsComputeQueue.Internal(), _graphicsCommandPool.Internal());
     }
 }
 
@@ -564,10 +557,6 @@ void Application::MainLoop()
 
 Application::~Application()
 {
-#ifdef M3VK_MEMORYLOG
-    DebugLayer::Log(DebugLayer::LogType::DESTROY, "Application Destroyed !");
-#endif
-
     _swapChain.reset();
 }
 

@@ -184,10 +184,6 @@ void DebugLayer::PopulateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInf
 
 DebugLayer::DebugLayer(VkInstance instance)
 {
-#ifdef M3VK_MEMORYLOG
-    DebugLayer::Log(DebugLayer::LogType::CREATE, "DebugLayer Creation !");
-#endif
-
     if(!Enabled) return;
     _instance = instance;
 
@@ -202,10 +198,6 @@ DebugLayer::DebugLayer(VkInstance instance)
 
 DebugLayer::~DebugLayer()
 {
-#ifdef M3VK_MEMORYLOG
-    DebugLayer::Log(DebugLayer::LogType::DESTROY, "DebugLayer Destroyed !");
-#endif
-
     if (!Enabled) return;
     M3VK_DestroyDebugUtilsMessengerEXT(_instance, _debugMessenger, nullptr);
 }

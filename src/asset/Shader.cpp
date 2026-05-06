@@ -1,10 +1,7 @@
 #include "asset/Shader.h"
 #include "application/ApplicationInfo.h"
 #include "application/ApplicationHelper.h"
-
-#ifdef M3VK_MEMORYLOG
-#include "application/DebugLayer.h"
-#endif
+#include <filesystem>
 
 #include <stdexcept>
 #include <vector>
@@ -12,43 +9,38 @@
 
 Shader::~Shader()
 {
-    vkDestroyShaderModule(ApplicationInfo::Device(), VertexShader, nullptr);
-    vkDestroyShaderModule(ApplicationInfo::Device(), FragmentShader, nullptr);
-
-#ifdef M3VK_MEMORYLOG
-    DebugLayer::Log(DebugLayer::LogType::DESTROY, "Shader Destroyed !");
-#endif
+    vkDestroyShaderModule(ApplicationInfo::Device(), _internal, nullptr);
 }
 
-VkShaderModule Shader::CreateShaderModule(const std::vector<char>& shaderCode)
+Shader::Shader(const std::filesystem::path& path, VkShaderStageFlags stageFlags)
 {
+    std::vector<char> shaderCode = ApplicationHelper::ReadFile(path);
+
     VkShaderModuleCreateInfo createInfo
     {
         .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+        .flags = stageFlags,
         .codeSize = shaderCode.size(),
         .pCode = reinterpret_cast<const uint32_t*>(shaderCode.data())
     };
 
-    VkShaderModule module{};
-    if(vkCreateShaderModule(ApplicationInfo::Device(), &createInfo, nullptr, &module) != VK_SUCCESS)
+    _internal = VK_NULL_HANDLE;
+    if(vkCreateShaderModule(ApplicationInfo::Device(), &createInfo, nullptr, &_internal) != VK_SUCCESS)
     {
         throw std::runtime_error("Can't compile shader code");
     }
-
-    return module;
 }
 
-Shader::Shader()
+Shader::Shader(Shader&& other) noexcept
 {
-#ifdef M3VK_MEMORYLOG
-    DebugLayer::Log(DebugLayer::LogType::CREATE, "Shader Creation !");
-#endif
+    _internal = std::exchange(other._internal, VK_NULL_HANDLE);
+}
 
-    std::vector<char> vertex = ApplicationHelper::ReadFile(std::string(SHADER_DIRECTORY) + "Default.vert.spv");
-    std::vector<char> fragment = ApplicationHelper::ReadFile(std::string(SHADER_DIRECTORY) + "Default.frag.spv");
-
-
-
-    VertexShader = CreateShaderModule(vertex);
-    FragmentShader = CreateShaderModule(fragment);
+Shader& Shader::operator=(Shader&& other) noexcept
+{
+    if(this != &other)
+    {
+        _internal = std::exchange(other._internal, VK_NULL_HANDLE);
+    }
+    return *this;
 }
