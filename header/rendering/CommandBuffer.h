@@ -55,6 +55,11 @@ class CommandBuffer
         vkCmdDrawIndexed(_internal, indexCount, 1, firstIndex, vertexOffset, 0);
     }
 
+    inline void DrawIndexedIndirect(VkBuffer indirectBuffer, VkDeviceSize offset, uint32_t drawCount, uint32_t stride) const
+    {
+        vkCmdDrawIndexedIndirect(_internal, indirectBuffer, offset, drawCount, stride);
+    }
+
     inline void BindPipeline(VkPipeline pipeline, VkPipelineBindPoint bindPoint) const
     {
         vkCmdBindPipeline(_internal, bindPoint, pipeline);
@@ -131,6 +136,126 @@ class CommandBuffer
     inline void EndRendering() const
     {
         vkCmdEndRendering(_internal);
+    }
+
+    inline void SetDepthCompareOp(VkCompareOp op) const
+    {
+        vkCmdSetDepthCompareOp(_internal, op);
+    }
+
+    inline void SetDepthTest(VkBool32 enable) const
+    {
+        vkCmdSetDepthTestEnable(_internal, enable);
+    }
+
+    inline void SetDepthWrite(VkBool32 enable) const
+    {
+        vkCmdSetDepthWriteEnable(_internal, enable);
+    }
+
+    inline void SetStencilTest(VkBool32 enable) const
+    {
+        vkCmdSetStencilTestEnable(_internal, enable);
+    }
+
+    inline void SetBlendEnable(VkBool32 enable) const
+    {
+        VkFunctions::vkCmdSetColorBlendEnableEXT(_internal, 0, 1, &enable);
+    }
+
+    inline void SetBlendEquation(VkColorBlendEquationEXT equation) const
+    {
+        VkFunctions::vkCmdSetColorBlendEquationEXT(_internal, 0, 1, &equation);
+    }
+
+    inline void SetColorWriteMask(VkColorComponentFlags mask) const
+    {
+        VkFunctions::vkCmdSetColorWriteMaskEXT(_internal, 0, 1, &mask);
+    }
+
+    inline void SetPrimitiveTopology(VkPrimitiveTopology topology) const
+    {
+        vkCmdSetPrimitiveTopology(_internal, topology);
+    }
+
+    inline void SetPrimitiveRestart(VkBool32 enable) const
+    {
+        vkCmdSetPrimitiveRestartEnable(_internal, enable);
+    }
+
+    inline void SetRasterizerDiscard(VkBool32 enable) const
+    {
+        vkCmdSetRasterizerDiscardEnable(_internal, enable);
+    }
+
+    inline void SetCullMode(VkCullModeFlags cullMode) const
+    {
+        vkCmdSetCullMode(_internal, cullMode);
+    }
+
+    inline void SetFrontFace(VkFrontFace frontFace) const
+    {
+        vkCmdSetFrontFace(_internal, frontFace);
+    }
+
+    inline void SetPolygonMode(VkPolygonMode polygonMode) const
+    {
+        VkFunctions::vkCmdSetPolygonModeEXT(_internal, polygonMode);
+    }
+
+    inline void SetLineWidth(float lineWidth) const
+    {
+        vkCmdSetLineWidth(_internal, lineWidth);
+    }
+
+    inline void SetDepthBiasEnable(VkBool32 enable) const
+    {
+        vkCmdSetDepthBiasEnable(_internal, enable);
+    }
+
+    inline void SetRasterizationSamples(VkSampleCountFlagBits samples) const
+    {
+        VkFunctions::vkCmdSetRasterizationSamplesEXT(_internal, samples);
+    }
+
+    inline void SetSampleMask(VkSampleCountFlagBits samples, VkSampleMask sampleMask) const
+    {
+        VkFunctions::vkCmdSetSampleMaskEXT(_internal, samples, &sampleMask);
+    }
+
+    inline void SetDepthBias(float depthBiasConstantFactor, float depthBiasClamp, float depthBiasSlopeFactor) const
+    {
+        vkCmdSetDepthBias(_internal, depthBiasConstantFactor, depthBiasClamp, depthBiasSlopeFactor);
+    }
+
+    inline void SetSampleMask(VkSampleCountFlagBits samples, const VkSampleMask* sampleMask)
+    {
+        VkFunctions::vkCmdSetSampleMaskEXT(_internal, samples, sampleMask);
+    }
+
+    inline void SetAlphaToCoverageEnable(VkBool32 enable) const
+    {
+        VkFunctions::vkCmdSetAlphaToCoverageEnableEXT(_internal, enable);
+    }
+
+    inline void SetAlphaToOneEnable(VkBool32 enable) const
+    {
+        VkFunctions::vkCmdSetAlphaToOneEnableEXT(_internal, enable);
+    }
+
+    inline void SetDepthClampEnable(VkBool32 enable) const
+    {
+        VkFunctions::vkCmdSetDepthClampEnableEXT(_internal, enable);
+    }
+
+    inline void SetVertexInput(uint32_t bindingCount, const VkVertexInputBindingDescription2EXT* pVertexBindingDescriptions, uint32_t vertexAttributeDescriptionCount, const VkVertexInputAttributeDescription2EXT* pVertexAttributeDescriptions) const
+    {
+        VkFunctions::vkCmdSetVertexInputEXT(_internal, bindingCount, pVertexBindingDescriptions, vertexAttributeDescriptionCount, pVertexAttributeDescriptions);
+    }
+
+    inline void BindShaders(uint32_t stageCount, const VkShaderStageFlagBits* pStages, const VkShaderEXT* pShaders) const
+    {
+        VkFunctions::vkCmdBindShadersEXT(_internal, stageCount, pStages, pShaders);
     }
 
     inline VkCommandBuffer GetInternal() const { return _internal; }

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "application/ApplicationInfo.h"
+#include "glm/ext/vector_float3.hpp"
 #include "rendering/CommandBuffer.h"
 #include "rendering/GraphicsBuffer.h"
 #include "registry/Registry.h"
@@ -18,11 +19,13 @@ struct MeshHandle
 
 struct InstanceData
 {
-    glm::mat4 modelMatrix;
+    alignas(16) glm::mat4 modelMatrix;
+
+    glm::vec3 AABBMin;
     uint32_t materialId;
-    uint32_t pad0;
-    uint32_t pad1;
-    uint32_t pad2;
+
+    glm::vec3 AABBMax;
+    uint32_t meshId;
 };
 
 struct DrawIndexedIndirectPadded {
@@ -45,9 +48,14 @@ class MeshRegistry : public Registry
 
     void UploadAndRelease(VkQueue queue, VkCommandPool cmdPool) override;
     void Bind(const CommandBuffer& cmdBuffer, VkPipelineLayout layout) const override;
-    void Draw(const CommandBuffer& cmdBuffer, VkPipelineLayout layout) const;
 
     inline VkDescriptorBufferInfo InstanceBufferInfo() const { return _instanceDataBuffer.GetDescriptorBufferInfo(0, _instanceDataBuffer.GetCount()); }
+    inline VkDescriptorBufferInfo IndirectBufferInfo() const { return _indirectBuffer.GetDescriptorBufferInfo(0, _indirectBuffer.GetCount()); }
+
+    inline GeometryBuffer& VertexBuffer() { return _vertexBuffer; }
+    inline GeometryBuffer& IndexBuffer() { return _indexBuffer; }
+    inline GeometryBuffer& IndirectBuffer() { return _indirectBuffer; }
+    inline GeometryBuffer& InstanceDataBuffer() { return _instanceDataBuffer; }
 
     private:
     std::vector<Vertex> _cpuVertices;

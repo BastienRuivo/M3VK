@@ -1,5 +1,6 @@
 #include "application/Application.h"
 #include "application/ApplicationHelper.h"
+#include "asset/Shader.h"
 #include "rendering/GraphicsBuffer.h"
 #include "application/ApplicationInfo.h"
 #include "rendering/CommandBuffer.h"
@@ -13,6 +14,7 @@
 #include "asset/AssetHelper.h"
 #include "asset/MeshHelper.h"
 #include "registry/Registry.h"
+#include "rendering/ShaderState.h"
 #include "rendering/SwapChain.h"
 #include "application/DebugLayer.h"
 #include <GLFW/glfw3.h>
@@ -260,9 +262,23 @@ void Application::RecordCommandBuffer(const CommandBuffer& cmdBuffer, uint32_t c
 
         cmdBuffer.BeginRendering(renderArea, &colorAttachment, 1, depthAttachment, stencilAttachment);
         {
-            cmdBuffer.BindPipeline(_graphicsPipeline.Internal(), VK_PIPELINE_BIND_POINT_GRAPHICS);
             cmdBuffer.SetViewport(0, 0, renderArea.extent.width, renderArea.extent.height);
             cmdBuffer.SetScissor(renderArea);
+
+            // base param
+            cmdBuffer.SetPrimitiveTopology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
+            cmdBuffer.SetPrimitiveRestart(false);
+            cmdBuffer.SetRasterizerDiscard(false);
+            cmdBuffer.SetDepthClampEnable(false);
+            cmdBuffer.SetPolygonMode(VK_POLYGON_MODE_FILL);
+            cmdBuffer.SetFrontFace(VK_FRONT_FACE_COUNTER_CLOCKWISE);
+            cmdBuffer.SetDepthBiasEnable(false);
+            cmdBuffer.SetLineWidth(1.0f);
+
+            cmdBuffer.SetRasterizationSamples(ApplicationInfo::Constant::MaxMSAASample);
+            cmdBuffer.SetSampleMask(ApplicationInfo::Constant::MaxMSAASample, 0xFFFFFFFF);
+            cmdBuffer.SetAlphaToCoverageEnable(false);
+            cmdBuffer.SetAlphaToOneEnable(false);
 
             for(const auto& registry : _registries)
             {
@@ -272,10 +288,13 @@ void Application::RecordCommandBuffer(const CommandBuffer& cmdBuffer, uint32_t c
             cmdBuffer.BindDescriptorSets(_pipelineLayout.Internal(), _descriptorSet.Get(currentFrame), 0);
             cmdBuffer.BindDescriptorSets(_pipelineLayout.Internal(), _materialInstancesSet, 2);
 
+            _shaders[0].Bind(cmdBuffer);
+            _shaders[1].Bind(cmdBuffer);
+
             auto& meshRegistry = static_cast<MeshRegistry&>(*_registries[(size_t)RegistryType::Mesh]);
 
-            meshRegistry.Draw(cmdBuffer, _pipelineLayout.Internal());
-
+            GeometryBuffer& indirectBuffer = meshRegistry.IndirectBuffer();
+            cmdBuffer.DrawIndexedIndirect(indirectBuffer.Internal(), 0, indirectBuffer.GetCurrentIndex(), indirectBuffer.GetStride());
         }
         cmdBuffer.EndRendering();
         ImageHelper::TransitionLayoutCommand(cmdBuffer, backBuffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
@@ -311,7 +330,7 @@ Application::Application() :
     _vkDebugLayer(_instance.Internal()),
     _windowSurface(_instance.Internal(), _window.Internal()),
     _physicalDevice(_instance.Internal(), _windowSurface.Internal(), _deviceExtensions),
-    _device(_windowSurface.Internal(), _deviceExtensions),
+    _device(_instance.Internal(), _windowSurface.Internal(), _deviceExtensions),
 
     // Queues & Swapchain
     _graphicsComputeQueue(VkQueueHandler::Graphics),
@@ -339,7 +358,7 @@ Application::Application() :
         )
         .AddLayout(DescriptorPool::LayoutBuilder()
             .AddBinding(0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, 1) // Material
-            .AddBinding(1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_VERTEX_BIT, 0, 1) // InstanceData
+            .AddBinding(1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_VERTEX_BIT , 0, 1) // InstanceData
         )
         .Build()
     ),
@@ -349,22 +368,42 @@ Application::Application() :
             std::make_unique<MeshRegistry>(),
             std::make_unique<MaterialRegistry>(_staticDescriptorPool, 0),
         }),
+
+    _shaders([this](){
+        std::vector<Shader> shaders;
+            //shaders.emplace_back(std::string(SHADER_DIRECTORY) + "Culling.comp.spv", VK_SHADER_STAGE_COMPUTE_BIT, std::span<const VkDescriptorSetLayout>{}, std::span<const VkPushConstantRange>{});
+            ShaderState state;
+            shaders.emplace_back(std::string(SHADER_DIRECTORY) + "Default.vert.spv", state,
+            VK_SHADER_STAGE_VERTEX_BIT,
+            std::initializer_list<const VkDescriptorSetLayout>
+            {
+                _dynamicDescriptorPool.Layout(0),
+                _staticDescriptorPool.Layout(0),
+                _staticDescriptorPool.Layout(1)
+            }, std::span<const VkPushConstantRange>{});
+            shaders.emplace_back(std::string(SHADER_DIRECTORY) + "Default.frag.spv", state,
+            VK_SHADER_STAGE_FRAGMENT_BIT,
+            std::initializer_list<const VkDescriptorSetLayout>
+            {
+                _dynamicDescriptorPool.Layout(0),
+                _staticDescriptorPool.Layout(0),
+                _staticDescriptorPool.Layout(1)
+            },
+            std::span<const VkPushConstantRange>{});
+            return shaders;
+        }()
+    ),
+    _visibleDrawIndirectBuffer(ApplicationInfo::Constant::DrawIndirectBufferMaxSize, sizeof(DrawIndexedIndirectPadded), GraphicsBuffer::BufferType::INDIRECT_DRAW),
+    _visibleObjectDataBuffer(ApplicationInfo::Constant::DrawIndirectBufferMaxSize, sizeof(InstanceData), GraphicsBuffer::BufferType::STORAGE),
+    // Command pool
+    _graphicsCommandPool(ApplicationInfo::GetGraphicsQueueId()),
     _pipelineLayout(std::initializer_list<VkDescriptorSetLayout>(
         {
             _dynamicDescriptorPool.Layout(0),
             _staticDescriptorPool.Layout(0),
             _staticDescriptorPool.Layout(1)
         }
-    ),
-    std::initializer_list<VkPushConstantRange>(
-        // {
-        //     VkPushConstantRange{ VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(ObjectData) }
-        // }
-    )),
-    _graphicsPipeline(_swapChain->GetExtent(), ApplicationInfo::Get().GetMsaaSample(), _pipelineLayout.Internal(), _swapChain->GetImageFormat(), ApplicationInfo::Constant::DepthFormat),
-
-    // Command pool
-    _graphicsCommandPool(ApplicationInfo::GetGraphicsQueueId()),
+    ), {}),
 
     // Geometry & Data Buffers
     _colorBackBuffer(std::make_unique<GPUAllocatedImage>(_swapChain->GetExtent().width, _swapChain->GetExtent().height,
@@ -429,7 +468,8 @@ Application::Application() :
     const float axisLength = 10.0f;
     const float axisThickness = 0.00625f;
 
-    uint32_t cube = MeshHelper::CubeMesh(meshRegistry);
+    glm::vec3 aabbMin, aabbMax;
+    uint32_t cube = MeshHelper::CubeMesh(meshRegistry, aabbMin, aabbMax);
     MaterialProperties defaultMat = materialRegistry.Material(defaultMaterial);
 
     {
@@ -439,7 +479,9 @@ Application::Application() :
             .modelMatrix = ApplicationHelper::TranslateRotateScale(glm::vec3(0.0f, 0.0f, 0.0f),
                 glm::vec3(0.0f, 0.0f, 0.0f),
                 glm::vec3(axisLength, axisThickness, axisThickness)),
+            .AABBMin = aabbMin,
             .materialId = matBinding,
+            .AABBMax = aabbMax
         };
         meshRegistry.RegisterInstance(instance);
     }
@@ -451,7 +493,9 @@ Application::Application() :
             .modelMatrix = ApplicationHelper::TranslateRotateScale(glm::vec3(0.0f, 0.0f, 0.0f),
                 glm::vec3(0.0f, 0.0f, 0.0f),
                 glm::vec3(axisThickness, axisLength, axisThickness)),
+            .AABBMin = aabbMin,
             .materialId = matBinding,
+            .AABBMax = aabbMax
         };
         meshRegistry.RegisterInstance(instance);
     }
@@ -463,48 +507,12 @@ Application::Application() :
             .modelMatrix = ApplicationHelper::TranslateRotateScale(glm::vec3(0.0f, 0.0f, 0.0f),
                 glm::vec3(0.0f, 0.0f, 0.0f),
                 glm::vec3(axisThickness, axisThickness, axisLength)),
+            .AABBMin = aabbMin,
             .materialId = matBinding,
+            .AABBMax = aabbMax
         };
         meshRegistry.RegisterInstance(instance);
     }
-
-    // for(uint32_t i = 0; i < 100; ++i)
-    // {
-    //     float red = (rand() / (float)RAND_MAX);
-    //     float green = (rand() / (float)RAND_MAX);
-    //     float blue = (rand() / (float)RAND_MAX);
-    //     defaultMat.BaseColor = {red, green, blue, 1.0f};
-    //     uint32_t matBinding = materialRegistry.RegisterMaterial(defaultMat);
-    // }
-
-    // float sample = 1000000;
-    // float tr = 80.0f;
-
-    // for(uint32_t i = 0; i < sample; ++i)
-    // {
-    //     uint32_t matBinding = rand() % materialRegistry.MaterialsCount();
-
-    //     float x = (rand() / (float)RAND_MAX) * 2.0f - 1.0f;
-    //     float y = (rand() / (float)RAND_MAX) * 2.0f - 1.0f;
-    //     float z = (rand() / (float)RAND_MAX) * 2.0f - 1.0f;
-
-    //     float norm = sqrtf(x*x + y*y + z*z);
-
-    //     float radius = (rand() / (float)RAND_MAX) * tr;
-
-    //     x = (x / norm) * radius;
-    //     y = (y / norm) * radius;
-    //     z = (z / norm) * radius;
-
-    //     float scale = radius / tr * 25.0f;
-    //     InstanceData instance = {
-    //         .modelMatrix = ApplicationHelper::TranslateRotateScale(glm::vec3(x, y, z),
-    //             glm::vec3(0.0f, 0.0f, 0.0f),
-    //             glm::vec3(axisThickness * scale, axisThickness * scale, axisThickness * scale)),
-    //         .materialId = matBinding,
-    //     };
-    //     meshRegistry.RegisterInstance(instance);
-    // }
 
     AssetHelper::Load3DModel("data/BistroExterior.m3vkasset", meshRegistry, materialRegistry, _graphicsCommandPool.Internal(), _graphicsComputeQueue.Internal(), _sampler.Internal());
 

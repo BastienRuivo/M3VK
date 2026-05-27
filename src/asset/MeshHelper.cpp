@@ -3,7 +3,7 @@
 #include "registry/MeshRegistry.h"
 #include <cstdint>
 
-uint32_t MeshHelper::CubeMesh(MeshRegistry& meshRegistry)
+uint32_t MeshHelper::CubeMesh(MeshRegistry& meshRegistry, glm::vec3& aabbMin, glm::vec3& aabbMax)
 {
     std::array<Vertex, 24> vertices
     {
@@ -168,6 +168,9 @@ uint32_t MeshHelper::CubeMesh(MeshRegistry& meshRegistry)
         18, 17, 16, 16, 19, 18, // left
         20, 21, 22, 22, 23, 20 // right
     };
+
+    aabbMin = { -0.5f, -0.5f, -0.5f };
+    aabbMax = { 0.5f, 0.5f, 0.5f };
 
     return meshRegistry.RegisterMesh(vertices, indices);
 }

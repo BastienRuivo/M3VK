@@ -21,8 +21,10 @@ struct MaterialProperties
 struct ObjectData
 {
     mat4 LocalToWorldMatrix;
+    vec3 AabbMin;
     uint MaterialIndex;
-    uint Pad[3];
+    vec3 AabbMax;
+    uint pad;
 };
 
 // don't forget alignement the day you will have vec2 or nested

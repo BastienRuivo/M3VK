@@ -68,7 +68,7 @@ public:
 class VkDeviceHandler : public Handler<VkDevice>
 {
 public:
-    VkDeviceHandler(VkSurfaceKHR windowSurface, const std::vector<const char*>& deviceExtensions);
+    VkDeviceHandler(VkInstance instance, VkSurfaceKHR windowSurface, const std::vector<const char*>& deviceExtensions);
     ~VkDeviceHandler() override;
 
     VkDeviceHandler(VkDeviceHandler&& other) noexcept = default;
@@ -108,26 +108,6 @@ public:
     VkInstanceHandler& operator=(VkInstanceHandler&& other) noexcept = default;
 private:
     std::vector<const char*> GetRequiredExtensions() const;
-};
-
-class VkPipelineHandler : public Handler<VkPipeline>
-{
-public:
-    VkPipelineHandler(const VkExtent2D& appExtent, VkSampleCountFlagBits msaaSampleCount, VkPipelineLayout pipelineLayout, VkFormat swapChainFormat, VkFormat depthFormat);
-    ~VkPipelineHandler() override;
-
-    VkPipelineHandler(VkPipelineHandler&& other) noexcept = default;
-    VkPipelineHandler& operator=(VkPipelineHandler&& other) noexcept = default;
-};
-
-class VkPipelineLayoutHandler : public Handler<VkPipelineLayout>
-{
-public:
-    VkPipelineLayoutHandler(std::span<const VkDescriptorSetLayout> descriptorLayouts, std::span<const VkPushConstantRange> pushConstantRanges);
-    ~VkPipelineLayoutHandler() override;
-
-    VkPipelineLayoutHandler(VkPipelineLayoutHandler&& other) noexcept = default;
-    VkPipelineLayoutHandler& operator=(VkPipelineLayoutHandler&& other) noexcept = default;
 };
 
 class VkQueueHandler : public Handler<VkQueue>
@@ -175,4 +155,14 @@ public:
     VkSurfaceHandler& operator=(VkSurfaceHandler&& other) noexcept = default;
     private:
     VkInstance _instance;
+};
+
+class VkPipelineLayoutHandler : public Handler<VkPipelineLayout>
+{
+public:
+    VkPipelineLayoutHandler(std::span<const VkDescriptorSetLayout> descriptorLayouts, std::span<const VkPushConstantRange> pushConstantRanges);
+    ~VkPipelineLayoutHandler() override;
+
+    VkPipelineLayoutHandler(VkPipelineLayoutHandler&& other) noexcept = default;
+    VkPipelineLayoutHandler& operator=(VkPipelineLayoutHandler&& other) noexcept = default;
 };

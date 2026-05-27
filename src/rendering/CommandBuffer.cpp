@@ -111,13 +111,12 @@ void CommandBuffer::SetScissor(int32_t x, int32_t y, uint32_t width, uint32_t he
         .offset = {x, y},
         .extent = {width, height}
     };
-
-    vkCmdSetScissor(_internal, 0, 1, &scissors);
+    SetScissor(scissors);
 }
 
 void CommandBuffer::SetScissor(const VkRect2D& scissors) const
 {
-    vkCmdSetScissor(_internal, 0, 1, &scissors);
+    vkCmdSetScissorWithCount(_internal, 1, &scissors);
 }
 
 void CommandBuffer::SetViewport(uint32_t x, uint32_t y, uint32_t width, uint32_t height) const
@@ -132,7 +131,7 @@ void CommandBuffer::SetViewport(uint32_t x, uint32_t y, uint32_t width, uint32_t
         .maxDepth = 1
     };
 
-    vkCmdSetViewport(_internal, 0, 1, &viewport);
+    vkCmdSetViewportWithCount(_internal, 1, &viewport);
 }
 
 void CommandBuffer::WaitCompletion() const

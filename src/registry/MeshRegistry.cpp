@@ -37,6 +37,7 @@ uint32_t MeshRegistry::RegisterMesh(std::span<const Vertex> vertices, std::span<
 
 uint32_t MeshRegistry::RegisterInstance(InstanceData instances)
 {
+    instances.meshId = static_cast<uint32_t>(_cpuIndirectCommands.size() - 1);
     _cpuInstances.push_back(instances);
     _cpuIndirectCommands.back().instanceCount++;
     return static_cast<uint32_t>(_cpuInstances.size() - 1);
@@ -75,9 +76,4 @@ void MeshRegistry::Bind(const CommandBuffer& cmdBuffer, VkPipelineLayout layout)
 {
     cmdBuffer.BindBuffer(_vertexBuffer);
     cmdBuffer.BindBuffer(_indexBuffer);
-}
-
-void MeshRegistry::Draw(const CommandBuffer& cmdBuffer, VkPipelineLayout layout) const
-{
-    vkCmdDrawIndexedIndirect(cmdBuffer.GetInternal(), _indirectBuffer.Internal(), 0, static_cast<uint32_t>(_indirectBuffer.GetCurrentIndex()), _indirectBuffer.GetStride());
 }

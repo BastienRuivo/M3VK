@@ -1,6 +1,7 @@
 #pragma once
 
 
+#include "asset/Shader.h"
 #include "rendering/Camera.h"
 #include "rendering/DescriptorPool.h"
 #include "registry/Registry.h"
@@ -76,9 +77,10 @@ class Application
         Mesh = 0,
         Material = 1
     };
-
+    std::vector<Shader> _shaders;
+    GraphicsBuffer _visibleDrawIndirectBuffer;
+    GraphicsBuffer _visibleObjectDataBuffer;
     VkPipelineLayoutHandler _pipelineLayout;
-    VkPipelineHandler _graphicsPipeline;
 
     std::unique_ptr<GPUAllocatedImage> _colorBackBuffer;
     std::unique_ptr<GPUAllocatedImage> _depthBuffer;
@@ -122,7 +124,12 @@ class Application
 
     // Utils
     static inline const std::vector<const char*> _deviceExtensions = {
-        VK_KHR_SWAPCHAIN_EXTENSION_NAME
+        VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+        VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME,
+        VK_EXT_SHADER_OBJECT_EXTENSION_NAME,
+        VK_EXT_EXTENDED_DYNAMIC_STATE_EXTENSION_NAME,
+        VK_EXT_EXTENDED_DYNAMIC_STATE_2_EXTENSION_NAME,
+        VK_EXT_EXTENDED_DYNAMIC_STATE_3_EXTENSION_NAME
     };
 
     uint32_t FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) const;

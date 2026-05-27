@@ -1,12 +1,13 @@
 #pragma once
 
 #include <filesystem>
-#include <vector>
+#include <span>
 #include <vulkan/vulkan_core.h>
+#include "rendering/ShaderState.h"
 class Shader
 {
     public:
-    Shader(const std::filesystem::path& path, VkShaderStageFlags stageFlags);
+    Shader(const std::filesystem::path& path, ShaderState state, VkShaderStageFlagBits stageFlags, std::span<const VkDescriptorSetLayout> descriptorLayouts, std::span<const VkPushConstantRange> pushConstantRanges);
     ~Shader();
 
     Shader(const Shader&) = delete;
@@ -15,9 +16,16 @@ class Shader
     Shader(Shader&& other) noexcept;
     Shader& operator=(Shader&& other) noexcept;
 
-    VkShaderModule CreateShaderModule();
-    inline VkShaderModule Internal() const { return _internal; }
+    VkShaderEXT CreateShader();
+    inline VkShaderEXT Internal() const { return _internal; }
+    inline void Bind(const CommandBuffer& cmdBuffer) const
+    {
+        cmdBuffer.BindShaders(1, &_stage, &_internal);
+        _state.Bind(cmdBuffer);
+    }
 
     private:
-    VkShaderModule _internal;
+    VkShaderEXT _internal;
+    VkShaderStageFlagBits _stage;
+    ShaderState _state;
 };

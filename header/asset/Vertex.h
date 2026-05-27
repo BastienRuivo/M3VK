@@ -24,38 +24,43 @@ struct Vertex
         return pos == other.pos && normal == other.normal && texCoord == other.texCoord;
     }
 
-    static VkVertexInputBindingDescription GetBindingDescription()
+    static VkVertexInputBindingDescription2EXT GetBindingDescription()
     {
-        VkVertexInputBindingDescription description
+        VkVertexInputBindingDescription2EXT description
         {
+            .sType = VK_STRUCTURE_TYPE_VERTEX_INPUT_BINDING_DESCRIPTION_2_EXT,
             .binding = 0,
             .stride = sizeof(Vertex),
-            .inputRate = VK_VERTEX_INPUT_RATE_VERTEX
+            .inputRate = VK_VERTEX_INPUT_RATE_VERTEX,
+            .divisor = 1
         };
         return description;
     }
 
-    static std::vector<VkVertexInputAttributeDescription> GetAttributeDescription()
+    static std::vector<VkVertexInputAttributeDescription2EXT> GetAttributeDescription()
     {
         uint32_t location = 0;
-        std::vector<VkVertexInputAttributeDescription> attributeDescriptions
+        std::vector<VkVertexInputAttributeDescription2EXT> attributeDescriptions
         {
-            VkVertexInputAttributeDescription
+            VkVertexInputAttributeDescription2EXT
             {
+                .sType = VK_STRUCTURE_TYPE_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION_2_EXT,
                 .location = location++,
                 .binding = 0,
                 .format = VK_FORMAT_R32G32B32_SFLOAT,
                 .offset = offsetof(Vertex, pos)
             },
-            VkVertexInputAttributeDescription
+            VkVertexInputAttributeDescription2EXT
             {
+                .sType = VK_STRUCTURE_TYPE_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION_2_EXT,
                 .location = location++,
                 .binding = 0,
                 .format = VK_FORMAT_R32G32B32_SFLOAT,
                 .offset = offsetof(Vertex, normal)
             },
-            VkVertexInputAttributeDescription
+            VkVertexInputAttributeDescription2EXT
             {
+                .sType = VK_STRUCTURE_TYPE_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION_2_EXT,
                 .location = location++,
                 .binding = 0,
                 .format = VK_FORMAT_R32G32_SFLOAT,

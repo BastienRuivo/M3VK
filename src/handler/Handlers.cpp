@@ -4,10 +4,9 @@
 #include <cstring>
 #include <set>
 #include <stdexcept>
+#include <vector>
 #include <vulkan/vulkan_core.h>
 #include "application/DebugLayer.h"
-#include "asset/Shader.h"
-#include "asset/Vertex.h"
 
 VkCommandPoolHandler::VkCommandPoolHandler(uint32_t queueFamilyIndex)
 : Handler<VkCommandPool>(), _queueFamilyIndex(queueFamilyIndex)
@@ -32,7 +31,7 @@ VkCommandPoolHandler::~VkCommandPoolHandler()
     vkDestroyCommandPool(ApplicationInfo::Device(), _internal, nullptr);
 }
 
-VkDeviceHandler::VkDeviceHandler(VkSurfaceKHR windowSurface, const std::vector<const char*>& deviceExtensions)
+VkDeviceHandler::VkDeviceHandler(VkInstance instance, VkSurfaceKHR windowSurface, const std::vector<const char*>& deviceExtensions)
 {
     std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
     std::set<uint32_t> uniqueQueueIds =
@@ -55,9 +54,44 @@ VkDeviceHandler::VkDeviceHandler(VkSurfaceKHR windowSurface, const std::vector<c
         queueCreateInfos.push_back(queueCreateInfo);
     }
 
+    VkPhysicalDeviceExtendedDynamicState3FeaturesEXT extendedDynamicState3Features{};
+    extendedDynamicState3Features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTENDED_DYNAMIC_STATE_3_FEATURES_EXT,
+    extendedDynamicState3Features.pNext = nullptr,
+    extendedDynamicState3Features.extendedDynamicState3RasterizationSamples = VK_TRUE,
+    extendedDynamicState3Features.extendedDynamicState3ColorBlendEnable = VK_TRUE,
+    extendedDynamicState3Features.extendedDynamicState3ColorBlendEquation = VK_TRUE,
+    extendedDynamicState3Features.extendedDynamicState3ColorWriteMask = VK_TRUE,
+    extendedDynamicState3Features.extendedDynamicState3PolygonMode = VK_TRUE,
+    extendedDynamicState3Features.extendedDynamicState3AlphaToCoverageEnable = VK_TRUE,
+    extendedDynamicState3Features.extendedDynamicState3DepthClampEnable = VK_TRUE,
+    extendedDynamicState3Features.extendedDynamicState3LogicOpEnable = VK_TRUE,
+    extendedDynamicState3Features.extendedDynamicState3AlphaToOneEnable = VK_TRUE;
+
+    VkPhysicalDeviceExtendedDynamicState2FeaturesEXT extendedDynamicState2Features
+    {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTENDED_DYNAMIC_STATE_2_FEATURES_EXT,
+        .pNext = &extendedDynamicState3Features,
+        .extendedDynamicState2 = VK_TRUE
+    };
+
+    VkPhysicalDeviceExtendedDynamicStateFeaturesEXT extendedDynamicStateFeatures
+    {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTENDED_DYNAMIC_STATE_FEATURES_EXT,
+        .pNext = &extendedDynamicState2Features,
+        .extendedDynamicState = VK_TRUE
+    };
+
+    VkPhysicalDeviceShaderObjectFeaturesEXT shaderObjectFeatures
+    {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_OBJECT_FEATURES_EXT,
+        .pNext = &extendedDynamicStateFeatures,
+        .shaderObject = VK_TRUE,
+    };
+
     VkPhysicalDeviceVulkan11Features vulkan11Features
     {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES,
+        .pNext = &shaderObjectFeatures,
         .shaderDrawParameters = VK_TRUE
     };
 
@@ -111,6 +145,7 @@ VkDeviceHandler::VkDeviceHandler(VkSurfaceKHR windowSurface, const std::vector<c
     }
 
     ApplicationInfo::Get()._device = _internal;
+    VkFunctions::Instance(); // force loading of vk ext functions
 }
 
 VkDeviceHandler::~VkDeviceHandler()
@@ -200,6 +235,7 @@ VkInstanceHandler::VkInstanceHandler()
     }
 
     std::vector<const char *> requiredExtensions = GetRequiredExtensions();
+    std::vector<const char*> missingExtensions;
     for(int i = 0; i < requiredExtensions.size(); ++i)
     {
         bool isPresent = false;
@@ -214,8 +250,17 @@ VkInstanceHandler::VkInstanceHandler()
 
         if(!isPresent)
         {
-            throw std::runtime_error("Vulkan Extension" + std::string(requiredExtensions[i]) + " Is not supported but required for GLFW");
+            missingExtensions.push_back(requiredExtensions[i]);
         }
+    }
+
+    if(missingExtensions.size() > 0)
+    {
+        for(const char* missingExtension : missingExtensions)
+        {
+            DebugLayer::Log(DebugLayer::LogType::ERROR, "Missing VK Extension : " + std::string(missingExtension));
+        }
+        throw std::runtime_error("Missing required VK Extensions");
     }
 
     if(!DebugLayer::CheckValidationLayerSupport())
@@ -247,6 +292,8 @@ VkInstanceHandler::VkInstanceHandler()
             throw std::runtime_error("Failed to create VK_Instance");
         }
     }
+
+    ApplicationInfo::Get()._vkInstance = _internal;
 }
 
 std::vector<const char *> VkInstanceHandler::GetRequiredExtensions() const
@@ -268,227 +315,6 @@ VkInstanceHandler::~VkInstanceHandler()
     if(_internal == VK_NULL_HANDLE) return;
 
     vkDestroyInstance(_internal, nullptr);
-}
-
-VkPipelineHandler::VkPipelineHandler(const VkExtent2D& appExtent, VkSampleCountFlagBits msaaSampleCount, VkPipelineLayout pipelineLayout, VkFormat swapChainFormat, VkFormat depthFormat)
-{
-    Shader vertex(std::string(SHADER_DIRECTORY) + "Default.vert.spv", 0);
-    Shader fragment(std::string(SHADER_DIRECTORY) + "Default.frag.spv", 0);
-
-    VkPipelineShaderStageCreateInfo shadersStagesCreateInfo[2] = {
-        {},
-        {}
-    };
-
-    shadersStagesCreateInfo[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    shadersStagesCreateInfo[0].stage = VK_SHADER_STAGE_VERTEX_BIT;
-    shadersStagesCreateInfo[0].module = vertex.Internal();
-    shadersStagesCreateInfo[0].pName = "main";
-
-    shadersStagesCreateInfo[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    shadersStagesCreateInfo[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-    shadersStagesCreateInfo[1].module = fragment.Internal();
-    shadersStagesCreateInfo[1].pName = "main";
-
-    std::vector<VkDynamicState> dynamicStates =
-    {
-        VK_DYNAMIC_STATE_VIEWPORT,
-        VK_DYNAMIC_STATE_SCISSOR
-    };
-
-    VkPipelineDynamicStateCreateInfo pipelineStateCreateInfo
-    {
-        .sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
-        .dynamicStateCount = static_cast<uint32_t>(dynamicStates.size()),
-        .pDynamicStates = dynamicStates.data()
-    };
-
-    VkVertexInputBindingDescription bindingDescription = Vertex::GetBindingDescription();
-    auto attributeDescription = Vertex::GetAttributeDescription();
-
-
-    VkPipelineVertexInputStateCreateInfo vertexInputCreateInfo
-    {
-        .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
-        .vertexBindingDescriptionCount = 1,
-        .pVertexBindingDescriptions = &bindingDescription,
-        .vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescription.size()),
-        .pVertexAttributeDescriptions = attributeDescription.data()
-    };
-
-    // Input Assembly
-    VkPipelineInputAssemblyStateCreateInfo inputAssemblyCreateInfo
-    {
-        .sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
-        // For later use (When i will choose if i still want to make a cube world like thingy) maybe i can try strip ?
-        // like in opengl, this turn 4 index like 1234 into 2 triangle (123, 324) and this can save me some place (bandwith <3)
-        // theres also some element buffer shit to setup here later
-        .topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
-        .primitiveRestartEnable = false
-    };
-
-    VkViewport viewport
-    {
-        .x = 0.0f,
-        .y = 0.0f,
-        .width = (float)appExtent.width,
-        .height = (float)appExtent.height,
-        .minDepth = 0.0f,
-        .maxDepth = 1.0f
-    };
-
-    // Region to rasterize pixels on
-    VkRect2D scissors
-    {
-        .offset = {0, 0},
-        .extent = appExtent
-    };
-
-    VkPipelineViewportStateCreateInfo viewportCreateInfo
-    {
-        .sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
-        .viewportCount = 1,
-        .scissorCount = 1,
-    };
-
-    // Rasterizer
-    VkPipelineRasterizationStateCreateInfo rasterizeCreateInfo
-    {
-        .sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
-        // if true, clamp near and far object to the planes instead of discarding them
-        .depthClampEnable = false,
-        // disable geometry from going to the rasterizer stage ??
-        .rasterizerDiscardEnable = false,
-        // VK_POLYGON_MODE_LINE for wireframe later maybe ? or this can be another feature to enable, check later
-        .polygonMode = VK_POLYGON_MODE_FILL,
-        .cullMode = VK_CULL_MODE_BACK_BIT,
-        .frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE,
-        .depthBiasEnable = VK_FALSE,
-        .depthBiasConstantFactor = 0.0f,
-        .depthBiasClamp = 0.0f,
-        .depthBiasSlopeFactor = 0.0f,
-        .lineWidth = 1.0f
-    };
-
-    VkPipelineMultisampleStateCreateInfo msaaCreateInfo
-    {
-        .sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
-        .rasterizationSamples = msaaSampleCount,
-        .sampleShadingEnable = VK_TRUE,
-        .minSampleShading = 0.2f,
-        .pSampleMask = nullptr,
-        .alphaToCoverageEnable = VK_FALSE,
-        .alphaToOneEnable = VK_FALSE
-    };
-
-    // Blending
-    VkPipelineColorBlendAttachmentState colorBlendAttachment
-    {
-        .blendEnable = VK_FALSE,
-        .srcColorBlendFactor = VK_BLEND_FACTOR_ONE, // Optional
-        .dstColorBlendFactor = VK_BLEND_FACTOR_ZERO, // Optional
-        .colorBlendOp = VK_BLEND_OP_ADD, // Optional
-        .srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE, // Optional
-        .dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO, // Optional
-        .alphaBlendOp = VK_BLEND_OP_ADD, // Optional
-        .colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
-    };
-
-    VkPipelineColorBlendStateCreateInfo colorBlending
-    {
-        .sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
-        .logicOpEnable = VK_FALSE,
-        .logicOp = VK_LOGIC_OP_COPY, // Optional
-        .attachmentCount = 1,
-        .pAttachments = &colorBlendAttachment,
-        .blendConstants = { 0.0f, 0.0f, 0.0f, 0.0f } // Optional
-    };
-
-    VkPipelineDepthStencilStateCreateInfo depthStencilCreateInfo
-    {
-        .sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
-        .depthTestEnable = VK_TRUE,
-        .depthWriteEnable = VK_TRUE,
-        .depthCompareOp = VK_COMPARE_OP_LESS,
-
-        // Can discard pixels fragment that aren't in this interval
-        .depthBoundsTestEnable = VK_FALSE,
-
-        // Depth Stencil Not used for now
-        .stencilTestEnable = VK_FALSE,
-        .front{},
-        .back{},
-
-        .minDepthBounds = 0.0f, // Optional
-        .maxDepthBounds = 1.0f, // Optional
-    };
-
-    VkPipelineRenderingCreateInfoKHR pipelineRenderingCreateInfo
-    {
-        .sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR,
-        .colorAttachmentCount = 1,
-        .pColorAttachmentFormats = &swapChainFormat,
-        .depthAttachmentFormat = depthFormat,
-    };
-
-    VkGraphicsPipelineCreateInfo pipelineCreateInfo
-    {
-        .sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
-        .pNext = &pipelineRenderingCreateInfo,
-        .stageCount = 2,
-
-        // Graphics pipeline
-        .pStages = shadersStagesCreateInfo,
-        .pVertexInputState = &vertexInputCreateInfo,
-        .pInputAssemblyState = &inputAssemblyCreateInfo,
-        .pViewportState = &viewportCreateInfo,
-        .pRasterizationState = &rasterizeCreateInfo,
-        .pMultisampleState = &msaaCreateInfo,
-        .pDepthStencilState = &depthStencilCreateInfo,
-        .pColorBlendState = &colorBlending,
-        .pDynamicState = &pipelineStateCreateInfo,
-
-        .layout = pipelineLayout,
-        .subpass = 0,
-
-        // can be use to switch between parent pipeline (less expensive theorically if simillar)
-        .basePipelineHandle = VK_NULL_HANDLE,
-        .basePipelineIndex = -1
-    };
-
-
-
-    if(vkCreateGraphicsPipelines(ApplicationInfo::Device(), VK_NULL_HANDLE, 1, &pipelineCreateInfo, nullptr, &_internal) != VK_SUCCESS)
-    {
-        throw std::runtime_error("Failed to create graphics pipeline !");
-    }
-}
-VkPipelineHandler::~VkPipelineHandler()
-{
-    if(_internal == VK_NULL_HANDLE) return;
-    vkDestroyPipeline(ApplicationInfo::Device(), _internal, nullptr);
-}
-
-VkPipelineLayoutHandler::VkPipelineLayoutHandler( std::span<const VkDescriptorSetLayout> descriptorLayouts, std::span<const VkPushConstantRange> pushConstantRanges)
-{
-    VkPipelineLayoutCreateInfo layoutCreateInfo
-    {
-        .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-        .setLayoutCount = static_cast<uint32_t>(descriptorLayouts.size()),
-        .pSetLayouts = descriptorLayouts.data(),
-        .pushConstantRangeCount = static_cast<uint32_t>(pushConstantRanges.size()),
-        .pPushConstantRanges = pushConstantRanges.data()
-    };
-
-    if(vkCreatePipelineLayout(ApplicationInfo::Device(), &layoutCreateInfo, nullptr, &_internal) != VK_SUCCESS)
-    {
-        throw std::runtime_error("Failed to create VK Layout !");
-    }
-}
-VkPipelineLayoutHandler::~VkPipelineLayoutHandler()
-{
-    if(_internal == VK_NULL_HANDLE) return;
-    vkDestroyPipelineLayout(ApplicationInfo::Device(), _internal, nullptr);
 }
 
 VkQueueHandler::VkQueueHandler(VkQueueHandler::QueueTypeEnum queueType)
@@ -586,4 +412,26 @@ VkSurfaceHandler::~VkSurfaceHandler()
     if(_internal == VK_NULL_HANDLE) return;
 
     vkDestroySurfaceKHR(_instance, _internal, nullptr);
+}
+
+VkPipelineLayoutHandler::VkPipelineLayoutHandler( std::span<const VkDescriptorSetLayout> descriptorLayouts, std::span<const VkPushConstantRange> pushConstantRanges)
+{
+    VkPipelineLayoutCreateInfo layoutCreateInfo
+    {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+        .setLayoutCount = static_cast<uint32_t>(descriptorLayouts.size()),
+        .pSetLayouts = descriptorLayouts.data(),
+        .pushConstantRangeCount = static_cast<uint32_t>(pushConstantRanges.size()),
+        .pPushConstantRanges = pushConstantRanges.data()
+    };
+
+    if(vkCreatePipelineLayout(ApplicationInfo::Device(), &layoutCreateInfo, nullptr, &_internal) != VK_SUCCESS)
+    {
+        throw std::runtime_error("Failed to create VK Layout !");
+    }
+}
+VkPipelineLayoutHandler::~VkPipelineLayoutHandler()
+{
+    if(_internal == VK_NULL_HANDLE) return;
+    vkDestroyPipelineLayout(ApplicationInfo::Device(), _internal, nullptr);
 }
