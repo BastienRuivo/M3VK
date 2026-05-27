@@ -120,6 +120,7 @@ VkDeviceHandler::VkDeviceHandler(VkInstance instance, VkSurfaceKHR windowSurface
         .sampleRateShading = VK_TRUE,
         .multiDrawIndirect = VK_TRUE,
         .drawIndirectFirstInstance = VK_TRUE,
+        .fillModeNonSolid = VK_TRUE,
         .samplerAnisotropy = VK_TRUE,
     };
 

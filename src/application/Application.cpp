@@ -256,6 +256,21 @@ void Application::RecordCommandBuffer(const CommandBuffer& cmdBuffer, uint32_t c
 
     cmdBuffer.Begin();
     {
+          // base param
+        cmdBuffer.SetPrimitiveTopology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
+        cmdBuffer.SetPrimitiveRestart(false);
+        cmdBuffer.SetRasterizerDiscard(false);
+        cmdBuffer.SetDepthClampEnable(false);
+        cmdBuffer.SetPolygonMode(VK_POLYGON_MODE_FILL);
+        cmdBuffer.SetFrontFace(VK_FRONT_FACE_COUNTER_CLOCKWISE);
+        cmdBuffer.SetDepthBiasEnable(false);
+        cmdBuffer.SetLineWidth(1.0f);
+
+        cmdBuffer.SetRasterizationSamples(ApplicationInfo::Constant::MaxMSAASample);
+        cmdBuffer.SetSampleMask(ApplicationInfo::Constant::MaxMSAASample, 0xFFFFFFFF);
+        cmdBuffer.SetAlphaToCoverageEnable(false);
+        cmdBuffer.SetAlphaToOneEnable(false);
+
         ImageHelper::TransitionLayoutCommand(cmdBuffer, _colorBackBuffer->Internal(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
         ImageHelper::TransitionLayoutCommand(cmdBuffer, _depthBuffer->Internal(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
         ImageHelper::TransitionLayoutCommand(cmdBuffer, backBuffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
@@ -264,21 +279,6 @@ void Application::RecordCommandBuffer(const CommandBuffer& cmdBuffer, uint32_t c
         {
             cmdBuffer.SetViewport(0, 0, renderArea.extent.width, renderArea.extent.height);
             cmdBuffer.SetScissor(renderArea);
-
-            // base param
-            cmdBuffer.SetPrimitiveTopology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
-            cmdBuffer.SetPrimitiveRestart(false);
-            cmdBuffer.SetRasterizerDiscard(false);
-            cmdBuffer.SetDepthClampEnable(false);
-            cmdBuffer.SetPolygonMode(VK_POLYGON_MODE_FILL);
-            cmdBuffer.SetFrontFace(VK_FRONT_FACE_COUNTER_CLOCKWISE);
-            cmdBuffer.SetDepthBiasEnable(false);
-            cmdBuffer.SetLineWidth(1.0f);
-
-            cmdBuffer.SetRasterizationSamples(ApplicationInfo::Constant::MaxMSAASample);
-            cmdBuffer.SetSampleMask(ApplicationInfo::Constant::MaxMSAASample, 0xFFFFFFFF);
-            cmdBuffer.SetAlphaToCoverageEnable(false);
-            cmdBuffer.SetAlphaToOneEnable(false);
 
             for(const auto& registry : _registries)
             {
@@ -520,6 +520,43 @@ Application::Application() :
     }
 
     AssetHelper::Load3DModel("data/BistroExterior.m3vkasset", meshRegistry, materialRegistry, _graphicsCommandPool.Internal(), _graphicsComputeQueue.Internal(), _sampler.Internal());
+    /*for(uint32_t i = 0; i < 100; ++i)
+    {
+        float red = (rand() / (float)RAND_MAX);
+        float green = (rand() / (float)RAND_MAX);
+        float blue = (rand() / (float)RAND_MAX);
+        defaultMat.BaseColor = {red, green, blue, 1.0f};
+        uint32_t matBinding = materialRegistry.RegisterMaterial(defaultMat);
+    }
+
+    float sample = 300000;
+    float tr = 80.0f;
+
+    for(uint32_t i = 0; i < sample; ++i)
+    {
+        uint32_t matBinding = rand() % materialRegistry.MaterialsCount();
+
+        float x = (rand() / (float)RAND_MAX) * 2.0f - 1.0f;
+        float y = (rand() / (float)RAND_MAX) * 2.0f - 1.0f;
+        float z = (rand() / (float)RAND_MAX) * 2.0f - 1.0f;
+
+        float norm = sqrtf(x*x + y*y + z*z);
+
+        float radius = (rand() / (float)RAND_MAX) * tr;
+
+        x = (x / norm) * radius;
+        y = (y / norm) * radius;
+        z = (z / norm) * radius;
+
+        float scale = radius / tr * 25.0f;
+        InstanceData instance = {
+            .modelMatrix = ApplicationHelper::TranslateRotateScale(glm::vec3(x, y, z),
+                glm::vec3(0.0f, 0.0f, 0.0f),
+                glm::vec3(axisThickness * scale, axisThickness * scale, axisThickness * scale)),
+            .materialId = matBinding,
+        };
+        meshRegistry.RegisterInstance(instance);
+    }*/
 
     for(auto& registry : _registries)
     {
