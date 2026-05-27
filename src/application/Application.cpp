@@ -291,6 +291,11 @@ void Application::RecordCommandBuffer(const CommandBuffer& cmdBuffer, uint32_t c
             _shaders[0].Bind(cmdBuffer);
             _shaders[1].Bind(cmdBuffer);
 
+            if(_wireframe)
+            {
+                cmdBuffer.SetPolygonMode(VK_POLYGON_MODE_LINE);
+            }
+
             auto& meshRegistry = static_cast<MeshRegistry&>(*_registries[(size_t)RegistryType::Mesh]);
 
             GeometryBuffer& indirectBuffer = meshRegistry.IndirectBuffer();
@@ -550,6 +555,7 @@ void Application::MainLoop()
         if(_inputPrevent <= 0)
         {
             if(_window.IsKeyPressed(GLFW_KEY_LEFT_ALT)) _window.LockMouse(_mouseLocked = !_mouseLocked); _inputPrevent = ApplicationInfo::Constant::InputPrevent;
+            if(_window.IsKeyPressed(GLFW_KEY_Z)) _wireframe = !_wireframe; _inputPrevent = ApplicationInfo::Constant::InputPrevent;
         }
         else
         {

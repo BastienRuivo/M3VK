@@ -107,6 +107,7 @@ class Application
     double _lastMouseX = -1.0;
     double _lastMouseY = -1.0;
     uint32_t _inputDeltaPrevent = 3; // see : https://github.com/glfw/glfw/issues/2523
+    bool _wireframe = false;
     static void MouseMoveCallback(GLFWwindow* window, double xpos, double ypos);
     static void WindowFocusCallback(GLFWwindow* window, int focused);
     static void ResizeCallback(GLFWwindow* window, int width, int height);
