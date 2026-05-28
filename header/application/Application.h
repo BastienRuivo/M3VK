@@ -77,11 +77,14 @@ class Application
         Material = 1
     };
     ShaderLibrary _shaderLibrary;
+    ShaderLibrary::ComputeKernel _cullingKernel;
     ShaderLibrary::VertexBinding _vertexShader;
     ShaderLibrary::FragmentBinding _fragmentShader;
+
     GraphicsBuffer _visibleDrawIndirectBuffer;
     GraphicsBuffer _visibleObjectDataBuffer;
-    VkPipelineLayoutHandler _pipelineLayout;
+    VkPipelineLayoutHandler _cullingLayout;
+    VkPipelineLayoutHandler _drawLayout;
 
     std::unique_ptr<GPUAllocatedImage> _colorBackBuffer;
     std::unique_ptr<GPUAllocatedImage> _depthBuffer;

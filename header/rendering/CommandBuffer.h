@@ -258,6 +258,11 @@ class CommandBuffer
         VkFunctions::vkCmdBindShadersEXT(_internal, stageCount, pStages, pShaders);
     }
 
+    inline void Dispatch(uint32_t x, uint32_t y, uint32_t z) const
+    {
+        vkCmdDispatch(_internal, x, y, z);
+    }
+
     inline VkCommandBuffer GetInternal() const { return _internal; }
 
     private:

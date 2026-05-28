@@ -1,31 +1,8 @@
 #version 450
 
-struct CameraData
-{
-    mat4 WorldToCameraMatrix;
-    mat4 ProjectionMatrix;
-    mat4 ViewProjectionMatrix;
-};
-
-struct MaterialProperties
-{
-    uint BaseColorTexIndex;
-    uint NormalTexIndex;
-    uint MetallicRoughnessTexIndex;
-    float Metallic;
-
-    vec4 BaseColor;
-    float Roughness;
-};
-
-struct ObjectData
-{
-    mat4 LocalToWorldMatrix;
-    vec3 AabbMin;
-    uint MaterialIndex;
-    vec3 AabbMax;
-    uint pad;
-};
+#include "header/Camera.glsl"
+#include "header/Material.glsl"
+#include "header/Instancing.glsl"
 
 // don't forget alignement the day you will have vec2 or nested
 layout(set = 0, binding = 0) uniform CameraDataBuffer

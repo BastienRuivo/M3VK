@@ -280,11 +280,11 @@ void Application::RecordCommandBuffer(const CommandBuffer& cmdBuffer, uint32_t c
 
             for(const auto& registry : _registries)
             {
-                registry->Bind(cmdBuffer, _pipelineLayout.Internal());
+                registry->Bind(cmdBuffer, _drawLayout.Internal());
             }
 
-            cmdBuffer.BindDescriptorSets(_pipelineLayout.Internal(), _descriptorSet.Get(currentFrame), 0);
-            cmdBuffer.BindDescriptorSets(_pipelineLayout.Internal(), _materialInstancesSet, 2);
+            cmdBuffer.BindDescriptorSets(_drawLayout.Internal(), _descriptorSet.Get(currentFrame), 0);
+            cmdBuffer.BindDescriptorSets(_drawLayout.Internal(), _materialInstancesSet, 2);
 
             _vertexShader.Bind(cmdBuffer);
             _fragmentShader.Bind(cmdBuffer);
@@ -328,30 +328,20 @@ uint32_t Application::LoadDefaultMaterial()
 
 void Application::LoadShaders()
 {
-     /*_shaders([this](){
-        std::vector<ShaderHandler> shaders;
-            //shaders.emplace_back(, VK_SHADER_STAGE_COMPUTE_BIT, std::span<const VkDescriptorSetLayout>{}, std::span<const VkPushConstantRange>{});
-            ShaderState state;
-            shaders.emplace_back(std::string(SHADER_DIRECTORY) + "Default.vert.spv", state,
-            VK_SHADER_STAGE_VERTEX_BIT,
-            std::initializer_list<const VkDescriptorSetLayout>
-            {
-                _dynamicDescriptorPool.Layout(0),
-                _staticDescriptorPool.Layout(0),
-                _staticDescriptorPool.Layout(1)
-            }, std::span<const VkPushConstantRange>{});
-            shaders.emplace_back(std::string(SHADER_DIRECTORY) + "Default.frag.spv", state,
-            VK_SHADER_STAGE_FRAGMENT_BIT,
-            std::initializer_list<const VkDescriptorSetLayout>
-            {
-                _dynamicDescriptorPool.Layout(0),
-                _staticDescriptorPool.Layout(0),
-                _staticDescriptorPool.Layout(1)
-            },
-            std::span<const VkPushConstantRange>{});
-            return shaders;
-        }()
-    ),*/
+    uint32_t culling = _shaderLibrary.RegisterShader(std::filesystem::path(SHADER_DIRECTORY) / "Culling.comp.spv", ShaderLibrary::Compute,
+    {{
+        _dynamicDescriptorPool.Layout(0),
+        _staticDescriptorPool.Layout(1)
+    }}, {});
+
+    _cullingKernel =
+    {
+        .Shader = _shaderLibrary.Get(culling).Internal(),
+        .GX = 0,
+        .GY = 0,
+        .GZ = 0
+    };
+
 
     uint32_t vertex = _shaderLibrary.RegisterShader(std::filesystem::path(SHADER_DIRECTORY) / "Default.vert.spv", ShaderLibrary::Vertex,
     {{
@@ -397,7 +387,7 @@ Application::Application() :
     _dynamicDescriptorPool(DescriptorPool::Builder()
         .AddLayout(
             DescriptorPool::LayoutBuilder()
-                .AddBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT, 0, 1)
+                .AddBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_COMPUTE_BIT, 0, 1)
             )
         .SetFlags(VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT)
         .SetMaxSets(ApplicationInfo::Constant::MaxFrameInCount)
@@ -414,8 +404,8 @@ Application::Application() :
             .SetFlags(VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT)
         )
         .AddLayout(DescriptorPool::LayoutBuilder()
-            .AddBinding(0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, 1) // Material
-            .AddBinding(1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_VERTEX_BIT , 0, 1) // InstanceData
+            .AddBinding(0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT, 0, 1) // Material
+            .AddBinding(1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_COMPUTE_BIT , 0, 1) // InstanceData
         )
         .Build()
     ),
@@ -429,7 +419,11 @@ Application::Application() :
     _visibleObjectDataBuffer(ApplicationInfo::Constant::DrawIndirectBufferMaxSize, sizeof(InstanceData), GraphicsBuffer::BufferType::STORAGE),
     // Command pool
     _graphicsCommandPool(ApplicationInfo::GetGraphicsQueueId()),
-    _pipelineLayout(std::initializer_list<VkDescriptorSetLayout>(
+    _cullingLayout(std::initializer_list<VkDescriptorSetLayout>(
+        {
+            _dynamicDescriptorPool.Layout(0),
+        }), {}),
+    _drawLayout(std::initializer_list<VkDescriptorSetLayout>(
         {
             _dynamicDescriptorPool.Layout(0),
             _staticDescriptorPool.Layout(0),

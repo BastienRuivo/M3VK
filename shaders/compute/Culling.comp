@@ -1,42 +1,12 @@
 #version 450
 
-struct DrawIndexedIndirect
-{
-    uint indexCount;
-    uint instanceCount;
-    uint firstIndex;
-    int vertexOffset;
-    uint firstInstance;
-    uint pad0[3];
-};
+#include "../header/Camera.glsl"
+#include "../header/Material.glsl"
+#include "../header/Instancing.glsl"
 
-struct ObjectData
+layout(set = 0, binding = 0) uniform CameraDataBuffer
 {
-    mat4 LocalToWorldMatrix;
-    vec3 AabbMin;
-    uint MaterialIndex;
-    vec3 AabbMax;
-    uint MeshId;
-};
-
-layout(std430, binding = 0) readonly buffer ObjectDataBuffer
-{
-    ObjectData _ObjectData[];
-};
-
-layout(std430, binding = 1) readonly buffer DrawIndexedIndirectBuffer
-{
-    DrawIndexedIndirect _DrawIndexedIndirect[];
-};
-
-layout(std430, binding = 2) buffer VisibleObjectDataBuffer
-{
-    ObjectData _VisibleObjectData[];
-};
-
-layout(std430, binding = 3) buffer VisibleDrawIndexedIndirectBuffer
-{
-    DrawIndexedIndirect _VisibleDrawIndexedIndirect[];
+    CameraData _Camera;
 };
 
 uint _ObjectCount;

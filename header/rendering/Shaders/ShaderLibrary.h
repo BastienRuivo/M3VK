@@ -40,6 +40,34 @@ class ShaderLibrary
         }
     };
 
+    struct ComputeKernel
+    {
+        VkShaderEXT Shader;
+        uint32_t GX, GY, GZ;
+
+        void Bind(const CommandBuffer& cmdBuffer)
+        {
+            const VkShaderStageFlagBits compute = VK_SHADER_STAGE_FRAGMENT_BIT;
+            cmdBuffer.BindShaders(1, &compute, &Shader);
+        }
+
+        void CeilDispatch(const CommandBuffer& cmdBuffer, uint32_t x = 1, uint32_t y = 1, uint32_t z = 1)
+        {
+            if(x == 0 || y == 0 || z == 0)
+            {
+                DebugLayer::Log(DebugLayer::WARNING, "Try to dispatch with size 0 !");
+                return;
+            }
+            uint32_t gx, gy, gz;
+
+            gx = (x + GX - 1) / GX;
+            gy = (y + GY - 1) / GY;
+            gz = (z + GZ - 1) / GZ;
+
+            cmdBuffer.Dispatch(gx, gy, gz);
+        }
+    };
+
     ShaderLibrary();
     ~ShaderLibrary();
 

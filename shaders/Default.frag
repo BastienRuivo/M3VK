@@ -3,16 +3,8 @@
 
 #define UINT32_MAX 0xffffffff
 
-struct MaterialProperties
-{
-    uint BaseColorTexIndex;
-    uint NormalTexIndex;
-    uint MetallicRoughnessTexIndex;
+#include "header/Material.glsl"
 
-    vec4 BaseColor;
-    float Metallic;
-    float Roughness;
-};
 
 layout(set = 1, binding = 0) uniform sampler2D uTextures[];
 //ssbo

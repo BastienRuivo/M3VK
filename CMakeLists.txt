@@ -30,7 +30,18 @@ fetchcontent_declare(
     GIT_TAG        1.0.3
 )
 
+fetchcontent_declare(
+    spirv_reflect
+    GIT_REPOSITORY https://github.com/KhronosGroup/SPIRV-Reflect.git
+    GIT_TAG        main
+)
+
 fetchcontent_makeavailable(glfw stb glm)
+
+fetchcontent_getproperties(spirv_reflect)
+if(NOT spirv_reflect_POPULATED)
+    fetchcontent_populate(spirv_reflect)
+endif()
 
 # --- Interface Library Setup ---
 
@@ -42,9 +53,17 @@ target_include_directories(stb INTERFACE ${stb_SOURCE_DIR})
 add_library(glm_lib INTERFACE)
 target_include_directories(glm_lib INTERFACE ${glm_SOURCE_DIR})
 
+# SPIRV-Reflect compilation target
+add_library(spirv-reflect STATIC
+    "${spirv_reflect_SOURCE_DIR}/spirv_reflect.c"
+    "${spirv_reflect_SOURCE_DIR}/spirv_reflect.h"
+)
+target_include_directories(spirv-reflect PUBLIC ${spirv_reflect_SOURCE_DIR})
+
 # --- Vulkan and Shaders ---
 
 find_package(Vulkan REQUIRED)
+target_link_libraries(spirv-reflect PRIVATE Vulkan::Vulkan)
 
 find_program(GLSLC_EXECUTABLE NAMES glslc HINTS "$ENV{VULKAN_SDK}/bin")
 if(NOT GLSLC_EXECUTABLE)
@@ -114,6 +133,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     glfw
     stb
     glm::glm
+    spirv-reflect
 )
 
 # --- Asset Management ---
