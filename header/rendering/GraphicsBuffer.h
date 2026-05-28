@@ -72,7 +72,7 @@ class GraphicsBuffer
     {
         INDEX = 0,
         VERTEX = 1,
-        DYNAMIC_UNIFORM = 2,
+        DYNAMIC_STORAGE = 2,
         UNIFORM = 3,
         STORAGE = 4,
         INDIRECT_DRAW = 5,
@@ -102,7 +102,7 @@ class GraphicsBuffer
     inline VkDeviceSize GetStride() const { return _stride; }
     inline void* GetDataPtr() const
     {
-        if(_type != BufferType::DYNAMIC_UNIFORM)
+        if(_type != BufferType::DYNAMIC_STORAGE)
         {
             DebugLayer::Log(DebugLayer::LogType::ERROR, "Trying to get data pointer for non uniform buffer");
         }
@@ -122,8 +122,8 @@ class GraphicsBuffer
     inline VkDescriptorType GetDescriptorType() const
     {
         switch (_type) {
-        case BufferType::DYNAMIC_UNIFORM:
-            return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+        case BufferType::DYNAMIC_STORAGE:
+            return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;
         case BufferType::UNIFORM:
             return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         case BufferType::STORAGE:

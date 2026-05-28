@@ -5,7 +5,7 @@
 #include "header/Instancing.glsl"
 
 // don't forget alignement the day you will have vec2 or nested
-layout(set = 0, binding = 0) uniform CameraDataBuffer
+layout(set = 0, binding = 0, std430) readonly buffer CameraDataBuffer
 {
     CameraData _Camera;
 };
