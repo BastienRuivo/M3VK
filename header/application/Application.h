@@ -1,7 +1,5 @@
 #pragma once
 
-
-#include "asset/Shader.h"
 #include "rendering/Camera.h"
 #include "rendering/DescriptorPool.h"
 #include "registry/Registry.h"
@@ -11,6 +9,7 @@
 #include "handler/VkPhysicalDeviceHandler.h"
 #include "application/Window.h"
 #include "rendering/GraphicsBuffer.h"
+#include "rendering/Shaders/ShaderLibrary.h"
 #include "rendering/SwapChain.h"
 #include <chrono>
 #include <cstdint>
@@ -77,7 +76,9 @@ class Application
         Mesh = 0,
         Material = 1
     };
-    std::vector<Shader> _shaders;
+    ShaderLibrary _shaderLibrary;
+    ShaderLibrary::VertexBinding _vertexShader;
+    ShaderLibrary::FragmentBinding _fragmentShader;
     GraphicsBuffer _visibleDrawIndirectBuffer;
     GraphicsBuffer _visibleObjectDataBuffer;
     VkPipelineLayoutHandler _pipelineLayout;
@@ -122,6 +123,7 @@ class Application
     void RecordCommandBuffer(const CommandBuffer& cmdBuffer, uint32_t currentFrame, uint32_t imageIndex);
     void DrawFrame();
     uint32_t LoadDefaultMaterial();
+    void LoadShaders();
 
     // Utils
     static inline const std::vector<const char*> _deviceExtensions = {

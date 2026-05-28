@@ -4,11 +4,26 @@
 #include "rendering/CommandBuffer.h"
 #include <vulkan/vulkan_core.h>
 
-struct ShaderState
+struct VertexState
 {
-    VkCullModeFlags cullMode = VK_CULL_MODE_BACK_BIT;
-    VkVertexInputBindingDescription2EXT bindingDescription = Vertex::GetBindingDescription();
-    std::vector<VkVertexInputAttributeDescription2EXT> vertexAttributeDescriptions = Vertex::GetAttributeDescription();
+    VertexState() :
+        CullMode(VK_CULL_MODE_BACK_BIT),
+        BindingDescription(Vertex::GetBindingDescription()),
+        VertexAttributeDescriptions(Vertex::GetAttributeDescription()) {};
+
+    VkCullModeFlags CullMode;
+    VkVertexInputBindingDescription2EXT BindingDescription;
+    std::vector<VkVertexInputAttributeDescription2EXT> VertexAttributeDescriptions;
+
+    void Bind(const CommandBuffer& cmdBuffer) const
+    {
+        cmdBuffer.SetVertexInput(1, &BindingDescription, static_cast<uint32_t>(VertexAttributeDescriptions.size()), VertexAttributeDescriptions.data());
+        cmdBuffer.SetCullMode(CullMode);
+    }
+};
+
+struct FragmentState
+{
 
     // depth related
     VkBool32 depthTest = VK_TRUE;
@@ -33,8 +48,6 @@ struct ShaderState
 
     void Bind(const CommandBuffer& cmdBuffer) const
     {
-        cmdBuffer.SetVertexInput(1, &bindingDescription, static_cast<uint32_t>(vertexAttributeDescriptions.size()), vertexAttributeDescriptions.data());
-        cmdBuffer.SetCullMode(cullMode);
         cmdBuffer.SetDepthCompareOp(depthCompareOp);
         cmdBuffer.SetDepthTest(depthTest);
         cmdBuffer.SetDepthWrite(depthWrite);

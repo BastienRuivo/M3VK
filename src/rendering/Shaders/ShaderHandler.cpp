@@ -1,4 +1,4 @@
-#include "asset/Shader.h"
+#include "rendering/Shaders/ShaderHandler.h"
 #include "application/ApplicationInfo.h"
 #include "application/ApplicationHelper.h"
 #include <cstdint>
@@ -8,13 +8,13 @@
 #include <vector>
 #include <vulkan/vulkan_core.h>
 
-Shader::~Shader()
+ShaderHandler::~ShaderHandler()
 {
     VkFunctions::vkDestroyShaderEXT(_internal, nullptr);
 }
 
-Shader::Shader(const std::filesystem::path& path, ShaderState state, VkShaderStageFlagBits stageFlags, std::span<const VkDescriptorSetLayout> descriptorLayouts, std::span<const VkPushConstantRange> pushConstantRanges)
-: _state(state), _stage(stageFlags)
+ShaderHandler::ShaderHandler(const std::filesystem::path& path, VkShaderStageFlagBits stageFlags, std::span<const VkDescriptorSetLayout> descriptorLayouts, std::span<const VkPushConstantRange> pushConstantRanges)
+:  _stage(stageFlags)
 {
     std::vector<char> shaderCode = ApplicationHelper::ReadFile(path);
 
@@ -46,19 +46,17 @@ Shader::Shader(const std::filesystem::path& path, ShaderState state, VkShaderSta
     }
 }
 
-Shader::Shader(Shader&& other) noexcept
+ShaderHandler::ShaderHandler(ShaderHandler&& other) noexcept
 {
     _internal = std::exchange(other._internal, VK_NULL_HANDLE);
-    _state = std::exchange(other._state, {});
     _stage = std::exchange(other._stage, VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM);
 }
 
-Shader& Shader::operator=(Shader&& other) noexcept
+ShaderHandler& ShaderHandler::operator=(ShaderHandler&& other) noexcept
 {
     if(this != &other)
     {
         _internal = std::exchange(other._internal, VK_NULL_HANDLE);
-        _state = std::exchange(other._state, {});
         _stage = std::exchange(other._stage, VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM);
     }
     return *this;

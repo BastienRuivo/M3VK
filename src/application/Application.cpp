@@ -1,6 +1,5 @@
 #include "application/Application.h"
 #include "application/ApplicationHelper.h"
-#include "asset/Shader.h"
 #include "rendering/GraphicsBuffer.h"
 #include "application/ApplicationInfo.h"
 #include "rendering/CommandBuffer.h"
@@ -14,7 +13,6 @@
 #include "asset/AssetHelper.h"
 #include "asset/MeshHelper.h"
 #include "registry/Registry.h"
-#include "rendering/ShaderState.h"
 #include "rendering/SwapChain.h"
 #include "application/DebugLayer.h"
 #include <GLFW/glfw3.h>
@@ -288,8 +286,8 @@ void Application::RecordCommandBuffer(const CommandBuffer& cmdBuffer, uint32_t c
             cmdBuffer.BindDescriptorSets(_pipelineLayout.Internal(), _descriptorSet.Get(currentFrame), 0);
             cmdBuffer.BindDescriptorSets(_pipelineLayout.Internal(), _materialInstancesSet, 2);
 
-            _shaders[0].Bind(cmdBuffer);
-            _shaders[1].Bind(cmdBuffer);
+            _vertexShader.Bind(cmdBuffer);
+            _fragmentShader.Bind(cmdBuffer);
 
             if(_wireframe)
             {
@@ -326,6 +324,60 @@ uint32_t Application::LoadDefaultMaterial()
     matProperties.MRAOTexId = mraoIndex;
 
     return materialRegistry.RegisterMaterial(matProperties);
+}
+
+void Application::LoadShaders()
+{
+     /*_shaders([this](){
+        std::vector<ShaderHandler> shaders;
+            //shaders.emplace_back(, VK_SHADER_STAGE_COMPUTE_BIT, std::span<const VkDescriptorSetLayout>{}, std::span<const VkPushConstantRange>{});
+            ShaderState state;
+            shaders.emplace_back(std::string(SHADER_DIRECTORY) + "Default.vert.spv", state,
+            VK_SHADER_STAGE_VERTEX_BIT,
+            std::initializer_list<const VkDescriptorSetLayout>
+            {
+                _dynamicDescriptorPool.Layout(0),
+                _staticDescriptorPool.Layout(0),
+                _staticDescriptorPool.Layout(1)
+            }, std::span<const VkPushConstantRange>{});
+            shaders.emplace_back(std::string(SHADER_DIRECTORY) + "Default.frag.spv", state,
+            VK_SHADER_STAGE_FRAGMENT_BIT,
+            std::initializer_list<const VkDescriptorSetLayout>
+            {
+                _dynamicDescriptorPool.Layout(0),
+                _staticDescriptorPool.Layout(0),
+                _staticDescriptorPool.Layout(1)
+            },
+            std::span<const VkPushConstantRange>{});
+            return shaders;
+        }()
+    ),*/
+
+    uint32_t vertex = _shaderLibrary.RegisterShader(std::filesystem::path(SHADER_DIRECTORY) / "Default.vert.spv", ShaderLibrary::Vertex,
+    {{
+        _dynamicDescriptorPool.Layout(0),
+        _staticDescriptorPool.Layout(0),
+        _staticDescriptorPool.Layout(1)
+    }}, {});
+
+    _vertexShader =
+    {
+        .Shader = _shaderLibrary.Get(vertex).Internal(),
+        .State = VertexState()
+    };
+
+    uint32_t fragment = _shaderLibrary.RegisterShader(std::filesystem::path(SHADER_DIRECTORY) / "Default.frag.spv", ShaderLibrary::Fragment,
+    {{
+        _dynamicDescriptorPool.Layout(0),
+        _staticDescriptorPool.Layout(0),
+        _staticDescriptorPool.Layout(1)
+    }}, {});
+
+    _fragmentShader =
+    {
+        .Shader = _shaderLibrary.Get(fragment).Internal(),
+        .State = FragmentState()
+    };
 }
 
 Application::Application() :
@@ -373,31 +425,6 @@ Application::Application() :
             std::make_unique<MeshRegistry>(),
             std::make_unique<MaterialRegistry>(_staticDescriptorPool, 0),
         }),
-
-    _shaders([this](){
-        std::vector<Shader> shaders;
-            //shaders.emplace_back(std::string(SHADER_DIRECTORY) + "Culling.comp.spv", VK_SHADER_STAGE_COMPUTE_BIT, std::span<const VkDescriptorSetLayout>{}, std::span<const VkPushConstantRange>{});
-            ShaderState state;
-            shaders.emplace_back(std::string(SHADER_DIRECTORY) + "Default.vert.spv", state,
-            VK_SHADER_STAGE_VERTEX_BIT,
-            std::initializer_list<const VkDescriptorSetLayout>
-            {
-                _dynamicDescriptorPool.Layout(0),
-                _staticDescriptorPool.Layout(0),
-                _staticDescriptorPool.Layout(1)
-            }, std::span<const VkPushConstantRange>{});
-            shaders.emplace_back(std::string(SHADER_DIRECTORY) + "Default.frag.spv", state,
-            VK_SHADER_STAGE_FRAGMENT_BIT,
-            std::initializer_list<const VkDescriptorSetLayout>
-            {
-                _dynamicDescriptorPool.Layout(0),
-                _staticDescriptorPool.Layout(0),
-                _staticDescriptorPool.Layout(1)
-            },
-            std::span<const VkPushConstantRange>{});
-            return shaders;
-        }()
-    ),
     _visibleDrawIndirectBuffer(ApplicationInfo::Constant::DrawIndirectBufferMaxSize, sizeof(DrawIndexedIndirectPadded), GraphicsBuffer::BufferType::INDIRECT_DRAW),
     _visibleObjectDataBuffer(ApplicationInfo::Constant::DrawIndirectBufferMaxSize, sizeof(InstanceData), GraphicsBuffer::BufferType::STORAGE),
     // Command pool
@@ -437,6 +464,8 @@ Application::Application() :
         CPUImage logo("data/logo.png", STBI_rgb_alpha);
         _window.SetIcon(logo.Data(), logo.Width(), logo.Height());
     }
+
+    LoadShaders();
 
     MeshRegistry& meshRegistry = static_cast<MeshRegistry&>(*_registries[(size_t)RegistryType::Mesh]);
     MaterialRegistry& materialRegistry = static_cast<MaterialRegistry&>(*_registries[(size_t)RegistryType::Material]);
