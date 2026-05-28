@@ -328,7 +328,7 @@ uint32_t Application::LoadDefaultMaterial()
 
 void Application::LoadShaders()
 {
-    uint32_t culling = _shaderLibrary.RegisterShader(std::filesystem::path(SHADER_DIRECTORY) / "Culling.comp.spv", ShaderLibrary::Compute,
+    /*uint32_t culling = _shaderLibrary.RegisterShader(std::filesystem::path(SHADER_DIRECTORY) / "Culling.comp.spv", ShaderLibrary::Compute,
     {{
         _dynamicDescriptorPool.Layout(0),
         _staticDescriptorPool.Layout(1)
@@ -340,7 +340,7 @@ void Application::LoadShaders()
         .GX = 0,
         .GY = 0,
         .GZ = 0
-    };
+    };*/
 
 
     uint32_t vertex = _shaderLibrary.RegisterShader(std::filesystem::path(SHADER_DIRECTORY) / "Default.vert.spv", ShaderLibrary::Vertex,
@@ -415,14 +415,14 @@ Application::Application() :
             std::make_unique<MeshRegistry>(),
             std::make_unique<MaterialRegistry>(_staticDescriptorPool, 0),
         }),
-    _visibleDrawIndirectBuffer(ApplicationInfo::Constant::DrawIndirectBufferMaxSize, sizeof(DrawIndexedIndirectPadded), GraphicsBuffer::BufferType::INDIRECT_DRAW),
-    _visibleObjectDataBuffer(ApplicationInfo::Constant::DrawIndirectBufferMaxSize, sizeof(InstanceData), GraphicsBuffer::BufferType::STORAGE),
+    /*_visibleDrawIndirectBuffer(ApplicationInfo::Constant::DrawIndirectBufferMaxSize, sizeof(DrawIndexedIndirectPadded), GraphicsBuffer::BufferType::INDIRECT_DRAW),
+    _visibleObjectDataBuffer(ApplicationInfo::Constant::DrawIndirectBufferMaxSize, sizeof(InstanceData), GraphicsBuffer::BufferType::STORAGE),*/
     // Command pool
     _graphicsCommandPool(ApplicationInfo::GetGraphicsQueueId()),
-    _cullingLayout(std::initializer_list<VkDescriptorSetLayout>(
+    /*_cullingLayout(std::initializer_list<VkDescriptorSetLayout>(
         {
             _dynamicDescriptorPool.Layout(0),
-        }), {}),
+        }), {}),*/
     _drawLayout(std::initializer_list<VkDescriptorSetLayout>(
         {
             _dynamicDescriptorPool.Layout(0),
