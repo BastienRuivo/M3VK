@@ -1,23 +1,25 @@
 #version 450
 
-#include "../header/Camera.glsl"
-#include "../header/Material.glsl"
-#include "../header/Instancing.glsl"
+// #include "../header/Camera.glsl"
+// #include "../header/Material.glsl"
+// #include "../header/Instancing.glsl"
 
-layout(set = 0, binding = 0) uniform CameraDataBuffer
-{
-    CameraData _Camera;
-};
+// layout(set = 0, binding = 0) uniform CameraDataBuffer
+// {
+//     CameraData _Camera;
+// };
 
-uint _ObjectCount;
+// uint _ObjectCount;
 
-layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
-void main()
-{
-    uint objectIndex = gl_GlobalInvocationID.x;
-    if (objectIndex < _ObjectCount)
-    {
-        _VisibleObjectData[objectIndex] = _ObjectData[objectIndex];
-        _VisibleDrawIndexedIndirect[objectIndex] = _DrawIndexedIndirect[objectIndex];
-    }
-}
+// layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+// void main()
+// {
+//     uint objectIndex = gl_GlobalInvocationID.x;
+//     if (objectIndex < _ObjectCount)
+//     {
+//         _VisibleObjectData[objectIndex] = _ObjectData[objectIndex];
+//         _VisibleDrawIndexedIndirect[objectIndex] = _DrawIndexedIndirect[objectIndex];
+//     }
+// }
+
+void main () {}
