@@ -1,9 +1,9 @@
 #include "application/Application.h"
 #include "application/ApplicationHelper.h"
+#include "rendering/DescriptorAllocator.h"
 #include "rendering/GraphicsBuffer.h"
 #include "application/ApplicationInfo.h"
 #include "rendering/CommandBuffer.h"
-#include "rendering/DescriptorPool.h"
 #include "rendering/GPUImage.h"
 #include "rendering/GraphicsBuffer.h"
 #include "registry/MaterialRegistry.h"
@@ -25,10 +25,11 @@
 #include <glm/ext/vector_float3.hpp>
 #include <glm/fwd.hpp>
 #include <glm/trigonometric.hpp>
-#include <initializer_list>
 #include <memory>
 #include <stdexcept>
 #include "asset/CPUImage.h"
+
+#include "../shaders/Shader_Bindings.h"
 
 #ifdef M3VK_VERBOSE_LOG
 #include <string>
@@ -39,36 +40,9 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-MultiFrameObject<DescriptorSetHandle> Application::CreateDescriptorSet()
-{
-    MultiFrameObject<DescriptorSetHandle> descriptorSets(_dynamicDescriptorPool.Allocate(0, ApplicationInfo::Constant::MaxFrameInCount));
 
-    for(int i = 0; i < ApplicationInfo::Constant::MaxFrameInCount; ++i)
-    {
-        VkDescriptorBufferInfo cameraDataInfo = DescriptorPool::DescriptorBufferInfo(_cameraDataBuffer.Get(i), 0);
 
-        uint32_t binding = 0;
-        DescriptorHelper::UpdateDescriptorSet(std::initializer_list<VkWriteDescriptorSet>(
-            {
-                {
-                .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-                .dstSet = descriptorSets.Get(i).set,
-                .dstBinding = binding++,
-                .dstArrayElement = 0,
-                .descriptorCount = 1,
-                .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-                .pImageInfo = nullptr,
-                .pBufferInfo = &cameraDataInfo,
-                .pTexelBufferView = nullptr
-                }
-            }
-        ), {});
-    }
-
-    return descriptorSets;
-}
-
-void Application::UpdateCameraData(uint32_t currentFrame)
+void Application::UpdateCameraData()
 {
     VkExtent2D extent = _swapChain->GetExtent();
 
@@ -82,7 +56,7 @@ void Application::UpdateCameraData(uint32_t currentFrame)
 
     cameraData.viewProjectionMatrix = cameraData.projectionMatrix * cameraData.worldToCameraMatrix;
 
-    memcpy(_cameraDataBuffer.Get(currentFrame).GetDataPtr(), &cameraData, sizeof(cameraData));
+    memcpy(_cameraDataBuffer.GetDataPtr(), &cameraData, sizeof(cameraData));
 }
 
 void Application::ResizeCallback(GLFWwindow* window, int width, int height)
@@ -159,12 +133,13 @@ void Application::RefreshSwapChain()
 
 void Application::DrawFrame()
 {
-    _waitFence.Get(_currentFrame).Wait(UINT64_MAX);
+    uint32_t currentFrame = ApplicationInfo::CurrentFrame();
+    _waitFence.Get(currentFrame).Wait(UINT64_MAX);
 
     // Acquire image to draw on
     uint32_t imageIndex;
-    VkResult result = vkAcquireNextImageKHR(ApplicationInfo::Device(), _swapChain->Internal(), UINT64_MAX, _availableImageSemaphore.Internal(_currentFrame), VK_NULL_HANDLE, &imageIndex);
-
+    VkResult result = vkAcquireNextImageKHR(ApplicationInfo::Device(), _swapChain->Internal(), UINT64_MAX, _availableImageSemaphore.Internal(currentFrame), VK_NULL_HANDLE, &imageIndex);
+    ApplicationInfo::NextFrame();
     if(result == VK_ERROR_OUT_OF_DATE_KHR)
     {
         RefreshSwapChain();
@@ -176,19 +151,21 @@ void Application::DrawFrame()
     }
 
     // Only reset the fence if we are submitting work
-    _waitFence.Get(_currentFrame).Reset();
+    _waitFence.Get(currentFrame).Reset();
 
-    UpdateCameraData(_currentFrame);
+    UpdateCameraData();
 
-    _commandBuffer.Get(_currentFrame).Reset();
-    RecordCommandBuffer(_commandBuffer.Get(_currentFrame), _currentFrame, imageIndex);
+    const CommandBuffer& commandBuffer = _commandBuffer.Get(currentFrame);
+
+    commandBuffer.Reset();
+    RecordCommandBuffer(commandBuffer, imageIndex);
 
     // stackallocs that can be cached.
-    VkSemaphore wait[] = {_availableImageSemaphore.Internal(_currentFrame)};
+    VkSemaphore wait[] = {_availableImageSemaphore.Internal(currentFrame)};
     VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
     VkSemaphore signalSemaphore[] = {_renderFinishedSemaphores.Internal(imageIndex)};
 
-    _commandBuffer.Get(_currentFrame).Submit(wait, 1, waitStages, signalSemaphore, 1, _waitFence.Internal(_currentFrame));
+    commandBuffer.Submit(wait, 1, waitStages, signalSemaphore, 1, _waitFence.Internal(currentFrame));
 
     // actually present the frame
     VkSwapchainKHR swapChain = _swapChain->Internal();
@@ -213,10 +190,10 @@ void Application::DrawFrame()
         throw std::runtime_error("failed to present swap chain image!");
     }
 
-    _currentFrame = (_currentFrame + 1) % ApplicationInfo::Constant::MaxFrameInCount;
+    ApplicationInfo::NextFrame();
 }
 
-void Application::RecordCommandBuffer(const CommandBuffer& cmdBuffer, uint32_t currentFrame, uint32_t imageIndex)
+void Application::RecordCommandBuffer(const CommandBuffer& cmdBuffer, uint32_t imageIndex)
 {
     VkRect2D renderArea = {0, 0, _swapChain->GetExtent().width, _swapChain->GetExtent().height};
 
@@ -251,6 +228,8 @@ void Application::RecordCommandBuffer(const CommandBuffer& cmdBuffer, uint32_t c
     };
 
     const ImageReference& backBuffer = _swapChain->Images.Get(imageIndex);
+    const auto& meshRegistry = static_cast<MeshRegistry&>(*_registries[(size_t)RegistryType::Mesh]);
+    const auto& materialRegistry = static_cast<MaterialRegistry&>(*_registries[(size_t)RegistryType::Material]);
 
     cmdBuffer.Begin();
     {
@@ -278,13 +257,17 @@ void Application::RecordCommandBuffer(const CommandBuffer& cmdBuffer, uint32_t c
             cmdBuffer.SetViewport(0, 0, renderArea.extent.width, renderArea.extent.height);
             cmdBuffer.SetScissor(renderArea);
 
+            PushConstants push
+            {
+                ._CameraBufferIndex = _cameraDataBuffer.GetGPUIndex()
+            };
+            cmdBuffer.PushConstants(_descriptorAllocator.GlobalLayout(), VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(PushConstants), &push);
+            cmdBuffer.BindDescriptorSets(_descriptorAllocator.GlobalLayout(), _descriptorAllocator.GlobalDescriptorSet(), 0);
+
             for(const auto& registry : _registries)
             {
-                registry->Bind(cmdBuffer, _drawLayout.Internal());
+                registry->Bind(cmdBuffer, _descriptorAllocator.GlobalLayout());
             }
-
-            cmdBuffer.BindDescriptorSets(_drawLayout.Internal(), _descriptorSet.Get(currentFrame), 0);
-            cmdBuffer.BindDescriptorSets(_drawLayout.Internal(), _materialInstancesSet, 2);
 
             _vertexShader.Bind(cmdBuffer);
             _fragmentShader.Bind(cmdBuffer);
@@ -294,9 +277,8 @@ void Application::RecordCommandBuffer(const CommandBuffer& cmdBuffer, uint32_t c
                 cmdBuffer.SetPolygonMode(VK_POLYGON_MODE_LINE);
             }
 
-            auto& meshRegistry = static_cast<MeshRegistry&>(*_registries[(size_t)RegistryType::Mesh]);
 
-            GeometryBuffer& indirectBuffer = meshRegistry.IndirectBuffer();
+            const GeometryBuffer& indirectBuffer = meshRegistry.IndirectBuffer();
             cmdBuffer.DrawIndexedIndirect(indirectBuffer.Internal(), 0, indirectBuffer.GetCurrentIndex(), indirectBuffer.GetStride());
         }
         cmdBuffer.EndRendering();
@@ -310,13 +292,13 @@ uint32_t Application::LoadDefaultMaterial()
     MaterialRegistry& materialRegistry = static_cast<MaterialRegistry&>(*_registries[(size_t)RegistryType::Material]);
 
     GPUAllocatedImage baseColorTex = GPUAllocatedImage(AssetHelper::ImageFromCPU(CPUImage("data/default/BaseColor.png", STBI_rgb_alpha), _graphicsCommandPool.Internal(), _graphicsComputeQueue.Internal()));
-    uint32_t baseIndex = materialRegistry.RegisterTexture(std::move(baseColorTex), _sampler.Internal());
+    uint32_t baseIndex = materialRegistry.RegisterTexture(_descriptorAllocator, std::move(baseColorTex), _sampler.Internal());
 
     GPUAllocatedImage normalMapTex = GPUAllocatedImage(AssetHelper::ImageFromCPU(CPUImage("data/default/BaseNormal.png", STBI_rgb_alpha), _graphicsCommandPool.Internal(), _graphicsComputeQueue.Internal()));
-    uint32_t normalIndex = materialRegistry.RegisterTexture(std::move(normalMapTex), _sampler.Internal());
+    uint32_t normalIndex = materialRegistry.RegisterTexture(_descriptorAllocator, std::move(normalMapTex), _sampler.Internal());
 
     GPUAllocatedImage mraoTex = GPUAllocatedImage(AssetHelper::ImageFromCPU(CPUImage("data/default/BaseMRAO.png", STBI_rgb_alpha), _graphicsCommandPool.Internal(), _graphicsComputeQueue.Internal()));
-    uint32_t mraoIndex = materialRegistry.RegisterTexture(std::move(mraoTex), _sampler.Internal());
+    uint32_t mraoIndex = materialRegistry.RegisterTexture(_descriptorAllocator, std::move(mraoTex), _sampler.Internal());
 
     MaterialProperties matProperties = MaterialProperties::Default();
     matProperties.BaseColorTexId = baseIndex;
@@ -328,27 +310,7 @@ uint32_t Application::LoadDefaultMaterial()
 
 void Application::LoadShaders()
 {
-    /*uint32_t culling = _shaderLibrary.RegisterShader(std::filesystem::path(SHADER_DIRECTORY) / "Culling.comp.spv", ShaderLibrary::Compute,
-    {{
-        _dynamicDescriptorPool.Layout(0),
-        _staticDescriptorPool.Layout(1)
-    }}, {});
-
-    _cullingKernel =
-    {
-        .Shader = _shaderLibrary.Get(culling).Internal(),
-        .GX = 0,
-        .GY = 0,
-        .GZ = 0
-    };*/
-
-
-    uint32_t vertex = _shaderLibrary.RegisterShader(std::filesystem::path(SHADER_DIRECTORY) / "Default.vert.spv", ShaderLibrary::Vertex,
-    {{
-        _dynamicDescriptorPool.Layout(0),
-        _staticDescriptorPool.Layout(0),
-        _staticDescriptorPool.Layout(1)
-    }}, {});
+    uint32_t vertex = _shaderLibrary.RegisterShader(std::filesystem::path(SHADER_DIRECTORY) / "Default.vert.spv", ShaderLibrary::Vertex, _descriptorAllocator);
 
     _vertexShader =
     {
@@ -356,12 +318,7 @@ void Application::LoadShaders()
         .State = VertexState()
     };
 
-    uint32_t fragment = _shaderLibrary.RegisterShader(std::filesystem::path(SHADER_DIRECTORY) / "Default.frag.spv", ShaderLibrary::Fragment,
-    {{
-        _dynamicDescriptorPool.Layout(0),
-        _staticDescriptorPool.Layout(0),
-        _staticDescriptorPool.Layout(1)
-    }}, {});
+    uint32_t fragment = _shaderLibrary.RegisterShader(std::filesystem::path(SHADER_DIRECTORY) / "Default.frag.spv", ShaderLibrary::Fragment, _descriptorAllocator);
 
     _fragmentShader =
     {
@@ -383,54 +340,14 @@ Application::Application() :
     _graphicsComputeQueue(VkQueueHandler::Graphics),
     _presentQueue(VkQueueHandler::Present),
     _swapChain(std::make_unique<SwapChain>(_window, _windowSurface.Internal())),
-
-    _dynamicDescriptorPool(DescriptorPool::Builder()
-        .AddLayout(
-            DescriptorPool::LayoutBuilder()
-                .AddBinding(0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_COMPUTE_BIT, 0, 1)
-            )
-        .SetFlags(VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT)
-        .SetMaxSets(ApplicationInfo::Constant::MaxFrameInCount)
-        .Build()),
-    _staticDescriptorPool(DescriptorPool::Builder()
-        .SetMaxSets(2)
-        .SetFlags(VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT | VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT)
-        .AddLayout(DescriptorPool::LayoutBuilder()
-            .AddBinding(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-                VK_SHADER_STAGE_FRAGMENT_BIT,
-                VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT
-                | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT
-                | VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT, ApplicationInfo::Constant::MaxTextureCount)
-            .SetFlags(VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT)
-        )
-        .AddLayout(DescriptorPool::LayoutBuilder()
-            .AddBinding(0, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT, 0, 1) // Material
-            .AddBinding(1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_COMPUTE_BIT , 0, 1) // InstanceData
-        )
-        .Build()
-    ),
-    _materialInstancesSet(_staticDescriptorPool.Allocate(1)),
+    _descriptorAllocator(),
     _registries(
         {
-            std::make_unique<MeshRegistry>(),
-            std::make_unique<MaterialRegistry>(_staticDescriptorPool, 0),
+            std::make_unique<MeshRegistry>(_descriptorAllocator),
+            std::make_unique<MaterialRegistry>(_descriptorAllocator),
         }),
-    /*_visibleDrawIndirectBuffer(ApplicationInfo::Constant::DrawIndirectBufferMaxSize, sizeof(DrawIndexedIndirectPadded), GraphicsBuffer::BufferType::INDIRECT_DRAW),
-    _visibleObjectDataBuffer(ApplicationInfo::Constant::DrawIndirectBufferMaxSize, sizeof(InstanceData), GraphicsBuffer::BufferType::STORAGE),*/
     // Command pool
     _graphicsCommandPool(ApplicationInfo::GetGraphicsQueueId()),
-    /*_cullingLayout(std::initializer_list<VkDescriptorSetLayout>(
-        {
-            _dynamicDescriptorPool.Layout(0),
-        }), {}),*/
-    _drawLayout(std::initializer_list<VkDescriptorSetLayout>(
-        {
-            _dynamicDescriptorPool.Layout(0),
-            _staticDescriptorPool.Layout(0),
-            _staticDescriptorPool.Layout(1)
-        }
-    ), {}),
-
     // Geometry & Data Buffers
     _colorBackBuffer(std::make_unique<GPUAllocatedImage>(_swapChain->GetExtent().width, _swapChain->GetExtent().height,
         ApplicationInfo::Get().GetMsaaSample(),
@@ -441,17 +358,15 @@ Application::Application() :
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)),
     _depthBuffer(std::make_unique<GPUAllocatedImage>(_swapChain->GetExtent().width, _swapChain->GetExtent().height, ApplicationInfo::Get().GetMsaaSample(), 1, ApplicationInfo::Constant::DepthFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)),
 
-    _cameraDataBuffer(ApplicationInfo::Constant::MaxFrameInCount, 1, sizeof(CameraData), GraphicsBuffer::DYNAMIC_STORAGE),
+    _cameraDataBuffer(_descriptorAllocator, BINDING_CAMERA_BUFFER, GraphicsBuffer::STORAGE, RessourceUsage::PerFrame, 1, sizeof(CameraData)),
     _sampler(),
     _camera(glm::vec3(0.0f, 0.5f, 4.0f), glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, 1.0f, 0.0f), 45.0f, (float)_swapChain->GetExtent().width / (float)_swapChain->GetExtent().height, 0.1f, 1000.0f),
-    // Descriptor Sets & Execution
-    _descriptorSet(CreateDescriptorSet()),
-    _commandBuffer(ApplicationInfo::Constant::MaxFrameInCount, _graphicsCommandPool.Internal(), _graphicsComputeQueue.Internal()),
+    _commandBuffer(ApplicationInfo::Constant::MaxFrameInFlight, _graphicsCommandPool.Internal(), _graphicsComputeQueue.Internal()),
 
     // Synchronization
-    _availableImageSemaphore(ApplicationInfo::Constant::MaxFrameInCount),
+    _availableImageSemaphore(ApplicationInfo::Constant::MaxFrameInFlight),
     _renderFinishedSemaphores(_swapChain->Images.Size()),
-    _waitFence(ApplicationInfo::Constant::MaxFrameInCount)
+    _waitFence(ApplicationInfo::Constant::MaxFrameInFlight)
 {
     _window.LockMouse(_mouseLocked);
     {
@@ -463,33 +378,6 @@ Application::Application() :
 
     MeshRegistry& meshRegistry = static_cast<MeshRegistry&>(*_registries[(size_t)RegistryType::Mesh]);
     MaterialRegistry& materialRegistry = static_cast<MaterialRegistry&>(*_registries[(size_t)RegistryType::Material]);
-
-    VkDescriptorBufferInfo materialBufferInfo = materialRegistry.MaterialBufferInfo();
-    VkDescriptorBufferInfo instanceBufferInfo = meshRegistry.InstanceBufferInfo();
-    DescriptorHelper::UpdateDescriptorSet(std::initializer_list<VkWriteDescriptorSet>(
-        {
-            VkWriteDescriptorSet
-            {
-                .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-                .dstSet = _materialInstancesSet.set,
-                .dstBinding = 0,
-                .dstArrayElement = 0,
-                .descriptorCount = 1,
-                .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-                .pBufferInfo = &materialBufferInfo
-            },
-            VkWriteDescriptorSet
-            {
-                .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-                .dstSet = _materialInstancesSet.set,
-                .dstBinding = 1,
-                .dstArrayElement = 0,
-                .descriptorCount = 1,
-                .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-                .pBufferInfo = &instanceBufferInfo
-            }
-        }
-    ), {});
 
     uint32_t defaultMaterial = LoadDefaultMaterial();
 
@@ -542,7 +430,7 @@ Application::Application() :
         meshRegistry.RegisterInstance(instance);
     }
 
-    AssetHelper::Load3DModel("data/BistroExterior.m3vkasset", meshRegistry, materialRegistry, _graphicsCommandPool.Internal(), _graphicsComputeQueue.Internal(), _sampler.Internal());
+    //AssetHelper::Load3DModel(_descriptorAllocator, "data/BistroExterior.m3vkasset", meshRegistry, materialRegistry, _graphicsCommandPool.Internal(), _graphicsComputeQueue.Internal(), _sampler.Internal());
     /*for(uint32_t i = 0; i < 100; ++i)
     {
         float red = (rand() / (float)RAND_MAX);

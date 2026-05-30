@@ -4,6 +4,8 @@
 #include <utility>
 #include <vector>
 
+#include "application/DebugLayer.h"
+
 #include <stdexcept>
 #include <vulkan/vulkan_core.h>
 
@@ -81,7 +83,6 @@ DescriptorSetHandle DescriptorPool::Allocate(uint32_t layoutIndex) const
         throw std::runtime_error("Descriptor pool is full !!");
     }
 
-
     VkDescriptorSetAllocateInfo allocateInfo
     {
         .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
@@ -98,52 +99,15 @@ DescriptorSetHandle DescriptorPool::Allocate(uint32_t layoutIndex) const
 
     _allocatedSets++;
     return  {
-        .set = descriptorSet,
-        .layout = _layouts[layoutIndex],
-        .pool = _pool
-    };
-}
-
-DescriptorSetHandle DescriptorPool::AllocateBindless(uint32_t layoutIndex, uint32_t count) const
-{
-    if(_allocatedSets + 1 > _maxSets)
-    {
-        DebugLayer::Log(DebugLayer::LogType::ERROR, "Trying to allocate 1 descriptor set in a pool with " + std::to_string(_allocatedSets) + " / " + std::to_string(_maxSets) + " occupied slots");
-        throw std::runtime_error("Descriptor pool is full !!");
-    }
-
-    VkDescriptorSetVariableDescriptorCountAllocateInfo countInfo{
-        .sType              = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_VARIABLE_DESCRIPTOR_COUNT_ALLOCATE_INFO,
-        .descriptorSetCount = 1,             // must match VkDescriptorSetAllocateInfo::descriptorSetCount
-        .pDescriptorCounts  = &count,
-    };
-
-    VkDescriptorSetAllocateInfo allocateInfo
-    {
-        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-        .pNext = &countInfo,
-        .descriptorPool = _pool,
-        .descriptorSetCount = 1,
-        .pSetLayouts = &_layouts[layoutIndex]
-    };
-
-    VkDescriptorSet descriptorSet;
-    if(vkAllocateDescriptorSets(ApplicationInfo::Device(), &allocateInfo, &descriptorSet) != VK_SUCCESS)
-    {
-        throw std::runtime_error("Failed to allocate descriptor sets");
-    }
-
-    _allocatedSets++;
-    return  {
-        .set = descriptorSet,
-        .layout = _layouts[layoutIndex],
-        .pool = _pool
+        .Set = descriptorSet,
+        .Layout = _layouts[layoutIndex],
+        .Pool = _pool
     };
 }
 
 void DescriptorPool::Free(DescriptorSetHandle set) const
 {
-    vkFreeDescriptorSets(ApplicationInfo::Device(), _pool, 1, &set.set);
+    vkFreeDescriptorSets(ApplicationInfo::Device(), _pool, 1, &set.Set);
     _allocatedSets--;
 }
 
@@ -161,6 +125,13 @@ DescriptorPool::LayoutBuilder& DescriptorPool::LayoutBuilder::AddBinding(uint32_
     _bindingFlags.push_back(bindingFlags);
 
     return *this;
+}
+
+DescriptorPool::LayoutBuilder& DescriptorPool::LayoutBuilder::AddBinding(uint32_t binding, VkDescriptorType type, VkShaderStageFlags stageFlags, VkDescriptorBindingFlags bindingFlags, RessourceUsage usage)
+{
+    uint32_t count = usage == RessourceUsage::Static ? 1 : ApplicationInfo::Constant::MaxFrameInFlight;
+
+    return AddBinding(binding, type, stageFlags, bindingFlags, count);
 }
 
 VkDescriptorSetLayout DescriptorPool::LayoutBuilder::Build() const

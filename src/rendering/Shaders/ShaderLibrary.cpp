@@ -1,4 +1,5 @@
 #include "rendering/Shaders/ShaderLibrary.h"
+#include "rendering/DescriptorAllocator.h"
 
 ShaderLibrary::ShaderLibrary()
 {
@@ -23,6 +24,11 @@ ShaderLibrary& ShaderLibrary::operator=(ShaderLibrary&& other) noexcept
     }
 
     return *this;
+}
+
+uint32_t ShaderLibrary::RegisterShader(std::filesystem::path path, ShaderType type, const DescriptorAllocator& descriptorAllocator)
+{
+    return RegisterShader(path, type, descriptorAllocator.GlobalSetLayouts(), descriptorAllocator.GlobalPushConstantRanges());
 }
 
 uint32_t ShaderLibrary::RegisterShader(std::filesystem::path path, ShaderType type, std::span<const VkDescriptorSetLayout> descriptorLayouts, std::span<const VkPushConstantRange> pushConstantRanges)

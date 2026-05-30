@@ -1,6 +1,8 @@
 #pragma once
 
+#include "application/ApplicationInfo.h"
 #include "application/DebugLayer.h"
+#include "rendering/DescriptorAllocator.h"
 #include <cstdint>
 #include <stdexcept>
 #include <vulkan/vulkan_core.h>
@@ -70,15 +72,17 @@ class GraphicsBuffer
     public:
     enum BufferType
     {
-        INDEX = 0,
-        VERTEX = 1,
-        DYNAMIC_STORAGE = 2,
-        UNIFORM = 3,
-        STORAGE = 4,
-        INDIRECT_DRAW = 5,
+        INDEX,
+        VERTEX,
+        UNIFORM,
+        STORAGE,
+        INDIRECT_DRAW,
         COUNT
     };
-    GraphicsBuffer(VkDeviceSize count, VkDeviceSize stride, BufferType type);
+
+    GraphicsBuffer(DescriptorAllocator& allocator, uint32_t dstBinding, BufferType type, RessourceUsage usage, VkDeviceSize count, VkDeviceSize stride);
+    GraphicsBuffer(BufferType type, RessourceUsage usage, VkDeviceSize count, VkDeviceSize stride);
+
     ~GraphicsBuffer();
 
     GraphicsBuffer(GraphicsBuffer&& other) noexcept;
@@ -94,26 +98,28 @@ class GraphicsBuffer
         uint32_t srcIndex = 0,
         uint32_t dstIndex = 0);
 
-    VkBuffer Internal() const { return _internal; }
+    VkBuffer Internal() const { return Current()._internal; }
     BufferType GetType() const { return _type; }
 
+    inline RessourceUsage GetUsage() const { return _usage; }
     inline VkDeviceSize GetSize() const { return _count * _stride; }
     inline VkDeviceSize GetCount() const { return _count; }
     inline VkDeviceSize GetStride() const { return _stride; }
+    inline uint32_t GetGPUIndex() const { return Current()._gpuIndex; }
     inline void* GetDataPtr() const
     {
-        if(_type != BufferType::DYNAMIC_STORAGE)
+        if(_usage != RessourceUsage::PerFrame)
         {
             DebugLayer::Log(DebugLayer::LogType::ERROR, "Trying to get data pointer for non uniform buffer");
         }
-        return _dataPtr;
+        return Current()._dataPtr;
     }
 
     inline VkDescriptorBufferInfo GetDescriptorBufferInfo(uint32_t index, uint32_t count) const
     {
         return
         {
-            .buffer = _internal,
+            .buffer = Current()._internal,
             .offset = index * _stride,
             .range = _stride * count
         };
@@ -122,21 +128,32 @@ class GraphicsBuffer
     inline VkDescriptorType GetDescriptorType() const
     {
         switch (_type) {
-        case BufferType::DYNAMIC_STORAGE:
-            return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;
         case BufferType::UNIFORM:
             return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         case BufferType::STORAGE:
+            return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        case BufferType::INDIRECT_DRAW:
             return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
         default: throw std::runtime_error("Unimplemented Descriptor Type");
         }
     }
 
     protected:
-    VkBuffer _internal = VK_NULL_HANDLE;
-    VkDeviceMemory _memoryInternal = VK_NULL_HANDLE;
+
+    struct BufferInternal
+    {
+        VkBuffer _internal = VK_NULL_HANDLE;
+        VkDeviceMemory _memoryInternal = VK_NULL_HANDLE;
+        void* _dataPtr = nullptr; // Currently used for persistent mapping for Uniform buffers, we only map it once to avoid the cost of mapping it each time
+        uint32_t _gpuIndex = UINT32_MAX; // only filled if uniform or storage
+    };
+
+    inline const BufferInternal& Current() const { return _usage == RessourceUsage::Static ? _buffers[0] : _buffers[ApplicationInfo::CurrentFrame()]; }
+    BufferInternal CreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties);
+
+    std::vector<BufferInternal> _buffers;
     BufferType _type;
-    void* _dataPtr = nullptr; // Currently used for persistent mapping for Uniform buffers, we only map it once to avoid the cost of mapping it each time
+    RessourceUsage _usage;
     VkDeviceSize _stride = 0;
     VkDeviceSize _count = 0;
 };

@@ -2,6 +2,7 @@
 
 #include "asset/AssetImporter.h"
 #include "asset/CPUImage.h"
+#include "rendering/DescriptorAllocator.h"
 #include "rendering/GPUImage.h"
 #include "registry/MaterialRegistry.h"
 #include "registry/MeshRegistry.h"
@@ -18,7 +19,7 @@ namespace AssetHelper
         VkBufferImageCopy CopyRegion[16];
     };
 
-    void Load3DModel(const std::string & modelPath, MeshRegistry & meshRegistry, MaterialRegistry & materialRegistry, VkCommandPool uploadPool, VkQueue uploadQueue, VkSampler sampler);
-    uint32_t LoadTexture(AssetImporter& importer, uint32_t textureIndex, MaterialRegistry& materialRegistry, PoolStageBuffer & uploadBuffer, AssetHelper::UploadCommand* commands, uint32_t& commandCount, VkSampler sampler, VkCommandPool uploadPool, VkQueue uploadQueue);
+    void Load3DModel(DescriptorAllocator& allocator, const std::string & modelPath, MeshRegistry & meshRegistry, MaterialRegistry & materialRegistry, VkCommandPool uploadPool, VkQueue uploadQueue, VkSampler sampler);
+    uint32_t LoadTexture(DescriptorAllocator& allocator, AssetImporter& importer, uint32_t textureIndex, MaterialRegistry& materialRegistry, PoolStageBuffer & uploadBuffer, AssetHelper::UploadCommand* commands, uint32_t& commandCount, VkSampler sampler, VkCommandPool uploadPool, VkQueue uploadQueue);
     GPUAllocatedImage ImageFromCPU(const CPUImage& cpuImg, VkCommandPool pool, VkQueue queue);
 }

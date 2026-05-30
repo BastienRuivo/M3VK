@@ -1,6 +1,7 @@
 #include "rendering/GraphicsBuffer.h"
 #include "application/ApplicationInfo.h"
 #include "rendering/CommandBuffer.h"
+#include "rendering/DescriptorAllocator.h"
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
@@ -159,21 +160,65 @@ void PoolStageBuffer::Clear()
     _offset = 0;
 }
 
-GraphicsBuffer::GraphicsBuffer(VkDeviceSize count, VkDeviceSize stride, BufferType type)
-: _type(type), _stride(stride), _count(count)
+GraphicsBuffer::BufferInternal GraphicsBuffer::CreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties)
+{
+    BufferInternal buffer;
+
+    VkBufferCreateInfo info
+    {
+        .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+        .size = size,
+        .usage = usage,
+        .sharingMode = VK_SHARING_MODE_EXCLUSIVE
+    };
+
+    // // If note exclusive, need to add a queue family index
+
+    if(vkCreateBuffer(ApplicationInfo::Device(), &info, nullptr, &buffer._internal) != VK_SUCCESS)
+    {
+        throw std::runtime_error("Failed to create buffer !");
+    }
+
+    VkMemoryRequirements memRequirements;
+    vkGetBufferMemoryRequirements(ApplicationInfo::Device(), buffer._internal, &memRequirements);
+
+    VkMemoryAllocateInfo allocateInfo
+    {
+        .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+        .allocationSize = memRequirements.size,
+        .memoryTypeIndex = ApplicationInfo::FindMemoryType(memRequirements.memoryTypeBits, properties)
+    };
+
+    if(vkAllocateMemory(ApplicationInfo::Device(),&allocateInfo, nullptr, &buffer._memoryInternal) != VK_SUCCESS)
+    {
+        throw std::runtime_error("Failed to allocate buffer memory");
+    }
+
+    vkBindBufferMemory(ApplicationInfo::Device(), buffer._internal, buffer._memoryInternal, 0);
+
+    if(_usage == RessourceUsage::PerFrame)
+    {
+        if(vkMapMemory(ApplicationInfo::Device(), buffer._memoryInternal, 0, memRequirements.size, 0, &buffer._dataPtr) != VK_SUCCESS)
+        {
+            throw std::runtime_error("Failed to map buffer memory");
+        }
+    }
+
+    return buffer;
+}
+
+GraphicsBuffer::GraphicsBuffer(BufferType type, RessourceUsage bufferUsage, VkDeviceSize count, VkDeviceSize stride) : _type(type), _stride(stride), _count(count), _usage(bufferUsage)
 {
     // mean it's a dst buffer, already in good memory shape but cant be writable directly by cpu
     VkBufferUsageFlags usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 
-    if(_type == DYNAMIC_STORAGE || _type == UNIFORM || _type == STORAGE || _type == INDIRECT_DRAW)
+    if(_type == UNIFORM || _type == STORAGE || _type == INDIRECT_DRAW)
     {
          VkDeviceSize alignement = stride;
 
         switch(_type) {
             case UNIFORM: alignement = ApplicationInfo::GetProperties().limits.minUniformBufferOffsetAlignment; break;
-
             case INDIRECT_DRAW:
-            case DYNAMIC_STORAGE:
             case STORAGE: alignement = ApplicationInfo::GetProperties().limits.minStorageBufferOffsetAlignment; break;
             default:
             {
@@ -194,8 +239,7 @@ GraphicsBuffer::GraphicsBuffer(VkDeviceSize count, VkDeviceSize stride, BufferTy
         case INDEX: usage |= VK_BUFFER_USAGE_INDEX_BUFFER_BIT; break;
         case VERTEX: usage |= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT; break;
         case UNIFORM: usage |= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT; break;
-        case INDIRECT_DRAW: usage |= VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT; break;
-        case DYNAMIC_STORAGE:
+        case INDIRECT_DRAW: usage |= VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT; break;
         case STORAGE: usage |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT; break;
         default:
         {
@@ -210,50 +254,45 @@ GraphicsBuffer::GraphicsBuffer(VkDeviceSize count, VkDeviceSize stride, BufferTy
         case STORAGE:
         case INDEX:
         case VERTEX: properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT; break; // Memory optimized for GPU access
-        case DYNAMIC_STORAGE: properties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT; break; // Host = CPU so it mean it is visible and writable by it
         default:
         {
             throw std::runtime_error("Achievement get :: How did we get Here ? (Uknown Buffer Type)");
         }
     }
 
-    VkBufferCreateInfo info
+    if(_usage == RessourceUsage::PerFrame)
     {
-        .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-        .size = size,
-        .usage = usage,
-        .sharingMode = VK_SHARING_MODE_EXCLUSIVE
-    };
-
-    // // If note exclusive, need to add a queue family index
-
-    if(vkCreateBuffer(ApplicationInfo::Device(),&info, nullptr, &_internal) != VK_SUCCESS)
-    {
-        throw std::runtime_error("Failed to create buffer !");
+        if(_type != STORAGE && _type != UNIFORM) throw std::runtime_error("PerFrame Buffer can only be STORAGE or UNIFORM");
+        properties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
     }
 
-    VkMemoryRequirements memRequirements;
-    vkGetBufferMemoryRequirements(ApplicationInfo::Device(),_internal, &memRequirements);
-
-    VkMemoryAllocateInfo allocateInfo
+    int frameCount = ApplicationInfo::Constant::MaxFrameInFlight;
+    if(_usage == RessourceUsage::Static)
     {
-        .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-        .allocationSize = memRequirements.size,
-        .memoryTypeIndex = ApplicationInfo::FindMemoryType(memRequirements.memoryTypeBits, properties)
-    };
-
-    if(vkAllocateMemory(ApplicationInfo::Device(),&allocateInfo, nullptr, &_memoryInternal) != VK_SUCCESS)
-    {
-        throw std::runtime_error("Failed to allocate buffer memory");
+        frameCount = 1;
     }
 
-    vkBindBufferMemory(ApplicationInfo::Device(),_internal, _memoryInternal, 0);
-
-    if(_type == DYNAMIC_STORAGE)
+    _buffers.resize(frameCount);
+    for(int i = 0; i < _buffers.size(); i++)
     {
-        if(vkMapMemory(ApplicationInfo::Device(),_memoryInternal, 0, memRequirements.size, 0, &_dataPtr) != VK_SUCCESS)
+        _buffers[i] = CreateBuffer(size, usage, properties);
+    }
+}
+
+GraphicsBuffer::GraphicsBuffer(DescriptorAllocator& allocator, uint32_t dstBinding, BufferType type, RessourceUsage bufferUsage, VkDeviceSize count, VkDeviceSize stride)
+: GraphicsBuffer(type, bufferUsage, count, stride)
+{
+    for(int i = 0; i < _buffers.size(); i++)
+    {
+        if(_type == UNIFORM || _type == STORAGE || _type == INDIRECT_DRAW)
         {
-            throw std::runtime_error("Failed to map buffer memory");
+            VkDescriptorBufferInfo desc = {
+                .buffer = _buffers[i]._internal,
+                .offset = 0,
+                .range = _stride * _count
+            };
+            allocator.RegisterBuffer(desc, GetDescriptorType(), dstBinding, i);
+            _buffers[i]._gpuIndex = i;
         }
     }
 }
@@ -271,7 +310,7 @@ void GraphicsBuffer::CopyToBuffer(const VkQueue& queue,
     CommandBuffer cmdBuffer(pool, queue);
     cmdBuffer.BeginSingleTime();
     {
-        cmdBuffer.CopyBuffer(copyBuffer.Internal(), _internal, size, srcIndex, dstIndex);
+        cmdBuffer.CopyBuffer(copyBuffer.Internal(), Current()._internal, size, srcIndex, dstIndex);
     }
     cmdBuffer.End();
     cmdBuffer.WaitCompletion();
@@ -279,44 +318,34 @@ void GraphicsBuffer::CopyToBuffer(const VkQueue& queue,
 
 GraphicsBuffer::~GraphicsBuffer()
 {
-    if(_internal != VK_NULL_HANDLE)
+    for(int i = 0; i < _buffers.size(); i++)
     {
-        vkDestroyBuffer(ApplicationInfo::Device(), _internal, nullptr);
-    }
-
-    if(_memoryInternal != VK_NULL_HANDLE)
-    {
-        if(_dataPtr != nullptr)
-        {
-            vkUnmapMemory(ApplicationInfo::Device(), _memoryInternal);
-            _dataPtr = nullptr;
-        }
-        vkFreeMemory(ApplicationInfo::Device(), _memoryInternal, nullptr);
+        vkDestroyBuffer(ApplicationInfo::Device(), _buffers[i]._internal, nullptr);
+        if(_buffers[i]._dataPtr != nullptr) vkUnmapMemory(ApplicationInfo::Device(), _buffers[i]._memoryInternal);
+        vkFreeMemory(ApplicationInfo::Device(), _buffers[i]._memoryInternal, nullptr);
     }
 }
 
 GraphicsBuffer::GraphicsBuffer(GraphicsBuffer && other) noexcept
 {
-    _internal = other._internal;
-    _memoryInternal = other._memoryInternal;
+    _buffers = std::move(other._buffers);
 
-
-    other._internal = VK_NULL_HANDLE;
-    other._memoryInternal = VK_NULL_HANDLE;
+    _count = std::exchange(other._count, 0);
+    _stride = std::exchange(other._stride, 0);
+    _type = std::exchange(other._type, BufferType::VERTEX);
+    _usage = std::exchange(other._usage, RessourceUsage::Static);
 }
 
 GraphicsBuffer& GraphicsBuffer::operator=(GraphicsBuffer&& other) noexcept
 {
     if(this != &other)
     {
-        _internal = other._internal;
-        _memoryInternal = other._memoryInternal;
+        _buffers = std::move(other._buffers);
 
-        _dataPtr = other._dataPtr;
-
-        other._internal = VK_NULL_HANDLE;
-        other._memoryInternal = VK_NULL_HANDLE;
-        other._dataPtr = nullptr;
+        _count = std::exchange(other._count, 0);
+        _stride = std::exchange(other._stride, 0);
+        _type = std::exchange(other._type, BufferType::VERTEX);
+        _usage = std::exchange(other._usage, RessourceUsage::Static);
     }
 
     return *this;

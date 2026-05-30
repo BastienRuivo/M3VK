@@ -1,7 +1,9 @@
 #pragma once
 
+#include "rendering/DescriptorAllocator.h"
 #include "rendering/Shaders/ShaderHandler.h"
 #include "rendering/Shaders/ShaderState.h"
+#include <cstdint>
 #include <filesystem>
 #include <vector>
 
@@ -78,6 +80,7 @@ class ShaderLibrary
     ShaderLibrary& operator=(ShaderLibrary&& other) noexcept;
 
     uint32_t RegisterShader(std::filesystem::path, ShaderType type, std::span<const VkDescriptorSetLayout> descriptorLayouts, std::span<const VkPushConstantRange> pushConstantRanges);
+    uint32_t RegisterShader(std::filesystem::path, ShaderType type, const DescriptorAllocator& descriptorAllocator);
     inline const ShaderHandler& Get(uint32_t id) const { return _handlers[id]; }
     private:
     std::vector<ShaderHandler> _handlers;

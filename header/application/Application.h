@@ -1,7 +1,7 @@
 #pragma once
 
 #include "rendering/Camera.h"
-#include "rendering/DescriptorPool.h"
+#include "rendering/DescriptorAllocator.h"
 #include "registry/Registry.h"
 #include "rendering/CommandBuffer.h"
 #include "rendering/MultiFrame.h"
@@ -48,8 +48,6 @@ class Application
         alignas(16) glm::mat4 viewProjectionMatrix;
     };
 
-    uint32_t _currentFrame = 0;
-
     // RAII is first in last out order
     Window _window;
     VkInstanceHandler _instance;
@@ -66,9 +64,8 @@ class Application
     std::unique_ptr<SwapChain> _swapChain;
 
     // used for object sharing data between cpu and gpu -> due to race condition we need one copy for each frame
-    DescriptorPool _dynamicDescriptorPool;
-    DescriptorPool _staticDescriptorPool;
-    DescriptorSetHandle _materialInstancesSet;
+
+    DescriptorAllocator _descriptorAllocator;
 
     std::array<std::unique_ptr<Registry>, 2> _registries;
     enum class RegistryType
@@ -84,7 +81,6 @@ class Application
     //GraphicsBuffer _visibleDrawIndirectBuffer;
     //GraphicsBuffer _visibleObjectDataBuffer;
     //VkPipelineLayoutHandler _cullingLayout;
-    VkPipelineLayoutHandler _drawLayout;
 
     std::unique_ptr<GPUAllocatedImage> _colorBackBuffer;
     std::unique_ptr<GPUAllocatedImage> _depthBuffer;
@@ -95,9 +91,7 @@ class Application
 
     VkSamplerHandler _sampler;
 
-    MultiFrameHandler<GraphicsBuffer> _cameraDataBuffer;
-    MultiFrameObject<DescriptorSetHandle> _descriptorSet;
-    MultiFrameObject<DescriptorSetHandle> CreateDescriptorSet();
+    GraphicsBuffer _cameraDataBuffer;
 
     MultiFrameObject<CommandBuffer> _commandBuffer;
 
@@ -122,8 +116,8 @@ class Application
 
     void RefreshSwapChain();
 
-    void UpdateCameraData(uint32_t currentImage);
-    void RecordCommandBuffer(const CommandBuffer& cmdBuffer, uint32_t currentFrame, uint32_t imageIndex);
+    void UpdateCameraData();
+    void RecordCommandBuffer(const CommandBuffer& cmdBuffer, uint32_t imageIndex);
     void DrawFrame();
     uint32_t LoadDefaultMaterial();
     void LoadShaders();

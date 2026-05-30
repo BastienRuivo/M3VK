@@ -1,24 +1,23 @@
-#version 450
+#version 460
 
+#extension GL_EXT_nonuniform_qualifier : require
+
+#include "Global_Include.glsl"
 #include "header/Camera.glsl"
 #include "header/Material.glsl"
 #include "header/Instancing.glsl"
 
 // don't forget alignement the day you will have vec2 or nested
-layout(set = 0, binding = 0, std430) readonly buffer CameraDataBuffer
+layout(set = GLOBAL_SET, binding = BINDING_CAMERA_BUFFER, std430) readonly buffer CameraDataBuffer
 {
-    CameraData _Camera;
-};
+    CameraData data;
+} _Cameras[];
 
-layout(set = 2, binding = 0, std430) readonly buffer MaterialPropertiesBuffer
+layout(set = GLOBAL_SET, binding = STATIC_BINDING_INSTANCE_DATA_BUFFER, std430) readonly buffer InstanceDataBuffer
 {
-    MaterialProperties _Material[];
-};
+    InstanceData data[];
+} _Instances;
 
-layout(set = 2, binding = 1, std430) readonly buffer ObjectDataBuffer
-{
-    ObjectData _Instance[];
-};
 
 // Note: Vec3 & stuff uses multiple location space see https://wikis.khronos.org/opengl/Layout_Qualifier_(GLSL)
 // In
@@ -33,10 +32,12 @@ layout(location=2) out vec2 vTexcoords;
 
 void main()
 {
-    ObjectData instance = _Instance[gl_InstanceIndex];
-    MaterialProperties material = _Material[instance.MaterialIndex];
+    uint cameraBufferIndex = nonuniformEXT(push._CameraBufferIndex);
 
-    gl_Position = _Camera.ViewProjectionMatrix * instance.LocalToWorldMatrix * vec4(osVertexPosition, 1.0);
+    InstanceData instance = _Instances.data[gl_InstanceIndex];
+    CameraData camera = _Cameras[cameraBufferIndex].data;
+
+    gl_Position = camera.ViewProjectionMatrix * instance.LocalToWorldMatrix * vec4(osVertexPosition, 1.0);
 
     vMaterialIndex = instance.MaterialIndex;
     vNormal = normal;

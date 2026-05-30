@@ -3,6 +3,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <stdexcept>
+#include <sys/stat.h>
 #include <sys/types.h>
 #include <vulkan/vulkan_core.h>
 #include "rendering/QueueFamilyIds.h"
@@ -29,7 +30,7 @@ class ApplicationInfo
     struct Constant
     {
         static inline constexpr VkSampleCountFlagBits MaxMSAASample = VK_SAMPLE_COUNT_8_BIT;
-        static inline constexpr uint32_t MaxFrameInCount = 2;
+        static inline constexpr uint32_t MaxFrameInFlight = 2;
         static inline constexpr size_t VertexBufferMaxSize = 16777216; // 2^23
         static inline constexpr size_t IndexBufferMaxSize = 16777216;
         static inline constexpr size_t DrawIndirectBufferMaxSize = 4194304;
@@ -37,6 +38,7 @@ class ApplicationInfo
         static inline constexpr VkFormat DepthFormat = VK_FORMAT_D32_SFLOAT;
         static inline constexpr int InputPrevent = 60;
         static inline constexpr uint32_t MaxTextureCount = 1024;
+        static inline constexpr uint32_t MaxBufferCount = 1024;
     };
 
     static inline const QueueFamilyIds& GetQueueFamilyIds()
@@ -70,6 +72,8 @@ class ApplicationInfo
     }
 
     static uint32_t FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
+    static inline uint32_t CurrentFrame() { return ApplicationInfo::Get()._currentFrame; }
+    static inline void NextFrame() { ApplicationInfo::Get()._currentFrame = (ApplicationInfo::Get()._currentFrame + 1) % Constant::MaxFrameInFlight; }
 
     private:
     void SetPhysicalDeviceInformation(VkPhysicalDevice physicalDevice, VkPhysicalDeviceProperties properties, const QueueFamilyIds& queueFamilyIds);
@@ -82,6 +86,7 @@ class ApplicationInfo
     VkPhysicalDevice _physicalDevice = VK_NULL_HANDLE;
     VkDevice _device = VK_NULL_HANDLE;
     VkInstance _vkInstance = VK_NULL_HANDLE;
+    uint32_t _currentFrame = 0;
 
     friend class VkPhysicalDeviceHandler;
     friend class VkDeviceHandler;

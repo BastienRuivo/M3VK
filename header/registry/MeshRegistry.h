@@ -40,7 +40,7 @@ struct DrawIndexedIndirectPadded {
 class MeshRegistry : public Registry
 {
     public:
-    MeshRegistry(size_t vertexBufferSize = ApplicationInfo::Constant::VertexBufferMaxSize, size_t indexBufferSize = ApplicationInfo::Constant::IndexBufferMaxSize, size_t indirectBufferSize = ApplicationInfo::Constant::DrawIndirectBufferMaxSize);
+    MeshRegistry(DescriptorAllocator& allocator, size_t vertexBufferSize = ApplicationInfo::Constant::VertexBufferMaxSize, size_t indexBufferSize = ApplicationInfo::Constant::IndexBufferMaxSize, size_t indirectBufferSize = ApplicationInfo::Constant::DrawIndirectBufferMaxSize);
 
     uint32_t RegisterMesh(std::span<const Vertex> vertices, std::span<const uint32_t> indices);
     uint32_t RegisterInstance(InstanceData instance);
@@ -52,10 +52,10 @@ class MeshRegistry : public Registry
     inline VkDescriptorBufferInfo InstanceBufferInfo() const { return _instanceDataBuffer.GetDescriptorBufferInfo(0, _instanceDataBuffer.GetCount()); }
     inline VkDescriptorBufferInfo IndirectBufferInfo() const { return _indirectBuffer.GetDescriptorBufferInfo(0, _indirectBuffer.GetCount()); }
 
-    inline GeometryBuffer& VertexBuffer() { return _vertexBuffer; }
-    inline GeometryBuffer& IndexBuffer() { return _indexBuffer; }
-    inline GeometryBuffer& IndirectBuffer() { return _indirectBuffer; }
-    inline GeometryBuffer& InstanceDataBuffer() { return _instanceDataBuffer; }
+    inline const GeometryBuffer& VertexBuffer() const { return _vertexBuffer; }
+    inline const GeometryBuffer& IndexBuffer() const { return _indexBuffer; }
+    inline const GeometryBuffer& IndirectBuffer() const { return _indirectBuffer; }
+    inline const GeometryBuffer& InstanceDataBuffer() const { return _instanceDataBuffer; }
 
     private:
     std::vector<Vertex> _cpuVertices;

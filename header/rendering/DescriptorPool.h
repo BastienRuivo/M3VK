@@ -2,7 +2,7 @@
 
 #include "application/ApplicationInfo.h"
 #include "rendering/GPUImage.h"
-#include "rendering/GraphicsBuffer.h"
+#include "rendering/RessourceUsage.h"
 #include <cstdint>
 #include <span>
 #include <vulkan/vulkan_core.h>
@@ -16,9 +16,9 @@
 
 struct DescriptorSetHandle
 {
-    VkDescriptorSet set;
-    VkDescriptorSetLayout layout;
-    VkDescriptorPool pool;
+    VkDescriptorSet Set;
+    VkDescriptorSetLayout Layout;
+    VkDescriptorPool Pool;
 };
 
 class DescriptorPool
@@ -31,6 +31,7 @@ class DescriptorPool
         LayoutBuilder() = default;
 
         LayoutBuilder& AddBinding(uint32_t binding, VkDescriptorType type, VkShaderStageFlags stageFlags, VkDescriptorBindingFlags bindingFlags, uint32_t count);
+        LayoutBuilder& AddBinding(uint32_t binding, VkDescriptorType type, VkShaderStageFlags stageFlags, VkDescriptorBindingFlags bindingFlags, RessourceUsage usage);
         inline LayoutBuilder& SetFlags(VkDescriptorSetLayoutCreateFlags flags) { _flags = flags; return *this; }
         VkDescriptorSetLayout Build() const;
 
@@ -76,16 +77,6 @@ class DescriptorPool
     inline VkDescriptorSetLayout Layout(uint32_t index) const { return _layouts[index]; }
     inline VkDescriptorPool Pool() const { return _pool; }
 
-    static inline VkDescriptorBufferInfo DescriptorBufferInfo(const GraphicsBuffer& buffer, VkDeviceSize offset)
-    {
-        return
-        {
-            .buffer = buffer.Internal(),
-            .offset = offset,
-            .range = buffer.GetSize()
-        };
-    }
-
     static inline VkDescriptorImageInfo DescriptorImageInfo(const ImageReference& image, VkSampler sampler)
     {
         return
@@ -109,5 +100,10 @@ namespace DescriptorHelper
     inline void UpdateDescriptorSet(std::span<const VkWriteDescriptorSet> writes, std::span<const VkCopyDescriptorSet> copies)
     {
         vkUpdateDescriptorSets(ApplicationInfo::Device(), static_cast<uint32_t>(writes.size()), writes.data(), static_cast<uint32_t>(copies.size()), copies.data());
+    }
+
+    inline void UpdateDescriptorSet(uint32_t writeCount, const VkWriteDescriptorSet* writes, uint32_t copyCount, const VkCopyDescriptorSet* copies)
+    {
+        vkUpdateDescriptorSets(ApplicationInfo::Device(), writeCount, writes, copyCount, copies);
     }
 };

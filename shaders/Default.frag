@@ -1,19 +1,19 @@
-#version 450
-#extension GL_EXT_nonuniform_qualifier : enable
+#version 460
+
+#extension GL_EXT_nonuniform_qualifier : require
 
 #define UINT32_MAX 0xffffffff
 
+#include "Global_Include.glsl"
 #include "header/Material.glsl"
 
 
-layout(set = 1, binding = 0) uniform sampler2D uTextures[];
+layout(set = GLOBAL_SET, binding = BINDING_TEXTURES) uniform sampler2D uTextures[];
 //ssbo
-layout(set = 2, binding = 0) readonly buffer MaterialData
+layout(set = GLOBAL_SET, binding = STATIC_BINDING_MATERIAL_BUFFER, std430) readonly buffer MaterialPropertiesBuffer
 {
-    MaterialProperties _Material[];
-};
-
-
+    MaterialProperties data[];
+} _Materials;
 
 //inputs
 layout(location = 0) flat in uint vMaterialIndex;
@@ -25,7 +25,8 @@ layout(location = 0) out vec4 outColor;
 
 void main()
 {
-    MaterialProperties material = _Material[vMaterialIndex];
+
+    MaterialProperties material = _Materials.data[vMaterialIndex];
 
     vec4 baseColor = texture(uTextures[material.BaseColorTexIndex], vTexcoords) * material.BaseColor;
 

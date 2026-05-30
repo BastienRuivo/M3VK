@@ -2,7 +2,7 @@
 
 #include "glm/ext/vector_float4.hpp"
 #include "registry/Registry.h"
-#include "rendering/DescriptorPool.h"
+#include "rendering/DescriptorAllocator.h"
 #include "rendering/GPUImage.h"
 #include <cstdint>
 
@@ -43,17 +43,16 @@ class MaterialRegistry : public Registry
 {
 public:
 
-    MaterialRegistry(DescriptorPool& pool, uint32_t layoutIndex, uint32_t maxTexturesCount = ApplicationInfo::Constant::MaxTextureCount);
+    MaterialRegistry(DescriptorAllocator& pool, uint32_t maxTexturesCount = ApplicationInfo::Constant::MaxTextureCount);
     ~MaterialRegistry();
 
     void UploadAndRelease(VkQueue queue, VkCommandPool cmdPool) override;
     void Bind(const CommandBuffer& cmdBuffer, VkPipelineLayout layout) const override;
 
     uint32_t RegisterMaterial(MaterialProperties material);
-    uint32_t RegisterTexture(GPUAllocatedImage&& texture, VkSampler sampler);
+    uint32_t RegisterTexture(DescriptorAllocator& allocator, GPUAllocatedImage&& texture, VkSampler sampler);
     uint32_t RemoveTexture(uint32_t textureIndex);
 
-    inline DescriptorSetHandle BindlessTextureSet() const { return _bindlessTextureSet; }
     inline uint32_t MaxTexturesCount() const { return _maxTexturesCount; }
     inline uint32_t LastFreeTextureIndex() const { return _lastFreeTextureIndex; }
     inline GPUAllocatedImage& Texture(uint32_t index) { return _textures[index]; }
@@ -62,13 +61,12 @@ public:
     inline MaterialProperties DefaultMaterial() const { return _materials[0]; }
     inline uint32_t MaterialsCount() const { return _materials.size(); }
 
-    VkDescriptorBufferInfo MaterialBufferInfo() const { return _materialBuffer.GetDescriptorBufferInfo(0, _materialBuffer.GetCount()); }
+    inline uint32_t GetMaterialBufferGPUIndex() const { return _materialBuffer.GetGPUIndex(); }
 
     private:
     uint32_t _maxTexturesCount;
     std::vector<int32_t> _textureIndicesState;
     uint32_t _lastFreeTextureIndex = 0;
-    DescriptorSetHandle _bindlessTextureSet = {};
 
     std::vector<MaterialProperties> _materials;
 

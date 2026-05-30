@@ -1,12 +1,14 @@
 #include "registry/MaterialRegistry.h"
 #include "application/ApplicationInfo.h"
-#include "rendering/DescriptorPool.h"
+#include "rendering/DescriptorAllocator.h"
 #include "rendering/GPUImage.h"
 #include "rendering/GraphicsBuffer.h"
 #include "rendering/ImageHelper.h"
 #include <cstdint>
 #include <stdexcept>
 #include <vulkan/vulkan_core.h>
+
+#include "../shaders/Shader_Bindings.h"
 
 
 void MaterialRegistry::UploadAndRelease(VkQueue queue, VkCommandPool cmdPool)
@@ -29,7 +31,6 @@ void MaterialRegistry::UploadAndRelease(VkQueue queue, VkCommandPool cmdPool)
 
 void MaterialRegistry::Bind(const CommandBuffer& cmdBuffer, VkPipelineLayout layout) const
 {
-    cmdBuffer.BindDescriptorSets(layout, _bindlessTextureSet, 1);
 }
 
 uint32_t MaterialRegistry::RegisterMaterial(MaterialProperties material)
@@ -42,20 +43,20 @@ uint32_t MaterialRegistry::RegisterMaterial(MaterialProperties material)
     return _materials.size() - 1;
 }
 
-MaterialRegistry::MaterialRegistry(DescriptorPool& pool, uint32_t layoutIndex, uint32_t maxTexturesCount)
+MaterialRegistry::MaterialRegistry(DescriptorAllocator& allocator, uint32_t maxTexturesCount)
     :   _maxTexturesCount(maxTexturesCount),
         _textureIndicesState(std::vector<int32_t>(_maxTexturesCount, -1)),
         _lastFreeTextureIndex(0),
-        _materialBuffer(ApplicationInfo::Constant::MaterialBufferMaxSize, MaterialProperties::Stride(), GraphicsBuffer::BufferType::STORAGE)
+        _materialBuffer(allocator, STATIC_BINDING_MATERIAL_BUFFER, GraphicsBuffer::BufferType::STORAGE, RessourceUsage::Static, ApplicationInfo::Constant::MaterialBufferMaxSize, MaterialProperties::Stride())
 {
-    _bindlessTextureSet = pool.AllocateBindless(0, ApplicationInfo::Constant::MaxTextureCount);
+
 }
 
 MaterialRegistry::~MaterialRegistry()
 {
 }
 
-uint32_t MaterialRegistry::RegisterTexture(GPUAllocatedImage&& image, VkSampler sampler)
+uint32_t MaterialRegistry::RegisterTexture(DescriptorAllocator& allocator, GPUAllocatedImage&& image, VkSampler sampler)
 {
     ImageHelper::ImageBinding binding = ImageHelper::ImageBinding(image.Internal(), sampler);
     _textures.emplace_back(std::move(image));
@@ -77,20 +78,7 @@ uint32_t MaterialRegistry::RegisterTexture(GPUAllocatedImage&& image, VkSampler 
         throw std::runtime_error("BindlessTextureManager is full");
     }
 
-    VkWriteDescriptorSet write =
-    {
-        .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-        .dstSet = _bindlessTextureSet.set,
-        .dstBinding = 0,
-        .dstArrayElement = textureIndex,
-        .descriptorCount = 1,
-        .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-        .pImageInfo = &binding.Descriptor,
-        .pBufferInfo = nullptr,
-        .pTexelBufferView = nullptr
-    };
-
-    DescriptorHelper::UpdateDescriptorSet(std::span(&write, 1), {});
+    allocator.RegisterTexture(textureIndex, binding.Descriptor);
 
     _textureIndicesState[textureIndex] = textureIndex;
     _lastFreeTextureIndex = (textureIndex + 1) % _maxTexturesCount;

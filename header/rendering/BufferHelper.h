@@ -17,4 +17,14 @@ namespace BufferHelper
             Descriptor = buffer.GetDescriptorBufferInfo(index, count);
         }
     };
+
+    static inline VkDescriptorBufferInfo DescriptorBufferInfo(const GraphicsBuffer& buffer, VkDeviceSize offset)
+    {
+        return
+        {
+            .buffer = buffer.Internal(),
+            .offset = offset,
+            .range = buffer.GetSize()
+        };
+    }
 }

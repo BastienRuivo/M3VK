@@ -12,6 +12,7 @@
 #include "glm/ext/vector_float3.hpp"
 #include "registry/MaterialRegistry.h"
 #include "rendering/CommandBuffer.h"
+#include "rendering/DescriptorAllocator.h"
 #include "rendering/GPUImage.h"
 #include "rendering/GraphicsBuffer.h"
 #include "rendering/ImageHelper.h"
@@ -33,7 +34,7 @@ void Upload(AssetHelper::UploadCommand* commands, uint32_t commandCount, PoolSta
     cmdBuffer.WaitCompletion();
 }
 
-uint32_t AssetHelper::LoadTexture(AssetImporter& importer, uint32_t textureIndex, MaterialRegistry& materialRegistry, PoolStageBuffer & uploadBuffer, AssetHelper::UploadCommand* commands, uint32_t& commandCount, VkSampler sampler, VkCommandPool uploadPool, VkQueue uploadQueue)
+uint32_t AssetHelper::LoadTexture(DescriptorAllocator& allocator, AssetImporter& importer, uint32_t textureIndex, MaterialRegistry& materialRegistry, PoolStageBuffer & uploadBuffer, AssetHelper::UploadCommand* commands, uint32_t& commandCount, VkSampler sampler, VkCommandPool uploadPool, VkQueue uploadQueue)
 {
     //DebugLayer::Log(DebugLayer::LogType::INFO, "Loading texture " + std::to_string(textureIndex) + " of type " + std::to_string(importer.Textures[textureIndex].Type) + " with " + std::to_string(importer.Textures[textureIndex].MipCount) + " mips, with size " + std::to_string(importer.Textures[textureIndex].Size) + " width, height = " + std::to_string(importer.Textures[textureIndex].Width) + ", " + std::to_string(importer.Textures[textureIndex].Height) + " and format " + std::to_string(importer.Textures[textureIndex].Format));
     TextureImport & texture = importer.Textures[textureIndex];
@@ -95,10 +96,10 @@ uint32_t AssetHelper::LoadTexture(AssetImporter& importer, uint32_t textureIndex
     uploadBuffer.CopyToBuffer(importer.TextureDatas.data() + texture.Offset, offset);
     commands[commandCount++] = uploadCommand;
 
-    return materialRegistry.RegisterTexture(std::move(gpuTexture), sampler);
+    return materialRegistry.RegisterTexture(allocator, std::move(gpuTexture), sampler);
 }
 
-void AssetHelper::Load3DModel(const std::string & modelPath, MeshRegistry & meshRegistry, MaterialRegistry & materialRegistry, VkCommandPool uploadPool, VkQueue uploadQueue, VkSampler sampler)
+void AssetHelper::Load3DModel(DescriptorAllocator& allocator, const std::string & modelPath, MeshRegistry & meshRegistry, MaterialRegistry & materialRegistry, VkCommandPool uploadPool, VkQueue uploadQueue, VkSampler sampler)
 {
     AssetImporter importer;
 
@@ -129,9 +130,9 @@ void AssetHelper::Load3DModel(const std::string & modelPath, MeshRegistry & mesh
             const auto & material = importer.Materials[i];
             MaterialProperties gpuMaterial = material;
 
-            gpuMaterial.BaseColorTexId = material.BaseColorTexId == UINT32_MAX ? defaultMaterial.BaseColorTexId: LoadTexture(importer, material.BaseColorTexId, materialRegistry, uploadBuffer, uploadCommands.data(), uploadCommandCount, sampler, uploadPool, uploadQueue);
-            gpuMaterial.NormalMapTexId = material.NormalMapTexId == UINT32_MAX ? defaultMaterial.NormalMapTexId : LoadTexture(importer, material.NormalMapTexId, materialRegistry, uploadBuffer, uploadCommands.data(), uploadCommandCount, sampler, uploadPool, uploadQueue);
-            gpuMaterial.MRAOTexId = material.MRAOTexId == UINT32_MAX ? defaultMaterial.MRAOTexId : LoadTexture(importer, material.MRAOTexId, materialRegistry, uploadBuffer, uploadCommands.data(), uploadCommandCount, sampler, uploadPool, uploadQueue);
+            gpuMaterial.BaseColorTexId = material.BaseColorTexId == UINT32_MAX ? defaultMaterial.BaseColorTexId: LoadTexture(allocator, importer, material.BaseColorTexId, materialRegistry, uploadBuffer, uploadCommands.data(), uploadCommandCount, sampler, uploadPool, uploadQueue);
+            gpuMaterial.NormalMapTexId = material.NormalMapTexId == UINT32_MAX ? defaultMaterial.NormalMapTexId : LoadTexture(allocator, importer, material.NormalMapTexId, materialRegistry, uploadBuffer, uploadCommands.data(), uploadCommandCount, sampler, uploadPool, uploadQueue);
+            gpuMaterial.MRAOTexId = material.MRAOTexId == UINT32_MAX ? defaultMaterial.MRAOTexId : LoadTexture(allocator, importer, material.MRAOTexId, materialRegistry, uploadBuffer, uploadCommands.data(), uploadCommandCount, sampler, uploadPool, uploadQueue);
 
             materialRegistry.RegisterMaterial(gpuMaterial);
         }

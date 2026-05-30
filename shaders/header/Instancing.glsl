@@ -1,7 +1,7 @@
 #ifndef INSTANCING_INCLUDE
 #define INSTANCING_INCLUDE
 
-struct ObjectData
+struct InstanceData
 {
     mat4 LocalToWorldMatrix;
     vec3 AabbMin;

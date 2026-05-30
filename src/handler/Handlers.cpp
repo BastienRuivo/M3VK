@@ -103,6 +103,7 @@ VkDeviceHandler::VkDeviceHandler(VkInstance instance, VkSurfaceKHR windowSurface
 
         .shaderSampledImageArrayNonUniformIndexing = VK_TRUE, // different instance in the same wave can access different textures
         .descriptorBindingSampledImageUpdateAfterBind = VK_TRUE, // descriptor can be updated while bound
+        .descriptorBindingStorageBufferUpdateAfterBind = VK_TRUE,
         .descriptorBindingPartiallyBound = VK_TRUE, // slot can be empty
         .descriptorBindingVariableDescriptorCount = VK_TRUE, // actual count set at all location
         .runtimeDescriptorArray = VK_TRUE, // unsized array in shaders

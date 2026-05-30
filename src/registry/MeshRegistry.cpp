@@ -4,11 +4,13 @@
 #include <cstdint>
 #include <vulkan/vulkan_core.h>
 
-MeshRegistry::MeshRegistry(size_t vertexBufferSize, size_t indexBufferSize, size_t indirectBufferSize)
-: _vertexBuffer(vertexBufferSize, sizeof(Vertex), GraphicsBuffer::BufferType::VERTEX),
-    _indexBuffer(indexBufferSize, sizeof(uint32_t), GraphicsBuffer::BufferType::INDEX),
-    _indirectBuffer(indirectBufferSize, sizeof(DrawIndexedIndirectPadded), GraphicsBuffer::BufferType::INDIRECT_DRAW),
-    _instanceDataBuffer(indirectBufferSize, sizeof(InstanceData), GraphicsBuffer::BufferType::STORAGE)
+#include "../shaders/Shader_Bindings.h"
+
+MeshRegistry::MeshRegistry(DescriptorAllocator& allocator, size_t vertexBufferSize, size_t indexBufferSize, size_t indirectBufferSize)
+: _vertexBuffer(GraphicsBuffer::BufferType::VERTEX, RessourceUsage::Static, vertexBufferSize, sizeof(Vertex)),
+    _indexBuffer(GraphicsBuffer::BufferType::INDEX, RessourceUsage::Static, indexBufferSize, sizeof(uint32_t)),
+    _indirectBuffer(GraphicsBuffer::BufferType::INDIRECT_DRAW, RessourceUsage::Static, indirectBufferSize, sizeof(DrawIndexedIndirectPadded)),
+    _instanceDataBuffer(allocator, STATIC_BINDING_INSTANCE_DATA_BUFFER, GraphicsBuffer::BufferType::STORAGE, RessourceUsage::Static, indirectBufferSize, sizeof(InstanceData))
 {
 }
 
