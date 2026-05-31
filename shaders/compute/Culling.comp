@@ -1,8 +1,10 @@
-#version 450
+#version 460
 
-// #include "../header/Camera.glsl"
-// #include "../header/Material.glsl"
-// #include "../header/Instancing.glsl"
+#include "../header/Global_Include.glsl"
+
+#include "../header/Camera.glsl"
+#include "../header/Material.glsl"
+#include "../header/Instancing.glsl"
 
 // layout(set = 0, binding = 0) uniform CameraDataBuffer
 // {

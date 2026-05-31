@@ -1,8 +1,6 @@
 #version 460
 
-#extension GL_EXT_nonuniform_qualifier : require
-
-#include "Global_Include.glsl"
+#include "header/Global_Include.glsl"
 #include "header/Camera.glsl"
 #include "header/Material.glsl"
 #include "header/Instancing.glsl"

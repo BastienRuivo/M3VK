@@ -1,10 +1,6 @@
 #version 460
 
-#extension GL_EXT_nonuniform_qualifier : require
-
-#define UINT32_MAX 0xffffffff
-
-#include "Global_Include.glsl"
+#include "header/Global_Include.glsl"
 #include "header/Material.glsl"
 
 
