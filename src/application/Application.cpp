@@ -257,11 +257,11 @@ void Application::RecordCommandBuffer(const CommandBuffer& cmdBuffer, uint32_t i
             cmdBuffer.SetViewport(0, 0, renderArea.extent.width, renderArea.extent.height);
             cmdBuffer.SetScissor(renderArea);
 
-            PushConstants push
+            BufferIndexes indexes
             {
-                ._CameraBufferIndex = _cameraDataBuffer.GetGPUIndex()
+                .Cameras = _cameraDataBuffer.GetGPUIndex()
             };
-            cmdBuffer.PushConstants(_descriptorAllocator.GlobalLayout(), VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(PushConstants), &push);
+            cmdBuffer.PushConstants(_descriptorAllocator.GlobalLayout(), VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(BufferIndexes), &indexes);
             cmdBuffer.BindDescriptorSets(_descriptorAllocator.GlobalLayout(), _descriptorAllocator.GlobalDescriptorSet(), 0);
 
             for(const auto& registry : _registries)

@@ -6,22 +6,54 @@
 #include "../header/Material.glsl"
 #include "../header/Instancing.glsl"
 
-// layout(set = 0, binding = 0) uniform CameraDataBuffer
-// {
-//     CameraData _Camera;
-// };
+struct CullingConstants
+{
+    uint ObjectCount;
+};
 
-// uint _ObjectCount;
+layout(push_constant) uniform PushConstants
+{
+    BufferIndexes bufferIndex;
+    CullingConstants _CullingConstants;
+} push;
 
-// layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
-// void main()
-// {
-//     uint objectIndex = gl_GlobalInvocationID.x;
-//     if (objectIndex < _ObjectCount)
-//     {
-//         _VisibleObjectData[objectIndex] = _ObjectData[objectIndex];
-//         _VisibleDrawIndexedIndirect[objectIndex] = _DrawIndexedIndirect[objectIndex];
-//     }
-// }
+layout(set = GLOBAL_SET, binding = BINDING_CAMERA_BUFFER) readonly buffer CameraDataBuffer
+{
+    CameraData data;
+} _Camera[];
 
-void main () {}
+layout(set = GLOBAL_SET, binding = STATIC_BINDING_INSTANCE_DATA_BUFFER, std430) readonly buffer InstanceDataBuffer
+{
+    InstanceData data[];
+} _Instances;
+
+
+layout(set = GLOBAL_SET, binding = STATIC_BINDING_DRAW_INDIRECT_BUFFER, std430) readonly buffer DrawIndirectBuffer
+{
+    DrawIndexedIndirect data[];
+} _DrawIndexedIndirect;
+
+layout(set = GLOBAL_SET, binding = BINDING_VISIBLE_INSTANCE_DATA_BUFFER) writeonly buffer VisibleInstanceDataBuffer
+{
+    InstanceData data[];
+} _VisibleInstanceData[];
+
+layout(set = GLOBAL_SET, binding = BINDING_VISIBLE_DRAW_INDIRECT_BUFFER) writeonly buffer VisibleDrawIndirectBuffer
+{
+    DrawIndexedIndirect data[];
+} _VisibleDrawIndexedIndirect[];
+
+layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+
+void main()
+{
+    uint objectIndex = gl_GlobalInvocationID.x;
+    if (objectIndex >= push._CullingConstants.ObjectCount) return;
+
+    uint cameraBufferIndex = nonuniformEXT(push.bufferIndex.Cameras);
+    uint visibleInstanceDataBufferIndex = nonuniformEXT(push.bufferIndex.VisibleInstanceDatas);
+    uint visibleDrawIndirectBufferIndex = nonuniformEXT(push.bufferIndex.VisibleDrawIndirects);
+
+    _VisibleInstanceData[visibleInstanceDataBufferIndex].data[objectIndex] = _Instances.data[objectIndex];
+    _VisibleDrawIndexedIndirect[visibleDrawIndirectBufferIndex].data[objectIndex] = _DrawIndexedIndirect.data[objectIndex];
+}

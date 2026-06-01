@@ -5,6 +5,11 @@
 #include "header/Material.glsl"
 #include "header/Instancing.glsl"
 
+layout(push_constant) uniform PushConstants
+{
+    BufferIndexes bufferIndex;
+} push;
+
 // don't forget alignement the day you will have vec2 or nested
 layout(set = GLOBAL_SET, binding = BINDING_CAMERA_BUFFER, std430) readonly buffer CameraDataBuffer
 {
@@ -30,7 +35,7 @@ layout(location=2) out vec2 vTexcoords;
 
 void main()
 {
-    uint cameraBufferIndex = nonuniformEXT(push._CameraBufferIndex);
+    uint cameraBufferIndex = nonuniformEXT(push.bufferIndex.Cameras);
 
     InstanceData instance = _Instances.data[gl_InstanceIndex];
     CameraData camera = _Cameras[cameraBufferIndex].data;
