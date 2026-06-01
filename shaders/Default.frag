@@ -3,11 +3,6 @@
 #include "header/Global_Include.glsl"
 #include "header/Material.glsl"
 
-layout(push_constant) uniform PushConstants
-{
-    BufferIndexes bufferIndex;
-} push;
-
 
 layout(set = GLOBAL_SET, binding = BINDING_TEXTURES) uniform sampler2D uTextures[];
 //ssbo
