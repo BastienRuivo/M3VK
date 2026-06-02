@@ -48,5 +48,6 @@ uint32_t ShaderLibrary::RegisterShader(std::filesystem::path path, ShaderType ty
     }
 
    _handlers.emplace_back(path, stage, descriptorLayouts, pushConstantRanges);
+
    return _handlers.size() - 1;
 }

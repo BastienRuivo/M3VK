@@ -45,9 +45,9 @@ class CommandBuffer
     void SetViewport(uint32_t x, uint32_t y, uint32_t width, uint32_t height) const;
     void TransitionImageLayout(VkImage img, VkFormat format, uint32_t mipLevel, uint32_t mipCount, VkImageLayout oldLayout, VkImageLayout newLayout) const;
 
-    inline void BindDescriptorSets(const VkPipelineLayout& pipelineLayout, const DescriptorSetHandle& setHandle, uint32_t location) const
+    inline void BindDescriptorSets(const VkPipelineLayout& pipelineLayout, const DescriptorSetHandle& setHandle, VkPipelineBindPoint bindPoint, uint32_t location) const
     {
-        vkCmdBindDescriptorSets(_internal, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, location, 1, &setHandle.Set, 0, nullptr);
+        vkCmdBindDescriptorSets(_internal, bindPoint, pipelineLayout, location, 1, &setHandle.Set, 0, nullptr);
     }
 
     inline void DrawIndexed(uint32_t firstIndex, uint32_t indexCount, uint32_t vertexOffset) const
@@ -70,9 +70,9 @@ class CommandBuffer
         vkResetCommandBuffer(_internal, flags);
     }
 
-    inline void PushConstants(VkPipelineLayout layout, VkShaderStageFlags stageFlags, uint32_t offset, uint32_t size, const void* pValues) const
+    inline void PushConstants(VkPipelineLayout layout, uint32_t offset, uint32_t size, const void* pValues) const
     {
-        vkCmdPushConstants(_internal, layout, stageFlags, offset, size, pValues);
+        vkCmdPushConstants(_internal, layout, VK_SHADER_STAGE_ALL, offset, size, pValues);
     }
 
     inline void Barrier(VkPipelineStageFlags srcAccesMask, VkPipelineStageFlags dstAccesMask, VkMemoryBarrier* memoryBarriers, uint32_t memoryBarrierCount, VkBufferMemoryBarrier* bufferBarriers, uint32_t bufferBarrierCount, VkImageMemoryBarrier* imgBarriers, uint32_t imgBarrierCount) const

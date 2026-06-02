@@ -47,13 +47,13 @@ class ShaderLibrary
         VkShaderEXT Shader;
         uint32_t GX, GY, GZ;
 
-        void Bind(const CommandBuffer& cmdBuffer)
+        void Bind(const CommandBuffer& cmdBuffer) const
         {
-            const VkShaderStageFlagBits compute = VK_SHADER_STAGE_FRAGMENT_BIT;
+            const VkShaderStageFlagBits compute = VK_SHADER_STAGE_COMPUTE_BIT;
             cmdBuffer.BindShaders(1, &compute, &Shader);
         }
 
-        void CeilDispatch(const CommandBuffer& cmdBuffer, uint32_t x = 1, uint32_t y = 1, uint32_t z = 1)
+        void CeilDispatch(const CommandBuffer& cmdBuffer, uint32_t x = 1, uint32_t y = 1, uint32_t z = 1) const
         {
             if(x == 0 || y == 0 || z == 0)
             {

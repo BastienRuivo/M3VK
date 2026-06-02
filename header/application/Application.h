@@ -1,5 +1,6 @@
 #pragma once
 
+#include "modules/CullingModule.h"
 #include "rendering/Camera.h"
 #include "rendering/DescriptorAllocator.h"
 #include "registry/Registry.h"
@@ -99,6 +100,8 @@ class Application
     MultiFrameHandler<VkSemaphoreHandler> _availableImageSemaphore;
     MultiFrameHandler<VkSemaphoreHandler> _renderFinishedSemaphores;
     MultiFrameHandler<VkFenceHandler>  _waitFence;
+
+    CullingModule _cullingModule;
 
     bool _mouseLocked = true;
     float _inputPrevent = 0;

@@ -252,23 +252,29 @@ void Application::RecordCommandBuffer(const CommandBuffer& cmdBuffer, uint32_t i
         ImageHelper::TransitionLayoutCommand(cmdBuffer, _depthBuffer->Internal(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
         ImageHelper::TransitionLayoutCommand(cmdBuffer, backBuffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
+        cmdBuffer.SetViewport(0, 0, renderArea.extent.width, renderArea.extent.height);
+        cmdBuffer.SetScissor(renderArea);
+
+
+        for(const auto& registry : _registries)
+        {
+            registry->Bind(cmdBuffer, _descriptorAllocator.GlobalLayout());
+        }
+
+        cmdBuffer.BindDescriptorSets(_descriptorAllocator.GlobalLayout(), _descriptorAllocator.GlobalDescriptorSet(), VK_PIPELINE_BIND_POINT_COMPUTE, 0);
+
+        uint32_t preCulledCount = meshRegistry.IndirectBuffer().GetCurrentIndex();
+        _cullingModule.Execute(cmdBuffer, _cameraDataBuffer, meshRegistry.IndirectBuffer(), meshRegistry.InstanceDataBuffer(), _descriptorAllocator.GlobalLayout(), preCulledCount);
+
+        cmdBuffer.BindDescriptorSets(_descriptorAllocator.GlobalLayout(), _descriptorAllocator.GlobalDescriptorSet(), VK_PIPELINE_BIND_POINT_GRAPHICS, 0);
+        BufferIndexes indexes
+        {
+            .Cameras = _cameraDataBuffer.GetGPUIndex(),
+        };
+        cmdBuffer.PushConstants(_descriptorAllocator.GlobalLayout(), 0, sizeof(BufferIndexes), &indexes);
+
         cmdBuffer.BeginRendering(renderArea, &colorAttachment, 1, depthAttachment, stencilAttachment);
         {
-            cmdBuffer.SetViewport(0, 0, renderArea.extent.width, renderArea.extent.height);
-            cmdBuffer.SetScissor(renderArea);
-
-            BufferIndexes indexes
-            {
-                .Cameras = _cameraDataBuffer.GetGPUIndex()
-            };
-            cmdBuffer.PushConstants(_descriptorAllocator.GlobalLayout(), VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(BufferIndexes), &indexes);
-            cmdBuffer.BindDescriptorSets(_descriptorAllocator.GlobalLayout(), _descriptorAllocator.GlobalDescriptorSet(), 0);
-
-            for(const auto& registry : _registries)
-            {
-                registry->Bind(cmdBuffer, _descriptorAllocator.GlobalLayout());
-            }
-
             _vertexShader.Bind(cmdBuffer);
             _fragmentShader.Bind(cmdBuffer);
 
@@ -277,9 +283,12 @@ void Application::RecordCommandBuffer(const CommandBuffer& cmdBuffer, uint32_t i
                 cmdBuffer.SetPolygonMode(VK_POLYGON_MODE_LINE);
             }
 
-
-            const GeometryBuffer& indirectBuffer = meshRegistry.IndirectBuffer();
-            cmdBuffer.DrawIndexedIndirect(indirectBuffer.Internal(), 0, indirectBuffer.GetCurrentIndex(), indirectBuffer.GetStride());
+            #if 1
+            const GraphicsBuffer& indirectBuffer = _cullingModule.VisibleIndirectBuffer();
+            #else
+            const GraphicsBuffer& indirectBuffer = meshRegistry.IndirectBuffer();
+            #endif
+            cmdBuffer.DrawIndexedIndirect(indirectBuffer.Internal(), 0, preCulledCount, indirectBuffer.GetStride());
         }
         cmdBuffer.EndRendering();
         ImageHelper::TransitionLayoutCommand(cmdBuffer, backBuffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
@@ -328,7 +337,7 @@ void Application::LoadShaders()
 }
 
 Application::Application() :
-    // Core Window & Instance (The Foundation)
+    // Core Window & Instance
     _window(1920, 1080, "Window", this, Application::ResizeCallback, Application::MouseMoveCallback, Application::WindowFocusCallback),
     _instance(),
     _vkDebugLayer(_instance.Internal()),
@@ -366,7 +375,10 @@ Application::Application() :
     // Synchronization
     _availableImageSemaphore(ApplicationInfo::Constant::MaxFrameInFlight),
     _renderFinishedSemaphores(_swapChain->Images.Size()),
-    _waitFence(ApplicationInfo::Constant::MaxFrameInFlight)
+    _waitFence(ApplicationInfo::Constant::MaxFrameInFlight),
+
+    // modules
+    _cullingModule(_shaderLibrary, _descriptorAllocator)
 {
     _window.LockMouse(_mouseLocked);
     {

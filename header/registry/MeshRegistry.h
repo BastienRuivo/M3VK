@@ -10,6 +10,8 @@
 #include <span>
 #include <vector>
 
+#include "../shaders/Shader_Bindings.h"
+
 struct MeshHandle
 {
     uint32_t firstIndex;
@@ -26,15 +28,6 @@ struct InstanceData
 
     glm::vec3 AABBMax;
     uint32_t meshId;
-};
-
-struct DrawIndexedIndirectPadded {
-    uint32_t    indexCount;
-    uint32_t    instanceCount;
-    uint32_t    firstIndex;
-    int32_t     vertexOffset;
-    uint32_t    firstInstance;
-    uint32_t pad0[3];
 };
 
 class MeshRegistry : public Registry

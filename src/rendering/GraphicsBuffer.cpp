@@ -262,7 +262,7 @@ GraphicsBuffer::GraphicsBuffer(BufferType type, RessourceUsage bufferUsage, VkDe
 
     if(_usage == RessourceUsage::PerFrame)
     {
-        if(_type != STORAGE && _type != UNIFORM) throw std::runtime_error("PerFrame Buffer can only be STORAGE or UNIFORM");
+        if(_type != STORAGE && _type != UNIFORM && _type != INDIRECT_DRAW) throw std::runtime_error("PerFrame Buffer can only be STORAGE, UNIFORM or INDIRECT_DRAW");
         properties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
     }
 

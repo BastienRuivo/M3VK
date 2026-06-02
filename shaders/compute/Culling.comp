@@ -30,7 +30,7 @@ layout(set = GLOBAL_SET, binding = STATIC_BINDING_INSTANCE_DATA_BUFFER, std430) 
 
 layout(set = GLOBAL_SET, binding = STATIC_BINDING_DRAW_INDIRECT_BUFFER, std430) readonly buffer DrawIndirectBuffer
 {
-    DrawIndexedIndirect data[];
+    DrawIndexedIndirectPadded data[];
 } _DrawIndexedIndirect;
 
 layout(set = GLOBAL_SET, binding = BINDING_VISIBLE_INSTANCE_DATA_BUFFER) writeonly buffer VisibleInstanceDataBuffer
@@ -40,7 +40,7 @@ layout(set = GLOBAL_SET, binding = BINDING_VISIBLE_INSTANCE_DATA_BUFFER) writeon
 
 layout(set = GLOBAL_SET, binding = BINDING_VISIBLE_DRAW_INDIRECT_BUFFER) writeonly buffer VisibleDrawIndirectBuffer
 {
-    DrawIndexedIndirect data[];
+    DrawIndexedIndirectPadded data[];
 } _VisibleDrawIndexedIndirect[];
 
 layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;

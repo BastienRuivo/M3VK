@@ -8,6 +8,8 @@
 #include <vector>
 #include <vulkan/vulkan_core.h>
 
+#include "spirv_reflect.h"
+
 ShaderHandler::~ShaderHandler()
 {
     VkFunctions::vkDestroyShaderEXT(_internal, nullptr);
@@ -44,6 +46,32 @@ ShaderHandler::ShaderHandler(const std::filesystem::path& path, VkShaderStageFla
     {
         throw std::runtime_error("Can't compile shader code");
     }
+
+    switch(stageFlags)
+    {
+        case VK_SHADER_STAGE_VERTEX_BIT: _type = ShaderType::Vertex; break;
+        case VK_SHADER_STAGE_FRAGMENT_BIT: _type = ShaderType::Fragment; break;
+        case VK_SHADER_STAGE_COMPUTE_BIT: _type = ShaderType::Compute; break;
+        default: throw std::runtime_error("Unsupported shader type");
+    }
+
+    SpvReflectShaderModule module;
+    SpvReflectResult result = spvReflectCreateShaderModule(shaderCode.size(), shaderCode.data(), &module);
+    if(result != SPV_REFLECT_RESULT_SUCCESS)
+    {
+        throw std::runtime_error("Can't reflect shader code");
+    }
+
+    if(_type == ShaderType::Compute)
+    {
+        auto entryPoint = spvReflectGetEntryPoint(&module, "main");
+
+        _info.Compute.X = entryPoint->local_size.x;
+        _info.Compute.Y = entryPoint->local_size.y;
+        _info.Compute.Z = entryPoint->local_size.z;
+    }
+
+    spvReflectDestroyShaderModule(&module);
 }
 
 ShaderHandler::ShaderHandler(ShaderHandler&& other) noexcept

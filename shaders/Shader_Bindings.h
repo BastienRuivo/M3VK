@@ -20,9 +20,11 @@
 
 #ifdef GLSL
 #define dUint uint
+#define dInt int
 #else
 #include <cstdint>
 typedef uint32_t dUint;
+typedef int32_t dInt;
 #endif
 
 // BufferIndexes only contains index for non static buffers
@@ -42,5 +44,15 @@ struct BufferIndexes
     dUint VisibleInstanceDatas;
     dUint VisibleDrawIndirects;
 };
+
+struct DrawIndexedIndirectPadded {
+    dUint    indexCount;
+    dUint    instanceCount;
+    dUint    firstIndex;
+    dInt     vertexOffset;
+    dUint    firstInstance;
+    dUint pad0[3];
+};
+
 
 #endif
