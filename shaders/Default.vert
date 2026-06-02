@@ -1,9 +1,6 @@
 #version 460
 
-#include "header/Global_Include.glsl"
-#include "header/Camera.glsl"
-#include "header/Material.glsl"
-#include "header/Instancing.glsl"
+#include "header/GlobalIncludes.glsl"
 
 layout(push_constant) uniform PushConstants
 {

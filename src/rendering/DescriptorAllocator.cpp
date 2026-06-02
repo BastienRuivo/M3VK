@@ -4,7 +4,7 @@
 #include <cstdint>
 #include <vulkan/vulkan_core.h>
 
-#include "../shaders/Shader_Bindings.h"
+#include "ShaderBindings.h"
 
 DescriptorAllocator::DescriptorAllocator()
 :

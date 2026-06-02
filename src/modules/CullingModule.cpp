@@ -1,11 +1,13 @@
 #include "modules/CullingModule.h"
 #include "application/ApplicationInfo.h"
-#include "registry/MeshRegistry.h"
 #include "rendering/BufferHelper.h"
 #include "rendering/GraphicsBuffer.h"
 #include "rendering/Shaders/ShaderLibrary.h"
 #include <cstdint>
 #include <vulkan/vulkan_core.h>
+
+#include "ShaderBindings.h"
+#include "Instancing.h"
 
 CullingModule::CullingModule(ShaderLibrary& shaderLibrary, DescriptorAllocator& allocator)
 : _visibleIndirectBuffer(allocator, BINDING_VISIBLE_DRAW_INDIRECT_BUFFER, GraphicsBuffer::BufferType::INDIRECT_DRAW, RessourceUsage::PerFrame, ApplicationInfo::Constant::DrawIndirectBufferMaxSize, sizeof(DrawIndexedIndirectPadded)),

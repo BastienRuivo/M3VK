@@ -6,6 +6,9 @@
 #define UINT32_MAX 0xffffffff
 
 #define GLSL 1
-#include "../Shader_Bindings.h"
+#include "../../common/ShaderBindings.h"
+#include "../../common/Instancing.h"
+#include "../../common/Camera.h"
+#include "../../common/Material.h"
 
 #endif

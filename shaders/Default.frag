@@ -1,7 +1,6 @@
 #version 460
 
-#include "header/Global_Include.glsl"
-#include "header/Material.glsl"
+#include "header/GlobalIncludes.glsl"
 
 
 layout(set = GLOBAL_SET, binding = BINDING_TEXTURES) uniform sampler2D uTextures[];

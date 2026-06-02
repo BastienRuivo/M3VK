@@ -29,7 +29,7 @@
 #include <stdexcept>
 #include "asset/CPUImage.h"
 
-#include "../shaders/Shader_Bindings.h"
+#include "ShaderBindings.h"
 
 #ifdef M3VK_VERBOSE_LOG
 #include <string>
@@ -404,12 +404,12 @@ Application::Application() :
         defaultMat.BaseColor = {1.0f, 0.0f, 0.0f, 1.0f};
         uint32_t matBinding = materialRegistry.RegisterMaterial(defaultMat);
         InstanceData instance = {
-            .modelMatrix = ApplicationHelper::TranslateRotateScale(glm::vec3(0.0f, 0.0f, 0.0f),
+            .LocalToWorldMatrix = ApplicationHelper::TranslateRotateScale(glm::vec3(0.0f, 0.0f, 0.0f),
                 glm::vec3(0.0f, 0.0f, 0.0f),
                 glm::vec3(axisLength, axisThickness, axisThickness)),
-            .AABBMin = aabbMin,
-            .materialId = matBinding,
-            .AABBMax = aabbMax
+            .AabbMin = aabbMin,
+            .MaterialIndex = matBinding,
+            .AabbMax = aabbMax
         };
         meshRegistry.RegisterInstance(instance);
     }
@@ -418,12 +418,12 @@ Application::Application() :
         defaultMat.BaseColor = {0.0f, 1.0f, 0.0f, 1.0f};
         uint32_t matBinding = materialRegistry.RegisterMaterial(defaultMat);
         InstanceData instance = {
-            .modelMatrix = ApplicationHelper::TranslateRotateScale(glm::vec3(0.0f, 0.0f, 0.0f),
+            .LocalToWorldMatrix = ApplicationHelper::TranslateRotateScale(glm::vec3(0.0f, 0.0f, 0.0f),
                 glm::vec3(0.0f, 0.0f, 0.0f),
                 glm::vec3(axisThickness, axisLength, axisThickness)),
-            .AABBMin = aabbMin,
-            .materialId = matBinding,
-            .AABBMax = aabbMax
+            .AabbMin = aabbMin,
+            .MaterialIndex = matBinding,
+            .AabbMax = aabbMax
         };
         meshRegistry.RegisterInstance(instance);
     }
@@ -432,12 +432,12 @@ Application::Application() :
         defaultMat.BaseColor = {0.0f, 0.0f, 1.0f, 1.0f};
         uint32_t matBinding = materialRegistry.RegisterMaterial(defaultMat);
         InstanceData instance = {
-            .modelMatrix = ApplicationHelper::TranslateRotateScale(glm::vec3(0.0f, 0.0f, 0.0f),
+            .LocalToWorldMatrix = ApplicationHelper::TranslateRotateScale(glm::vec3(0.0f, 0.0f, 0.0f),
                 glm::vec3(0.0f, 0.0f, 0.0f),
                 glm::vec3(axisThickness, axisThickness, axisLength)),
-            .AABBMin = aabbMin,
-            .materialId = matBinding,
-            .AABBMax = aabbMax
+            .AabbMin = aabbMin,
+            .MaterialIndex = matBinding,
+            .AabbMax = aabbMax
         };
         meshRegistry.RegisterInstance(instance);
     }
@@ -473,10 +473,10 @@ Application::Application() :
 
         float scale = radius / tr * 25.0f;
         InstanceData instance = {
-            .modelMatrix = ApplicationHelper::TranslateRotateScale(glm::vec3(x, y, z),
+            .LocalToWorldMatrix = ApplicationHelper::TranslateRotateScale(glm::vec3(x, y, z),
                 glm::vec3(0.0f, 0.0f, 0.0f),
                 glm::vec3(axisThickness * scale, axisThickness * scale, axisThickness * scale)),
-            .materialId = matBinding,
+            .MaterialIndex = matBinding,
         };
         meshRegistry.RegisterInstance(instance);
     }*/

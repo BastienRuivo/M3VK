@@ -4,7 +4,7 @@
 #include <cstdint>
 #include <vulkan/vulkan_core.h>
 
-#include "../shaders/Shader_Bindings.h"
+#include "ShaderBindings.h"
 
 MeshRegistry::MeshRegistry(DescriptorAllocator& allocator, size_t vertexBufferSize, size_t indexBufferSize, size_t indirectBufferSize)
 : _vertexBuffer(GraphicsBuffer::BufferType::VERTEX, RessourceUsage::Static, vertexBufferSize, sizeof(Vertex)),
@@ -39,7 +39,7 @@ uint32_t MeshRegistry::RegisterMesh(std::span<const Vertex> vertices, std::span<
 
 uint32_t MeshRegistry::RegisterInstance(InstanceData instances)
 {
-    instances.meshId = static_cast<uint32_t>(_cpuIndirectCommands.size() - 1);
+    instances.MeshIndex = static_cast<uint32_t>(_cpuIndirectCommands.size() - 1);
     _cpuInstances.push_back(instances);
     _cpuIndirectCommands.back().instanceCount++;
     return static_cast<uint32_t>(_cpuInstances.size() - 1);

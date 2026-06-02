@@ -15,18 +15,6 @@
 #define BINDING_VISIBLE_INSTANCE_DATA_BUFFER (STATIC_BINDING_DRAW_INDIRECT_BUFFER + 1)
 #define BINDING_VISIBLE_DRAW_INDIRECT_BUFFER (BINDING_VISIBLE_INSTANCE_DATA_BUFFER + 1)
 
-//if GLSL define a type dUint for uint
-// if cpu define a type dUint for uint32_t
-
-#ifdef GLSL
-#define dUint uint
-#define dInt int
-#else
-#include <cstdint>
-typedef uint32_t dUint;
-typedef int32_t dInt;
-#endif
-
 // BufferIndexes only contains index for non static buffers
 // static buffers are bound at their creation
 // but other buffers are stored in an array, and we send the index within the array via push constants
@@ -38,21 +26,12 @@ typedef int32_t dInt;
 //     CameraData data;
 // } _Cameras[];
 
+#include "dTypes.h"
+
 struct BufferIndexes
 {
     dUint Cameras;
     dUint VisibleInstanceDatas;
     dUint VisibleDrawIndirects;
 };
-
-struct DrawIndexedIndirectPadded {
-    dUint    indexCount;
-    dUint    instanceCount;
-    dUint    firstIndex;
-    dInt     vertexOffset;
-    dUint    firstInstance;
-    dUint pad0[3];
-};
-
-
 #endif

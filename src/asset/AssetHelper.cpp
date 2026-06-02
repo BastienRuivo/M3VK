@@ -157,10 +157,12 @@ void AssetHelper::Load3DModel(DescriptorAllocator& allocator, const std::string 
 
         uint32_t submesh = meshRegistry.RegisterMesh(vertices, indices);
         InstanceData instance = {
-            .modelMatrix = ApplicationHelper::TranslateRotateScale(glm::vec3(0.0f, 0.0f, 0.0f),
+            .LocalToWorldMatrix = ApplicationHelper::TranslateRotateScale(glm::vec3(0.0f, 0.0f, 0.0f),
                 glm::vec3(0.0f, 0.0f, 0.0f),
                 glm::vec3(1.0f, 1.0f, 1.0f)),
-            .materialId = materialOffset + mesh.MaterialIndex,
+            .AabbMin = mesh.AABBMin,
+            .MaterialIndex = materialOffset + mesh.MaterialIndex,
+            .AabbMax = mesh.AABBMax
         };
 
         meshRegistry.RegisterInstance(instance);

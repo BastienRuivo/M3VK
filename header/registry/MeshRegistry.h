@@ -1,7 +1,6 @@
 #pragma once
 
 #include "application/ApplicationInfo.h"
-#include "glm/ext/vector_float3.hpp"
 #include "rendering/CommandBuffer.h"
 #include "rendering/GraphicsBuffer.h"
 #include "registry/Registry.h"
@@ -10,24 +9,13 @@
 #include <span>
 #include <vector>
 
-#include "../shaders/Shader_Bindings.h"
+#include "Instancing.h"
 
 struct MeshHandle
 {
     uint32_t firstIndex;
     uint32_t indexCount;
     uint32_t firstVertex;
-};
-
-struct InstanceData
-{
-    alignas(16) glm::mat4 modelMatrix;
-
-    glm::vec3 AABBMin;
-    uint32_t materialId;
-
-    glm::vec3 AABBMax;
-    uint32_t meshId;
 };
 
 class MeshRegistry : public Registry

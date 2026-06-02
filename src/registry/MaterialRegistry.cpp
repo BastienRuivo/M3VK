@@ -8,7 +8,7 @@
 #include <stdexcept>
 #include <vulkan/vulkan_core.h>
 
-#include "../shaders/Shader_Bindings.h"
+#include "ShaderBindings.h"
 
 
 void MaterialRegistry::UploadAndRelease(VkQueue queue, VkCommandPool cmdPool)
