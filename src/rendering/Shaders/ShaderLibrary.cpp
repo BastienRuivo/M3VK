@@ -51,3 +51,12 @@ uint32_t ShaderLibrary::RegisterShader(std::filesystem::path path, ShaderType ty
 
    return _handlers.size() - 1;
 }
+
+/*uint32_t ShaderLibrary::RegisterComputeShader(std::filesystem::path path, std::span<const VkDescriptorSetLayout> descriptorLayouts, std::span<const VkPushConstantRange> pushConstantRanges)
+{
+    VkShaderStageFlagBits stage = VK_SHADER_STAGE_COMPUTE_BIT;
+
+   _handlers.emplace_back(path, stage, descriptorLayouts, pushConstantRanges);
+
+   return _handlers.size() - 1;
+}*/

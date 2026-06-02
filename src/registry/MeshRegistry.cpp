@@ -9,7 +9,7 @@
 MeshRegistry::MeshRegistry(DescriptorAllocator& allocator, size_t vertexBufferSize, size_t indexBufferSize, size_t indirectBufferSize)
 : _vertexBuffer(GraphicsBuffer::BufferType::VERTEX, RessourceUsage::Static, vertexBufferSize, sizeof(Vertex)),
     _indexBuffer(GraphicsBuffer::BufferType::INDEX, RessourceUsage::Static, indexBufferSize, sizeof(uint32_t)),
-    _indirectBuffer(allocator, STATIC_BINDING_DRAW_INDIRECT_BUFFER, GraphicsBuffer::BufferType::INDIRECT_DRAW, RessourceUsage::Static, indirectBufferSize, sizeof(DrawIndexedIndirectPadded)),
+    _indirectBuffer(allocator, STATIC_BINDING_CLEAR_DRAW_INDIRECT_BUFFER, GraphicsBuffer::BufferType::STORAGE, RessourceUsage::Static, indirectBufferSize, sizeof(DrawIndexedIndirectPadded)),
     _instanceDataBuffer(allocator, STATIC_BINDING_INSTANCE_DATA_BUFFER, GraphicsBuffer::BufferType::STORAGE, RessourceUsage::Static, indirectBufferSize, sizeof(InstanceData))
 {
 }
@@ -37,11 +37,10 @@ uint32_t MeshRegistry::RegisterMesh(std::span<const Vertex> vertices, std::span<
     return static_cast<uint32_t>(_cpuIndirectCommands.size() - 1);
 }
 
-uint32_t MeshRegistry::RegisterInstance(InstanceData instances)
+uint32_t MeshRegistry::RegisterInstance(InstanceData instance)
 {
-    instances.MeshIndex = static_cast<uint32_t>(_cpuIndirectCommands.size() - 1);
-    _cpuInstances.push_back(instances);
-    _cpuIndirectCommands.back().instanceCount++;
+    instance.MeshIndex = instance.MeshIndex;
+    _cpuInstances.push_back(instance);
     return static_cast<uint32_t>(_cpuInstances.size() - 1);
 }
 

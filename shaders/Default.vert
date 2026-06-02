@@ -13,10 +13,16 @@ layout(set = GLOBAL_SET, binding = BINDING_CAMERA_BUFFER, std430) readonly buffe
     CameraData data;
 } _Cameras[];
 
-layout(set = GLOBAL_SET, binding = STATIC_BINDING_INSTANCE_DATA_BUFFER, std430) readonly buffer InstanceDataBuffer
+// TODO WHEN HERE : CHANGE _INSTANCES TO ARRAY
+layout(set = GLOBAL_SET, binding = STATIC_BINDING_INSTANCE_DATA_BUFFER, std430) readonly buffer VisibleInstanceDataBuffer
 {
     InstanceData data[];
 } _Instances;
+
+layout(set = GLOBAL_SET, binding = BINDING_VISIBLE_INSTANCE_INDIRECTION_BUFFER, std430) readonly buffer VisibleInstanceIndirectionBuffer
+{
+    uint data[];
+} _InstancesIndirection[];
 
 
 // Note: Vec3 & stuff uses multiple location space see https://wikis.khronos.org/opengl/Layout_Qualifier_(GLSL)
@@ -32,9 +38,12 @@ layout(location=2) out vec2 vTexcoords;
 
 void main()
 {
-    uint cameraBufferIndex = nonuniformEXT(push.bufferIndex.Cameras);
+    uint cameraBufferIndex = push.bufferIndex.Cameras;
+    uint bIndirectionIndex = push.bufferIndex.VisibleInstanceIndirections;
 
-    InstanceData instance = _Instances.data[gl_InstanceIndex];
+    uint instanceIndex = _InstancesIndirection[bIndirectionIndex].data[gl_InstanceIndex];
+
+    InstanceData instance = _Instances.data[instanceIndex];
     CameraData camera = _Cameras[cameraBufferIndex].data;
 
     gl_Position = camera.ViewProjectionMatrix * instance.LocalToWorldMatrix * vec4(osVertexPosition, 1.0);

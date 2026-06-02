@@ -207,10 +207,15 @@ GraphicsBuffer::BufferInternal GraphicsBuffer::CreateBuffer(VkDeviceSize size, V
     return buffer;
 }
 
-GraphicsBuffer::GraphicsBuffer(BufferType type, RessourceUsage bufferUsage, VkDeviceSize count, VkDeviceSize stride) : _type(type), _stride(stride), _count(count), _usage(bufferUsage)
+GraphicsBuffer::GraphicsBuffer(BufferType type, RessourceUsage bufferUsage, VkDeviceSize count, VkDeviceSize stride, bool isSource) : _type(type), _stride(stride), _count(count), _usage(bufferUsage)
 {
     // mean it's a dst buffer, already in good memory shape but cant be writable directly by cpu
     VkBufferUsageFlags usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+
+    if(isSource)
+    {
+        usage |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+    }
 
     if(_type == UNIFORM || _type == STORAGE || _type == INDIRECT_DRAW)
     {
@@ -279,8 +284,8 @@ GraphicsBuffer::GraphicsBuffer(BufferType type, RessourceUsage bufferUsage, VkDe
     }
 }
 
-GraphicsBuffer::GraphicsBuffer(DescriptorAllocator& allocator, uint32_t dstBinding, BufferType type, RessourceUsage bufferUsage, VkDeviceSize count, VkDeviceSize stride)
-: GraphicsBuffer(type, bufferUsage, count, stride)
+GraphicsBuffer::GraphicsBuffer(DescriptorAllocator& allocator, uint32_t dstBinding, BufferType type, RessourceUsage bufferUsage, VkDeviceSize count, VkDeviceSize stride, bool isSource)
+: GraphicsBuffer(type, bufferUsage, count, stride, isSource)
 {
     for(int i = 0; i < _buffers.size(); i++)
     {

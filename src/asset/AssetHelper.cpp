@@ -162,7 +162,8 @@ void AssetHelper::Load3DModel(DescriptorAllocator& allocator, const std::string 
                 glm::vec3(1.0f, 1.0f, 1.0f)),
             .AabbMin = mesh.AABBMin,
             .MaterialIndex = materialOffset + mesh.MaterialIndex,
-            .AabbMax = mesh.AABBMax
+            .AabbMax = mesh.AABBMax,
+            .MeshIndex = submesh
         };
 
         meshRegistry.RegisterInstance(instance);

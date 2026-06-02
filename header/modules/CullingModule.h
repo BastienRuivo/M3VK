@@ -13,18 +13,20 @@ public:
     struct CullingConstants
     {
         uint32_t InstanceCount;
+        uint32_t DrawCount;
     };
 
     CullingModule(ShaderLibrary& shaderLibrary, DescriptorAllocator& descriptorAllocator);
     ~CullingModule();
 
-    void Execute(const CommandBuffer& cmdBuffer, const GraphicsBuffer& cameraBuffer, const GeometryBuffer& indirectBuffer, const GeometryBuffer& instanceBuffer, VkPipelineLayout layout, uint32_t instanceCount) const;
-    void Barrier(const CommandBuffer& cmdBuffer, uint32_t instanceCount, VkAccessFlagBits src, VkAccessFlagBits dst) const;
-    inline const GraphicsBuffer& VisibleInstanceBuffer() const { return _visibleInstanceBuffer; }
+    void Execute(const CommandBuffer& cmdBuffer, const GraphicsBuffer& cameraBuffer, const GeometryBuffer& indirectBuffer, const GeometryBuffer& instanceBuffer, VkPipelineLayout layout) const;
+    void Barrier(const CommandBuffer& cmdBuffer, uint32_t instanceCount, uint32_t drawCount, VkAccessFlagBits src, VkAccessFlagBits dst) const;
+    inline const GraphicsBuffer& VisibleInstanceIndirectionBuffer() const { return _visibleIndirectionBuffer; }
     inline const GraphicsBuffer& VisibleIndirectBuffer() const { return _visibleIndirectBuffer; }
 
 private:
-    GraphicsBuffer _visibleInstanceBuffer;
+    GraphicsBuffer _visibleIndirectionBuffer;
     GraphicsBuffer _visibleIndirectBuffer;
     ShaderLibrary::ComputeKernel _cullingKernel;
+    ShaderLibrary::ComputeKernel _cullingInitKernel;
 };

@@ -1,0 +1,42 @@
+#version 460
+
+#include "CullingInclude.glsl"
+
+layout(set = GLOBAL_SET, binding = BINDING_CAMERA_BUFFER) readonly buffer CameraDataBuffer
+{
+    CameraData data;
+} _Camera[];
+
+layout(set = GLOBAL_SET, binding = STATIC_BINDING_INSTANCE_DATA_BUFFER, std430) readonly buffer InstanceDataBuffer
+{
+    InstanceData data[];
+} _Instances;
+
+layout(set = GLOBAL_SET, binding = BINDING_VISIBLE_INSTANCE_INDIRECTION_BUFFER) writeonly buffer VisibleInstanceIndirectionBuffer
+{
+    uint data[];
+} _VisibleInstanceIndirection[];
+
+layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+void main()
+{
+    uint globalIndex = gl_GlobalInvocationID.x;
+    if (globalIndex >= push._CullingConstants.InstanceCount) return;
+
+    uint cameraBufferIndex = push.bufferIndex.Cameras;
+    uint bIndirectionIndex = push.bufferIndex.VisibleInstanceIndirections;
+    uint bDrawIndex = push.bufferIndex.VisibleDrawIndirects;
+
+    bool isVisible = true;
+
+    if(isVisible)
+    {
+        uint meshIndex = _Instances.data[globalIndex].MeshIndex;
+        uint countIndex = atomicAdd(_VisibleDrawIndexedIndirect[bDrawIndex].data[meshIndex].instanceCount, 1);
+
+        DrawIndexedIndirectPadded indirectCommand = _DrawIndexedIndirect.data[meshIndex];
+        uint instanceIndex = indirectCommand.firstInstance + countIndex;
+
+        _VisibleInstanceIndirection[bIndirectionIndex].data[instanceIndex] = globalIndex;
+    }
+}

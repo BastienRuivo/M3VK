@@ -72,7 +72,7 @@ class CommandBuffer
 
     inline void PushConstants(VkPipelineLayout layout, uint32_t offset, uint32_t size, const void* pValues) const
     {
-        vkCmdPushConstants(_internal, layout, VK_SHADER_STAGE_ALL, offset, size, pValues);
+        vkCmdPushConstants(_internal, layout, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT, offset, size, pValues);
     }
 
     inline void Barrier(VkPipelineStageFlags srcAccesMask, VkPipelineStageFlags dstAccesMask, VkMemoryBarrier* memoryBarriers, uint32_t memoryBarrierCount, VkBufferMemoryBarrier* bufferBarriers, uint32_t bufferBarrierCount, VkImageMemoryBarrier* imgBarriers, uint32_t imgBarrierCount) const
@@ -106,7 +106,7 @@ class CommandBuffer
         vkCmdCopyBuffer(_internal, src, dst, regionCount, pRegions);
     }
 
-    inline void CopyBuffer(VkBuffer src, VkBuffer dst, VkDeviceSize size, uint32_t srcIndex = 0, uint32_t dstIndex = 0)
+    inline void CopyBuffer(VkBuffer src, VkBuffer dst, VkDeviceSize size, uint32_t srcIndex = 0, uint32_t dstIndex = 0) const
     {
         VkBufferCopy region
         {
@@ -261,6 +261,19 @@ class CommandBuffer
     inline void Dispatch(uint32_t x, uint32_t y, uint32_t z) const
     {
         vkCmdDispatch(_internal, x, y, z);
+    }
+
+    inline void BeginMarker(const char* name) const
+    {
+        VkDebugUtilsLabelEXT label{};
+        label.pLabelName = name;
+        label.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT;
+        VkFunctions::vkCmdBeginDebugUtilsLabelEXT(_internal, &label);
+    }
+
+    inline void EndMarker() const
+    {
+        VkFunctions::vkCmdEndDebugUtilsLabelEXT(_internal);
     }
 
     inline VkCommandBuffer GetInternal() const { return _internal; }

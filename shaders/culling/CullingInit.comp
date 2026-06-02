@@ -1,0 +1,14 @@
+#version 460
+
+#include "CullingInclude.glsl"
+
+layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+void main()
+{
+    uint globalIndex = gl_GlobalInvocationID.x;
+    if (globalIndex < push._CullingConstants.DrawCount)
+    {
+        uint bDrawIndex = push.bufferIndex.VisibleDrawIndirects;
+        _VisibleDrawIndexedIndirect[bDrawIndex].data[globalIndex].instanceCount = 0;
+    }
+}

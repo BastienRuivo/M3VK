@@ -114,6 +114,8 @@ class VkFunctions
         _vkCmdSetAlphaToOneEnableEXT = (PFN_vkCmdSetAlphaToOneEnableEXT)vkGetInstanceProcAddr(ApplicationInfo::Instance(), "vkCmdSetAlphaToOneEnableEXT");
         _vkCmdSetDepthClampEnableEXT = (PFN_vkCmdSetDepthClampEnableEXT)vkGetInstanceProcAddr(ApplicationInfo::Instance(), "vkCmdSetDepthClampEnableEXT");
         _vkCmdSetVertexInputEXT = (PFN_vkCmdSetVertexInputEXT)vkGetInstanceProcAddr(ApplicationInfo::Instance(), "vkCmdSetVertexInputEXT");
+        _vkCmdBeginDebugUtilsLabelEXT = (PFN_vkCmdBeginDebugUtilsLabelEXT)vkGetInstanceProcAddr(ApplicationInfo::Instance(), "vkCmdBeginDebugUtilsLabelEXT");
+        _vkCmdEndDebugUtilsLabelEXT = (PFN_vkCmdEndDebugUtilsLabelEXT)vkGetInstanceProcAddr(ApplicationInfo::Instance(), "vkCmdEndDebugUtilsLabelEXT");
 
         if(_vkCreateShadersEXT == nullptr
             || _vkDestroyShaderEXT == nullptr
@@ -236,6 +238,18 @@ class VkFunctions
         Instance._vkCmdSetVertexInputEXT(commandBuffer, vertexBindingDescriptionCount, pVertexBindingDescriptions, vertexAttributeDescriptionCount, pVertexAttributeDescriptions);
     }
 
+    inline static void vkCmdBeginDebugUtilsLabelEXT(VkCommandBuffer commandBuffer, const VkDebugUtilsLabelEXT *pLabelInfo)
+    {
+        auto& Instance = VkFunctions::Instance();
+        Instance._vkCmdBeginDebugUtilsLabelEXT(commandBuffer, pLabelInfo);
+    }
+
+    inline static void vkCmdEndDebugUtilsLabelEXT(VkCommandBuffer commandBuffer)
+    {
+        auto& Instance = VkFunctions::Instance();
+        Instance._vkCmdEndDebugUtilsLabelEXT(commandBuffer);
+    }
+
     private:
     PFN_vkCreateShadersEXT _vkCreateShadersEXT;
     PFN_vkDestroyShaderEXT _vkDestroyShaderEXT;
@@ -251,6 +265,8 @@ class VkFunctions
     PFN_vkCmdSetAlphaToOneEnableEXT _vkCmdSetAlphaToOneEnableEXT;
     PFN_vkCmdSetDepthClampEnableEXT _vkCmdSetDepthClampEnableEXT;
     PFN_vkCmdSetVertexInputEXT _vkCmdSetVertexInputEXT;
+    PFN_vkCmdBeginDebugUtilsLabelEXT _vkCmdBeginDebugUtilsLabelEXT;
+    PFN_vkCmdEndDebugUtilsLabelEXT _vkCmdEndDebugUtilsLabelEXT;
 
     bool _isLoaded = false;
 };

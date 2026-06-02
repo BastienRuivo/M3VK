@@ -80,8 +80,8 @@ class GraphicsBuffer
         COUNT
     };
 
-    GraphicsBuffer(DescriptorAllocator& allocator, uint32_t dstBinding, BufferType type, RessourceUsage usage, VkDeviceSize count, VkDeviceSize stride);
-    GraphicsBuffer(BufferType type, RessourceUsage usage, VkDeviceSize count, VkDeviceSize stride);
+    GraphicsBuffer(DescriptorAllocator& allocator, uint32_t dstBinding, BufferType type, RessourceUsage usage, VkDeviceSize count, VkDeviceSize stride, bool isSource = false);
+    GraphicsBuffer(BufferType type, RessourceUsage usage, VkDeviceSize count, VkDeviceSize stride, bool isSource = false);
 
     ~GraphicsBuffer();
 

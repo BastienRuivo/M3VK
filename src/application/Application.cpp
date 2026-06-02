@@ -234,63 +234,67 @@ void Application::RecordCommandBuffer(const CommandBuffer& cmdBuffer, uint32_t i
     cmdBuffer.Begin();
     {
           // base param
-        cmdBuffer.SetPrimitiveTopology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
-        cmdBuffer.SetPrimitiveRestart(false);
-        cmdBuffer.SetRasterizerDiscard(false);
-        cmdBuffer.SetDepthClampEnable(false);
-        cmdBuffer.SetPolygonMode(VK_POLYGON_MODE_FILL);
-        cmdBuffer.SetFrontFace(VK_FRONT_FACE_COUNTER_CLOCKWISE);
-        cmdBuffer.SetDepthBiasEnable(false);
-        cmdBuffer.SetLineWidth(1.0f);
-
-        cmdBuffer.SetRasterizationSamples(ApplicationInfo::Constant::MaxMSAASample);
-        cmdBuffer.SetSampleMask(ApplicationInfo::Constant::MaxMSAASample, 0xFFFFFFFF);
-        cmdBuffer.SetAlphaToCoverageEnable(false);
-        cmdBuffer.SetAlphaToOneEnable(false);
-
-        ImageHelper::TransitionLayoutCommand(cmdBuffer, _colorBackBuffer->Internal(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-        ImageHelper::TransitionLayoutCommand(cmdBuffer, _depthBuffer->Internal(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
-        ImageHelper::TransitionLayoutCommand(cmdBuffer, backBuffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-
-        cmdBuffer.SetViewport(0, 0, renderArea.extent.width, renderArea.extent.height);
-        cmdBuffer.SetScissor(renderArea);
-
-
-        for(const auto& registry : _registries)
+        cmdBuffer.BeginMarker("Pipeline Init");
         {
-            registry->Bind(cmdBuffer, _descriptorAllocator.GlobalLayout());
+            cmdBuffer.SetPrimitiveTopology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
+            cmdBuffer.SetPrimitiveRestart(false);
+            cmdBuffer.SetRasterizerDiscard(false);
+            cmdBuffer.SetDepthClampEnable(false);
+            cmdBuffer.SetPolygonMode(VK_POLYGON_MODE_FILL);
+            cmdBuffer.SetFrontFace(VK_FRONT_FACE_COUNTER_CLOCKWISE);
+            cmdBuffer.SetDepthBiasEnable(false);
+            cmdBuffer.SetLineWidth(1.0f);
+
+            cmdBuffer.SetRasterizationSamples(ApplicationInfo::Constant::MaxMSAASample);
+            cmdBuffer.SetSampleMask(ApplicationInfo::Constant::MaxMSAASample, 0xFFFFFFFF);
+            cmdBuffer.SetAlphaToCoverageEnable(false);
+            cmdBuffer.SetAlphaToOneEnable(false);
+
+            ImageHelper::TransitionLayoutCommand(cmdBuffer, _colorBackBuffer->Internal(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+            ImageHelper::TransitionLayoutCommand(cmdBuffer, _depthBuffer->Internal(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
+            ImageHelper::TransitionLayoutCommand(cmdBuffer, backBuffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+
+            cmdBuffer.SetViewport(0, 0, renderArea.extent.width, renderArea.extent.height);
+            cmdBuffer.SetScissor(renderArea);
+
+            for(const auto& registry : _registries)
+            {
+                registry->Bind(cmdBuffer, _descriptorAllocator.GlobalLayout());
+            }
         }
+        cmdBuffer.EndMarker();
 
         cmdBuffer.BindDescriptorSets(_descriptorAllocator.GlobalLayout(), _descriptorAllocator.GlobalDescriptorSet(), VK_PIPELINE_BIND_POINT_COMPUTE, 0);
 
-        uint32_t preCulledCount = meshRegistry.IndirectBuffer().GetCurrentIndex();
-        _cullingModule.Execute(cmdBuffer, _cameraDataBuffer, meshRegistry.IndirectBuffer(), meshRegistry.InstanceDataBuffer(), _descriptorAllocator.GlobalLayout(), preCulledCount);
+        _cullingModule.Execute(cmdBuffer, _cameraDataBuffer, meshRegistry.IndirectBuffer(), meshRegistry.InstanceDataBuffer(), _descriptorAllocator.GlobalLayout());
 
-        cmdBuffer.BindDescriptorSets(_descriptorAllocator.GlobalLayout(), _descriptorAllocator.GlobalDescriptorSet(), VK_PIPELINE_BIND_POINT_GRAPHICS, 0);
-        BufferIndexes indexes
+        cmdBuffer.BeginMarker("Render Pass");
         {
-            .Cameras = _cameraDataBuffer.GetGPUIndex(),
-        };
-        cmdBuffer.PushConstants(_descriptorAllocator.GlobalLayout(), 0, sizeof(BufferIndexes), &indexes);
-
-        cmdBuffer.BeginRendering(renderArea, &colorAttachment, 1, depthAttachment, stencilAttachment);
-        {
-            _vertexShader.Bind(cmdBuffer);
-            _fragmentShader.Bind(cmdBuffer);
-
-            if(_wireframe)
+            cmdBuffer.BindDescriptorSets(_descriptorAllocator.GlobalLayout(), _descriptorAllocator.GlobalDescriptorSet(), VK_PIPELINE_BIND_POINT_GRAPHICS, 0);
+            BufferIndexes indexes
             {
-                cmdBuffer.SetPolygonMode(VK_POLYGON_MODE_LINE);
-            }
+                .Cameras = _cameraDataBuffer.GetGPUIndex(),
+                .VisibleInstanceIndirections = _cullingModule.VisibleInstanceIndirectionBuffer().GetGPUIndex(),
+            };
+            cmdBuffer.PushConstants(_descriptorAllocator.GlobalLayout(), 0, sizeof(BufferIndexes), &indexes);
 
-            #if 1
-            const GraphicsBuffer& indirectBuffer = _cullingModule.VisibleIndirectBuffer();
-            #else
-            const GraphicsBuffer& indirectBuffer = meshRegistry.IndirectBuffer();
-            #endif
-            cmdBuffer.DrawIndexedIndirect(indirectBuffer.Internal(), 0, preCulledCount, indirectBuffer.GetStride());
+            cmdBuffer.BeginRendering(renderArea, &colorAttachment, 1, depthAttachment, stencilAttachment);
+            {
+                _vertexShader.Bind(cmdBuffer);
+                _fragmentShader.Bind(cmdBuffer);
+
+                if(_wireframe)
+                {
+                    cmdBuffer.SetPolygonMode(VK_POLYGON_MODE_LINE);
+                }
+
+                const GraphicsBuffer& indirectBuffer = _cullingModule.VisibleIndirectBuffer();
+                uint32_t drawCount = meshRegistry.IndirectBuffer().GetCurrentIndex();
+                cmdBuffer.DrawIndexedIndirect(indirectBuffer.Internal(), 0, drawCount, indirectBuffer.GetStride());
+            }
+            cmdBuffer.EndRendering();
         }
-        cmdBuffer.EndRendering();
+        cmdBuffer.EndMarker();
         ImageHelper::TransitionLayoutCommand(cmdBuffer, backBuffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
     }
     cmdBuffer.End();
@@ -409,7 +413,8 @@ Application::Application() :
                 glm::vec3(axisLength, axisThickness, axisThickness)),
             .AabbMin = aabbMin,
             .MaterialIndex = matBinding,
-            .AabbMax = aabbMax
+            .AabbMax = aabbMax,
+            .MeshIndex = cube
         };
         meshRegistry.RegisterInstance(instance);
     }
@@ -423,7 +428,8 @@ Application::Application() :
                 glm::vec3(axisThickness, axisLength, axisThickness)),
             .AabbMin = aabbMin,
             .MaterialIndex = matBinding,
-            .AabbMax = aabbMax
+            .AabbMax = aabbMax,
+            .MeshIndex = cube
         };
         meshRegistry.RegisterInstance(instance);
     }
@@ -437,12 +443,13 @@ Application::Application() :
                 glm::vec3(axisThickness, axisThickness, axisLength)),
             .AabbMin = aabbMin,
             .MaterialIndex = matBinding,
-            .AabbMax = aabbMax
+            .AabbMax = aabbMax,
+            .MeshIndex = cube
         };
         meshRegistry.RegisterInstance(instance);
     }
 
-    AssetHelper::Load3DModel(_descriptorAllocator, "data/BistroExterior.m3vkasset", meshRegistry, materialRegistry, _graphicsCommandPool.Internal(), _graphicsComputeQueue.Internal(), _sampler.Internal());
+    //AssetHelper::Load3DModel(_descriptorAllocator, "data/BistroExterior.m3vkasset", meshRegistry, materialRegistry, _graphicsCommandPool.Internal(), _graphicsComputeQueue.Internal(), _sampler.Internal());
     /*for(uint32_t i = 0; i < 100; ++i)
     {
         float red = (rand() / (float)RAND_MAX);
@@ -476,7 +483,10 @@ Application::Application() :
             .LocalToWorldMatrix = ApplicationHelper::TranslateRotateScale(glm::vec3(x, y, z),
                 glm::vec3(0.0f, 0.0f, 0.0f),
                 glm::vec3(axisThickness * scale, axisThickness * scale, axisThickness * scale)),
+            .AabbMin = aabbMin,
             .MaterialIndex = matBinding,
+            .AabbMax = aabbMax,
+            .MeshIndex = cube
         };
         meshRegistry.RegisterInstance(instance);
     }*/
