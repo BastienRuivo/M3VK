@@ -1,5 +1,6 @@
 #include "application/Application.h"
 #include "application/ApplicationHelper.h"
+#include "glm/matrix.hpp"
 #include "rendering/DescriptorAllocator.h"
 #include "rendering/GraphicsBuffer.h"
 #include "application/ApplicationInfo.h"
@@ -29,6 +30,8 @@
 #include <stdexcept>
 #include "asset/CPUImage.h"
 
+#include "Camera.h"
+
 #include "ShaderBindings.h"
 
 #ifdef M3VK_VERBOSE_LOG
@@ -40,6 +43,39 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
+void ExtractFrusumPlane(CameraData& data)
+{
+    glm::mat4 viewProjectionMatrix = glm::transpose(data.ViewProjectionMatrix);
+
+    glm::vec4 left = viewProjectionMatrix[3] + viewProjectionMatrix[0];
+    data.FrustumPlanes[CameraData::Planes::Left].Normal = glm::vec3(left);
+    data.FrustumPlanes[CameraData::Planes::Left].Distance = left.w;
+
+    glm::vec4 right = viewProjectionMatrix[3] - viewProjectionMatrix[0];
+    data.FrustumPlanes[CameraData::Planes::Right].Normal = glm::vec3(right);
+    data.FrustumPlanes[CameraData::Planes::Right].Distance = right.w;
+
+    glm::vec4 top = viewProjectionMatrix[3] - viewProjectionMatrix[1];
+    data.FrustumPlanes[CameraData::Planes::Top].Normal = glm::vec3(top);
+    data.FrustumPlanes[CameraData::Planes::Top].Distance = top.w;
+
+    glm::vec4 bottom = viewProjectionMatrix[3] + viewProjectionMatrix[1];
+    data.FrustumPlanes[CameraData::Planes::Bottom].Normal = glm::vec3(bottom);
+    data.FrustumPlanes[CameraData::Planes::Bottom].Distance = bottom.w;
+
+    glm::vec4 near = viewProjectionMatrix[3] + viewProjectionMatrix[2];
+    data.FrustumPlanes[CameraData::Planes::Near].Normal = glm::vec3(near);
+    data.FrustumPlanes[CameraData::Planes::Near].Distance = near.w;
+
+    glm::vec4 far = viewProjectionMatrix[3] - viewProjectionMatrix[2];
+    data.FrustumPlanes[CameraData::Planes::Far].Normal = glm::vec3(far);
+    data.FrustumPlanes[CameraData::Planes::Far].Distance = far.w;
+
+    for (int i = 0; i < 6; i++)
+    {
+        data.FrustumPlanes[i].Normalize();
+    }
+}
 
 
 void Application::UpdateCameraData()
@@ -48,13 +84,17 @@ void Application::UpdateCameraData()
 
     CameraData cameraData =
     {
-        .worldToCameraMatrix = _camera.GetViewMatrix(),
-        .projectionMatrix = _camera.GetProjectionMatrix()
+        .WorldToCameraMatrix = _camera.GetViewMatrix(),
+        .ProjectionMatrix = _camera.GetProjectionMatrix()
     };
     // it was designed for opengl so flip it
-    cameraData.projectionMatrix[1][1] *= -1;
+    cameraData.ProjectionMatrix[1][1] *= -1;
 
-    cameraData.viewProjectionMatrix = cameraData.projectionMatrix * cameraData.worldToCameraMatrix;
+    cameraData.ViewProjectionMatrix = cameraData.ProjectionMatrix * cameraData.WorldToCameraMatrix;
+
+    cameraData.InverseViewProjectionMatrix = glm::inverse(cameraData.ViewProjectionMatrix);
+
+    ExtractFrusumPlane(cameraData);
 
     memcpy(_cameraDataBuffer.GetDataPtr(), &cameraData, sizeof(cameraData));
 }
@@ -450,7 +490,7 @@ Application::Application() :
     }
 
     //AssetHelper::Load3DModel(_descriptorAllocator, "data/BistroExterior.m3vkasset", meshRegistry, materialRegistry, _graphicsCommandPool.Internal(), _graphicsComputeQueue.Internal(), _sampler.Internal());
-    /*for(uint32_t i = 0; i < 100; ++i)
+    for(uint32_t i = 0; i < 100; ++i)
     {
         float red = (rand() / (float)RAND_MAX);
         float green = (rand() / (float)RAND_MAX);
@@ -489,7 +529,7 @@ Application::Application() :
             .MeshIndex = cube
         };
         meshRegistry.RegisterInstance(instance);
-    }*/
+    }
 
     for(auto& registry : _registries)
     {

@@ -17,6 +17,61 @@ layout(set = GLOBAL_SET, binding = BINDING_VISIBLE_INSTANCE_INDIRECTION_BUFFER) 
     uint data[];
 } _VisibleInstanceIndirection[];
 
+vec3 Bbox[8] =
+{
+    vec3(-1.0, -1.0, -1.0),
+    vec3(1.0, -1.0, -1.0),
+    vec3(-1.0, 1.0, -1.0),
+    vec3(-1.0, -1.0, 1.0),
+    vec3(1.0, 1.0, -1.0),
+    vec3(1.0, -1.0, 1.0),
+    vec3(-1.0, 1.0, 1.0),
+    vec3(1.0, 1.0, 1.0)
+};
+
+void TransformBBOX(mat4 transform, vec3 AabbMin, vec3 AabbMax, out vec3 outCenter, out vec3 outExtent)
+{
+    vec3 center = (AabbMin + AabbMax) * 0.5;
+    vec3 extent = (AabbMax - AabbMin) * 0.5;
+
+    vec3 transformedAabbmin = vec3(1e7);
+    vec3 transformedAabbMax = vec3(-1e7);
+    for(int i = 0; i < 8; i++)
+    {
+        vec4 point = vec4(center + Bbox[i] * extent, 1.0);
+        point = transform * point;
+        transformedAabbmin = min(transformedAabbmin, point.xyz);
+        transformedAabbMax = max(transformedAabbMax, point.xyz);
+    }
+
+    outCenter = (transformedAabbmin + transformedAabbMax) * 0.5;
+    outExtent = (transformedAabbMax - transformedAabbmin) * 0.5;
+}
+
+bool FustumCulling(CameraData camera, vec3 center, vec3 extent)
+{
+    for(int i = 0; i < 6; i++)
+    {
+        Plane plane = camera.FrustumPlanes[i];
+        vec3 s = step(vec3(0.0), plane.Normal);
+        vec3 point = mix(center - extent, center + extent, s);
+
+        bool isVisible = dot(plane.Normal, point) + plane.Distance > 0.0;
+        if(!isVisible) return false;
+    }
+
+    return true;
+}
+
+bool Culling(CameraData camera, InstanceData instance)
+{
+    vec3 wsCenter, wsExtent;
+    TransformBBOX(instance.LocalToWorldMatrix, instance.AabbMin, instance.AabbMax, wsCenter, wsExtent);
+
+    bool isVisible = FustumCulling(camera, wsCenter, wsExtent);
+    return isVisible;
+}
+
 layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
 void main()
 {
@@ -27,7 +82,7 @@ void main()
     uint bIndirectionIndex = push.bufferIndex.VisibleInstanceIndirections;
     uint bDrawIndex = push.bufferIndex.VisibleDrawIndirects;
 
-    bool isVisible = true;
+    bool isVisible = Culling(_Camera[cameraBufferIndex].data, _Instances.data[globalIndex]);
 
     if(isVisible)
     {

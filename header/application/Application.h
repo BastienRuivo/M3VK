@@ -41,14 +41,6 @@ class Application
 
     private:
 
-    struct CameraData
-    {
-        // temp
-        alignas(16) glm::mat4 worldToCameraMatrix;
-        alignas(16) glm::mat4 projectionMatrix;
-        alignas(16) glm::mat4 viewProjectionMatrix;
-    };
-
     // RAII is first in last out order
     Window _window;
     VkInstanceHandler _instance;
