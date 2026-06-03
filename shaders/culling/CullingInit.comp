@@ -9,6 +9,6 @@ void main()
     if (globalIndex < push._CullingConstants.DrawCount)
     {
         uint bDrawIndex = push.bufferIndex.VisibleDrawIndirects;
-        _VisibleDrawIndexedIndirect[bDrawIndex].data[globalIndex].instanceCount = 0;
+        _VisibleDrawIndexedIndirect[bDrawIndex].data[globalIndex] = _DrawIndexedIndirect.data[globalIndex];
     }
 }
