@@ -558,7 +558,7 @@ void Application::MainLoop()
 
         if(_inputPrevent <= 0)
         {
-            if(_window.IsKeyPressed(GLFW_KEY_LEFT_ALT)) _window.LockMouse(_mouseLocked = !_mouseLocked); _inputPrevent = glfwGetVideoMode(glfwGetPrimaryMonitor())->refreshRate / 2;
+            if(_window.IsKeyPressed(GLFW_KEY_LEFT_ALT)) _window.LockMouse(_mouseLocked = !_mouseLocked); _inputPrevent = glfwGetVideoMode(glfwGetPrimaryMonitor())->refreshRate / 2.0;
         }
         else
         {
