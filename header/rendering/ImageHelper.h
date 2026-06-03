@@ -31,7 +31,30 @@ namespace ImageHelper
 
     void CopyToImageCommand(const CommandBuffer& cmdBuffer, const ImageReference& image, uint32_t mipLevel, VkBuffer srcData);
 
+    inline VkRenderingAttachmentInfo AttachmentInfo(VkImageView imageView, VkImageLayout imageLayout, VkAttachmentLoadOp loadOp, VkAttachmentStoreOp storeOp, VkClearValue clear = {})
+    {
+        return VkRenderingAttachmentInfo
+        {
+            .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
+            .imageView = imageView,
+            .imageLayout = imageLayout,
+            .loadOp = loadOp,
+            .storeOp = storeOp,
+            .clearValue = clear
+        };
+    }
+
+    inline VkRenderingAttachmentInfo AttachmentInfo(VkImageView imageView, VkImageLayout imageLayout, VkImageView resolveView, VkImageLayout resolveLayout, VkAttachmentLoadOp loadOp, VkAttachmentStoreOp storeOp, VkClearValue clear = {}, VkResolveModeFlagBits resolveMode = VK_RESOLVE_MODE_AVERAGE_BIT)
+    {
+        VkRenderingAttachmentInfo info = AttachmentInfo(imageView, imageLayout, loadOp, storeOp, clear);
+        info.resolveImageView = resolveView;
+        info.resolveImageLayout = resolveLayout;
+        info.resolveMode = resolveMode;
+        return info;
+    }
+
     VkImageMemoryBarrier TransitionLayoutBarrier(const ImageReference& image, uint32_t mipLevel, uint32_t mipCount, VkPipelineStageFlags& sourceStage, VkPipelineStageFlags& destinationStage, VkImageLayout oldLayout, VkImageLayout newLayout);
+    VkImageMemoryBarrier TransitionLayoutBarrier(const VkImageView& image, uint32_t mipLevel, uint32_t mipCount, VkPipelineStageFlags& sourceStage, VkPipelineStageFlags& destinationStage, VkImageLayout oldLayout, VkImageLayout newLayout);
 
     uint32_t GetMipCount(uint32_t width, uint32_t height);
     uint32_t GetBytePerPixel(VkFormat format);

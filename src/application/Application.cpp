@@ -132,6 +132,11 @@ void Application::MouseMoveCallback(GLFWwindow* window, double xpos, double ypos
     double dx = xpos - app->_lastMouseX;
     double dy = ypos - app->_lastMouseY;
 
+    if(!app->_mouseLocked)
+    {
+        dx = dy = 0.0f;
+    }
+
     const float sensitivity = 0.1f;
 
     app->_camera.Rotate(dx * sensitivity, dy * sensitivity);
@@ -195,6 +200,12 @@ void Application::DrawFrame()
     // Only reset the fence if we are submitting work
     _waitFence.Get(currentFrame).Reset();
 
+    _UserInterface.StartFrame();
+    _UserInterface.Begin("Parameters");
+    _UserInterface.Checkbox("Wireframe", &_wireframe);
+    _UserInterface.End();
+
+    _UserInterface.Render();
     UpdateCameraData();
 
     const CommandBuffer& commandBuffer = _commandBuffer.Get(currentFrame);
@@ -239,35 +250,17 @@ void Application::RecordCommandBuffer(const CommandBuffer& cmdBuffer, uint32_t i
 {
     VkRect2D renderArea = {0, 0, _swapChain->GetExtent().width, _swapChain->GetExtent().height};
 
-    VkRenderingAttachmentInfo colorAttachment
-    {
-        .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
-        .imageView = _colorBackBuffer->View(),
-        .imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-        .resolveMode = VK_RESOLVE_MODE_AVERAGE_BIT,
-        .resolveImageView = _swapChain->View(imageIndex),
-        .resolveImageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-        .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
-        .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-        .clearValue = {{0.2f, 0.4f, 0.75f, 1.0f}}
-    };
+    VkRenderingAttachmentInfo colorAttachment = ImageHelper::AttachmentInfo(_colorBackBuffer->View(),
+        VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+        _swapChain->View(imageIndex),
+        VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+        VK_ATTACHMENT_LOAD_OP_CLEAR,
+        VK_ATTACHMENT_STORE_OP_STORE,
+        {{0.2f, 0.4f, 0.75f, 1.0f}});
 
-    VkRenderingAttachmentInfo depthAttachment
-    {
-        .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
-        .imageView = _depthBuffer->View(),
-        .imageLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
-        .loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR,
-        .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-        .clearValue = {1.0f, 0}
-    };
-
+    VkRenderingAttachmentInfo depthAttachment = ImageHelper::AttachmentInfo(_depthBuffer->View(), VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE, {1.0f, 0.0});
     // there is no stencil buffer
-    VkRenderingAttachmentInfo stencilAttachment
-    {
-        .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
-        .imageView = VK_NULL_HANDLE,
-    };
+    VkRenderingAttachmentInfo stencilAttachment { .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO };
 
     const ImageReference& backBuffer = _swapChain->Images.Get(imageIndex);
     const auto& meshRegistry = static_cast<MeshRegistry&>(*_registries[(size_t)RegistryType::Mesh]);
@@ -323,6 +316,16 @@ void Application::RecordCommandBuffer(const CommandBuffer& cmdBuffer, uint32_t i
             cmdBuffer.BeginRendering(renderArea, &colorAttachment, 1, depthAttachment, stencilAttachment);
             {
                 _opaqueDrawModule.Execute(cmdBuffer, _descriptorAllocator.GlobalLayout(), _cullingModule.VisibleIndirectBuffer(), meshRegistry.IndirectBuffer().GetCurrentIndex(), _wireframe);
+            }
+            cmdBuffer.EndRendering();
+
+            VkRenderingAttachmentInfo uiColorAttachment = ImageHelper::AttachmentInfo(backBuffer.View, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_ATTACHMENT_LOAD_OP_LOAD, VK_ATTACHMENT_STORE_OP_STORE);
+
+            VkRenderingAttachmentInfo uiDepthAttachment { .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO };
+
+            cmdBuffer.BeginRendering(renderArea, &uiColorAttachment, 1, uiDepthAttachment, stencilAttachment);
+            {
+                _UserInterface.Draw(cmdBuffer.GetInternal());
             }
             cmdBuffer.EndRendering();
         }
@@ -393,6 +396,8 @@ Application::Application() :
     _availableImageSemaphore(ApplicationInfo::Constant::MaxFrameInFlight),
     _renderFinishedSemaphores(_swapChain->Images.Size()),
     _waitFence(ApplicationInfo::Constant::MaxFrameInFlight),
+
+    _UserInterface(_window.Internal(), *_swapChain, _graphicsComputeQueue.Internal(), _graphicsCommandPool.Internal()),
 
     _opaqueDrawModule(([&]() {
         uint32_t vertex = _shaderLibrary.RegisterShader(std::filesystem::path(SHADER_DIRECTORY) / "Default.vert.spv", ShaderLibrary::Vertex, _descriptorAllocator);
@@ -553,8 +558,7 @@ void Application::MainLoop()
 
         if(_inputPrevent <= 0)
         {
-            if(_window.IsKeyPressed(GLFW_KEY_LEFT_ALT)) _window.LockMouse(_mouseLocked = !_mouseLocked); _inputPrevent = ApplicationInfo::Constant::InputPrevent;
-            if(_window.IsKeyPressed(GLFW_KEY_Z)) _wireframe = !_wireframe; _inputPrevent = ApplicationInfo::Constant::InputPrevent;
+            if(_window.IsKeyPressed(GLFW_KEY_LEFT_ALT)) _window.LockMouse(_mouseLocked = !_mouseLocked); _inputPrevent = glfwGetVideoMode(glfwGetPrimaryMonitor())->refreshRate / 2;
         }
         else
         {

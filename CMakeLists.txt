@@ -36,7 +36,13 @@ fetchcontent_declare(
     GIT_TAG        main
 )
 
-fetchcontent_makeavailable(glfw stb glm spirv_reflect)
+fetchcontent_declare(
+    imgui
+    GIT_REPOSITORY https://github.com/ocornut/imgui.git
+    GIT_TAG        v1.90.4 # Or v1.90.4-docking
+)
+
+fetchcontent_makeavailable(glfw stb glm spirv_reflect imgui)
 
 # --- Interface Library Setup ---
 
@@ -50,6 +56,26 @@ add_library(spirv_reflect_lib STATIC
     "${spirv_reflect_SOURCE_DIR}/spirv_reflect.h"
 )
 target_include_directories(spirv_reflect_lib PUBLIC ${spirv_reflect_SOURCE_DIR})
+
+add_library(imgui_lib STATIC
+    "${imgui_SOURCE_DIR}/imgui.cpp"
+    "${imgui_SOURCE_DIR}/imgui_demo.cpp"
+    "${imgui_SOURCE_DIR}/imgui_draw.cpp"
+    "${imgui_SOURCE_DIR}/imgui_tables.cpp"
+    "${imgui_SOURCE_DIR}/imgui_widgets.cpp"
+    "${imgui_SOURCE_DIR}/backends/imgui_impl_glfw.cpp"
+    "${imgui_SOURCE_DIR}/backends/imgui_impl_vulkan.cpp"
+)
+
+target_include_directories(imgui_lib PUBLIC
+    ${imgui_SOURCE_DIR}
+    ${imgui_SOURCE_DIR}/backends
+)
+
+target_link_libraries(imgui_lib PRIVATE
+    glfw
+    Vulkan::Vulkan
+)
 
 # --- Vulkan and Shaders ---
 
@@ -126,6 +152,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     stb
     glm::glm
     spirv_reflect_lib
+    imgui_lib
 )
 
 # --- Asset Management ---

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "application/ApplicationHelper.h"
 #include "rendering/GPUImage.h"
 #include "rendering/MultiFrame.h"
 #include "handler/VkImageViewHandler.h"
@@ -26,6 +27,7 @@ class SwapChain
     inline VkExtent2D GetExtent() const { return _extent; }
     inline VkSwapchainKHR Internal() const { return _internal; }
     inline VkImageView View(uint32_t index) const { return Images.Get(index).View; }
+    inline uint32_t MinImageCount() const { return _minImageCount; }
 
     private:
     MultiFrameHandler<VkImageViewHandler> _viewHandlers;
@@ -33,4 +35,5 @@ class SwapChain
     VkFormat _imageFormat = VK_FORMAT_UNDEFINED;
     VkExtent2D _extent;
     VkSwapchainKHR _internal = VK_NULL_HANDLE;
+    uint32_t _minImageCount = 1;
 };

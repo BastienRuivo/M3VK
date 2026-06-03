@@ -136,6 +136,8 @@ SwapChain::SwapChain(const Window& window, VkSurfaceKHR windowSurface)
         .imageUsage =VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT
     };
 
+    _minImageCount = createInfo.minImageCount;
+
     QueueFamilyIds queueIds = QueueFamilyIds::QueryQueueFamilies(ApplicationInfo::PhysicalDevice(), windowSurface);
 
     uint32_t queueFamilyIndices[] = {queueIds.GraphicsCompute.value(), queueIds.Present.value()};

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "application/UserInterface.h"
 #include "modules/CullingModule.h"
 #include "modules/DrawModule.h"
 #include "rendering/Camera.h"
@@ -91,6 +92,7 @@ class Application
     MultiFrameHandler<VkSemaphoreHandler> _renderFinishedSemaphores;
     MultiFrameHandler<VkFenceHandler>  _waitFence;
 
+    UserInterface _UserInterface;
     CullingModule _cullingModule;
     DrawModule _opaqueDrawModule;
 
