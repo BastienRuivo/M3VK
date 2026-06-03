@@ -1,6 +1,7 @@
 #pragma once
 
 #include "modules/CullingModule.h"
+#include "modules/DrawModule.h"
 #include "rendering/Camera.h"
 #include "rendering/DescriptorAllocator.h"
 #include "registry/Registry.h"
@@ -67,9 +68,6 @@ class Application
         Material = 1
     };
     ShaderLibrary _shaderLibrary;
-    //ShaderLibrary::ComputeKernel _cullingKernel;
-    ShaderLibrary::VertexBinding _vertexShader;
-    ShaderLibrary::FragmentBinding _fragmentShader;
 
     //GraphicsBuffer _visibleDrawIndirectBuffer;
     //GraphicsBuffer _visibleObjectDataBuffer;
@@ -94,6 +92,7 @@ class Application
     MultiFrameHandler<VkFenceHandler>  _waitFence;
 
     CullingModule _cullingModule;
+    DrawModule _opaqueDrawModule;
 
     bool _mouseLocked = true;
     float _inputPrevent = 0;
@@ -115,7 +114,6 @@ class Application
     void RecordCommandBuffer(const CommandBuffer& cmdBuffer, uint32_t imageIndex);
     void DrawFrame();
     uint32_t LoadDefaultMaterial();
-    void LoadShaders();
 
     // Utils
     static inline const std::vector<const char*> _deviceExtensions = {

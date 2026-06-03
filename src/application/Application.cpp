@@ -1,6 +1,7 @@
 #include "application/Application.h"
 #include "application/ApplicationHelper.h"
 #include "glm/matrix.hpp"
+#include "modules/DrawModule.h"
 #include "rendering/DescriptorAllocator.h"
 #include "rendering/GraphicsBuffer.h"
 #include "application/ApplicationInfo.h"
@@ -14,6 +15,7 @@
 #include "asset/AssetHelper.h"
 #include "asset/MeshHelper.h"
 #include "registry/Registry.h"
+#include "rendering/Shaders/ShaderLibrary.h"
 #include "rendering/SwapChain.h"
 #include "application/DebugLayer.h"
 #include <GLFW/glfw3.h>
@@ -320,17 +322,7 @@ void Application::RecordCommandBuffer(const CommandBuffer& cmdBuffer, uint32_t i
 
             cmdBuffer.BeginRendering(renderArea, &colorAttachment, 1, depthAttachment, stencilAttachment);
             {
-                _vertexShader.Bind(cmdBuffer);
-                _fragmentShader.Bind(cmdBuffer);
-
-                if(_wireframe)
-                {
-                    cmdBuffer.SetPolygonMode(VK_POLYGON_MODE_LINE);
-                }
-
-                const GraphicsBuffer& indirectBuffer = _cullingModule.VisibleIndirectBuffer();
-                uint32_t drawCount = meshRegistry.IndirectBuffer().GetCurrentIndex();
-                cmdBuffer.DrawIndexedIndirect(indirectBuffer.Internal(), 0, drawCount, indirectBuffer.GetStride());
+                _opaqueDrawModule.Execute(cmdBuffer, _descriptorAllocator.GlobalLayout(), _cullingModule.VisibleIndirectBuffer(), meshRegistry.IndirectBuffer().GetCurrentIndex(), _wireframe);
             }
             cmdBuffer.EndRendering();
         }
@@ -359,25 +351,6 @@ uint32_t Application::LoadDefaultMaterial()
     matProperties.MRAOTexId = mraoIndex;
 
     return materialRegistry.RegisterMaterial(matProperties);
-}
-
-void Application::LoadShaders()
-{
-    uint32_t vertex = _shaderLibrary.RegisterShader(std::filesystem::path(SHADER_DIRECTORY) / "Default.vert.spv", ShaderLibrary::Vertex, _descriptorAllocator);
-
-    _vertexShader =
-    {
-        .Shader = _shaderLibrary.Get(vertex).Internal(),
-        .State = VertexState()
-    };
-
-    uint32_t fragment = _shaderLibrary.RegisterShader(std::filesystem::path(SHADER_DIRECTORY) / "Default.frag.spv", ShaderLibrary::Fragment, _descriptorAllocator);
-
-    _fragmentShader =
-    {
-        .Shader = _shaderLibrary.Get(fragment).Internal(),
-        .State = FragmentState()
-    };
 }
 
 Application::Application() :
@@ -421,6 +394,24 @@ Application::Application() :
     _renderFinishedSemaphores(_swapChain->Images.Size()),
     _waitFence(ApplicationInfo::Constant::MaxFrameInFlight),
 
+    _opaqueDrawModule(([&]() {
+        uint32_t vertex = _shaderLibrary.RegisterShader(std::filesystem::path(SHADER_DIRECTORY) / "Default.vert.spv", ShaderLibrary::Vertex, _descriptorAllocator);
+        ShaderLibrary::VertexBinding vertexShader =
+        {
+            .Shader = _shaderLibrary.Get(vertex).Internal(),
+            .State = VertexState()
+        };
+
+        uint32_t fragment = _shaderLibrary.RegisterShader(std::filesystem::path(SHADER_DIRECTORY) / "Default.frag.spv", ShaderLibrary::Fragment, _descriptorAllocator);
+        ShaderLibrary::FragmentBinding fragmentShader =
+        {
+            .Shader = _shaderLibrary.Get(fragment).Internal(),
+            .State = FragmentState()
+        };
+
+        return DrawModule(vertexShader, fragmentShader);
+    })()),
+
     // modules
     _cullingModule(_shaderLibrary, _descriptorAllocator)
 {
@@ -429,8 +420,6 @@ Application::Application() :
         CPUImage logo("data/logo.png", STBI_rgb_alpha);
         _window.SetIcon(logo.Data(), logo.Width(), logo.Height());
     }
-
-    LoadShaders();
 
     MeshRegistry& meshRegistry = static_cast<MeshRegistry&>(*_registries[(size_t)RegistryType::Mesh]);
     MaterialRegistry& materialRegistry = static_cast<MaterialRegistry&>(*_registries[(size_t)RegistryType::Material]);
@@ -489,8 +478,8 @@ Application::Application() :
         meshRegistry.RegisterInstance(instance);
     }
 
-    //AssetHelper::Load3DModel(_descriptorAllocator, "data/BistroExterior.m3vkasset", meshRegistry, materialRegistry, _graphicsCommandPool.Internal(), _graphicsComputeQueue.Internal(), _sampler.Internal());
-    for(uint32_t i = 0; i < 100; ++i)
+    AssetHelper::Load3DModel(_descriptorAllocator, "data/BistroExterior.m3vkasset", meshRegistry, materialRegistry, _graphicsCommandPool.Internal(), _graphicsComputeQueue.Internal(), _sampler.Internal());
+    /*for(uint32_t i = 0; i < 100; ++i)
     {
         float red = (rand() / (float)RAND_MAX);
         float green = (rand() / (float)RAND_MAX);
@@ -529,7 +518,7 @@ Application::Application() :
             .MeshIndex = cube
         };
         meshRegistry.RegisterInstance(instance);
-    }
+    }*/
 
     for(auto& registry : _registries)
     {
