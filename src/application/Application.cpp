@@ -400,14 +400,14 @@ Application::Application() :
     _UserInterface(_window.Internal(), *_swapChain, _graphicsComputeQueue.Internal(), _graphicsCommandPool.Internal()),
 
     _opaqueDrawModule(([&]() {
-        uint32_t vertex = _shaderLibrary.RegisterShader(std::filesystem::path(SHADER_DIRECTORY) / "Default.vert.spv", ShaderLibrary::Vertex, _descriptorAllocator);
+        uint32_t vertex = _shaderLibrary.RegisterShader(std::filesystem::path(SHADER_DIRECTORY) / "Draw.vert.spv", ShaderLibrary::Vertex, _descriptorAllocator);
         ShaderLibrary::VertexBinding vertexShader =
         {
             .Shader = _shaderLibrary.Get(vertex).Internal(),
             .State = VertexState()
         };
 
-        uint32_t fragment = _shaderLibrary.RegisterShader(std::filesystem::path(SHADER_DIRECTORY) / "Default.frag.spv", ShaderLibrary::Fragment, _descriptorAllocator);
+        uint32_t fragment = _shaderLibrary.RegisterShader(std::filesystem::path(SHADER_DIRECTORY) / "DrawOpaque.frag.spv", ShaderLibrary::Fragment, _descriptorAllocator);
         ShaderLibrary::FragmentBinding fragmentShader =
         {
             .Shader = _shaderLibrary.Get(fragment).Internal(),
