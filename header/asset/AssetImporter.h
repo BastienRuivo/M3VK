@@ -1,15 +1,15 @@
 #pragma once
 
+#include "Material.h"
 #include "asset/Vertex.h"
 #include "glm/ext/vector_float3.hpp"
-#include "registry/MaterialRegistry.h"
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
 #include <vector>
 #include <vulkan/vulkan_core.h>
 
-#define VERSION 2
+#define VERSION 3
 
 enum TextureType
 {

@@ -1,6 +1,6 @@
 #version 460
 
-#include "header/GlobalIncludes.glsl"
+#include "../header/GlobalIncludes.glsl"
 
 layout(push_constant) uniform PushConstants
 {

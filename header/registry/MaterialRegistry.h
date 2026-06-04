@@ -1,43 +1,10 @@
 #pragma once
 
-#include "glm/ext/vector_float4.hpp"
+#include "Material.h"
 #include "registry/Registry.h"
 #include "rendering/DescriptorAllocator.h"
 #include "rendering/GPUImage.h"
 #include <cstdint>
-
-struct MaterialProperties
-{
-    alignas(4) uint32_t BaseColorTexId;
-    alignas(4) uint32_t NormalMapTexId;
-    alignas(4) uint32_t MRAOTexId;
-    alignas(4) float Metallic;
-
-    alignas(16) glm::vec4 BaseColor;
-    alignas(4) float Roughness;
-
-    static constexpr uint32_t Stride();
-
-    static MaterialProperties Default()
-    {
-        return
-        {
-            .BaseColorTexId = UINT32_MAX,
-            .NormalMapTexId = UINT32_MAX,
-            .MRAOTexId = UINT32_MAX,
-            .Metallic = 0.0f,
-            .BaseColor = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f),
-            .Roughness = 1.0f
-        };
-    }
-
-    bool operator==(const MaterialProperties& other) const
-    {
-        return BaseColor == other.BaseColor;
-    }
-};
-
-inline constexpr uint32_t MaterialProperties::Stride() { return sizeof(MaterialProperties); }
 
 class MaterialRegistry : public Registry
 {

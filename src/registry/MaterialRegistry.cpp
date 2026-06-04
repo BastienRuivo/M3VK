@@ -47,7 +47,7 @@ MaterialRegistry::MaterialRegistry(DescriptorAllocator& allocator, uint32_t maxT
     :   _maxTexturesCount(maxTexturesCount),
         _textureIndicesState(std::vector<int32_t>(_maxTexturesCount, -1)),
         _lastFreeTextureIndex(0),
-        _materialBuffer(allocator, STATIC_BINDING_MATERIAL_BUFFER, GraphicsBuffer::BufferType::STORAGE, RessourceUsage::Static, ApplicationInfo::Constant::MaterialBufferMaxSize, MaterialProperties::Stride())
+        _materialBuffer(allocator, STATIC_BINDING_MATERIAL_BUFFER, GraphicsBuffer::BufferType::STORAGE, RessourceUsage::Static, ApplicationInfo::Constant::MaterialBufferMaxSize, sizeof(MaterialProperties))
 {
 
 }

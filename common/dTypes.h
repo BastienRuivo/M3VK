@@ -2,6 +2,7 @@
 #define DTYPES_INCLUDE
 
 #ifdef GLSL
+    #define dAlign(x)
     #define dUint uint
     #define dInt int
     #define dMat4 mat4
@@ -12,6 +13,7 @@
     #include <cstdint>
     #include <glm/glm.hpp>
 
+    #define dAlign(x) alignas(x)
     typedef uint32_t dUint;
     typedef int32_t dInt;
     typedef glm::mat4 dMat4;

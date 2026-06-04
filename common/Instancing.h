@@ -9,7 +9,8 @@ struct DrawIndexedIndirectPadded {
     dUint    firstIndex;
     dInt     vertexOffset;
     dUint    firstInstance;
-    dUint pad0[3];
+    dUint    drawOrder;
+    dUint pad0[2];
 };
 
 struct InstanceData
