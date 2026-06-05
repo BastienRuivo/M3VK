@@ -1,4 +1,5 @@
 #include "registry/MeshRegistry.h"
+#include "Material.h"
 #include "application/ApplicationInfo.h"
 #include <cassert>
 #include <cstdint>
@@ -14,63 +15,105 @@ MeshRegistry::MeshRegistry(DescriptorAllocator& allocator, size_t vertexBufferSi
 {
 }
 
-uint32_t MeshRegistry::RegisterMesh(std::span<const Vertex> vertices, std::span<const uint32_t> indices)
+uint32_t MeshRegistry::RegisterMesh(MaterialType type, std::span<const Vertex> vertices, std::span<const uint32_t> indices)
 {
     MeshHandle subMesh
     {
-        .firstIndex = static_cast<uint32_t>(_cpuIndices.size()),
+        .firstIndex = static_cast<uint32_t>(_uploadIndices.size()),
         .indexCount = static_cast<uint32_t>(indices.size()),
-        .firstVertex = static_cast<uint32_t>(_cpuVertices.size())
+        .firstVertex = static_cast<uint32_t>(_uploadVertices.size())
     };
 
-    _cpuVertices.insert(_cpuVertices.end(), vertices.begin(), vertices.end());
-    _cpuIndices.insert(_cpuIndices.end(), indices.begin(), indices.end());
-    _cpuIndirectCommands.push_back(DrawIndexedIndirectPadded
+    _uploadVertices.insert(_uploadVertices.end(), vertices.begin(), vertices.end());
+    _uploadIndices.insert(_uploadIndices.end(), indices.begin(), indices.end());
+
+    _uploadIndirectCommands[type].push_back(DrawIndexedIndirectPadded
     {
         .indexCount = subMesh.indexCount,
         .instanceCount = 0,
         .firstIndex = subMesh.firstIndex,
         .vertexOffset = static_cast<int32_t>(subMesh.firstVertex),
-        .firstInstance = static_cast<uint32_t>(_cpuInstances.size())
+        .firstInstance = static_cast<uint32_t>(_uploadInstances[type].size())
     });
 
-    return static_cast<uint32_t>(_cpuIndirectCommands.size() - 1);
+    return static_cast<uint32_t>(_uploadIndirectCommands[type].size() - 1);
 }
 
-uint32_t MeshRegistry::RegisterInstance(InstanceData instance)
+uint32_t MeshRegistry::RegisterInstance(MaterialType type, InstanceData instance)
 {
-    instance.MeshIndex = instance.MeshIndex;
-    _cpuInstances.push_back(instance);
-    return static_cast<uint32_t>(_cpuInstances.size() - 1);
-}
-
-DrawIndexedIndirectPadded& MeshRegistry::RegisterIndirectCommand(DrawIndexedIndirectPadded command)
-{
-    _cpuIndirectCommands.push_back(command);
-    return _cpuIndirectCommands.back();
+    _uploadInstances[type].push_back(instance);
+    return static_cast<uint32_t>(_uploadInstances[type].size() - 1);
 }
 
 void MeshRegistry::UploadAndRelease(VkQueue queue, VkCommandPool cmdPool)
 {
-    assert(_cpuVertices.size() <= ApplicationInfo::Constant::VertexBufferMaxSize);
-    assert(_cpuIndices.size() <= ApplicationInfo::Constant::IndexBufferMaxSize);
-    assert(_cpuInstances.size() <= ApplicationInfo::Constant::DrawIndirectBufferMaxSize);
+    assert(_uploadVertices.size() <= ApplicationInfo::Constant::VertexBufferMaxSize);
+    assert(_uploadIndices.size() <= ApplicationInfo::Constant::IndexBufferMaxSize);
+    assert(_uploadInstances.size() <= ApplicationInfo::Constant::DrawIndirectBufferMaxSize);
 
-    if(_cpuIndices.size() == 0 || _cpuVertices.size() == 0 || _cpuInstances.size() == 0)
+    if(_uploadIndices.size() == 0 || _uploadVertices.size() == 0 || _uploadInstances.size() == 0)
     {
         DebugLayer::Log(DebugLayer::LogType::WARNING, "No vertices or indices or instances to upload");
         return;
     }
 
-    _vertexBuffer.CopyToBuffer(queue, cmdPool, _cpuVertices.data(), _cpuVertices.size() * _vertexBuffer.GetStride());
-    _indexBuffer.CopyToBuffer(queue, cmdPool, _cpuIndices.data(), _cpuIndices.size() * _indexBuffer.GetStride());
-    _indirectBuffer.CopyToBuffer(queue, cmdPool, _cpuIndirectCommands.data(), _cpuIndirectCommands.size() * _indirectBuffer.GetStride());
-    _instanceDataBuffer.CopyToBuffer(queue, cmdPool, _cpuInstances.data(), _cpuInstances.size() * _instanceDataBuffer.GetStride());
+    _vertexBuffer.CopyToBuffer(queue, cmdPool, _uploadVertices.data(), _uploadVertices.size() * _vertexBuffer.GetStride());
+    _indexBuffer.CopyToBuffer(queue, cmdPool, _uploadIndices.data(), _uploadIndices.size() * _indexBuffer.GetStride());
 
-    _cpuVertices.clear();
-    _cpuIndices.clear();
-    _cpuIndirectCommands.clear();
-    _cpuInstances.clear();
+    uint32_t offsetDraw = 0;
+    uint32_t offsetInstance = 0;
+    for(uint32_t i = 0; i < MaterialType::Count; i++)
+    {
+        _indirectDrawInfoPerMaterial[i].offset = offsetDraw;
+        _indirectDrawInfoPerMaterial[i].count = static_cast<uint32_t>(_uploadIndirectCommands[i].size());
+        offsetDraw += _indirectDrawInfoPerMaterial[i].count;
+
+        _indirectInstanceInfoPerMaterial[i].offset = offsetInstance;
+        _indirectInstanceInfoPerMaterial[i].count = static_cast<uint32_t>(_uploadInstances[i].size());
+        offsetInstance += _indirectInstanceInfoPerMaterial[i].count;
+    }
+
+    for(uint32_t i = 0; i < _uploadIndirectCommands.size(); i++)
+    {
+        if(_uploadIndirectCommands[i].size() == 0) continue;
+
+        uint32_t offset = _indirectDrawInfoPerMaterial[i].offset;
+        for(auto& indirect : _uploadIndirectCommands[i])
+        {
+            indirect.firstInstance += offset;
+        }
+        _indirectBuffer.CopyToBuffer(queue, cmdPool, _uploadIndirectCommands[i].data(), _indirectDrawInfoPerMaterial[i].count * _indirectBuffer.GetStride());
+    }
+
+
+
+    for(uint32_t i = 0; i < _uploadInstances.size(); i++)
+    {
+        uint32_t offset = _indirectDrawInfoPerMaterial[i].offset;
+
+        for(auto& instance : _uploadInstances[i])
+        {
+            instance.MeshIndex += offset;
+        }
+
+        if(_uploadInstances[i].size() != 0)
+        {
+        _instanceDataBuffer.CopyToBuffer(queue, cmdPool, _uploadInstances[i].data(), _indirectInstanceInfoPerMaterial[i].count * _instanceDataBuffer.GetStride());
+        }
+        _indirectDrawInfoPerMaterial[i].offset *= _indirectBuffer.GetStride();
+    }
+
+
+    _uploadVertices.clear();
+    _uploadIndices.clear();
+    for(auto& indirect : _uploadIndirectCommands)
+    {
+        indirect.clear();
+    }
+    for(auto& instances : _uploadInstances)
+    {
+        instances.clear();
+    }
 }
 
 void MeshRegistry::Bind(const CommandBuffer& cmdBuffer, VkPipelineLayout layout) const

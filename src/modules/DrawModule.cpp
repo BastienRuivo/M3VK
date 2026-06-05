@@ -8,7 +8,7 @@ DrawModule::DrawModule(ShaderLibrary::VertexBinding vertexBinding, ShaderLibrary
 
 DrawModule::~DrawModule() {}
 
-void DrawModule::Execute(const CommandBuffer& cmdBuffer, VkPipelineLayout layout, const GraphicsBuffer& indirectBuffer, uint32_t drawCount, bool wireframe) const
+void DrawModule::Execute(const CommandBuffer& cmdBuffer, VkPipelineLayout layout, const GraphicsBuffer& indirectBuffer, uint32_t drawOffset, uint32_t drawCount, bool wireframe) const
 {
     _vertexBinding.Bind(cmdBuffer);
     _fragmentBinding.Bind(cmdBuffer);
@@ -18,5 +18,5 @@ void DrawModule::Execute(const CommandBuffer& cmdBuffer, VkPipelineLayout layout
         cmdBuffer.SetPolygonMode(VK_POLYGON_MODE_LINE);
     }
 
-    cmdBuffer.DrawIndexedIndirect(indirectBuffer.Internal(), 0, drawCount, indirectBuffer.GetStride());
+    cmdBuffer.DrawIndexedIndirect(indirectBuffer.Internal(), drawOffset, drawCount, indirectBuffer.GetStride());
 }

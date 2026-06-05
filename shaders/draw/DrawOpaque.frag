@@ -2,6 +2,7 @@
 
 #include "Lighting.glsl"
 
+layout(early_fragment_tests) in;
 void main()
 {
     LightingInput lightingInput = CreateLightingInput(vMaterialIndex);

@@ -4,7 +4,6 @@
 
 #include "asset/AssetImporter.h"
 #include "application/DebugLayer.h"
-#include "registry/MaterialRegistry.h"
 #include <cstddef>
 #include <cstdint>
 #include <string>

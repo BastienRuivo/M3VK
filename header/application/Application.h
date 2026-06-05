@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Material.h"
 #include "application/UserInterface.h"
 #include "modules/CullingModule.h"
 #include "modules/DrawModule.h"
@@ -94,7 +95,7 @@ class Application
 
     UserInterface _UserInterface;
     CullingModule _cullingModule;
-    DrawModule _opaqueDrawModule;
+    std::array<DrawModule, MaterialType::Count> _drawModules;
 
     bool _mouseLocked = true;
     float _inputPrevent = 0;

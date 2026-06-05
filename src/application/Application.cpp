@@ -1,5 +1,6 @@
 #include "application/Application.h"
-#include "application/ApplicationHelper.h"
+#include "Material.h"
+#include "asset/MeshHelper.h"
 #include "glm/matrix.hpp"
 #include "modules/DrawModule.h"
 #include "rendering/DescriptorAllocator.h"
@@ -13,7 +14,6 @@
 #include "rendering/ImageHelper.h"
 #include "rendering/MultiFrame.h"
 #include "asset/AssetHelper.h"
-#include "asset/MeshHelper.h"
 #include "registry/Registry.h"
 #include "rendering/Shaders/ShaderLibrary.h"
 #include "rendering/SwapChain.h"
@@ -315,7 +315,11 @@ void Application::RecordCommandBuffer(const CommandBuffer& cmdBuffer, uint32_t i
 
             cmdBuffer.BeginRendering(renderArea, &colorAttachment, 1, depthAttachment, stencilAttachment);
             {
-                _opaqueDrawModule.Execute(cmdBuffer, _descriptorAllocator.GlobalLayout(), _cullingModule.VisibleIndirectBuffer(), meshRegistry.IndirectBuffer().GetCurrentIndex(), _wireframe);
+                for(uint32_t i = 0; i < _drawModules.size(); i++)
+                {
+                    MeshRegistry::LayerMaterialInfo drawInfo = meshRegistry.GetIndirectDrawInfo(static_cast<MaterialType>(i));
+                    _drawModules[i].Execute(cmdBuffer, _descriptorAllocator.GlobalLayout(), _cullingModule.VisibleIndirectBuffer(), drawInfo.offset, drawInfo.count, _wireframe);
+                }
             }
             cmdBuffer.EndRendering();
 
@@ -399,22 +403,45 @@ Application::Application() :
 
     _UserInterface(_window.Internal(), *_swapChain, _graphicsComputeQueue.Internal(), _graphicsCommandPool.Internal()),
 
-    _opaqueDrawModule(([&]() {
-        uint32_t vertex = _shaderLibrary.RegisterShader(std::filesystem::path(SHADER_DIRECTORY) / "Draw.vert.spv", ShaderLibrary::Vertex, _descriptorAllocator);
-        ShaderLibrary::VertexBinding vertexShader =
+    _drawModules(([&]() {
+        uint32_t sVertex = _shaderLibrary.RegisterShader(std::filesystem::path(SHADER_DIRECTORY) / "Draw.vert.spv", ShaderLibrary::Vertex, _descriptorAllocator);
+        uint32_t sFragmentOpaque = _shaderLibrary.RegisterShader(std::filesystem::path(SHADER_DIRECTORY) / "DrawOpaque.frag.spv", ShaderLibrary::Fragment, _descriptorAllocator);
+        uint32_t sFragmentCutout = _shaderLibrary.RegisterShader(std::filesystem::path(SHADER_DIRECTORY) / "DrawCutout.frag.spv", ShaderLibrary::Fragment, _descriptorAllocator);
+
+        ShaderLibrary::VertexBinding vertexCullBack =
         {
-            .Shader = _shaderLibrary.Get(vertex).Internal(),
+            .Shader = _shaderLibrary.Get(sVertex).Internal(),
             .State = VertexState()
         };
 
-        uint32_t fragment = _shaderLibrary.RegisterShader(std::filesystem::path(SHADER_DIRECTORY) / "DrawOpaque.frag.spv", ShaderLibrary::Fragment, _descriptorAllocator);
-        ShaderLibrary::FragmentBinding fragmentShader =
+        ShaderLibrary::VertexBinding vertexCullOff =
         {
-            .Shader = _shaderLibrary.Get(fragment).Internal(),
+            .Shader = vertexCullBack.Shader,
+            .State = VertexState()
+        };
+        vertexCullOff.State.CullMode = VK_CULL_MODE_NONE;
+
+
+        ShaderLibrary::FragmentBinding fragmentOpaque =
+        {
+            .Shader = _shaderLibrary.Get(sFragmentCutout).Internal(),
             .State = FragmentState()
         };
 
-        return DrawModule(vertexShader, fragmentShader);
+        ShaderLibrary::FragmentBinding fragmentCutout =
+        {
+            .Shader = _shaderLibrary.Get(sFragmentCutout).Internal(),
+            .State = fragmentOpaque.State
+        };
+
+
+        return std::array<DrawModule, MaterialType::Count>
+        {
+            DrawModule(vertexCullBack, fragmentOpaque),
+            DrawModule(vertexCullBack, fragmentCutout),
+            DrawModule(vertexCullOff, fragmentCutout),
+            DrawModule(vertexCullBack, fragmentOpaque)
+        };
     })()),
 
     // modules
@@ -435,7 +462,7 @@ Application::Application() :
     const float axisThickness = 0.00625f;
 
     glm::vec3 aabbMin, aabbMax;
-    uint32_t cube = MeshHelper::CubeMesh(meshRegistry, aabbMin, aabbMax);
+    uint32_t cube = MeshHelper::CubeMesh(meshRegistry, MaterialType::Opaque, aabbMin, aabbMax);
     MaterialProperties defaultMat = materialRegistry.Material(defaultMaterial);
 
     {
@@ -450,7 +477,7 @@ Application::Application() :
             .AabbMax = aabbMax,
             .MeshIndex = cube
         };
-        meshRegistry.RegisterInstance(instance);
+        meshRegistry.RegisterInstance(MaterialType::Opaque, instance);
     }
 
     {
@@ -465,7 +492,7 @@ Application::Application() :
             .AabbMax = aabbMax,
             .MeshIndex = cube
         };
-        meshRegistry.RegisterInstance(instance);
+        meshRegistry.RegisterInstance(MaterialType::Opaque, instance);
     }
 
     {
@@ -480,7 +507,7 @@ Application::Application() :
             .AabbMax = aabbMax,
             .MeshIndex = cube
         };
-        meshRegistry.RegisterInstance(instance);
+        meshRegistry.RegisterInstance(MaterialType::Opaque, instance);
     }
 
     AssetHelper::Load3DModel(_descriptorAllocator, "data/BistroExterior.m3vkasset", meshRegistry, materialRegistry, _graphicsCommandPool.Internal(), _graphicsComputeQueue.Internal(), _sampler.Internal());
@@ -522,7 +549,7 @@ Application::Application() :
             .AabbMax = aabbMax,
             .MeshIndex = cube
         };
-        meshRegistry.RegisterInstance(instance);
+        meshRegistry.RegisterInstance(MaterialType::Opaque, instance);
     }*/
 
     for(auto& registry : _registries)

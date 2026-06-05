@@ -1,9 +1,10 @@
 #include "asset/MeshHelper.h"
+#include "Material.h"
 #include "asset/Vertex.h"
 #include "registry/MeshRegistry.h"
 #include <cstdint>
 
-uint32_t MeshHelper::CubeMesh(MeshRegistry& meshRegistry, glm::vec3& aabbMin, glm::vec3& aabbMax)
+uint32_t MeshHelper::CubeMesh(MeshRegistry& meshRegistry, MaterialType materialType, glm::vec3& aabbMin, glm::vec3& aabbMax)
 {
     std::array<Vertex, 24> vertices
     {
@@ -172,5 +173,5 @@ uint32_t MeshHelper::CubeMesh(MeshRegistry& meshRegistry, glm::vec3& aabbMin, gl
     aabbMin = { -0.5f, -0.5f, -0.5f };
     aabbMax = { 0.5f, 0.5f, 0.5f };
 
-    return meshRegistry.RegisterMesh(vertices, indices);
+    return meshRegistry.RegisterMesh(materialType, vertices, indices);
 }

@@ -55,9 +55,9 @@ class CommandBuffer
         vkCmdDrawIndexed(_internal, indexCount, 1, firstIndex, vertexOffset, 0);
     }
 
-    inline void DrawIndexedIndirect(VkBuffer indirectBuffer, VkDeviceSize offset, uint32_t drawCount, uint32_t stride) const
+    inline void DrawIndexedIndirect(VkBuffer indirectBuffer, VkDeviceSize offsetInBytes, uint32_t drawCount, uint32_t stride) const
     {
-        vkCmdDrawIndexedIndirect(_internal, indirectBuffer, offset, drawCount, stride);
+        vkCmdDrawIndexedIndirect(_internal, indirectBuffer, offsetInBytes, drawCount, stride);
     }
 
     inline void BindPipeline(VkPipeline pipeline, VkPipelineBindPoint bindPoint) const
@@ -106,12 +106,12 @@ class CommandBuffer
         vkCmdCopyBuffer(_internal, src, dst, regionCount, pRegions);
     }
 
-    inline void CopyBuffer(VkBuffer src, VkBuffer dst, VkDeviceSize size, uint32_t srcIndex = 0, uint32_t dstIndex = 0) const
+    inline void CopyBuffer(VkBuffer src, VkBuffer dst, VkDeviceSize size, uint32_t srcIndexInBytes = 0, uint32_t dstIndexInBytes = 0) const
     {
         VkBufferCopy region
         {
-            .srcOffset = srcIndex,
-            .dstOffset = dstIndex,
+            .srcOffset = srcIndexInBytes,
+            .dstOffset = dstIndexInBytes,
             .size = size
         };
 

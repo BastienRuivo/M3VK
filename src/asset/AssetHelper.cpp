@@ -1,4 +1,5 @@
 #include "asset/AssetHelper.h"
+#include "Material.h"
 #include "application/ApplicationHelper.h"
 #include "application/DebugLayer.h"
 #include "asset/AssetImporter.h"
@@ -155,7 +156,8 @@ void AssetHelper::Load3DModel(DescriptorAllocator& allocator, const std::string 
         std::span<const Vertex> vertices(importer.VertexDatas.data() + mesh.VertexOffset, mesh.VertexCount);
         std::span<const uint32_t> indices(importer.IndexDatas.data() + mesh.IndexOffset, mesh.IndexCount);
 
-        uint32_t submesh = meshRegistry.RegisterMesh(vertices, indices);
+        MaterialProperties material = materialRegistry.Material(mesh.MaterialIndex + materialOffset);
+        uint32_t submesh = meshRegistry.RegisterMesh(static_cast<MaterialType>(material.MaterialType), vertices, indices);
         InstanceData instance = {
             .LocalToWorldMatrix = ApplicationHelper::TranslateRotateScale(glm::vec3(0.0f, 0.0f, 0.0f),
                 glm::vec3(0.0f, 0.0f, 0.0f),
@@ -166,7 +168,7 @@ void AssetHelper::Load3DModel(DescriptorAllocator& allocator, const std::string 
             .MeshIndex = submesh
         };
 
-        meshRegistry.RegisterInstance(instance);
+        meshRegistry.RegisterInstance(static_cast<MaterialType>(material.MaterialType), instance);
     }
 
     std::chrono::high_resolution_clock::time_point t4 = std::chrono::high_resolution_clock::now();

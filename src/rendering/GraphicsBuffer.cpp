@@ -306,8 +306,8 @@ void GraphicsBuffer::CopyToBuffer(const VkQueue& queue,
     const VkCommandPool& pool,
     void* srcData,
     VkDeviceSize size,
-    uint32_t srcIndex,
-    uint32_t dstIndex)
+    uint32_t srcOffsetInBytes,
+    uint32_t dstOffsetInBytes)
 {
     StageBuffer copyBuffer(size, StageBuffer::Usage::Upload);
     copyBuffer.MapAndCopyToBuffer(srcData, 0, size);
@@ -315,7 +315,7 @@ void GraphicsBuffer::CopyToBuffer(const VkQueue& queue,
     CommandBuffer cmdBuffer(pool, queue);
     cmdBuffer.BeginSingleTime();
     {
-        cmdBuffer.CopyBuffer(copyBuffer.Internal(), Current()._internal, size, srcIndex, dstIndex);
+        cmdBuffer.CopyBuffer(copyBuffer.Internal(), Current()._internal, size, srcOffsetInBytes, dstOffsetInBytes);
     }
     cmdBuffer.End();
     cmdBuffer.WaitCompletion();
@@ -366,8 +366,6 @@ void GeometryBuffer::CopyToBuffer(const VkQueue& queue,
         DebugLayer::Log(DebugLayer::LogType::ERROR, "Max vertex buffer size reached");
         throw std::runtime_error("Max vertex buffer size reached");
     }
-
-    uint32_t index = 0;
 
     GraphicsBuffer::CopyToBuffer(queue, cmdPool, srcData, size, 0, _currentSize);
     _currentSize += size;
