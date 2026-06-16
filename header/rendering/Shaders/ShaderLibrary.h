@@ -1,7 +1,7 @@
 #pragma once
 
 #include "rendering/DescriptorAllocator.h"
-#include "rendering/Shaders/ShaderHandler.h"
+#include "rendering/Shaders/Shader.h"
 #include "rendering/Shaders/ShaderState.h"
 #include <cstdint>
 #include <filesystem>
@@ -16,41 +16,42 @@ class ShaderLibrary
         Fragment,
         Compute
     };
+
     struct VertexBinding
     {
-        VkShaderEXT Shader;
+        uint32_t LibraryIndex;
+        VkShaderEXT Handle;
         VertexState State;
-
         void Bind(const CommandBuffer& cmdBuffer) const
         {
             State.Bind(cmdBuffer);
-            const VkShaderStageFlagBits vertex = VK_SHADER_STAGE_VERTEX_BIT;
-            cmdBuffer.BindShaders(1, &vertex, &Shader);
+            const VkShaderStageFlagBits stage = VK_SHADER_STAGE_VERTEX_BIT;
+            cmdBuffer.BindShaders(1, &stage, &Handle);
         }
     };
 
     struct FragmentBinding
     {
-        VkShaderEXT Shader;
+        uint32_t LibraryIndex;
+        VkShaderEXT Handle;
         FragmentState State;
-
         void Bind(const CommandBuffer& cmdBuffer) const
         {
             State.Bind(cmdBuffer);
-            const VkShaderStageFlagBits vertex = VK_SHADER_STAGE_FRAGMENT_BIT;
-            cmdBuffer.BindShaders(1, &vertex, &Shader);
+            const VkShaderStageFlagBits stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+            cmdBuffer.BindShaders(1, &stage, &Handle);
         }
     };
 
     struct ComputeKernel
     {
-        VkShaderEXT Shader;
+        uint32_t LibraryIndex;
+        VkShaderEXT Handle;
         uint32_t GX, GY, GZ;
-
         void Bind(const CommandBuffer& cmdBuffer) const
         {
-            const VkShaderStageFlagBits compute = VK_SHADER_STAGE_COMPUTE_BIT;
-            cmdBuffer.BindShaders(1, &compute, &Shader);
+            const VkShaderStageFlagBits stage = VK_SHADER_STAGE_COMPUTE_BIT;
+            cmdBuffer.BindShaders(1, &stage, &Handle);
         }
 
         void CeilDispatch(const CommandBuffer& cmdBuffer, uint32_t x = 1, uint32_t y = 1, uint32_t z = 1) const
@@ -79,9 +80,13 @@ class ShaderLibrary
     ShaderLibrary(ShaderLibrary&& other) noexcept;
     ShaderLibrary& operator=(ShaderLibrary&& other) noexcept;
 
-    uint32_t RegisterShader(std::filesystem::path, ShaderType type, std::span<const VkDescriptorSetLayout> descriptorLayouts, std::span<const VkPushConstantRange> pushConstantRanges, std::span<const ShaderHandler::SpecializationConstant> speConstants);
-    uint32_t RegisterShader(std::filesystem::path, ShaderType type, const DescriptorAllocator& descriptorAllocator, std::span<const ShaderHandler::SpecializationConstant> speConstants);
-    inline const ShaderHandler& Get(uint32_t id) const { return _handlers[id]; }
+    uint32_t RegisterShader(std::filesystem::path, ShaderType type, std::span<const VkDescriptorSetLayout> descriptorLayouts, std::span<const VkPushConstantRange> pushConstantRanges, std::span<const Shader::SpecializationConstant> speConstants);
+    uint32_t RegisterShader(std::filesystem::path, ShaderType type, const DescriptorAllocator& descriptorAllocator, std::span<const Shader::SpecializationConstant> speConstants);
+    void DisposeShader(uint32_t);
+    inline VkShaderEXT GetHandle(uint32_t id) const { return _shaders[id].Handle; }
+    inline const Shader& Get(uint32_t id) const { return _shaders[id]; }
+
     private:
-    std::vector<ShaderHandler> _handlers;
+    std::vector<Shader> _shaders;
+    uint32_t _lastFreeIndex = 0;
 };

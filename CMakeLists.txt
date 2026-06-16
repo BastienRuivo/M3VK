@@ -107,11 +107,16 @@ foreach(SHADER_SOURCE ${SHADER_SOURCES})
     get_filename_component(ABSOLUTE_SHADER_SOURCE ${SHADER_SOURCE} ABSOLUTE)
     set(SPIRV_OUTPUT "${SHADER_BINARY_DIR}/${FILE_NAME}.spv")
 
+    # Define a path for the dependency file (.d)
+    set(DEP_FILE "${SHADER_BINARY_DIR}/${FILE_NAME}.d")
+
     add_custom_command(
         OUTPUT ${SPIRV_OUTPUT}
-        COMMAND ${GLSLC_EXECUTABLE} ${ABSOLUTE_SHADER_SOURCE} -o ${SPIRV_OUTPUT}
-        DEPENDS ${SHADER_SOURCE}
-        COMMENT "Compiling shader: ${FILE_NAME}"
+        COMMAND ${GLSLC_EXECUTABLE} -MD -MF ${DEP_FILE} ${ABSOLUTE_SHADER_SOURCE} -o ${SPIRV_OUTPUT}
+        DEPENDS ${ABSOLUTE_SHADER_SOURCE}
+        DEPFILE ${DEP_FILE} # Tells CMake to read this file to discover hidden .glsl dependencies
+        COMMENT "Compiling shader with dependencies: ${FILE_NAME}"
+        VERBATIM
     )
 
     list(APPEND SPIRV_BINARY_FILES ${SPIRV_OUTPUT})

@@ -1,4 +1,5 @@
 #include "application/UserInterface.h"
+#include "application/ApplicationInfo.h"
 
 void UserInterface::StartFrame() const
 {

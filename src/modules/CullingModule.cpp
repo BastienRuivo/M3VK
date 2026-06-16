@@ -14,24 +14,26 @@ _visibleIndirectionBuffer(allocator, BINDING_VISIBLE_INSTANCE_INDIRECTION_BUFFER
 {
     uint32_t cullingShader = shaderLibrary.RegisterShader(std::filesystem::path(SHADER_DIRECTORY) / "Culling.comp.spv", ShaderLibrary::Compute, allocator, {});
 
-    auto& shaderHandler = shaderLibrary.Get(cullingShader);
+    auto& cullingShaderInfo = shaderLibrary.Get(cullingShader);
     _cullingKernel =
     {
-        .Shader = shaderHandler.Internal(),
-        .GX = shaderHandler.Info().Compute.X,
-        .GY = shaderHandler.Info().Compute.Y,
-        .GZ = shaderHandler.Info().Compute.Z
+        .LibraryIndex = cullingShader,
+        .Handle = cullingShaderInfo.Handle,
+        .GX = cullingShaderInfo.Info.Compute.X,
+        .GY = cullingShaderInfo.Info.Compute.Y,
+        .GZ = cullingShaderInfo.Info.Compute.Z
     };
 
     uint32_t cullingInitShader = shaderLibrary.RegisterShader(std::filesystem::path(SHADER_DIRECTORY) / "CullingInit.comp.spv", ShaderLibrary::Compute, allocator, {});
 
-    auto& cullingInitShaderHandler = shaderLibrary.Get(cullingInitShader);
+    auto& initShaderInfo = shaderLibrary.Get(cullingInitShader);
     _cullingInitKernel =
     {
-        .Shader = cullingInitShaderHandler.Internal(),
-        .GX = cullingInitShaderHandler.Info().Compute.X,
-        .GY = cullingInitShaderHandler.Info().Compute.Y,
-        .GZ = cullingInitShaderHandler.Info().Compute.Z
+        .LibraryIndex = cullingInitShader,
+        .Handle = initShaderInfo.Handle,
+        .GX = initShaderInfo.Info.Compute.X,
+        .GY = initShaderInfo.Info.Compute.Y,
+        .GZ = initShaderInfo.Info.Compute.Z
     };
 }
 
@@ -43,8 +45,9 @@ void CullingModule::Execute(const CommandBuffer& cmdBuffer, const GraphicsBuffer
 {
     cmdBuffer.BeginMarker("Culling Module");
     {
-        BufferIndexes indexes
+        CommonIndexes indexes
         {
+            .DebugIndex = 0,
             .Cameras = cameraBuffer.GetGPUIndex(),
             .VisibleInstanceIndirections = _visibleIndirectionBuffer.GetGPUIndex(),
             .VisibleDrawIndirects = _visibleIndirectBuffer.GetGPUIndex(),
@@ -56,8 +59,8 @@ void CullingModule::Execute(const CommandBuffer& cmdBuffer, const GraphicsBuffer
             .DrawCount = indirectBuffer.GetCurrentIndex()
         };
 
-        cmdBuffer.PushConstants(layout, 0, sizeof(BufferIndexes), &indexes);
-        cmdBuffer.PushConstants(layout, sizeof(BufferIndexes), sizeof(CullingConstants), &constants);
+        cmdBuffer.PushConstants(layout, 0, sizeof(CommonIndexes), &indexes);
+        cmdBuffer.PushConstants(layout, sizeof(CommonIndexes), sizeof(CullingConstants), &constants);
 
         Barrier(cmdBuffer, constants.InstanceCount, constants.DrawCount, VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_SHADER_WRITE_BIT);
 

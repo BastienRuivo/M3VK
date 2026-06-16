@@ -24,7 +24,7 @@ _globalPushConstantRanges({
     {
         .stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT,
         .offset = 0,
-        .size = sizeof(BufferIndexes) + ShaderConstantsSize,
+        .size = sizeof(CommonIndexes) + ShaderConstantsSize,
     }
 }),
 _globalLayout(_globalSetLayouts, _globalPushConstantRanges),

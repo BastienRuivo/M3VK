@@ -8,7 +8,7 @@ struct CullingConstants
 
 layout(push_constant) uniform PushConstants
 {
-    BufferIndexes bufferIndex;
+    CommonIndexes indexes;
     CullingConstants _CullingConstants;
 } push;
 

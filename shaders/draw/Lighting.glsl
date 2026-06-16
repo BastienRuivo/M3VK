@@ -5,8 +5,7 @@
 
 layout(push_constant) uniform PushConstants
 {
-    BufferIndexes bufferIndex;
-    uint  debugIndex;
+    CommonIndexes indexes;
 } push;
 
 #define DEBUG_NORMAL 1
@@ -37,7 +36,11 @@ LightingInput CreateLightingInput(uint materialIndex)
 {
     MaterialProperties material = _Materials.data[materialIndex];
     vec4 baseColor = texture(uTextures[material.BaseColorTexId], vTexcoords) * material.BaseColor;
+    #if 0
+    vec3 normal = texture(uTextures[material.NormalMapTexId], vTexcoords).rgb;
+    #else
     vec3 normal = vNormal;
+    #endif
 
     LightingInput lightInput;
     lightInput.BaseColor = baseColor.rgb;
@@ -49,9 +52,9 @@ LightingInput CreateLightingInput(uint materialIndex)
 
 vec3 ComputeLighting(LightingInput lightInput)
 {
-    if(ENABLE_DEBUG && push.debugIndex == DEBUG_NORMAL)
+    if(ENABLE_DEBUG && push.indexes.DebugIndex == DEBUG_NORMAL)
     {
-        return vNormal;
+        return lightInput.Normal * 0.5 + 0.5;
     }
 
     return lightInput.BaseColor;

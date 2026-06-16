@@ -1,4 +1,4 @@
-#include "rendering/Shaders/ShaderHandler.h"
+#include "rendering/Shaders/Shader.h"
 #include "application/ApplicationInfo.h"
 #include "application/ApplicationHelper.h"
 #include <cstdint>
@@ -10,19 +10,22 @@
 
 #include "spirv_reflect.h"
 
-ShaderHandler::~ShaderHandler()
+void Shader::Dispose()
 {
-    VkFunctions::vkDestroyShaderEXT(_internal, nullptr);
+    VkFunctions::vkDestroyShaderEXT(Handle, nullptr);
+    Handle = VK_NULL_HANDLE;
+    Stage = VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM;
+    Type = ShaderType::Count;
 }
 
-ShaderHandler::ShaderHandler(const std::filesystem::path& path, VkShaderStageFlagBits stageFlags, std::span<const VkDescriptorSetLayout> descriptorLayouts, std::span<const VkPushConstantRange> pushConstantRanges, std::span<const SpecializationConstant> speConstants)
-:  _stage(stageFlags)
+void Shader::Init(const std::filesystem::path& path, VkShaderStageFlagBits stageFlags, std::span<const VkDescriptorSetLayout> descriptorLayouts, std::span<const VkPushConstantRange> pushConstantRanges, std::span<const SpecializationConstant> speConstants)
 {
+    Stage = stageFlags;
     switch(stageFlags)
     {
-        case VK_SHADER_STAGE_VERTEX_BIT: _type = ShaderType::Vertex; break;
-        case VK_SHADER_STAGE_FRAGMENT_BIT: _type = ShaderType::Fragment; break;
-        case VK_SHADER_STAGE_COMPUTE_BIT: _type = ShaderType::Compute; break;
+        case VK_SHADER_STAGE_VERTEX_BIT: Type = ShaderType::Vertex; break;
+        case VK_SHADER_STAGE_FRAGMENT_BIT: Type = ShaderType::Fragment; break;
+        case VK_SHADER_STAGE_COMPUTE_BIT: Type = ShaderType::Compute; break;
         default: throw std::runtime_error("Unsupported shader type");
     }
 
@@ -34,8 +37,6 @@ ShaderHandler::ShaderHandler(const std::filesystem::path& path, VkShaderStageFla
     {
         throw std::runtime_error("Can't reflect shader code");
     }
-
-
 
     uint32_t speConstantCount = 0;
     spvReflectEnumerateSpecializationConstants(&module, &speConstantCount, nullptr);
@@ -77,15 +78,15 @@ ShaderHandler::ShaderHandler(const std::filesystem::path& path, VkShaderStageFla
         .pData = mapValues.data(),
     };
 
-    if(_type == ShaderType::Compute)
+    if(Type == ShaderType::Compute)
     {
         auto entryPoint = spvReflectGetEntryPoint(&module, "main");
 
-        _info.Compute.X = entryPoint->local_size.x;
-        _info.Compute.Y = entryPoint->local_size.y;
-        _info.Compute.Z = entryPoint->local_size.z;
+        Info.Compute.X = entryPoint->local_size.x;
+        Info.Compute.Y = entryPoint->local_size.y;
+        Info.Compute.Z = entryPoint->local_size.z;
 
-        if(_info.Compute.X == 0 || _info.Compute.Y == 0 || _info.Compute.Z == 0) throw std::runtime_error("Try to load a kernel with size 0 !");
+        if(Info.Compute.X == 0 || Info.Compute.Y == 0 || Info.Compute.Z == 0) throw std::runtime_error("Try to load a kernel with size 0 !");
     }
 
     spvReflectDestroyShaderModule(&module);
@@ -111,25 +112,9 @@ ShaderHandler::ShaderHandler(const std::filesystem::path& path, VkShaderStageFla
         .pSpecializationInfo = speConstantCount > 0 ? &speInfos : nullptr
     };
 
-    _internal = VK_NULL_HANDLE;
-    if(VkFunctions::vkCreateShadersEXT(1, &createInfo, nullptr, &_internal) != VK_SUCCESS)
+    Handle = VK_NULL_HANDLE;
+    if(VkFunctions::vkCreateShadersEXT(1, &createInfo, nullptr, &Handle) != VK_SUCCESS)
     {
         throw std::runtime_error("Can't compile shader code");
     }
-}
-
-ShaderHandler::ShaderHandler(ShaderHandler&& other) noexcept
-{
-    _internal = std::exchange(other._internal, VK_NULL_HANDLE);
-    _stage = std::exchange(other._stage, VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM);
-}
-
-ShaderHandler& ShaderHandler::operator=(ShaderHandler&& other) noexcept
-{
-    if(this != &other)
-    {
-        _internal = std::exchange(other._internal, VK_NULL_HANDLE);
-        _stage = std::exchange(other._stage, VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM);
-    }
-    return *this;
 }

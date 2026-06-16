@@ -28,8 +28,9 @@
 
 #include "dTypes.h"
 
-struct BufferIndexes
+struct CommonIndexes
 {
+    dUint DebugIndex;
     dUint Cameras;
     dUint VisibleInstanceIndirections;
     dUint VisibleDrawIndirects;

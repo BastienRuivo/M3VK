@@ -201,9 +201,41 @@ void Application::DrawFrame()
     _waitFence.Get(currentFrame).Reset();
 
     _UserInterface.StartFrame();
-    _UserInterface.Begin("Parameters");
-    _UserInterface.Checkbox("Wireframe", &_wireframe);
-    _UserInterface.End();
+    ImGui::Begin("Parameters");
+    ImGui::Checkbox("Wireframe", &_wireframe);
+    if(ImGui::BeginCombo("Draw Debug Mode", DebugModeNames[_debug]))
+    {
+        for (int n = 0; n < DebugMode::Count; n++)
+        {
+            // Track if the current item in the loop is the selected one
+            const bool isSelected = (_debug == n);
+
+            if (ImGui::Selectable(DebugModeNames[n], isSelected))
+            {
+                DebugMode newVal = static_cast<DebugMode>(n);
+
+                if((newVal == DebugMode::None && _debug  != DebugMode::None) || (newVal != DebugMode::None && _debug  == DebugMode::None))
+                {
+                    vkDeviceWaitIdle(ApplicationInfo::Device());
+                    for(auto& module : _drawModules)
+                    {
+                        _shaderLibrary.DisposeShader(module.VertexBinding.LibraryIndex);
+                        _shaderLibrary.DisposeShader(module.FragmentBinding.LibraryIndex);
+                    }
+                    _drawModules = InitDrawModule(newVal != DebugMode::None);
+                }
+                _debug = newVal;
+            }
+
+            if (isSelected)
+            {
+                ImGui::SetItemDefaultFocus();
+            }
+        }
+        ImGui::EndCombo();
+    }
+
+    ImGui::End();
 
     _UserInterface.Render();
     UpdateCameraData();
@@ -306,12 +338,13 @@ void Application::RecordCommandBuffer(const CommandBuffer& cmdBuffer, uint32_t i
         cmdBuffer.BeginMarker("Render Pass");
         {
             cmdBuffer.BindDescriptorSets(_descriptorAllocator.GlobalLayout(), _descriptorAllocator.GlobalDescriptorSet(), VK_PIPELINE_BIND_POINT_GRAPHICS, 0);
-            BufferIndexes indexes
+            CommonIndexes indexes
             {
+                .DebugIndex = _debug,
                 .Cameras = _cameraDataBuffer.GetGPUIndex(),
                 .VisibleInstanceIndirections = _cullingModule.VisibleInstanceIndirectionBuffer().GetGPUIndex(),
             };
-            cmdBuffer.PushConstants(_descriptorAllocator.GlobalLayout(), 0, sizeof(BufferIndexes), &indexes);
+            cmdBuffer.PushConstants(_descriptorAllocator.GlobalLayout(), 0, sizeof(CommonIndexes), &indexes);
 
             cmdBuffer.BeginRendering(renderArea, &colorAttachment, 1, depthAttachment, stencilAttachment);
             {
@@ -360,6 +393,65 @@ uint32_t Application::LoadDefaultMaterial()
     return materialRegistry.RegisterMaterial(matProperties);
 }
 
+std::array<DrawModule, MaterialType::Count> Application::InitDrawModule(bool DebugOn)
+{
+    std::vector<Shader::SpecializationConstant> constants
+    {
+        Shader::SpecializationConstant{
+            .name = "ENABLE_DEBUG",
+            .enabled = DebugOn
+        }
+    };
+    uint32_t sVertex = _shaderLibrary.RegisterShader(std::filesystem::path(SHADER_DIRECTORY) / "Draw.vert.spv", ShaderLibrary::Vertex, _descriptorAllocator, constants);
+    uint32_t sFragmentOpaque = _shaderLibrary.RegisterShader(std::filesystem::path(SHADER_DIRECTORY) / "Draw.frag.spv", ShaderLibrary::Fragment, _descriptorAllocator, constants);
+
+    constants.push_back(Shader::SpecializationConstant
+    {
+        .name = "ENABLE_CUTOUT",
+        .enabled = true
+    });
+    uint32_t sFragmentCutout = _shaderLibrary.RegisterShader(std::filesystem::path(SHADER_DIRECTORY) / "Draw.frag.spv", ShaderLibrary::Fragment, _descriptorAllocator, constants);
+
+    ShaderLibrary::VertexBinding vertexCullBack =
+    {
+        .LibraryIndex = sVertex,
+        .Handle = _shaderLibrary.GetHandle(sVertex),
+        .State = VertexState()
+    };
+
+    ShaderLibrary::VertexBinding vertexCullOff =
+    {
+        .LibraryIndex = vertexCullBack.LibraryIndex,
+        .Handle = vertexCullBack.Handle,
+        .State = VertexState()
+    };
+    vertexCullOff.State.CullMode = VK_CULL_MODE_NONE;
+
+
+    ShaderLibrary::FragmentBinding fragmentOpaque =
+    {
+        .LibraryIndex = sFragmentOpaque,
+        .Handle = _shaderLibrary.GetHandle(sFragmentOpaque),
+        .State = FragmentState()
+    };
+
+    ShaderLibrary::FragmentBinding fragmentCutout =
+    {
+        .LibraryIndex = sFragmentCutout,
+        .Handle = _shaderLibrary.GetHandle(sFragmentCutout),
+        .State = fragmentOpaque.State
+    };
+
+
+    return std::array<DrawModule, MaterialType::Count>
+    {
+        DrawModule(vertexCullBack, fragmentOpaque),
+        DrawModule(vertexCullBack, fragmentCutout),
+        DrawModule(vertexCullOff, fragmentCutout),
+        DrawModule(vertexCullBack, fragmentOpaque)
+    };
+}
+
 Application::Application() :
     // Core Window & Instance
     _window(1920, 1080, "Window", this, Application::ResizeCallback, Application::MouseMoveCallback, Application::WindowFocusCallback),
@@ -403,52 +495,7 @@ Application::Application() :
 
     _UserInterface(_window.Internal(), *_swapChain, _graphicsComputeQueue.Internal(), _graphicsCommandPool.Internal()),
 
-    _drawModules(([&]() {
-        uint32_t sVertex = _shaderLibrary.RegisterShader(std::filesystem::path(SHADER_DIRECTORY) / "Draw.vert.spv", ShaderLibrary::Vertex, _descriptorAllocator, {});
-        uint32_t sFragmentOpaque = _shaderLibrary.RegisterShader(std::filesystem::path(SHADER_DIRECTORY) / "Draw.frag.spv", ShaderLibrary::Fragment, _descriptorAllocator, {});
-
-        ShaderHandler::SpecializationConstant cutout =
-        {
-            .name = "ENABLE_CUTOUT",
-            .enabled = true
-        };
-        uint32_t sFragmentCutout = _shaderLibrary.RegisterShader(std::filesystem::path(SHADER_DIRECTORY) / "Draw.frag.spv", ShaderLibrary::Fragment, _descriptorAllocator, {&cutout, 1});
-
-        ShaderLibrary::VertexBinding vertexCullBack =
-        {
-            .Shader = _shaderLibrary.Get(sVertex).Internal(),
-            .State = VertexState()
-        };
-
-        ShaderLibrary::VertexBinding vertexCullOff =
-        {
-            .Shader = vertexCullBack.Shader,
-            .State = VertexState()
-        };
-        vertexCullOff.State.CullMode = VK_CULL_MODE_NONE;
-
-
-        ShaderLibrary::FragmentBinding fragmentOpaque =
-        {
-            .Shader = _shaderLibrary.Get(sFragmentCutout).Internal(),
-            .State = FragmentState()
-        };
-
-        ShaderLibrary::FragmentBinding fragmentCutout =
-        {
-            .Shader = _shaderLibrary.Get(sFragmentCutout).Internal(),
-            .State = fragmentOpaque.State
-        };
-
-
-        return std::array<DrawModule, MaterialType::Count>
-        {
-            DrawModule(vertexCullBack, fragmentOpaque),
-            DrawModule(vertexCullBack, fragmentCutout),
-            DrawModule(vertexCullOff, fragmentCutout),
-            DrawModule(vertexCullBack, fragmentOpaque)
-        };
-    })()),
+    _drawModules(InitDrawModule(false)),
 
     // modules
     _cullingModule(_shaderLibrary, _descriptorAllocator)
