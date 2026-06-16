@@ -104,11 +104,16 @@ set(SPIRV_BINARY_FILES "")
 
 foreach(SHADER_SOURCE ${SHADER_SOURCES})
     get_filename_component(FILE_NAME ${SHADER_SOURCE} NAME)
+    get_filename_component(ABSOLUTE_SHADER_SOURCE ${SHADER_SOURCE} ABSOLUTE)
     set(SPIRV_OUTPUT "${SHADER_BINARY_DIR}/${FILE_NAME}.spv")
 
     add_custom_command(
         OUTPUT ${SPIRV_OUTPUT}
-        COMMAND ${GLSLC_EXECUTABLE} ${SHADER_SOURCE} -o ${SPIRV_OUTPUT}
+        COMMAND ${CMAKE_COMMAND}
+            -DGLSLC_BIN=${GLSLC_EXECUTABLE}
+            -DINPUT_FILE=${ABSOLUTE_SHADER_SOURCE}
+            -DOUTPUT_FILE=${SPIRV_OUTPUT}
+            -P "${CMAKE_CURRENT_SOURCE_DIR}/ShaderCompiler.cmake"
         DEPENDS ${SHADER_SOURCE}
         COMMENT "Compiling shader: ${FILE_NAME}"
     )
