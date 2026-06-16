@@ -71,10 +71,6 @@ class Application
     };
     ShaderLibrary _shaderLibrary;
 
-    //GraphicsBuffer _visibleDrawIndirectBuffer;
-    //GraphicsBuffer _visibleObjectDataBuffer;
-    //VkPipelineLayoutHandler _cullingLayout;
-
     std::unique_ptr<GPUAllocatedImage> _colorBackBuffer;
     std::unique_ptr<GPUAllocatedImage> _depthBuffer;
 
@@ -103,6 +99,20 @@ class Application
     double _lastMouseY = -1.0;
     uint32_t _inputDeltaPrevent = 3; // see : https://github.com/glfw/glfw/issues/2523
     bool _wireframe = false;
+
+    enum DebugMode
+    {
+        None,
+        Normal,
+        Count
+    };
+    DebugMode _debug = DebugMode::None;
+    const char* DebugModeNames[DebugMode::Count] =
+    {
+        "None",
+        "Normals"
+    };
+
     static void MouseMoveCallback(GLFWwindow* window, double xpos, double ypos);
     static void WindowFocusCallback(GLFWwindow* window, int focused);
     static void ResizeCallback(GLFWwindow* window, int width, int height);
@@ -117,6 +127,7 @@ class Application
     void RecordCommandBuffer(const CommandBuffer& cmdBuffer, uint32_t imageIndex);
     void DrawFrame();
     uint32_t LoadDefaultMaterial();
+    std::array<DrawModule, MaterialType::Count> InitDrawModule(bool DebugOn);
 
     // Utils
     static inline const std::vector<const char*> _deviceExtensions = {

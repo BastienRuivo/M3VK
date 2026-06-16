@@ -78,9 +78,9 @@ void main()
     uint globalIndex = gl_GlobalInvocationID.x;
     if (globalIndex >= push._CullingConstants.InstanceCount) return;
 
-    uint cameraBufferIndex = push.bufferIndex.Cameras;
-    uint bIndirectionIndex = push.bufferIndex.VisibleInstanceIndirections;
-    uint bDrawIndex = push.bufferIndex.VisibleDrawIndirects;
+    uint cameraBufferIndex = push.indexes.Cameras;
+    uint bIndirectionIndex = push.indexes.VisibleInstanceIndirections;
+    uint bDrawIndex = push.indexes.VisibleDrawIndirects;
 
     bool isVisible = Culling(_Camera[cameraBufferIndex].data, _Instances.data[globalIndex]);
 

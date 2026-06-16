@@ -4,14 +4,14 @@
 #include <vulkan/vulkan_core.h>
 
 DrawModule::DrawModule(ShaderLibrary::VertexBinding vertexBinding, ShaderLibrary::FragmentBinding fragmentBinding)
-    : _vertexBinding(vertexBinding), _fragmentBinding(fragmentBinding) {}
+    : VertexBinding(vertexBinding), FragmentBinding(fragmentBinding) {}
 
 DrawModule::~DrawModule() {}
 
 void DrawModule::Execute(const CommandBuffer& cmdBuffer, VkPipelineLayout layout, const GraphicsBuffer& indirectBuffer, uint32_t drawOffset, uint32_t drawCount, bool wireframe) const
 {
-    _vertexBinding.Bind(cmdBuffer);
-    _fragmentBinding.Bind(cmdBuffer);
+    VertexBinding.Bind(cmdBuffer);
+    FragmentBinding.Bind(cmdBuffer);
 
     if(wireframe)
     {

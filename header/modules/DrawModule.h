@@ -10,8 +10,6 @@ public:
     ~DrawModule();
 
     void Execute(const CommandBuffer& cmdBuffer, VkPipelineLayout layout, const GraphicsBuffer& indirectBuffer, uint32_t drawOffset, uint32_t drawCount, bool wireframe) const;
-
-private:
-    ShaderLibrary::VertexBinding _vertexBinding;
-    ShaderLibrary::FragmentBinding _fragmentBinding;
+    ShaderLibrary::VertexBinding VertexBinding;
+    ShaderLibrary::FragmentBinding FragmentBinding;
 };
