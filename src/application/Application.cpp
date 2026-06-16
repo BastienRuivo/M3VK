@@ -1,5 +1,6 @@
 #include "application/Application.h"
 #include "Material.h"
+#include "application/ApplicationHelper.h"
 #include "asset/MeshHelper.h"
 #include "glm/matrix.hpp"
 #include "modules/DrawModule.h"

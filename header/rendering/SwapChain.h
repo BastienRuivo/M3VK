@@ -1,6 +1,5 @@
 #pragma once
 
-#include "application/ApplicationHelper.h"
 #include "rendering/GPUImage.h"
 #include "rendering/MultiFrame.h"
 #include "handler/VkImageViewHandler.h"
