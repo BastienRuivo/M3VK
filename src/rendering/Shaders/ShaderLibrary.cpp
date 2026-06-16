@@ -26,12 +26,12 @@ ShaderLibrary& ShaderLibrary::operator=(ShaderLibrary&& other) noexcept
     return *this;
 }
 
-uint32_t ShaderLibrary::RegisterShader(std::filesystem::path path, ShaderType type, const DescriptorAllocator& descriptorAllocator)
+uint32_t ShaderLibrary::RegisterShader(std::filesystem::path path, ShaderType type, const DescriptorAllocator& descriptorAllocator, std::span<const ShaderHandler::SpecializationConstant> speConstants)
 {
-    return RegisterShader(path, type, descriptorAllocator.GlobalSetLayouts(), descriptorAllocator.GlobalPushConstantRanges());
+    return RegisterShader(path, type, descriptorAllocator.GlobalSetLayouts(), descriptorAllocator.GlobalPushConstantRanges(), speConstants);
 }
 
-uint32_t ShaderLibrary::RegisterShader(std::filesystem::path path, ShaderType type, std::span<const VkDescriptorSetLayout> descriptorLayouts, std::span<const VkPushConstantRange> pushConstantRanges)
+uint32_t ShaderLibrary::RegisterShader(std::filesystem::path path, ShaderType type, std::span<const VkDescriptorSetLayout> descriptorLayouts, std::span<const VkPushConstantRange> pushConstantRanges, std::span<const ShaderHandler::SpecializationConstant> speConstants)
 {
     VkShaderStageFlagBits stage;
 
@@ -47,16 +47,7 @@ uint32_t ShaderLibrary::RegisterShader(std::filesystem::path path, ShaderType ty
         }
     }
 
-   _handlers.emplace_back(path, stage, descriptorLayouts, pushConstantRanges);
+   _handlers.emplace_back(path, stage, descriptorLayouts, pushConstantRanges, speConstants);
 
    return _handlers.size() - 1;
 }
-
-/*uint32_t ShaderLibrary::RegisterComputeShader(std::filesystem::path path, std::span<const VkDescriptorSetLayout> descriptorLayouts, std::span<const VkPushConstantRange> pushConstantRanges)
-{
-    VkShaderStageFlagBits stage = VK_SHADER_STAGE_COMPUTE_BIT;
-
-   _handlers.emplace_back(path, stage, descriptorLayouts, pushConstantRanges);
-
-   return _handlers.size() - 1;
-}*/

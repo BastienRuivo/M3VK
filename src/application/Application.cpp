@@ -404,9 +404,15 @@ Application::Application() :
     _UserInterface(_window.Internal(), *_swapChain, _graphicsComputeQueue.Internal(), _graphicsCommandPool.Internal()),
 
     _drawModules(([&]() {
-        uint32_t sVertex = _shaderLibrary.RegisterShader(std::filesystem::path(SHADER_DIRECTORY) / "Draw.vert.spv", ShaderLibrary::Vertex, _descriptorAllocator);
-        uint32_t sFragmentOpaque = _shaderLibrary.RegisterShader(std::filesystem::path(SHADER_DIRECTORY) / "DrawOpaque.frag.spv", ShaderLibrary::Fragment, _descriptorAllocator);
-        uint32_t sFragmentCutout = _shaderLibrary.RegisterShader(std::filesystem::path(SHADER_DIRECTORY) / "DrawCutout.frag.spv", ShaderLibrary::Fragment, _descriptorAllocator);
+        uint32_t sVertex = _shaderLibrary.RegisterShader(std::filesystem::path(SHADER_DIRECTORY) / "Draw.vert.spv", ShaderLibrary::Vertex, _descriptorAllocator, {});
+        uint32_t sFragmentOpaque = _shaderLibrary.RegisterShader(std::filesystem::path(SHADER_DIRECTORY) / "Draw.frag.spv", ShaderLibrary::Fragment, _descriptorAllocator, {});
+
+        ShaderHandler::SpecializationConstant cutout =
+        {
+            .name = "ENABLE_CUTOUT",
+            .enabled = true
+        };
+        uint32_t sFragmentCutout = _shaderLibrary.RegisterShader(std::filesystem::path(SHADER_DIRECTORY) / "Draw.frag.spv", ShaderLibrary::Fragment, _descriptorAllocator, {&cutout, 1});
 
         ShaderLibrary::VertexBinding vertexCullBack =
         {

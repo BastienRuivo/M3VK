@@ -109,11 +109,7 @@ foreach(SHADER_SOURCE ${SHADER_SOURCES})
 
     add_custom_command(
         OUTPUT ${SPIRV_OUTPUT}
-        COMMAND ${CMAKE_COMMAND}
-            -DGLSLC_BIN=${GLSLC_EXECUTABLE}
-            -DINPUT_FILE=${ABSOLUTE_SHADER_SOURCE}
-            -DOUTPUT_FILE=${SPIRV_OUTPUT}
-            -P "${CMAKE_CURRENT_SOURCE_DIR}/ShaderCompiler.cmake"
+        COMMAND ${GLSLC_EXECUTABLE} ${ABSOLUTE_SHADER_SOURCE} -o ${SPIRV_OUTPUT}
         DEPENDS ${SHADER_SOURCE}
         COMMENT "Compiling shader: ${FILE_NAME}"
     )

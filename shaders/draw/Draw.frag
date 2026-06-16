@@ -1,7 +1,7 @@
 #version 460
 
-// KEYWORD ALPHA_CUTOUT
-// KEYWORD DEBUG
+layout(constant_id = 0) const bool ENABLE_CUTOUT = false;
+layout(constant_id = 1) const bool ENABLE_DEBUG = false;
 
 #include "Lighting.glsl"
 
@@ -10,14 +10,7 @@ void main()
 {
     LightingInput lightingInput = CreateLightingInput(vMaterialIndex);
 
-    #if defined(ALPHA_CUTOUT)
-    {
-        if (lightingInput.Alpha < 0.5)
-        {
-            discard;
-        }
-    }
-    #endif
+    if(ENABLE_CUTOUT && lightingInput.Alpha < 0.5) discard;
 
     outColor = vec4(ComputeLighting(lightingInput), 1.0);
 }

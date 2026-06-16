@@ -15,6 +15,12 @@ class ShaderHandler
         Compute
     };
 
+    struct SpecializationConstant
+    {
+        std::string name; // e.g., "ENABLE_CUTOUT"
+        bool enabled;
+    };
+
     // allocate 32 bytes of data per shader type, unused for fragment and vertex atm
     struct ComputeInfo
     {
@@ -41,7 +47,7 @@ class ShaderHandler
         FragmentInfo Fragment;
     };
 
-    ShaderHandler(const std::filesystem::path& path, VkShaderStageFlagBits stageFlags, std::span<const VkDescriptorSetLayout> descriptorLayouts, std::span<const VkPushConstantRange> pushConstantRanges);
+    ShaderHandler(const std::filesystem::path& path, VkShaderStageFlagBits stageFlags, std::span<const VkDescriptorSetLayout> descriptorLayouts, std::span<const VkPushConstantRange> pushConstantRanges, std::span<const SpecializationConstant> speConstants);
     ~ShaderHandler();
 
     ShaderHandler(const ShaderHandler&) = delete;

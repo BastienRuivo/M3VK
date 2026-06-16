@@ -71,10 +71,6 @@ class Application
     };
     ShaderLibrary _shaderLibrary;
 
-    //GraphicsBuffer _visibleDrawIndirectBuffer;
-    //GraphicsBuffer _visibleObjectDataBuffer;
-    //VkPipelineLayoutHandler _cullingLayout;
-
     std::unique_ptr<GPUAllocatedImage> _colorBackBuffer;
     std::unique_ptr<GPUAllocatedImage> _depthBuffer;
 
