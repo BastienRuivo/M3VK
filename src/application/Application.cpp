@@ -405,13 +405,7 @@ std::array<DrawModule, MaterialType::Count> Application::InitDrawModule(bool Deb
     };
     uint32_t sVertex = _shaderLibrary.RegisterShader(std::filesystem::path(SHADER_DIRECTORY) / "Draw.vert.spv", ShaderLibrary::Vertex, _descriptorAllocator, constants);
     uint32_t sFragmentOpaque = _shaderLibrary.RegisterShader(std::filesystem::path(SHADER_DIRECTORY) / "Draw.frag.spv", ShaderLibrary::Fragment, _descriptorAllocator, constants);
-
-    constants.push_back(Shader::SpecializationConstant
-    {
-        .name = "ENABLE_CUTOUT",
-        .enabled = true
-    });
-    uint32_t sFragmentCutout = _shaderLibrary.RegisterShader(std::filesystem::path(SHADER_DIRECTORY) / "Draw.frag.spv", ShaderLibrary::Fragment, _descriptorAllocator, constants);
+    uint32_t sFragmentCutout = _shaderLibrary.RegisterShader(std::filesystem::path(SHADER_DIRECTORY) / "DrawAlphaCutout.frag.spv", ShaderLibrary::Fragment, _descriptorAllocator, constants);
 
     ShaderLibrary::VertexBinding vertexCullBack =
     {

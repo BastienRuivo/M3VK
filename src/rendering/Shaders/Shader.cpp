@@ -53,7 +53,7 @@ void Shader::Init(const std::filesystem::path& path, VkShaderStageFlagBits stage
         auto& entry = mapEntries[i];
         const auto& constant = constants[i];
 
-        mapValues[i] = VK_FALSE;
+        mapValues[i] = *static_cast<VkBool32*>(constant->default_value);
         for(uint32_t j = 0; j < speConstants.size(); ++j)
         {
             if(speConstants[j].name == constant->name)

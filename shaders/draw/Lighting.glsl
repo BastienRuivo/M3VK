@@ -47,6 +47,9 @@ LightingInput CreateLightingInput(uint materialIndex)
     lightInput.Normal = normal;
     lightInput.Alpha = baseColor.a;
 
+
+    if(ENABLE_CUTOUT && lightInput.Alpha < 0.5) discard;
+
     return lightInput;
 }
 
