@@ -60,9 +60,9 @@ bool AssetImporter::Load(AssetImporter& importer, const std::filesystem::path& p
 
     fread(&importer.Version, sizeof(uint32_t), 1, file);
 
-    if(importer.Version < VERSION)
+    if(importer.Version != VERSION)
     {
-        DebugLayer::Log(DebugLayer::LogType::WARNING, "File '" + path.string() + "' version is too old : " + std::to_string(importer.Version) + " < " + std::to_string(VERSION));
+        DebugLayer::Log(DebugLayer::LogType::WARNING, "File '" + path.string() + "' version : " + std::to_string(importer.Version) + " != " + std::to_string(VERSION));
         return false;
     }
 

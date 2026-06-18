@@ -9,7 +9,7 @@
 #include <vector>
 #include <vulkan/vulkan_core.h>
 
-#define VERSION 3
+#define VERSION 4
 
 enum TextureType
 {

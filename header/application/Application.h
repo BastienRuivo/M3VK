@@ -78,7 +78,8 @@ class Application
 
     // Datas
 
-    VkSamplerHandler _sampler;
+    VkSamplerHandler _samplerLinear;
+    VkSamplerHandler _samplerNearest;
 
     GraphicsBuffer _cameraDataBuffer;
 
@@ -103,6 +104,7 @@ class Application
     enum DebugMode
     {
         None,
+        VertexNormal,
         Normal,
         Count
     };
@@ -110,7 +112,8 @@ class Application
     const char* DebugModeNames[DebugMode::Count] =
     {
         "None",
-        "Normals"
+        "VertexNormal",
+        "Normal"
     };
 
     static void MouseMoveCallback(GLFWwindow* window, double xpos, double ypos);

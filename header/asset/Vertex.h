@@ -17,11 +17,15 @@ struct Vertex
 {
     glm::vec3 pos;
     glm::vec3 normal;
+    glm::vec3 tangent;
     glm::vec2 texCoord;
 
     bool operator==(const Vertex& other) const
     {
-        return pos == other.pos && normal == other.normal && texCoord == other.texCoord;
+        return pos == other.pos
+            && normal == other.normal
+            && tangent == other.tangent
+            && texCoord == other.texCoord;
     }
 
     static VkVertexInputBindingDescription2EXT GetBindingDescription()
@@ -63,6 +67,14 @@ struct Vertex
                 .sType = VK_STRUCTURE_TYPE_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION_2_EXT,
                 .location = location++,
                 .binding = 0,
+                .format = VK_FORMAT_R32G32B32_SFLOAT,
+                .offset = offsetof(Vertex, tangent)
+            },
+            VkVertexInputAttributeDescription2EXT
+            {
+                .sType = VK_STRUCTURE_TYPE_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION_2_EXT,
+                .location = location++,
+                .binding = 0,
                 .format = VK_FORMAT_R32G32_SFLOAT,
                 .offset = offsetof(Vertex, texCoord)
             }
@@ -83,6 +95,7 @@ namespace std {
 
             HashCombine(seed, hash<glm::vec3>()(vertex.pos));
             HashCombine(seed, hash<glm::vec3>()(vertex.normal));
+            HashCombine(seed, hash<glm::vec3>()(vertex.tangent));
             HashCombine(seed, hash<glm::vec2>()(vertex.texCoord));
 
             return seed;

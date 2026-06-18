@@ -138,7 +138,7 @@ public:
 class VkSamplerHandler : public Handler<VkSampler>
 {
 public:
-    VkSamplerHandler();
+    VkSamplerHandler(VkFilter oversampling = VK_FILTER_LINEAR, VkFilter undersampling = VK_FILTER_LINEAR);
     ~VkSamplerHandler() override;
 
     VkSamplerHandler(VkSamplerHandler&& other) noexcept = default;

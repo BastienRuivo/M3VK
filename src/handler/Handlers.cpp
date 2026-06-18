@@ -358,14 +358,14 @@ VkQueueHandler& VkQueueHandler::operator=(VkQueueHandler&& other) noexcept
     return *this;
 }
 
-VkSamplerHandler::VkSamplerHandler()
+VkSamplerHandler::VkSamplerHandler(VkFilter oversampling, VkFilter undersampling)
 {
     VkSamplerCreateInfo createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
 
     // Mag -> Oversampling, Min -> Undersampling
-    createInfo.magFilter = VK_FILTER_LINEAR;
-    createInfo.minFilter = VK_FILTER_LINEAR;
+    createInfo.magFilter = oversampling;
+    createInfo.minFilter = undersampling;
 
     // what to do when reading OOB (repeat, clamp, mirror...)
     createInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;

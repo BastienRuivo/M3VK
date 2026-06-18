@@ -378,13 +378,13 @@ uint32_t Application::LoadDefaultMaterial()
     MaterialRegistry& materialRegistry = static_cast<MaterialRegistry&>(*_registries[(size_t)RegistryType::Material]);
 
     GPUAllocatedImage baseColorTex = GPUAllocatedImage(AssetHelper::ImageFromCPU(CPUImage("data/default/BaseColor.png", STBI_rgb_alpha), _graphicsCommandPool.Internal(), _graphicsComputeQueue.Internal()));
-    uint32_t baseIndex = materialRegistry.RegisterTexture(_descriptorAllocator, std::move(baseColorTex), _sampler.Internal());
+    uint32_t baseIndex = materialRegistry.RegisterTexture(_descriptorAllocator, std::move(baseColorTex), _samplerLinear.Internal());
 
     GPUAllocatedImage normalMapTex = GPUAllocatedImage(AssetHelper::ImageFromCPU(CPUImage("data/default/BaseNormal.png", STBI_rgb_alpha), _graphicsCommandPool.Internal(), _graphicsComputeQueue.Internal()));
-    uint32_t normalIndex = materialRegistry.RegisterTexture(_descriptorAllocator, std::move(normalMapTex), _sampler.Internal());
+    uint32_t normalIndex = materialRegistry.RegisterTexture(_descriptorAllocator, std::move(normalMapTex), _samplerLinear.Internal());
 
     GPUAllocatedImage mraoTex = GPUAllocatedImage(AssetHelper::ImageFromCPU(CPUImage("data/default/BaseMRAO.png", STBI_rgb_alpha), _graphicsCommandPool.Internal(), _graphicsComputeQueue.Internal()));
-    uint32_t mraoIndex = materialRegistry.RegisterTexture(_descriptorAllocator, std::move(mraoTex), _sampler.Internal());
+    uint32_t mraoIndex = materialRegistry.RegisterTexture(_descriptorAllocator, std::move(mraoTex), _samplerLinear.Internal());
 
     MaterialProperties matProperties = MaterialProperties::Default();
     matProperties.BaseColorTexId = baseIndex;
@@ -479,7 +479,8 @@ Application::Application() :
     _depthBuffer(std::make_unique<GPUAllocatedImage>(_swapChain->GetExtent().width, _swapChain->GetExtent().height, ApplicationInfo::Get().GetMsaaSample(), 1, ApplicationInfo::Constant::DepthFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)),
 
     _cameraDataBuffer(_descriptorAllocator, BINDING_CAMERA_BUFFER, GraphicsBuffer::STORAGE, RessourceUsage::PerFrame, 1, sizeof(CameraData)),
-    _sampler(),
+    _samplerLinear(),
+    _samplerNearest(VK_FILTER_NEAREST, VK_FILTER_NEAREST),
     _camera(glm::vec3(0.0f, 0.5f, 4.0f), glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, 1.0f, 0.0f), 45.0f, (float)_swapChain->GetExtent().width / (float)_swapChain->GetExtent().height, 0.1f, 1000.0f),
     _commandBuffer(ApplicationInfo::Constant::MaxFrameInFlight, _graphicsCommandPool.Internal(), _graphicsComputeQueue.Internal()),
 
@@ -558,8 +559,9 @@ Application::Application() :
         meshRegistry.RegisterInstance(MaterialType::Opaque, instance);
     }
 
-    AssetHelper::Load3DModel(_descriptorAllocator, "data/BistroExterior.m3vkasset", meshRegistry, materialRegistry, _graphicsCommandPool.Internal(), _graphicsComputeQueue.Internal(), _sampler.Internal());
-    /*for(uint32_t i = 0; i < 100; ++i)
+   AssetHelper::Load3DModel(_descriptorAllocator, "data/BistroExterior.m3vkasset", meshRegistry, materialRegistry, _graphicsCommandPool.Internal(), _graphicsComputeQueue.Internal(), _samplerLinear.Internal());
+   AssetHelper::Load3DModel(_descriptorAllocator, "data/BistroInterior_Wine.m3vkasset", meshRegistry, materialRegistry, _graphicsCommandPool.Internal(), _graphicsComputeQueue.Internal(), _samplerLinear.Internal());
+     /*for(uint32_t i = 0; i < 100; ++i)
     {
         float red = (rand() / (float)RAND_MAX);
         float green = (rand() / (float)RAND_MAX);

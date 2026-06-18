@@ -44,6 +44,7 @@ class MeshRegistry : public Registry
     inline const GeometryBuffer& IndirectBuffer() const { return _indirectBuffer; }
     inline const GeometryBuffer& InstanceDataBuffer() const { return _instanceDataBuffer; }
     inline const LayerMaterialInfo& GetIndirectDrawInfo(MaterialType type) const { return _indirectDrawInfoPerMaterial[static_cast<uint32_t>(type)]; }
+    inline InstanceData& LastInstance(MaterialType type) { return _uploadInstances[type].back(); }
 
     private:
     std::vector<Vertex> _uploadVertices;

@@ -8,7 +8,8 @@ layout(push_constant) uniform PushConstants
     CommonIndexes indexes;
 } push;
 
-#define DEBUG_NORMAL 1
+#define DEBUG_VERTEX_NORMAL 1
+#define DEBUG_NORMAL 2
 
 layout(set = GLOBAL_SET, binding = BINDING_TEXTURES) uniform sampler2D uTextures[];
 
@@ -19,8 +20,10 @@ layout(set = GLOBAL_SET, binding = STATIC_BINDING_MATERIAL_BUFFER, std430) reado
 
 //inputs
 layout(location = 0) flat in uint vMaterialIndex;
-layout(location = 1) in vec3 vNormal;
-layout(location = 2) in vec2 vTexcoords;
+layout(location=1) in vec3 vNormal;
+layout(location=2) in vec3 vTangent;
+layout(location=3) in vec2 vTexcoords;
+layout(location=4) in vec3 vWsPosition;
 
 // output
 layout(location = 0) out vec4 outColor;
@@ -36,15 +39,20 @@ LightingInput CreateLightingInput(uint materialIndex)
 {
     MaterialProperties material = _Materials.data[materialIndex];
     vec4 baseColor = texture(uTextures[material.BaseColorTexId], vTexcoords) * material.BaseColor;
-    #if 0
-    vec3 normal = texture(uTextures[material.NormalMapTexId], vTexcoords).rgb;
-    #else
-    vec3 normal = vNormal;
-    #endif
+
+    vec3 normal = texture(uTextures[material.NormalMapTexId], vTexcoords).rgb * 2.0 - 1.0;
+
+    vec3 N = vNormal;
+    vec3 T = vTangent;
+    vec3 B = normalize(cross(T, N));
+
+    mat3 TBN = mat3(T, B, N);
+
+    vec3 finalNormal = normalize(TBN * -normal.xyz);
 
     LightingInput lightInput;
     lightInput.BaseColor = baseColor.rgb;
-    lightInput.Normal = normal;
+    lightInput.Normal = finalNormal;
     lightInput.Alpha = baseColor.a;
 
 
@@ -55,12 +63,17 @@ LightingInput CreateLightingInput(uint materialIndex)
 
 vec3 ComputeLighting(LightingInput lightInput)
 {
-    if(ENABLE_DEBUG && push.indexes.DebugIndex == DEBUG_NORMAL)
+    if(ENABLE_DEBUG)
     {
-        return lightInput.Normal * 0.5 + 0.5;
+        if(push.indexes.DebugIndex == DEBUG_VERTEX_NORMAL) return vNormal * 0.5 + 0.5;
+        if(push.indexes.DebugIndex == DEBUG_NORMAL) return lightInput.Normal * 0.5 + 0.5;
     }
 
-    return lightInput.BaseColor;
+    vec3 lightDir = normalize(vec3(0, 10000, 10000) - vWsPosition);
+
+    float diffuse = max(dot(lightInput.Normal, lightDir), 0.0);
+
+    return lightInput.BaseColor ;
 }
 
 #endif

@@ -119,14 +119,14 @@ void CommandBuffer::SetScissor(const VkRect2D& scissors) const
     vkCmdSetScissorWithCount(_internal, 1, &scissors);
 }
 
-void CommandBuffer::SetViewport(uint32_t x, uint32_t y, uint32_t width, uint32_t height) const
+void CommandBuffer::SetViewport(float x, float y, float width, float height) const
 {
     VkViewport viewport
     {
-        .x = (float)x,
-        .y = (float)y,
-        .width = (float)width,
-        .height = (float)height,
+        .x = x,
+        .y = y,
+        .width = width,
+        .height = height,
         .minDepth = 0,
         .maxDepth = 1
     };

@@ -42,7 +42,7 @@ class CommandBuffer
     void BindBuffer(const GraphicsBuffer& buffer) const;
     void SetScissor(int32_t x, int32_t y, uint32_t width, uint32_t height) const;
     void SetScissor(const VkRect2D& scissors) const;
-    void SetViewport(uint32_t x, uint32_t y, uint32_t width, uint32_t height) const;
+    void SetViewport(float x, float y, float width, float height) const;
     void TransitionImageLayout(VkImage img, VkFormat format, uint32_t mipLevel, uint32_t mipCount, VkImageLayout oldLayout, VkImageLayout newLayout) const;
 
     inline void BindDescriptorSets(const VkPipelineLayout& pipelineLayout, const DescriptorSetHandle& setHandle, VkPipelineBindPoint bindPoint, uint32_t location) const
