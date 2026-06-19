@@ -71,9 +71,9 @@ vec3 ComputeLighting(LightingInput lightInput)
 
     vec3 lightDir = normalize(vec3(0, 10000, 10000) - vWsPosition);
 
-    float diffuse = max(dot(lightInput.Normal, lightDir), 0.0);
+    float diffuse = max(max(dot(lightInput.Normal, lightDir), 0.0), 0.1);
 
-    return lightInput.BaseColor ;
+    return diffuse * lightInput.BaseColor ;
 }
 
 #endif
