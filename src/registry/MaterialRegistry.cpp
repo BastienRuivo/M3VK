@@ -56,7 +56,7 @@ MaterialRegistry::~MaterialRegistry()
 {
 }
 
-uint32_t MaterialRegistry::RegisterTexture(DescriptorAllocator& allocator, GPUAllocatedImage&& image, VkSampler sampler)
+uint32_t MaterialRegistry::RegisterTexture(DescriptorAllocator& allocator, GPUImage&& image, VkSampler sampler)
 {
     ImageHelper::ImageBinding binding = ImageHelper::ImageBinding(image.Internal(), sampler);
     _textures.emplace_back(std::move(image));

@@ -71,8 +71,8 @@ class Application
     };
     ShaderLibrary _shaderLibrary;
 
-    std::unique_ptr<GPUAllocatedImage> _colorBackBuffer;
-    std::unique_ptr<GPUAllocatedImage> _depthBuffer;
+    std::unique_ptr<GPUImage> _colorBackBuffer;
+    std::unique_ptr<GPUImage> _depthBuffer;
 
     VkCommandPoolHandler _graphicsCommandPool;
 

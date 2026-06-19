@@ -168,7 +168,7 @@ void Application::RefreshSwapChain()
     _camera._aspect = static_cast<float>(_swapChain->GetExtent().width) / static_cast<float>(_swapChain->GetExtent().height);
 
     _colorBackBuffer.reset();
-    _colorBackBuffer = std::make_unique<GPUAllocatedImage>(_swapChain->GetExtent().width, _swapChain->GetExtent().height,
+    _colorBackBuffer = std::make_unique<GPUImage>(_swapChain->GetExtent().width, _swapChain->GetExtent().height,
         ApplicationInfo::Get().GetMsaaSample(),
         1, _swapChain->GetImageFormat(),
         VK_IMAGE_TILING_OPTIMAL,
@@ -176,7 +176,7 @@ void Application::RefreshSwapChain()
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
     _depthBuffer.reset();
-    _depthBuffer = std::make_unique<GPUAllocatedImage>(_swapChain->GetExtent().width, _swapChain->GetExtent().height, ApplicationInfo::Get().GetMsaaSample(), 1, ApplicationInfo::Constant::DepthFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    _depthBuffer = std::make_unique<GPUImage>(_swapChain->GetExtent().width, _swapChain->GetExtent().height, ApplicationInfo::Get().GetMsaaSample(), 1, ApplicationInfo::Constant::DepthFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 }
 
 void Application::DrawFrame()
@@ -377,13 +377,13 @@ uint32_t Application::LoadDefaultMaterial()
 {
     MaterialRegistry& materialRegistry = static_cast<MaterialRegistry&>(*_registries[(size_t)RegistryType::Material]);
 
-    GPUAllocatedImage baseColorTex = GPUAllocatedImage(AssetHelper::ImageFromCPU(CPUImage("data/default/BaseColor.png", STBI_rgb_alpha), _graphicsCommandPool.Internal(), _graphicsComputeQueue.Internal()));
+    GPUImage baseColorTex = GPUImage(AssetHelper::ImageFromCPU(CPUImage("data/default/BaseColor.png", STBI_rgb_alpha), _graphicsCommandPool.Internal(), _graphicsComputeQueue.Internal()));
     uint32_t baseIndex = materialRegistry.RegisterTexture(_descriptorAllocator, std::move(baseColorTex), _samplerLinear.Internal());
 
-    GPUAllocatedImage normalMapTex = GPUAllocatedImage(AssetHelper::ImageFromCPU(CPUImage("data/default/BaseNormal.png", STBI_rgb_alpha), _graphicsCommandPool.Internal(), _graphicsComputeQueue.Internal()));
+    GPUImage normalMapTex = GPUImage(AssetHelper::ImageFromCPU(CPUImage("data/default/BaseNormal.png", STBI_rgb_alpha), _graphicsCommandPool.Internal(), _graphicsComputeQueue.Internal()));
     uint32_t normalIndex = materialRegistry.RegisterTexture(_descriptorAllocator, std::move(normalMapTex), _samplerLinear.Internal());
 
-    GPUAllocatedImage mraoTex = GPUAllocatedImage(AssetHelper::ImageFromCPU(CPUImage("data/default/BaseMRAO.png", STBI_rgb_alpha), _graphicsCommandPool.Internal(), _graphicsComputeQueue.Internal()));
+    GPUImage mraoTex = GPUImage(AssetHelper::ImageFromCPU(CPUImage("data/default/BaseMRAO.png", STBI_rgb_alpha), _graphicsCommandPool.Internal(), _graphicsComputeQueue.Internal()));
     uint32_t mraoIndex = materialRegistry.RegisterTexture(_descriptorAllocator, std::move(mraoTex), _samplerLinear.Internal());
 
     MaterialProperties matProperties = MaterialProperties::Default();
@@ -469,14 +469,14 @@ Application::Application() :
     // Command pool
     _graphicsCommandPool(ApplicationInfo::GetGraphicsQueueId()),
     // Geometry & Data Buffers
-    _colorBackBuffer(std::make_unique<GPUAllocatedImage>(_swapChain->GetExtent().width, _swapChain->GetExtent().height,
+    _colorBackBuffer(std::make_unique<GPUImage>(_swapChain->GetExtent().width, _swapChain->GetExtent().height,
         ApplicationInfo::Get().GetMsaaSample(),
         1,
         _swapChain->GetImageFormat(),
         VK_IMAGE_TILING_OPTIMAL,
         VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)),
-    _depthBuffer(std::make_unique<GPUAllocatedImage>(_swapChain->GetExtent().width, _swapChain->GetExtent().height, ApplicationInfo::Get().GetMsaaSample(), 1, ApplicationInfo::Constant::DepthFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)),
+    _depthBuffer(std::make_unique<GPUImage>(_swapChain->GetExtent().width, _swapChain->GetExtent().height, ApplicationInfo::Get().GetMsaaSample(), 1, ApplicationInfo::Constant::DepthFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)),
 
     _cameraDataBuffer(_descriptorAllocator, BINDING_CAMERA_BUFFER, GraphicsBuffer::STORAGE, RessourceUsage::PerFrame, 1, sizeof(CameraData)),
     _samplerLinear(),

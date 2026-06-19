@@ -9,19 +9,19 @@
 #include <utility>
 #include <vulkan/vulkan_core.h>
 
-GPUAllocatedImage::GPUAllocatedImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags imageUsageFlags, VkMemoryPropertyFlags memoryFlags)
-: GPUAllocatedImage(width, height, ImageHelper::GetMipCount(width, height), format, tiling, imageUsageFlags, memoryFlags)
+GPUImage::GPUImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags imageUsageFlags, VkMemoryPropertyFlags memoryFlags)
+: GPUImage(width, height, ImageHelper::GetMipCount(width, height), format, tiling, imageUsageFlags, memoryFlags)
 {
 
 }
 
-GPUAllocatedImage::GPUAllocatedImage(uint32_t width, uint32_t height, uint32_t mipCount, VkFormat format, VkImageTiling tiling, VkImageUsageFlags imageUsageFlags, VkMemoryPropertyFlags memoryFlags)
-: GPUAllocatedImage(width, height, VK_SAMPLE_COUNT_1_BIT, mipCount, format, tiling, imageUsageFlags, memoryFlags)
+GPUImage::GPUImage(uint32_t width, uint32_t height, uint32_t mipCount, VkFormat format, VkImageTiling tiling, VkImageUsageFlags imageUsageFlags, VkMemoryPropertyFlags memoryFlags)
+: GPUImage(width, height, VK_SAMPLE_COUNT_1_BIT, mipCount, format, tiling, imageUsageFlags, memoryFlags)
 {
 
 }
 
-GPUAllocatedImage::GPUAllocatedImage(uint32_t width, uint32_t height, VkSampleCountFlagBits msaaSampleCount, uint32_t mipCount, VkFormat format, VkImageTiling tiling, VkImageUsageFlags imageUsageFlags, VkMemoryPropertyFlags memoryFlags)
+GPUImage::GPUImage(uint32_t width, uint32_t height, VkSampleCountFlagBits msaaSampleCount, uint32_t mipCount, VkFormat format, VkImageTiling tiling, VkImageUsageFlags imageUsageFlags, VkMemoryPropertyFlags memoryFlags)
 {
     VkImageCreateInfo createInfo
     {
@@ -88,7 +88,7 @@ GPUAllocatedImage::GPUAllocatedImage(uint32_t width, uint32_t height, VkSampleCo
 }
 
 
-void GPUAllocatedImage::TransitionLayout(VkCommandPool pool, VkQueue queue, VkImageLayout oldLayout, VkImageLayout newLayout) const
+void GPUImage::TransitionLayout(VkCommandPool pool, VkQueue queue, VkImageLayout oldLayout, VkImageLayout newLayout) const
 {
     CommandBuffer cmdBuffer(pool, queue);
     cmdBuffer.BeginSingleTime();
@@ -99,7 +99,7 @@ void GPUAllocatedImage::TransitionLayout(VkCommandPool pool, VkQueue queue, VkIm
     cmdBuffer.WaitCompletion();
 }
 
-void GPUAllocatedImage::UploadAndGenerateMip(void* data, uint32_t width, uint32_t height, uint32_t pixelStride, VkCommandPool pool, VkQueue queue)
+void GPUImage::UploadAndGenerateMip(void* data, uint32_t width, uint32_t height, uint32_t pixelStride, VkCommandPool pool, VkQueue queue)
 {
     VkDeviceSize size = width * height * pixelStride;
     StageBuffer stage(size, StageBuffer::Usage::Upload);
@@ -115,20 +115,20 @@ void GPUAllocatedImage::UploadAndGenerateMip(void* data, uint32_t width, uint32_
     cmdBuffer.WaitCompletion();
 }
 
-GPUAllocatedImage::~GPUAllocatedImage()
+GPUImage::~GPUImage()
 {
     vkDestroyImage(ApplicationInfo::Device(), _internal.Image, nullptr);
     vkFreeMemory(ApplicationInfo::Device(), _memoryInternal, nullptr);
 }
 
-GPUAllocatedImage::GPUAllocatedImage(GPUAllocatedImage&& other) noexcept
+GPUImage::GPUImage(GPUImage&& other) noexcept
 {
     _internal = std::exchange(other._internal, {});
     _memoryInternal = std::exchange(other._memoryInternal, VK_NULL_HANDLE);
     _view = std::move(other._view);
 }
 
-GPUAllocatedImage& GPUAllocatedImage::operator=(GPUAllocatedImage&& other) noexcept
+GPUImage& GPUImage::operator=(GPUImage&& other) noexcept
 {
     if(this != &other)
     {

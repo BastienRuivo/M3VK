@@ -21,5 +21,5 @@ namespace AssetHelper
 
     void Load3DModel(DescriptorAllocator& allocator, const std::string & modelPath, MeshRegistry & meshRegistry, MaterialRegistry & materialRegistry, VkCommandPool uploadPool, VkQueue uploadQueue, VkSampler sampler);
     uint32_t LoadTexture(DescriptorAllocator& allocator, AssetImporter& importer, uint32_t textureIndex, MaterialRegistry& materialRegistry, PoolStageBuffer & uploadBuffer, AssetHelper::UploadCommand* commands, uint32_t& commandCount, VkSampler sampler, VkCommandPool uploadPool, VkQueue uploadQueue);
-    GPUAllocatedImage ImageFromCPU(const CPUImage& cpuImg, VkCommandPool pool, VkQueue queue);
+    GPUImage ImageFromCPU(const CPUImage& cpuImg, VkCommandPool pool, VkQueue queue);
 }

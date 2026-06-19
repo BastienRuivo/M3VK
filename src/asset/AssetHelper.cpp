@@ -39,7 +39,7 @@ uint32_t AssetHelper::LoadTexture(DescriptorAllocator& allocator, AssetImporter&
 {
     //DebugLayer::Log(DebugLayer::LogType::INFO, "Loading texture " + std::to_string(textureIndex) + " of type " + std::to_string(importer.Textures[textureIndex].Type) + " with " + std::to_string(importer.Textures[textureIndex].MipCount) + " mips, with size " + std::to_string(importer.Textures[textureIndex].Size) + " width, height = " + std::to_string(importer.Textures[textureIndex].Width) + ", " + std::to_string(importer.Textures[textureIndex].Height) + " and format " + std::to_string(importer.Textures[textureIndex].Format));
     TextureImport & texture = importer.Textures[textureIndex];
-    GPUAllocatedImage gpuTexture(texture.Width, texture.Height, texture.MipCount, texture.Format,
+    GPUImage gpuTexture(texture.Width, texture.Height, texture.MipCount, texture.Format,
     VK_IMAGE_TILING_OPTIMAL,
     VK_IMAGE_USAGE_TRANSFER_SRC_BIT |VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
     VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
@@ -176,9 +176,9 @@ void AssetHelper::Load3DModel(DescriptorAllocator& allocator, const std::string 
     DebugLayer::Log(DebugLayer::LogType::INFO, "AssetImporter load time: " + std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(t4 - t1).count()) + "ms -------------------------------------------");
 }
 
-GPUAllocatedImage AssetHelper::ImageFromCPU(const CPUImage& cpuImg, VkCommandPool pool, VkQueue queue)
+GPUImage AssetHelper::ImageFromCPU(const CPUImage& cpuImg, VkCommandPool pool, VkQueue queue)
 {
-    GPUAllocatedImage gpuImg(cpuImg.Width(),
+    GPUImage gpuImg(cpuImg.Width(),
         cpuImg.Height(),
         cpuImg.GetGPUFormat(),
         VK_IMAGE_TILING_OPTIMAL,

@@ -17,12 +17,12 @@ public:
     void Bind(const CommandBuffer& cmdBuffer, VkPipelineLayout layout) const override;
 
     uint32_t RegisterMaterial(MaterialProperties material);
-    uint32_t RegisterTexture(DescriptorAllocator& allocator, GPUAllocatedImage&& texture, VkSampler sampler);
+    uint32_t RegisterTexture(DescriptorAllocator& allocator, GPUImage&& texture, VkSampler sampler);
     uint32_t RemoveTexture(uint32_t textureIndex);
 
     inline uint32_t MaxTexturesCount() const { return _maxTexturesCount; }
     inline uint32_t LastFreeTextureIndex() const { return _lastFreeTextureIndex; }
-    inline GPUAllocatedImage& Texture(uint32_t index) { return _textures[index]; }
+    inline GPUImage& Texture(uint32_t index) { return _textures[index]; }
 
     inline MaterialProperties Material(uint32_t index) { return _materials[index]; }
     inline MaterialProperties DefaultMaterial() const { return _materials[0]; }
@@ -37,6 +37,6 @@ public:
 
     std::vector<MaterialProperties> _materials;
 
-    std::vector<GPUAllocatedImage> _textures;
+    std::vector<GPUImage> _textures;
     GeometryBuffer _materialBuffer;
 };

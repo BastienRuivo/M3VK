@@ -17,20 +17,20 @@ struct ImageReference
     size_t Size = 0;
 };
 
-class GPUAllocatedImage
+class GPUImage
 {
     public:
 
-    GPUAllocatedImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags imageUsageFlags, VkMemoryPropertyFlags memoryFlags);
-    GPUAllocatedImage(uint32_t width, uint32_t height, uint32_t mipCount, VkFormat format, VkImageTiling tiling, VkImageUsageFlags imageUsageFlags, VkMemoryPropertyFlags memoryFlags);
-    GPUAllocatedImage(uint32_t width, uint32_t height, VkSampleCountFlagBits msaaSampleCount, uint32_t mipCount, VkFormat format, VkImageTiling tiling, VkImageUsageFlags imageUsageFlags, VkMemoryPropertyFlags memoryFlags);
-    ~GPUAllocatedImage();
+    GPUImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags imageUsageFlags, VkMemoryPropertyFlags memoryFlags);
+    GPUImage(uint32_t width, uint32_t height, uint32_t mipCount, VkFormat format, VkImageTiling tiling, VkImageUsageFlags imageUsageFlags, VkMemoryPropertyFlags memoryFlags);
+    GPUImage(uint32_t width, uint32_t height, VkSampleCountFlagBits msaaSampleCount, uint32_t mipCount, VkFormat format, VkImageTiling tiling, VkImageUsageFlags imageUsageFlags, VkMemoryPropertyFlags memoryFlags);
+    ~GPUImage();
 
-    GPUAllocatedImage(GPUAllocatedImage&& other) noexcept;
-    GPUAllocatedImage& operator=(GPUAllocatedImage&& other) noexcept;
+    GPUImage(GPUImage&& other) noexcept;
+    GPUImage& operator=(GPUImage&& other) noexcept;
 
-    GPUAllocatedImage(const GPUAllocatedImage&) = delete;
-    GPUAllocatedImage& operator=(const GPUAllocatedImage&) = delete;
+    GPUImage(const GPUImage&) = delete;
+    GPUImage& operator=(const GPUImage&) = delete;
 
     void UploadAndGenerateMip(void* data, uint32_t width, uint32_t height, uint32_t pixelStride, VkCommandPool pool, VkQueue queue);
     void TransitionLayout(VkCommandPool pool, VkQueue queue, VkImageLayout oldLayout, VkImageLayout newLayout) const;
