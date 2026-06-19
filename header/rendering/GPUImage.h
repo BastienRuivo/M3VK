@@ -21,9 +21,10 @@ class GPUImage
 {
     public:
 
-    GPUImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags imageUsageFlags, VkMemoryPropertyFlags memoryFlags);
-    GPUImage(uint32_t width, uint32_t height, uint32_t mipCount, VkFormat format, VkImageTiling tiling, VkImageUsageFlags imageUsageFlags, VkMemoryPropertyFlags memoryFlags);
-    GPUImage(uint32_t width, uint32_t height, VkSampleCountFlagBits msaaSampleCount, uint32_t mipCount, VkFormat format, VkImageTiling tiling, VkImageUsageFlags imageUsageFlags, VkMemoryPropertyFlags memoryFlags);
+    GPUImage(uint32_t width, uint32_t height, uint32_t arrayLayers, VkImageCreateFlags createFlags, VkImageUsageFlags usageFlags, VkMemoryPropertyFlags memoryFlags, VkFormat format, uint32_t mipCount, VkSampleCountFlagBits msaaSampleCount, VkImageTiling tiling);
+    GPUImage(uint32_t width, uint32_t height, VkImageUsageFlags usageFlags, VkMemoryPropertyFlags memoryFlags, VkFormat format, uint32_t mipCount, VkSampleCountFlagBits msaaSampleCount, VkImageTiling tiling);
+    GPUImage(uint32_t width, uint32_t height, VkImageUsageFlags imageUsageFlags, VkMemoryPropertyFlags memoryFlags, VkFormat format, VkImageTiling tiling);
+    GPUImage(uint32_t width, uint32_t height, VkImageUsageFlags imageUsageFlags, VkMemoryPropertyFlags memoryFlags, VkFormat format, uint32_t mipCount, VkImageTiling tiling);
     ~GPUImage();
 
     GPUImage(GPUImage&& other) noexcept;
@@ -41,7 +42,7 @@ class GPUImage
     inline uint32_t Height() const { return _internal.Height; }
     inline uint32_t MipCount() const { return _internal.MipCount; }
 
-    private:
+    protected:
     VkDeviceMemory _memoryInternal = VK_NULL_HANDLE;
     ImageReference _internal;
     VkImageViewHandler _view;

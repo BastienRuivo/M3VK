@@ -9,23 +9,29 @@
 #include <utility>
 #include <vulkan/vulkan_core.h>
 
-GPUImage::GPUImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags imageUsageFlags, VkMemoryPropertyFlags memoryFlags)
-: GPUImage(width, height, ImageHelper::GetMipCount(width, height), format, tiling, imageUsageFlags, memoryFlags)
+GPUImage::GPUImage(uint32_t width, uint32_t height, VkImageUsageFlags imageUsageFlags, VkMemoryPropertyFlags memoryFlags, VkFormat format, VkImageTiling tiling)
+: GPUImage(width, height, imageUsageFlags, memoryFlags, format, ImageHelper::GetMipCount(width, height), tiling)
 {
 
 }
 
-GPUImage::GPUImage(uint32_t width, uint32_t height, uint32_t mipCount, VkFormat format, VkImageTiling tiling, VkImageUsageFlags imageUsageFlags, VkMemoryPropertyFlags memoryFlags)
-: GPUImage(width, height, VK_SAMPLE_COUNT_1_BIT, mipCount, format, tiling, imageUsageFlags, memoryFlags)
+GPUImage::GPUImage(uint32_t width, uint32_t height, VkImageUsageFlags imageUsageFlags, VkMemoryPropertyFlags memoryFlags, VkFormat format, uint32_t mipCount, VkImageTiling tiling)
+: GPUImage(width, height, imageUsageFlags, memoryFlags, format, mipCount, VK_SAMPLE_COUNT_1_BIT, tiling)
 {
 
 }
 
-GPUImage::GPUImage(uint32_t width, uint32_t height, VkSampleCountFlagBits msaaSampleCount, uint32_t mipCount, VkFormat format, VkImageTiling tiling, VkImageUsageFlags imageUsageFlags, VkMemoryPropertyFlags memoryFlags)
+GPUImage::GPUImage(uint32_t width, uint32_t height, VkImageUsageFlags usageFlags, VkMemoryPropertyFlags memoryFlags, VkFormat format, uint32_t mipCount, VkSampleCountFlagBits msaaSampleCount, VkImageTiling tiling)
+: GPUImage(width, height, 1, 0, usageFlags, memoryFlags, format, mipCount, msaaSampleCount, tiling)
+{
+}
+
+GPUImage::GPUImage(uint32_t width, uint32_t height, uint32_t arrayLayers, VkImageCreateFlags createFlags, VkImageUsageFlags usageFlags, VkMemoryPropertyFlags memoryFlags, VkFormat format, uint32_t mipCount, VkSampleCountFlagBits msaaSampleCount, VkImageTiling tiling)
 {
     VkImageCreateInfo createInfo
     {
         .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+        .flags = 0,
         .imageType = VK_IMAGE_TYPE_2D,
         .format = format,
         .extent
@@ -35,10 +41,10 @@ GPUImage::GPUImage(uint32_t width, uint32_t height, VkSampleCountFlagBits msaaSa
             .depth = 1
         },
         .mipLevels = mipCount,
-        .arrayLayers = 1,
+        .arrayLayers = arrayLayers,
         .samples = msaaSampleCount,
         .tiling = tiling, // Optimal tiling data, if need to write / acces directly to the texture need LINEAR wich is classical row column
-        .usage = imageUsageFlags,
+        .usage = usageFlags,
         .sharingMode = VK_SHARING_MODE_EXCLUSIVE, // only used by the graphics queue
         .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
     };

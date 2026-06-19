@@ -39,10 +39,12 @@ uint32_t AssetHelper::LoadTexture(DescriptorAllocator& allocator, AssetImporter&
 {
     //DebugLayer::Log(DebugLayer::LogType::INFO, "Loading texture " + std::to_string(textureIndex) + " of type " + std::to_string(importer.Textures[textureIndex].Type) + " with " + std::to_string(importer.Textures[textureIndex].MipCount) + " mips, with size " + std::to_string(importer.Textures[textureIndex].Size) + " width, height = " + std::to_string(importer.Textures[textureIndex].Width) + ", " + std::to_string(importer.Textures[textureIndex].Height) + " and format " + std::to_string(importer.Textures[textureIndex].Format));
     TextureImport & texture = importer.Textures[textureIndex];
-    GPUImage gpuTexture(texture.Width, texture.Height, texture.MipCount, texture.Format,
-    VK_IMAGE_TILING_OPTIMAL,
-    VK_IMAGE_USAGE_TRANSFER_SRC_BIT |VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    GPUImage gpuTexture(texture.Width, texture.Height,
+        VK_IMAGE_USAGE_TRANSFER_SRC_BIT |VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+        texture.Format,
+        texture.MipCount,
+    VK_IMAGE_TILING_OPTIMAL);
 
     UploadCommand uploadCommand
     {
@@ -180,10 +182,10 @@ GPUImage AssetHelper::ImageFromCPU(const CPUImage& cpuImg, VkCommandPool pool, V
 {
     GPUImage gpuImg(cpuImg.Width(),
         cpuImg.Height(),
-        cpuImg.GetGPUFormat(),
-        VK_IMAGE_TILING_OPTIMAL,
         VK_IMAGE_USAGE_TRANSFER_SRC_BIT |VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+        cpuImg.GetGPUFormat(),
+        VK_IMAGE_TILING_OPTIMAL);
     gpuImg.UploadAndGenerateMip(cpuImg.Data(), cpuImg.Width(), cpuImg.Height(), cpuImg.Channels(), pool, queue);
 
     return gpuImg;

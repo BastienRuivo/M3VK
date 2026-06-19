@@ -169,14 +169,18 @@ void Application::RefreshSwapChain()
 
     _colorBackBuffer.reset();
     _colorBackBuffer = std::make_unique<GPUImage>(_swapChain->GetExtent().width, _swapChain->GetExtent().height,
-        ApplicationInfo::Get().GetMsaaSample(),
-        1, _swapChain->GetImageFormat(),
-        VK_IMAGE_TILING_OPTIMAL,
         VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+        _swapChain->GetImageFormat(), 1,
+        ApplicationInfo::Get().GetMsaaSample(),
+        VK_IMAGE_TILING_OPTIMAL);
 
     _depthBuffer.reset();
-    _depthBuffer = std::make_unique<GPUImage>(_swapChain->GetExtent().width, _swapChain->GetExtent().height, ApplicationInfo::Get().GetMsaaSample(), 1, ApplicationInfo::Constant::DepthFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+    _depthBuffer = std::make_unique<GPUImage>(
+        _swapChain->GetExtent().width, _swapChain->GetExtent().height,
+        VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+        ApplicationInfo::Constant::DepthFormat, 1, ApplicationInfo::Get().GetMsaaSample(), VK_IMAGE_TILING_OPTIMAL);
 }
 
 void Application::DrawFrame()
@@ -470,13 +474,17 @@ Application::Application() :
     _graphicsCommandPool(ApplicationInfo::GetGraphicsQueueId()),
     // Geometry & Data Buffers
     _colorBackBuffer(std::make_unique<GPUImage>(_swapChain->GetExtent().width, _swapChain->GetExtent().height,
-        ApplicationInfo::Get().GetMsaaSample(),
-        1,
-        _swapChain->GetImageFormat(),
-        VK_IMAGE_TILING_OPTIMAL,
         VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)),
-    _depthBuffer(std::make_unique<GPUImage>(_swapChain->GetExtent().width, _swapChain->GetExtent().height, ApplicationInfo::Get().GetMsaaSample(), 1, ApplicationInfo::Constant::DepthFormat, VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)),
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+        _swapChain->GetImageFormat(),
+        1,
+        ApplicationInfo::Get().GetMsaaSample(),
+        VK_IMAGE_TILING_OPTIMAL)),
+    _depthBuffer(std::make_unique<GPUImage>(
+        _swapChain->GetExtent().width, _swapChain->GetExtent().height,
+        VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+        ApplicationInfo::Constant::DepthFormat, 1, ApplicationInfo::Get().GetMsaaSample(),
+        VK_IMAGE_TILING_OPTIMAL)),
 
     _cameraDataBuffer(_descriptorAllocator, BINDING_CAMERA_BUFFER, GraphicsBuffer::STORAGE, RessourceUsage::PerFrame, 1, sizeof(CameraData)),
     _samplerLinear(),
