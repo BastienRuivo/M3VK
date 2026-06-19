@@ -23,8 +23,8 @@ class GPUImage
 
     GPUImage(uint32_t width, uint32_t height, uint32_t arrayLayers, VkImageCreateFlags createFlags, VkImageUsageFlags usageFlags, VkMemoryPropertyFlags memoryFlags, VkFormat format, uint32_t mipCount, VkSampleCountFlagBits msaaSampleCount, VkImageTiling tiling);
     GPUImage(uint32_t width, uint32_t height, VkImageUsageFlags usageFlags, VkMemoryPropertyFlags memoryFlags, VkFormat format, uint32_t mipCount, VkSampleCountFlagBits msaaSampleCount, VkImageTiling tiling);
-    GPUImage(uint32_t width, uint32_t height, VkImageUsageFlags imageUsageFlags, VkMemoryPropertyFlags memoryFlags, VkFormat format, VkImageTiling tiling);
-    GPUImage(uint32_t width, uint32_t height, VkImageUsageFlags imageUsageFlags, VkMemoryPropertyFlags memoryFlags, VkFormat format, uint32_t mipCount, VkImageTiling tiling);
+    GPUImage(uint32_t width, uint32_t height, VkImageUsageFlags usageFlags, VkMemoryPropertyFlags memoryFlags, VkFormat format, VkImageTiling tiling);
+    GPUImage(uint32_t width, uint32_t height, VkImageUsageFlags usageFlags, VkMemoryPropertyFlags memoryFlags, VkFormat format, uint32_t mipCount, VkImageTiling tiling);
     ~GPUImage();
 
     GPUImage(GPUImage&& other) noexcept;

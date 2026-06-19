@@ -9,14 +9,14 @@
 #include <utility>
 #include <vulkan/vulkan_core.h>
 
-GPUImage::GPUImage(uint32_t width, uint32_t height, VkImageUsageFlags imageUsageFlags, VkMemoryPropertyFlags memoryFlags, VkFormat format, VkImageTiling tiling)
-: GPUImage(width, height, imageUsageFlags, memoryFlags, format, ImageHelper::GetMipCount(width, height), tiling)
+GPUImage::GPUImage(uint32_t width, uint32_t height, VkImageUsageFlags usageFlags, VkMemoryPropertyFlags memoryFlags, VkFormat format, VkImageTiling tiling)
+: GPUImage(width, height, usageFlags, memoryFlags, format, ImageHelper::GetMipCount(width, height), tiling)
 {
 
 }
 
-GPUImage::GPUImage(uint32_t width, uint32_t height, VkImageUsageFlags imageUsageFlags, VkMemoryPropertyFlags memoryFlags, VkFormat format, uint32_t mipCount, VkImageTiling tiling)
-: GPUImage(width, height, imageUsageFlags, memoryFlags, format, mipCount, VK_SAMPLE_COUNT_1_BIT, tiling)
+GPUImage::GPUImage(uint32_t width, uint32_t height, VkImageUsageFlags usageFlags, VkMemoryPropertyFlags memoryFlags, VkFormat format, uint32_t mipCount, VkImageTiling tiling)
+: GPUImage(width, height, usageFlags, memoryFlags, format, mipCount, VK_SAMPLE_COUNT_1_BIT, tiling)
 {
 
 }
