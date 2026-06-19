@@ -50,6 +50,11 @@ class CommandBuffer
         vkCmdBindDescriptorSets(_internal, bindPoint, pipelineLayout, location, 1, &setHandle.Set, 0, nullptr);
     }
 
+    inline void Draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance) const
+    {
+        vkCmdDraw(_internal, vertexCount, instanceCount, firstVertex, firstInstance);
+    }
+
     inline void DrawIndexed(uint32_t firstIndex, uint32_t indexCount, uint32_t vertexOffset) const
     {
         vkCmdDrawIndexed(_internal, indexCount, 1, firstIndex, vertexOffset, 0);

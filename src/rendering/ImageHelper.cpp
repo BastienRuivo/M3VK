@@ -8,19 +8,19 @@
 
 void ImageHelper::TransitionLayoutCommand(const CommandBuffer& cmdBuffer, const ImageReference& image, VkImageLayout oldLayout, VkImageLayout newLayout)
 {
-    TransitionLayoutCommand(cmdBuffer, image, 0, image.MipCount, oldLayout, newLayout);
+    TransitionLayoutCommand(cmdBuffer, image, 0, image.MipCount, 0, image.ArrayLayerCount, oldLayout, newLayout);
 }
 
-void ImageHelper::TransitionLayoutCommand(const CommandBuffer& cmdBuffer, const ImageReference& image, uint32_t mipLevel, uint32_t mipCount, VkImageLayout oldLayout, VkImageLayout newLayout)
+void ImageHelper::TransitionLayoutCommand(const CommandBuffer& cmdBuffer, const ImageReference& image, uint32_t mipLevel, uint32_t mipCount, uint32_t arrayLayer, uint32_t arrayLayerCount, VkImageLayout oldLayout, VkImageLayout newLayout)
 {
     VkPipelineStageFlags srcAccesMask, dstAccesMask;
-    VkImageMemoryBarrier barrier = TransitionLayoutBarrier(image, mipLevel, mipCount, srcAccesMask, dstAccesMask, oldLayout, newLayout);
+    VkImageMemoryBarrier barrier = TransitionLayoutBarrier(image, mipLevel, mipCount, arrayLayer, arrayLayerCount, srcAccesMask, dstAccesMask, oldLayout, newLayout);
     cmdBuffer.Barrier(srcAccesMask, dstAccesMask, nullptr, 0, nullptr, 0, &barrier, 1);
 }
 
 void ImageHelper::CopyToImageCommand(const CommandBuffer &cmdBuffer, const ImageReference &image, uint32_t mipLevel, VkBuffer srcData)
 {
-    ImageHelper::TransitionLayoutCommand(cmdBuffer, image, mipLevel, 1, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+    ImageHelper::TransitionLayoutCommand(cmdBuffer, image, mipLevel, 1, 0, 1, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
     VkBufferImageCopy region
     {
@@ -73,7 +73,7 @@ void ImageHelper::GenerateMipmapsCommand(const CommandBuffer& cmdBuffer, const I
             .baseMipLevel = 0,
             .levelCount = 1,
             .baseArrayLayer = 0,
-            .layerCount = 1
+            .layerCount = image.ArrayLayerCount
         }
     };
 
@@ -83,7 +83,7 @@ void ImageHelper::GenerateMipmapsCommand(const CommandBuffer& cmdBuffer, const I
     size_t mipCount = image.MipCount;
     for(uint32_t i = 1; i < mipCount; ++i)
     {
-        ImageHelper::TransitionLayoutCommand(cmdBuffer, image, i, 1, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+        ImageHelper::TransitionLayoutCommand(cmdBuffer, image, i, 1, 0, image.ArrayLayerCount, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
         barrier.subresourceRange.baseMipLevel = i - 1;
         barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
@@ -100,7 +100,7 @@ void ImageHelper::GenerateMipmapsCommand(const CommandBuffer& cmdBuffer, const I
                 .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
                 .mipLevel = i - 1,
                 .baseArrayLayer = 0,
-                .layerCount = 1
+                .layerCount = image.ArrayLayerCount
             },
             .srcOffsets =
             {
@@ -112,7 +112,7 @@ void ImageHelper::GenerateMipmapsCommand(const CommandBuffer& cmdBuffer, const I
                 .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
                 .mipLevel = i,
                 .baseArrayLayer = 0,
-                .layerCount = 1
+                .layerCount = image.ArrayLayerCount
             },
             .dstOffsets =
             {
@@ -158,7 +158,7 @@ uint32_t ImageHelper::GetBytePerPixel(VkFormat format)
     }
 }
 
-VkImageMemoryBarrier ImageHelper::TransitionLayoutBarrier(const ImageReference &image, uint32_t mipLevel, uint32_t mipCount, VkPipelineStageFlags& sourceStage, VkPipelineStageFlags& destinationStage, VkImageLayout oldLayout, VkImageLayout newLayout)
+VkImageMemoryBarrier ImageHelper::TransitionLayoutBarrier(const ImageReference &image, uint32_t mipLevel, uint32_t mipCount, uint32_t arrayLayer, uint32_t arrayLayerCount, VkPipelineStageFlags& sourceStage, VkPipelineStageFlags& destinationStage, VkImageLayout oldLayout, VkImageLayout newLayout)
 {
     VkImageMemoryBarrier barrier
     {
@@ -175,8 +175,8 @@ VkImageMemoryBarrier ImageHelper::TransitionLayoutBarrier(const ImageReference &
             .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
             .baseMipLevel = mipLevel,
             .levelCount = mipCount,
-            .baseArrayLayer = 0,
-            .layerCount = 1
+            .baseArrayLayer = arrayLayer,
+            .layerCount = arrayLayerCount
         },
     };
 

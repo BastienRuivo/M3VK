@@ -8,6 +8,7 @@ class VkImageViewHandler : public Handler<VkImageView>
 {
     public:
     VkImageViewHandler() {};
+    VkImageViewHandler(VkImage image, VkFormat format, uint32_t mipCount, VkImageAspectFlags aspectMask, VkImageViewType type);
     VkImageViewHandler(VkImage image, VkFormat format, uint32_t mipCount, VkImageAspectFlags aspectMask);
     VkImageViewHandler(VkImage image, VkFormat format, uint32_t mipCount);
     ~VkImageViewHandler();

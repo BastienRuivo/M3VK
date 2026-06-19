@@ -15,6 +15,9 @@
 #define BINDING_VISIBLE_INSTANCE_INDIRECTION_BUFFER (STATIC_BINDING_CLEAR_DRAW_INDIRECT_BUFFER + 1)
 #define BINDING_VISIBLE_DRAW_INDIRECT_BUFFER (BINDING_VISIBLE_INSTANCE_INDIRECTION_BUFFER + 1)
 
+// Skybox
+#define STATIC_BINDING_SKYBOX_TEXTURE (BINDING_VISIBLE_DRAW_INDIRECT_BUFFER + 1)
+
 // BufferIndexes only contains index for non static buffers
 // static buffers are bound at their creation
 // but other buffers are stored in an array, and we send the index within the array via push constants

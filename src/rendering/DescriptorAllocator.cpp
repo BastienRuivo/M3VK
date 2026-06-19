@@ -10,13 +10,14 @@ DescriptorAllocator::DescriptorAllocator()
 :
 _globalSetLayouts({
     DescriptorPool::LayoutBuilder()
-    .AddBinding(BINDING_TEXTURES, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT, 0, ApplicationInfo::Constant::MaxTextureCount)
+    .AddBinding(BINDING_TEXTURES, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT, 0, ApplicationInfo::Constant::MaxMaterialTextureCount)
     .AddBinding(BINDING_CAMERA_BUFFER, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT, 0, RessourceUsage::PerFrame)
     .AddBinding(STATIC_BINDING_MATERIAL_BUFFER, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, RessourceUsage::Static)
     .AddBinding(STATIC_BINDING_INSTANCE_DATA_BUFFER, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_COMPUTE_BIT, 0, RessourceUsage::Static)
     .AddBinding(STATIC_BINDING_CLEAR_DRAW_INDIRECT_BUFFER, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT, 0, RessourceUsage::Static)
     .AddBinding(BINDING_VISIBLE_DRAW_INDIRECT_BUFFER, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT, 0, RessourceUsage::PerFrame)
     .AddBinding(BINDING_VISIBLE_INSTANCE_INDIRECTION_BUFFER, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_COMPUTE_BIT, 0, RessourceUsage::PerFrame)
+    .AddBinding(STATIC_BINDING_SKYBOX_TEXTURE, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0, RessourceUsage::Static)
     .Build(),
 }),
 _globalPushConstantRanges({
@@ -35,7 +36,7 @@ _bindlessPool(DescriptorPool::Builder()
         .AddBinding(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
             VK_SHADER_STAGE_FRAGMENT_BIT,
             VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT
-            | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT, ApplicationInfo::Constant::MaxTextureCount)
+            | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT, ApplicationInfo::Constant::MaxMaterialTextureCount + ApplicationInfo::Constant::MaxOtherTextureCount)
         .AddBinding(1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
             VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT | VK_SHADER_STAGE_VERTEX_BIT,
             VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT
@@ -82,7 +83,7 @@ DescriptorSetHandle DescriptorAllocator::AllocateBindless(std::span<uint32_t> co
     };
 }
 
-uint32_t DescriptorAllocator::RegisterTexture(uint32_t index, const VkDescriptorImageInfo& imageInfo)
+uint32_t DescriptorAllocator::RegisterBindlessTexture(uint32_t index, const VkDescriptorImageInfo& imageInfo)
 {
     VkDescriptorSet set = _globalSet.Set;
 
@@ -104,15 +105,9 @@ uint32_t DescriptorAllocator::RegisterTexture(uint32_t index, const VkDescriptor
     return index;
 }
 
-void DescriptorAllocator::RegisterBuffer(const VkDescriptorBufferInfo& bufferInfo, VkDescriptorType type, uint32_t dstBinding, uint32_t dstArrayElement)
+void DescriptorAllocator::RegisterBuffer(const VkDescriptorBufferInfo& info, VkDescriptorType type, uint32_t dstBinding, uint32_t dstArrayElement)
 {
     VkDescriptorSet set = _globalSet.Set;
-    uint32_t bufferIndex = _bufferCount++;
-
-    if(bufferIndex >= ApplicationInfo::Constant::MaxBufferCount)
-    {
-        throw std::runtime_error("Too many buffers");
-    }
 
     VkWriteDescriptorSet write =
     {
@@ -123,7 +118,27 @@ void DescriptorAllocator::RegisterBuffer(const VkDescriptorBufferInfo& bufferInf
         .descriptorCount = 1,
         .descriptorType = type,
         .pImageInfo = nullptr,
-        .pBufferInfo = &bufferInfo,
+        .pBufferInfo = &info,
+        .pTexelBufferView = nullptr
+    };
+
+    DescriptorHelper::UpdateDescriptorSet(std::span(&write, 1), {});
+}
+
+void DescriptorAllocator::RegisterTexture(const VkDescriptorImageInfo& info, uint32_t dstBinding, uint32_t dstArrayElement)
+{
+    VkDescriptorSet set = _globalSet.Set;
+
+    VkWriteDescriptorSet write =
+    {
+        .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+        .dstSet = set,
+        .dstBinding = dstBinding,
+        .dstArrayElement = dstArrayElement,
+        .descriptorCount = 1,
+        .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+        .pImageInfo = &info,
+        .pBufferInfo = nullptr,
         .pTexelBufferView = nullptr
     };
 

@@ -7,13 +7,16 @@
 VkImageViewHandler::VkImageViewHandler(VkImage image, VkFormat format, uint32_t mipCount) :
     VkImageViewHandler(image, format, mipCount, ApplicationHelper::GetImageAspectFlags(format)) {}
 
-VkImageViewHandler::VkImageViewHandler(VkImage image, VkFormat format, uint32_t mipCount, VkImageAspectFlags aspectMask)
+VkImageViewHandler::VkImageViewHandler(VkImage image, VkFormat format, uint32_t mipCount, VkImageAspectFlags aspectMask) :
+    VkImageViewHandler(image, format, mipCount, aspectMask, VK_IMAGE_VIEW_TYPE_2D) {}
+
+VkImageViewHandler::VkImageViewHandler(VkImage image, VkFormat format, uint32_t mipCount, VkImageAspectFlags aspectMask, VkImageViewType type)
 {
     VkImageViewCreateInfo createInfo
     {
         .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
         .image = image,
-        .viewType = VK_IMAGE_VIEW_TYPE_2D,
+        .viewType = type,
         .format = format,
         .subresourceRange =
         {
@@ -21,7 +24,7 @@ VkImageViewHandler::VkImageViewHandler(VkImage image, VkFormat format, uint32_t 
             .baseMipLevel = 0,
             .levelCount = mipCount,
             .baseArrayLayer = 0,
-            .layerCount = 1
+            .layerCount = type == VK_IMAGE_VIEW_TYPE_CUBE ? 6u : 1u
         }
     };
 

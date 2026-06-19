@@ -15,8 +15,9 @@ class DescriptorAllocator
     static constexpr uint32_t ShaderConstantsSize = 64;
 
     DescriptorSetHandle AllocateBindless(std::span<uint32_t> counts, VkDescriptorSetLayout layout);
-    uint32_t RegisterTexture(uint32_t index, const VkDescriptorImageInfo& imageInfo);
-    void RegisterBuffer(const VkDescriptorBufferInfo& bufferInfo, VkDescriptorType type, uint32_t dstBinding, uint32_t dstArrayElement);
+    uint32_t RegisterBindlessTexture(uint32_t index, const VkDescriptorImageInfo& imageInfo);
+    void RegisterBuffer(const VkDescriptorBufferInfo& info, VkDescriptorType type, uint32_t dstBinding, uint32_t dstArrayElement);
+    void RegisterTexture(const VkDescriptorImageInfo& info, uint32_t dstBinding, uint32_t dstArrayElement);
 
     inline DescriptorSetHandle GlobalDescriptorSet() const { return _globalSet; }
     inline VkPipelineLayout GlobalLayout() const { return _globalLayout.Internal(); }
@@ -30,7 +31,4 @@ class DescriptorAllocator
     std::vector<VkDescriptorSetLayout> _globalSetLayouts;
     std::vector<VkPushConstantRange> _globalPushConstantRanges;
     VkPipelineLayoutHandler _globalLayout;
-
-    uint32_t _textureCount = 0;
-    uint32_t _bufferCount = 0;
 };

@@ -16,7 +16,9 @@
 #include "rendering/DescriptorAllocator.h"
 #include "rendering/GPUImage.h"
 #include "rendering/GraphicsBuffer.h"
+#include "rendering/GraphicsImage.h"
 #include "rendering/ImageHelper.h"
+#include "rendering/RessourceUsage.h"
 
 void Upload(AssetHelper::UploadCommand* commands, uint32_t commandCount, PoolStageBuffer& buffer, VkQueue queue, VkCommandPool pool)
 {
@@ -26,9 +28,9 @@ void Upload(AssetHelper::UploadCommand* commands, uint32_t commandCount, PoolSta
         for (uint32_t i = 0; i < commandCount; i++)
         {
             AssetHelper::UploadCommand& command = commands[i];
-            ImageHelper::TransitionLayoutCommand(cmdBuffer, command.Image, 0, command.MipCount, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+            ImageHelper::TransitionLayoutCommand(cmdBuffer, command.Image, 0, command.MipCount, 0, 1, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
             cmdBuffer.CopyBufferToImage(buffer.Internal(), command.Image.Image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, command.CopyRegion, command.MipCount);
-            ImageHelper::TransitionLayoutCommand(cmdBuffer, command.Image, 0, command.MipCount, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+            ImageHelper::TransitionLayoutCommand(cmdBuffer, command.Image, 0, command.MipCount, 0, 1, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
         }
     }
     cmdBuffer.End();
@@ -43,8 +45,7 @@ uint32_t AssetHelper::LoadTexture(DescriptorAllocator& allocator, AssetImporter&
         VK_IMAGE_USAGE_TRANSFER_SRC_BIT |VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
         texture.Format,
-        texture.MipCount,
-    VK_IMAGE_TILING_OPTIMAL);
+        texture.MipCount);
 
     UploadCommand uploadCommand
     {
@@ -184,9 +185,59 @@ GPUImage AssetHelper::ImageFromCPU(const CPUImage& cpuImg, VkCommandPool pool, V
         cpuImg.Height(),
         VK_IMAGE_USAGE_TRANSFER_SRC_BIT |VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-        cpuImg.GetGPUFormat(),
-        VK_IMAGE_TILING_OPTIMAL);
+        cpuImg.GetGPUFormat());
     gpuImg.UploadAndGenerateMip(cpuImg.Data(), cpuImg.Width(), cpuImg.Height(), cpuImg.Channels(), pool, queue);
 
     return gpuImg;
+}
+
+GraphicsImage AssetHelper::CubemapFromCPU(DescriptorAllocator& allocator, uint32_t dstBinding, VkCommandPool pool, VkQueue queue, VkSampler sampler, const CPUImage& front, const CPUImage& back, const CPUImage& left, const CPUImage& right, const CPUImage& top, const CPUImage& bottom)
+{
+    assert(front.Width() == back.Width() && front.Width() == left.Width() && front.Width() == right.Width() && front.Width() == top.Width() && front.Width() == bottom.Width());
+    assert(front.Height() == back.Height() && front.Height() == left.Height() && front.Height() == right.Height() && front.Height() == top.Height() && front.Height() == bottom.Height());
+    assert(front.Channels() == back.Channels() && front.Channels() == left.Channels() && front.Channels() == right.Channels() && front.Channels() == top.Channels() && front.Channels() == bottom.Channels());
+
+    GraphicsImage gpuCubeMap(allocator, dstBinding, sampler,RessourceUsage::Static,
+        front.Width(), front.Height(),
+        6, VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT,
+        VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+        front.GetGPUFormat(), ImageHelper::GetMipCount(front.Width(), front.Height()), VK_IMAGE_TILING_OPTIMAL, VK_SAMPLE_COUNT_1_BIT);
+
+    const CPUImage* stage[6] = { &right, &left, &top, &bottom, &front, &back };
+    VkBufferImageCopy copyRegions[6];
+    VkBufferImageCopy base = {};
+    base.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    base.imageSubresource.layerCount = 1;
+    base.imageExtent = { static_cast<uint32_t>(front.Width()), static_cast<uint32_t>(front.Height()), 1 };
+
+    VkDeviceSize size = front.Width() * front.Height() * front.Channels();
+
+    StageBuffer stageBuffer(size * 6, StageBuffer::Usage::Upload);
+
+    VkDeviceSize offset = 0;
+    for (uint32_t i = 0; i < 6; i++)
+    {
+        const CPUImage* img = stage[i];
+        stageBuffer.MapAndCopyToBuffer(img->Data(), offset, size);
+
+        copyRegions[i] = base;
+        copyRegions[i].bufferOffset = offset;
+        copyRegions[i].imageSubresource.baseArrayLayer = i;
+        offset += size;
+    }
+
+    const auto & image = gpuCubeMap.Internal();
+
+    CommandBuffer cmdBuffer(pool, queue);
+    cmdBuffer.BeginSingleTime();
+    {
+        ImageHelper::TransitionLayoutCommand(cmdBuffer, image, 0, 1, 0, 6, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+        cmdBuffer.CopyBufferToImage(stageBuffer.Internal(), image.Image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, copyRegions, 6);
+        ImageHelper::GenerateMipmapsCommand(cmdBuffer, gpuCubeMap.Internal());
+    }
+    cmdBuffer.End();
+    cmdBuffer.WaitCompletion();
+
+    return gpuCubeMap;
 }

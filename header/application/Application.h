@@ -4,6 +4,7 @@
 #include "application/UserInterface.h"
 #include "modules/CullingModule.h"
 #include "modules/DrawModule.h"
+#include "modules/SkyboxModule.h"
 #include "rendering/Camera.h"
 #include "rendering/DescriptorAllocator.h"
 #include "registry/Registry.h"
@@ -93,6 +94,7 @@ class Application
     UserInterface _UserInterface;
     CullingModule _cullingModule;
     std::array<DrawModule, MaterialType::Count> _drawModules;
+    SkyboxModule _skyboxModule;
 
     bool _mouseLocked = true;
     float _inputPrevent = 0;

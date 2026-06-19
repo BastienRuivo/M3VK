@@ -80,8 +80,8 @@ class ShaderLibrary
     ShaderLibrary(ShaderLibrary&& other) noexcept;
     ShaderLibrary& operator=(ShaderLibrary&& other) noexcept;
 
-    uint32_t RegisterShader(std::filesystem::path, ShaderType type, std::span<const VkDescriptorSetLayout> descriptorLayouts, std::span<const VkPushConstantRange> pushConstantRanges, std::span<const Shader::SpecializationConstant> speConstants);
-    uint32_t RegisterShader(std::filesystem::path, ShaderType type, const DescriptorAllocator& descriptorAllocator, std::span<const Shader::SpecializationConstant> speConstants);
+    uint32_t RegisterShader(std::filesystem::path, ShaderType type, std::span<const VkDescriptorSetLayout> descriptorLayouts, std::span<const VkPushConstantRange> pushConstantRanges, std::span<const Shader::SpecializationConstant> speConstants = {});
+    uint32_t RegisterShader(std::filesystem::path, ShaderType type, const DescriptorAllocator& descriptorAllocator, std::span<const Shader::SpecializationConstant> speConstants = {});
     void DisposeShader(uint32_t);
     inline VkShaderEXT GetHandle(uint32_t id) const { return _shaders[id].Handle; }
     inline const Shader& Get(uint32_t id) const { return _shaders[id]; }

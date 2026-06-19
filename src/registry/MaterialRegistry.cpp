@@ -78,7 +78,7 @@ uint32_t MaterialRegistry::RegisterTexture(DescriptorAllocator& allocator, GPUIm
         throw std::runtime_error("BindlessTextureManager is full");
     }
 
-    allocator.RegisterTexture(textureIndex, binding.Descriptor);
+    allocator.RegisterBindlessTexture(textureIndex, binding.Descriptor);
 
     _textureIndicesState[textureIndex] = textureIndex;
     _lastFreeTextureIndex = (textureIndex + 1) % _maxTexturesCount;

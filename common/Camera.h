@@ -20,11 +20,12 @@ struct Plane
 
 struct CameraData
 {
-    dMat4 WorldToCameraMatrix;
-    dMat4 ProjectionMatrix;
-    dMat4 ViewProjectionMatrix;
-    dMat4 InverseViewProjectionMatrix;
-    Plane FrustumPlanes[6];
+    dAlign(16) dMat4 WorldToCameraMatrix;
+    dAlign(16) dMat4 ProjectionMatrix;
+    dAlign(16) dMat4 ViewProjectionMatrix;
+    dAlign(16) dMat4 InverseViewProjectionMatrix;
+    dAlign(16) dMat4 InverseViewProjectionMatrixNoTranslation;
+    dAlign(4) Plane FrustumPlanes[6];
 
     #ifndef GLSL
     enum Planes

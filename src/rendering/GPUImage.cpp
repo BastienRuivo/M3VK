@@ -1,4 +1,5 @@
 #include "rendering/GPUImage.h"
+#include "application/ApplicationHelper.h"
 #include "rendering/ImageHelper.h"
 #include "application/ApplicationInfo.h"
 #include "rendering/CommandBuffer.h"
@@ -9,29 +10,24 @@
 #include <utility>
 #include <vulkan/vulkan_core.h>
 
-GPUImage::GPUImage(uint32_t width, uint32_t height, VkImageUsageFlags usageFlags, VkMemoryPropertyFlags memoryFlags, VkFormat format, VkImageTiling tiling)
-: GPUImage(width, height, usageFlags, memoryFlags, format, ImageHelper::GetMipCount(width, height), tiling)
+GPUImage::GPUImage(uint32_t width, uint32_t height, VkImageUsageFlags usageFlags, VkMemoryPropertyFlags memoryFlags, VkFormat format, VkImageTiling tiling, VkSampleCountFlagBits msaaSampleCount)
+: GPUImage(width, height, 1, 0, usageFlags, memoryFlags, format, ImageHelper::GetMipCount(width, height), tiling, msaaSampleCount)
 {
 
 }
 
-GPUImage::GPUImage(uint32_t width, uint32_t height, VkImageUsageFlags usageFlags, VkMemoryPropertyFlags memoryFlags, VkFormat format, uint32_t mipCount, VkImageTiling tiling)
-: GPUImage(width, height, usageFlags, memoryFlags, format, mipCount, VK_SAMPLE_COUNT_1_BIT, tiling)
+GPUImage::GPUImage(uint32_t width, uint32_t height, VkImageUsageFlags usageFlags, VkMemoryPropertyFlags memoryFlags, VkFormat format, uint32_t mipCount, VkImageTiling tiling, VkSampleCountFlagBits msaaSampleCount)
+: GPUImage(width, height, 1, 0, usageFlags, memoryFlags, format, mipCount, tiling, msaaSampleCount)
 {
 
 }
 
-GPUImage::GPUImage(uint32_t width, uint32_t height, VkImageUsageFlags usageFlags, VkMemoryPropertyFlags memoryFlags, VkFormat format, uint32_t mipCount, VkSampleCountFlagBits msaaSampleCount, VkImageTiling tiling)
-: GPUImage(width, height, 1, 0, usageFlags, memoryFlags, format, mipCount, msaaSampleCount, tiling)
-{
-}
-
-GPUImage::GPUImage(uint32_t width, uint32_t height, uint32_t arrayLayers, VkImageCreateFlags createFlags, VkImageUsageFlags usageFlags, VkMemoryPropertyFlags memoryFlags, VkFormat format, uint32_t mipCount, VkSampleCountFlagBits msaaSampleCount, VkImageTiling tiling)
+GPUImage::GPUImage(uint32_t width, uint32_t height, uint32_t arrayLayers, VkImageCreateFlags createFlags, VkImageUsageFlags usageFlags, VkMemoryPropertyFlags memoryFlags, VkFormat format, uint32_t mipCount, VkImageTiling tiling, VkSampleCountFlagBits msaaSampleCount)
 {
     VkImageCreateInfo createInfo
     {
         .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
-        .flags = 0,
+        .flags = createFlags,
         .imageType = VK_IMAGE_TYPE_2D,
         .format = format,
         .extent
@@ -79,7 +75,7 @@ GPUImage::GPUImage(uint32_t width, uint32_t height, uint32_t arrayLayers, VkImag
         throw  std::runtime_error("Can't bind image memory !");
     }
 
-    _view = VkImageViewHandler(image, format, mipCount);
+    _view = VkImageViewHandler(image, format, mipCount, ApplicationHelper::GetImageAspectFlags(format), createFlags & VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT ? VK_IMAGE_VIEW_TYPE_CUBE : VK_IMAGE_VIEW_TYPE_2D);
 
     _internal =
     {
@@ -89,6 +85,7 @@ GPUImage::GPUImage(uint32_t width, uint32_t height, uint32_t arrayLayers, VkImag
         .Width = static_cast<uint32_t>(width),
         .Height = static_cast<uint32_t>(height),
         .MipCount = mipCount,
+        .ArrayLayerCount = arrayLayers,
         .Size = memRequirements.size
     };
 }

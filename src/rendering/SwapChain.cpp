@@ -189,6 +189,7 @@ SwapChain::SwapChain(const Window& window, VkSurfaceKHR windowSurface)
             .Width = extents.width,
             .Height = extents.height,
             .MipCount = 1,
+            .ArrayLayerCount = 1
         };
         Images.EmplaceBack(image);
     }

@@ -10,7 +10,7 @@ class MaterialRegistry : public Registry
 {
 public:
 
-    MaterialRegistry(DescriptorAllocator& pool, uint32_t maxTexturesCount = ApplicationInfo::Constant::MaxTextureCount);
+    MaterialRegistry(DescriptorAllocator& pool, uint32_t maxTexturesCount = ApplicationInfo::Constant::MaxMaterialTextureCount);
     ~MaterialRegistry();
 
     void UploadAndRelease(VkQueue queue, VkCommandPool cmdPool) override;

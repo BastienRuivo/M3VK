@@ -95,6 +95,7 @@ void Application::UpdateCameraData()
 
     cameraData.ViewProjectionMatrix = cameraData.ProjectionMatrix * cameraData.WorldToCameraMatrix;
 
+    cameraData.InverseViewProjectionMatrixNoTranslation = glm::inverse(glm::mat4(glm::mat3(cameraData.ViewProjectionMatrix)));
     cameraData.InverseViewProjectionMatrix = glm::inverse(cameraData.ViewProjectionMatrix);
 
     ExtractFrusumPlane(cameraData);
@@ -172,15 +173,15 @@ void Application::RefreshSwapChain()
         VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
         _swapChain->GetImageFormat(), 1,
-        ApplicationInfo::Get().GetMsaaSample(),
-        VK_IMAGE_TILING_OPTIMAL);
+        VK_IMAGE_TILING_OPTIMAL,
+        ApplicationInfo::GetMsaaSample());
 
     _depthBuffer.reset();
     _depthBuffer = std::make_unique<GPUImage>(
         _swapChain->GetExtent().width, _swapChain->GetExtent().height,
         VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-        ApplicationInfo::Constant::DepthFormat, 1, ApplicationInfo::Get().GetMsaaSample(), VK_IMAGE_TILING_OPTIMAL);
+        ApplicationInfo::Constant::DepthFormat, 1, VK_IMAGE_TILING_OPTIMAL, ApplicationInfo::GetMsaaSample());
 }
 
 void Application::DrawFrame()
@@ -293,7 +294,7 @@ void Application::RecordCommandBuffer(const CommandBuffer& cmdBuffer, uint32_t i
         VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
         VK_ATTACHMENT_LOAD_OP_CLEAR,
         VK_ATTACHMENT_STORE_OP_STORE,
-        {{0.2f, 0.4f, 0.75f, 1.0f}});
+        {{}});
 
     VkRenderingAttachmentInfo depthAttachment = ImageHelper::AttachmentInfo(_depthBuffer->View(), VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE, {1.0f, 0.0});
     // there is no stencil buffer
@@ -358,6 +359,8 @@ void Application::RecordCommandBuffer(const CommandBuffer& cmdBuffer, uint32_t i
                     MeshRegistry::LayerMaterialInfo drawInfo = meshRegistry.GetIndirectDrawInfo(static_cast<MaterialType>(i));
                     _drawModules[i].Execute(cmdBuffer, _descriptorAllocator.GlobalLayout(), _cullingModule.VisibleIndirectBuffer(), drawInfo.offset, drawInfo.count, _wireframe);
                 }
+
+                _skyboxModule.Execute(cmdBuffer, _descriptorAllocator.GlobalLayout());
             }
             cmdBuffer.EndRendering();
 
@@ -477,14 +480,11 @@ Application::Application() :
         VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
         _swapChain->GetImageFormat(),
-        1,
-        ApplicationInfo::Get().GetMsaaSample(),
-        VK_IMAGE_TILING_OPTIMAL)),
+        1, VK_IMAGE_TILING_OPTIMAL, ApplicationInfo::GetMsaaSample())),
     _depthBuffer(std::make_unique<GPUImage>(
         _swapChain->GetExtent().width, _swapChain->GetExtent().height,
         VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-        ApplicationInfo::Constant::DepthFormat, 1, ApplicationInfo::Get().GetMsaaSample(),
-        VK_IMAGE_TILING_OPTIMAL)),
+        ApplicationInfo::Constant::DepthFormat, 1, VK_IMAGE_TILING_OPTIMAL, ApplicationInfo::GetMsaaSample())),
 
     _cameraDataBuffer(_descriptorAllocator, BINDING_CAMERA_BUFFER, GraphicsBuffer::STORAGE, RessourceUsage::PerFrame, 1, sizeof(CameraData)),
     _samplerLinear(),
@@ -500,6 +500,7 @@ Application::Application() :
     _UserInterface(_window.Internal(), *_swapChain, _graphicsComputeQueue.Internal(), _graphicsCommandPool.Internal()),
 
     _drawModules(InitDrawModule(false)),
+    _skyboxModule(_shaderLibrary, _descriptorAllocator, _graphicsCommandPool.Internal(), _graphicsComputeQueue.Internal()),
 
     // modules
     _cullingModule(_shaderLibrary, _descriptorAllocator)
@@ -568,7 +569,7 @@ Application::Application() :
     }
 
    AssetHelper::Load3DModel(_descriptorAllocator, "data/BistroExterior.m3vkasset", meshRegistry, materialRegistry, _graphicsCommandPool.Internal(), _graphicsComputeQueue.Internal(), _samplerLinear.Internal());
-   AssetHelper::Load3DModel(_descriptorAllocator, "data/BistroInterior_Wine.m3vkasset", meshRegistry, materialRegistry, _graphicsCommandPool.Internal(), _graphicsComputeQueue.Internal(), _samplerLinear.Internal());
+   //AssetHelper::Load3DModel(_descriptorAllocator, "data/BistroInterior_Wine.m3vkasset", meshRegistry, materialRegistry, _graphicsCommandPool.Internal(), _graphicsComputeQueue.Internal(), _samplerLinear.Internal());
      /*for(uint32_t i = 0; i < 100; ++i)
     {
         float red = (rand() / (float)RAND_MAX);

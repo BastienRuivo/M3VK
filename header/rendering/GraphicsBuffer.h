@@ -127,7 +127,8 @@ class GraphicsBuffer
 
     inline VkDescriptorType GetDescriptorType() const
     {
-        switch (_type) {
+        switch (_type)
+        {
         case BufferType::UNIFORM:
             return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         case BufferType::STORAGE:

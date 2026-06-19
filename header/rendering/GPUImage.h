@@ -14,6 +14,7 @@ struct ImageReference
     uint32_t Width = 0;
     uint32_t Height = 0;
     uint32_t MipCount = 0;
+    uint32_t ArrayLayerCount = 0;
     size_t Size = 0;
 };
 
@@ -21,11 +22,12 @@ class GPUImage
 {
     public:
 
-    GPUImage(uint32_t width, uint32_t height, uint32_t arrayLayers, VkImageCreateFlags createFlags, VkImageUsageFlags usageFlags, VkMemoryPropertyFlags memoryFlags, VkFormat format, uint32_t mipCount, VkSampleCountFlagBits msaaSampleCount, VkImageTiling tiling);
-    GPUImage(uint32_t width, uint32_t height, VkImageUsageFlags usageFlags, VkMemoryPropertyFlags memoryFlags, VkFormat format, uint32_t mipCount, VkSampleCountFlagBits msaaSampleCount, VkImageTiling tiling);
-    GPUImage(uint32_t width, uint32_t height, VkImageUsageFlags usageFlags, VkMemoryPropertyFlags memoryFlags, VkFormat format, VkImageTiling tiling);
-    GPUImage(uint32_t width, uint32_t height, VkImageUsageFlags usageFlags, VkMemoryPropertyFlags memoryFlags, VkFormat format, uint32_t mipCount, VkImageTiling tiling);
+    GPUImage(uint32_t width, uint32_t height, uint32_t arrayLayers, VkImageCreateFlags createFlags, VkImageUsageFlags usageFlags, VkMemoryPropertyFlags memoryFlags, VkFormat format, uint32_t mipCount, VkImageTiling tiling, VkSampleCountFlagBits msaaSampleCount);
+    GPUImage(uint32_t width, uint32_t height, VkImageUsageFlags usageFlags, VkMemoryPropertyFlags memoryFlags, VkFormat format, uint32_t mipCount, VkImageTiling tiling = VK_IMAGE_TILING_OPTIMAL, VkSampleCountFlagBits msaaSampleCount = VK_SAMPLE_COUNT_1_BIT);
+    GPUImage(uint32_t width, uint32_t height, VkImageUsageFlags usageFlags, VkMemoryPropertyFlags memoryFlags, VkFormat format, VkImageTiling tiling = VK_IMAGE_TILING_OPTIMAL, VkSampleCountFlagBits msaaSampleCount = VK_SAMPLE_COUNT_1_BIT);
     ~GPUImage();
+
+    GPUImage static CubeMap(uint32_t width, uint32_t height, VkImageUsageFlags usageFlags, VkMemoryPropertyFlags memoryFlags, VkFormat format, VkImageTiling tiling = VK_IMAGE_TILING_OPTIMAL, VkSampleCountFlagBits msaaSampleCount = VK_SAMPLE_COUNT_1_BIT);
 
     GPUImage(GPUImage&& other) noexcept;
     GPUImage& operator=(GPUImage&& other) noexcept;
