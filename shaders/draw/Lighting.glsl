@@ -77,7 +77,7 @@ vec3 ComputeLighting(LightingInput lightInput)
 
     float diffuse = max(max(dot(lightInput.Normal, lightDir), 0.0), 0.1);
 
-    return diffuse * lightInput.BaseColor ;
+    return diffuse * lightInput.BaseColor;
 }
 
 #endif
