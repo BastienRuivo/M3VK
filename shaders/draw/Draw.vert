@@ -29,13 +29,13 @@ layout(set = GLOBAL_SET, binding = BINDING_VISIBLE_INSTANCE_INDIRECTION_BUFFER, 
 // In
 layout(location = 0) in vec3 osVertexPosition;
 layout(location = 1) in vec3 normal;
-layout(location = 2) in vec3 tangent;
+layout(location = 2) in vec4 tangent;
 layout(location = 3) in vec2 texCoords;
 
 // Out
 layout (location=0) out uint vMaterialIndex;
 layout(location=1) out vec3 vNormal;
-layout(location=2) out vec3 vTangent;
+layout(location=2) out vec4 vTangent;
 layout(location=3) out vec2 vTexcoords;
 layout(location=4) out vec3 vWsPosition;
 
@@ -49,22 +49,22 @@ void main()
     InstanceData instance = _Instances.data[instanceIndex];
     CameraData camera = _Cameras[cameraBufferIndex].data;
 
-    vec4 wsPosition = vec4(osVertexPosition, 1.0);
+    vec4 wsPosition = instance.LocalToWorldMatrix * vec4(osVertexPosition, 1.0);
 
     vWsPosition = wsPosition.xyz;
 
-    gl_Position = camera.ViewProjectionMatrix * instance.LocalToWorldMatrix * wsPosition;
+    gl_Position = camera.ViewProjectionMatrix * wsPosition;
 
     vMaterialIndex = instance.MaterialIndex;
 
     // Correct normal for non uniform scaling
     mat3 normalMatrix = mat3(transpose(inverse(instance.LocalToWorldMatrix)));
     vec3 N = normalize(normalMatrix  * normal);
-    vec3 T = normalize(normalMatrix  * tangent);
+    vec3 T = normalize(normalMatrix  * tangent.xyz);
     T = normalize(T - dot(T, N) * N);
 
     vNormal = N;
-    vTangent = T;
+    vTangent = vec4(T, tangent.w);
 
     vTexcoords = texCoords;
 }

@@ -21,7 +21,7 @@ layout(set = GLOBAL_SET, binding = STATIC_BINDING_MATERIAL_BUFFER, std430) reado
 //inputs
 layout(location = 0) flat in uint vMaterialIndex;
 layout(location=1) in vec3 vNormal;
-layout(location=2) in vec3 vTangent;
+layout(location=2) in vec4 vTangent;
 layout(location=3) in vec2 vTexcoords;
 layout(location=4) in vec3 vWsPosition;
 
@@ -40,15 +40,19 @@ LightingInput CreateLightingInput(uint materialIndex)
     MaterialProperties material = _Materials.data[materialIndex];
     vec4 baseColor = texture(uTextures[material.BaseColorTexId], vTexcoords) * material.BaseColor;
 
-    vec3 normal = texture(uTextures[material.NormalMapTexId], vTexcoords).rgb * 2.0 - 1.0;
+    // BC5 only stored RG values which let us recontruct B value
+    vec2 normalXY = texture(uTextures[material.NormalMapTexId], vTexcoords).rg * 2.0 - 1.0;
+    float normalZ = sqrt(max(1.0 - dot(normalXY, normalXY), 0.0));
+    vec3 normal = vec3(normalXY, normalZ);
 
-    vec3 N = vNormal;
-    vec3 T = vTangent;
-    vec3 B = normalize(cross(T, N));
+
+    vec3 N = normalize(vNormal);
+    vec3 T = normalize(vTangent.xyz);
+    vec3 B = normalize(cross(N, T) * vTangent.w);
 
     mat3 TBN = mat3(T, B, N);
 
-    vec3 finalNormal = normalize(TBN * -normal.xyz);
+    vec3 finalNormal = normalize(TBN * normal.xyz);
 
     LightingInput lightInput;
     lightInput.BaseColor = baseColor.rgb;

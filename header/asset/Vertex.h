@@ -17,7 +17,7 @@ struct Vertex
 {
     glm::vec3 pos;
     glm::vec3 normal;
-    glm::vec3 tangent;
+    glm::vec4 tangent;
     glm::vec2 texCoord;
 
     bool operator==(const Vertex& other) const
@@ -67,7 +67,7 @@ struct Vertex
                 .sType = VK_STRUCTURE_TYPE_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION_2_EXT,
                 .location = location++,
                 .binding = 0,
-                .format = VK_FORMAT_R32G32B32_SFLOAT,
+                .format = VK_FORMAT_R32G32B32A32_SFLOAT,
                 .offset = offsetof(Vertex, tangent)
             },
             VkVertexInputAttributeDescription2EXT

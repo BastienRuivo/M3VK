@@ -568,7 +568,32 @@ Application::Application() :
         meshRegistry.RegisterInstance(MaterialType::Opaque, instance);
     }
 
-   AssetHelper::Load3DModel(_descriptorAllocator, "data/BistroExterior.m3vkasset", meshRegistry, materialRegistry, _graphicsCommandPool.Internal(), _graphicsComputeQueue.Internal(), _samplerLinear.Internal());
+
+    InstanceData instance = {
+        .LocalToWorldMatrix = ApplicationHelper::TranslateRotateScale(glm::vec3(0.0f, -0.1f, 0.0f),
+            glm::vec3(0.0f, 0.0f, 0.0f),
+            glm::vec3(10000, 0.001, 10000)),
+        .AabbMin = aabbMin,
+        .MaterialIndex = 2,
+        .AabbMax = aabbMax,
+        .MeshIndex = cube
+    };
+
+    meshRegistry.RegisterInstance(MaterialType::Opaque, instance);
+    instance = {
+        .LocalToWorldMatrix = ApplicationHelper::TranslateRotateScale(glm::vec3(0.0f, 10.0f, 10.0f),
+            glm::vec3(0.0f, 0.0f, 0.0f),
+            glm::vec3(1, 1, 1)),
+        .AabbMin = aabbMin,
+        .MaterialIndex = 1,
+        .AabbMax = aabbMax,
+        .MeshIndex = cube
+    };
+
+    meshRegistry.RegisterInstance(MaterialType::Opaque, instance);
+
+
+   //AssetHelper::Load3DModel(_descriptorAllocator, "data/BistroExterior.m3vkasset", meshRegistry, materialRegistry, _graphicsCommandPool.Internal(), _graphicsComputeQueue.Internal(), _samplerLinear.Internal());
    //AssetHelper::Load3DModel(_descriptorAllocator, "data/BistroInterior_Wine.m3vkasset", meshRegistry, materialRegistry, _graphicsCommandPool.Internal(), _graphicsComputeQueue.Internal(), _samplerLinear.Internal());
      /*for(uint32_t i = 0; i < 100; ++i)
     {
