@@ -1,5 +1,5 @@
 #include "modules/SkyboxModule.h"
-#include "asset/AssetHelper.h"
+#include "asset/ImporterHelper.h"
 #include "rendering/DescriptorAllocator.h"
 #include "rendering/Shaders/ShaderLibrary.h"
 #include <cstdint>
@@ -9,7 +9,7 @@
 SkyboxModule::SkyboxModule(ShaderLibrary& shaderLibrary, DescriptorAllocator& allocator, VkCommandPool pool, VkQueue queue)
 :
     _sampler(VK_FILTER_LINEAR, VK_FILTER_LINEAR),
-    _skyboxTexture(AssetHelper::CubemapFromCPU(allocator, STATIC_BINDING_SKYBOX_TEXTURE, pool, queue, _sampler.Internal(),
+    _skyboxTexture(ImporterHelper::CubemapFromCPU(allocator, STATIC_BINDING_SKYBOX_TEXTURE, pool, queue, _sampler.Internal(),
         CPUImage("data/skybox/front.jpg", STBI_rgb_alpha),
         CPUImage("data/skybox/back.jpg", STBI_rgb_alpha),
         CPUImage("data/skybox/left.jpg", STBI_rgb_alpha),

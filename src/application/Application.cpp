@@ -1,6 +1,7 @@
 #include "application/Application.h"
 #include "Material.h"
 #include "application/ApplicationHelper.h"
+#include "asset/AssetImporter.h"
 #include "asset/MeshHelper.h"
 #include "glm/matrix.hpp"
 #include "modules/DrawModule.h"
@@ -14,7 +15,7 @@
 #include "registry/MeshRegistry.h"
 #include "rendering/ImageHelper.h"
 #include "rendering/MultiFrame.h"
-#include "asset/AssetHelper.h"
+#include "asset/ImporterHelper.h"
 #include "registry/Registry.h"
 #include "rendering/Shaders/ShaderLibrary.h"
 #include "rendering/SwapChain.h"
@@ -384,13 +385,13 @@ uint32_t Application::LoadDefaultMaterial()
 {
     MaterialRegistry& materialRegistry = static_cast<MaterialRegistry&>(*_registries[(size_t)RegistryType::Material]);
 
-    GPUImage baseColorTex = GPUImage(AssetHelper::ImageFromCPU(CPUImage("data/default/BaseColor.png", STBI_rgb_alpha), _graphicsCommandPool.Internal(), _graphicsComputeQueue.Internal()));
+    GPUImage baseColorTex = GPUImage(ImporterHelper::ImageFromCPU(CPUImage("data/default/BaseColor.png", STBI_rgb_alpha), _graphicsCommandPool.Internal(), _graphicsComputeQueue.Internal()));
     uint32_t baseIndex = materialRegistry.RegisterTexture(_descriptorAllocator, std::move(baseColorTex), _samplerLinear.Internal());
 
-    GPUImage normalMapTex = GPUImage(AssetHelper::ImageFromCPU(CPUImage("data/default/BaseNormal.png", STBI_rgb_alpha), _graphicsCommandPool.Internal(), _graphicsComputeQueue.Internal()));
+    GPUImage normalMapTex = GPUImage(ImporterHelper::ImageFromCPU(CPUImage("data/default/BaseNormal.png", STBI_rgb_alpha), _graphicsCommandPool.Internal(), _graphicsComputeQueue.Internal()));
     uint32_t normalIndex = materialRegistry.RegisterTexture(_descriptorAllocator, std::move(normalMapTex), _samplerLinear.Internal());
 
-    GPUImage mraoTex = GPUImage(AssetHelper::ImageFromCPU(CPUImage("data/default/BaseMRAO.png", STBI_rgb_alpha), _graphicsCommandPool.Internal(), _graphicsComputeQueue.Internal()));
+    GPUImage mraoTex = GPUImage(ImporterHelper::ImageFromCPU(CPUImage("data/default/BaseMRAO.png", STBI_rgb_alpha), _graphicsCommandPool.Internal(), _graphicsComputeQueue.Internal()));
     uint32_t mraoIndex = materialRegistry.RegisterTexture(_descriptorAllocator, std::move(mraoTex), _samplerLinear.Internal());
 
     MaterialProperties matProperties = MaterialProperties::Default();
@@ -570,17 +571,6 @@ Application::Application() :
 
 
     InstanceData instance = {
-        .LocalToWorldMatrix = ApplicationHelper::TranslateRotateScale(glm::vec3(0.0f, -0.1f, 0.0f),
-            glm::vec3(0.0f, 0.0f, 0.0f),
-            glm::vec3(10000, 0.001, 10000)),
-        .AabbMin = aabbMin,
-        .MaterialIndex = 2,
-        .AabbMax = aabbMax,
-        .MeshIndex = cube
-    };
-
-    meshRegistry.RegisterInstance(MaterialType::Opaque, instance);
-    instance = {
         .LocalToWorldMatrix = ApplicationHelper::TranslateRotateScale(glm::vec3(0.0f, 10.0f, 10.0f),
             glm::vec3(0.0f, 0.0f, 0.0f),
             glm::vec3(1, 1, 1)),
@@ -592,9 +582,8 @@ Application::Application() :
 
     meshRegistry.RegisterInstance(MaterialType::Opaque, instance);
 
-
-   AssetHelper::Load3DModel(_descriptorAllocator, "data/BistroExterior.m3vkasset", meshRegistry, materialRegistry, _graphicsCommandPool.Internal(), _graphicsComputeQueue.Internal(), _samplerLinear.Internal());
-   //AssetHelper::Load3DModel(_descriptorAllocator, "data/BistroInterior_Wine.m3vkasset", meshRegistry, materialRegistry, _graphicsCommandPool.Internal(), _graphicsComputeQueue.Internal(), _samplerLinear.Internal());
+   AssetImporter::LoadAsset(_descriptorAllocator, "data/BistroExterior.m3vkasset", meshRegistry, materialRegistry, _graphicsCommandPool.Internal(), _graphicsComputeQueue.Internal(), _samplerLinear.Internal());
+   //ImporterHelper::Load3DModel(_descriptorAllocator, "data/BistroInterior_Wine.m3vkasset", meshRegistry, materialRegistry, _graphicsCommandPool.Internal(), _graphicsComputeQueue.Internal(), _samplerLinear.Internal());
      /*for(uint32_t i = 0; i < 100; ++i)
     {
         float red = (rand() / (float)RAND_MAX);
@@ -669,7 +658,7 @@ void Application::MainLoop()
 
         if(_inputPrevent <= 0)
         {
-            if(_window.IsKeyPressed(GLFW_KEY_LEFT_ALT)) _window.LockMouse(_mouseLocked = !_mouseLocked); _inputPrevent = glfwGetVideoMode(glfwGetPrimaryMonitor())->refreshRate / 2.0;
+            if(_window.IsKeyPressed(GLFW_KEY_LEFT_ALT)) _window.LockMouse(_mouseLocked = !_mouseLocked); _inputPrevent = glfwGetVideoMode(glfwGetPrimaryMonitor())->refreshRate;
         }
         else
         {

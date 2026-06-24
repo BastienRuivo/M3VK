@@ -1,73 +1,44 @@
 #pragma once
 
-#include "Material.h"
+#include "asset/Importer.h"
 #include "asset/Vertex.h"
-#include "glm/ext/vector_float3.hpp"
+#include "registry/MaterialRegistry.h"
+#include "registry/MeshRegistry.h"
+#include "rendering/DescriptorAllocator.h"
 #include <cstddef>
 #include <cstdint>
-#include <filesystem>
 #include <vector>
 #include <vulkan/vulkan_core.h>
 
-#define VERSION 4
-
-enum TextureType
+struct AssetImporter : public Importer
 {
-    BaseColor = 0,
-    NormalMap = 1,
-    MRAO = 2
-};
+    struct Header
+    {
+        uint64_t MaterialCount;
+        uint64_t TextureCount;
+        uint64_t TextureDataCount;
+        uint64_t SubMeshCount;
+        uint64_t VertexCount;
+        uint64_t IndexCount;
+    };
 
-struct TextureImport
-{
-    uint32_t Type;
-    uint32_t Offset;
-    uint32_t Size;
-    uint32_t Width;
-    uint32_t Height;
-    VkFormat Format;
-    uint32_t MipCount;
-};
+    const static constexpr uint32_t VERSION = 5;
 
-struct SubMeshImport
-{
-    uint32_t MaterialIndex;
-    uint32_t VertexOffset;
-    uint32_t VertexCount;
-    uint32_t IndexOffset;
-    uint32_t IndexCount;
-    glm::vec3 AABBMin;
-    glm::vec3 AABBMax;
-};
+    Header Header;
 
-struct AssetHeader
-{
-    uint64_t MaterialCount;
-    uint64_t TextureCount;
-    uint64_t TextureDataCount;
-    uint64_t SubMeshCount;
-    uint64_t VertexCount;
-    uint64_t IndexCount;
-};
-
-struct AssetImporter
-{
-    uint32_t Version;
-    AssetHeader Header;
-
-    std::vector<MaterialProperties> Materials;
+    std::vector<MaterialImport> Materials;
     std::vector<TextureImport> Textures;
     std::vector<SubMeshImport> SubMeshes;
     std::vector<std::byte> TextureDatas;
     std::vector<Vertex> VertexDatas;
     std::vector<uint32_t> IndexDatas;
 
-    std::vector<std::byte> UncompressedDataCache;
-
     AssetImporter() = default;
     AssetImporter(AssetImporter&& other) noexcept;
     AssetImporter& operator=(AssetImporter&& other) noexcept;
+    ~AssetImporter() = default;
 
-    static bool Load(AssetImporter& exporter, const std::filesystem::path& path);
-    static void Clear(AssetImporter& exporter);
+    static void LoadAsset(DescriptorAllocator& allocator, const std::string & modelPath, MeshRegistry & meshRegistry, MaterialRegistry & materialRegistry, VkCommandPool uploadPool, VkQueue uploadQueue, VkSampler sampler);
+    bool Load(const std::filesystem::path& path) override;
+    void Clear() override;
 };
