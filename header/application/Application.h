@@ -63,6 +63,9 @@ class Application
     // used for object sharing data between cpu and gpu -> due to race condition we need one copy for each frame
 
     DescriptorAllocator _descriptorAllocator;
+    VkCommandPoolHandler _graphicsCommandPool;
+    VkSamplerHandler _samplerLinear;
+    VkSamplerHandler _samplerNearest;
 
     std::array<std::unique_ptr<Registry>, 2> _registries;
     enum class RegistryType
@@ -75,12 +78,7 @@ class Application
     std::unique_ptr<GPUImage> _colorBackBuffer;
     std::unique_ptr<GPUImage> _depthBuffer;
 
-    VkCommandPoolHandler _graphicsCommandPool;
-
     // Datas
-
-    VkSamplerHandler _samplerLinear;
-    VkSamplerHandler _samplerNearest;
 
     GraphicsBuffer _cameraDataBuffer;
 
@@ -131,7 +129,6 @@ class Application
     void UpdateCameraData();
     void RecordCommandBuffer(const CommandBuffer& cmdBuffer, uint32_t imageIndex);
     void DrawFrame();
-    uint32_t LoadDefaultMaterial();
     std::array<DrawModule, MaterialType::Count> InitDrawModule(bool DebugOn);
 
     // Utils

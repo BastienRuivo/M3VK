@@ -10,7 +10,7 @@ class MaterialRegistry : public Registry
 {
 public:
 
-    MaterialRegistry(DescriptorAllocator& pool, uint32_t maxTexturesCount = ApplicationInfo::Constant::MaxMaterialTextureCount);
+    MaterialRegistry(DescriptorAllocator& pool, uint32_t maxTexturesCount, VkCommandPool uploadPool, VkQueue uploadQueue, VkSampler sampler);
     ~MaterialRegistry();
 
     void UploadAndRelease(VkQueue queue, VkCommandPool cmdPool) override;
@@ -25,7 +25,8 @@ public:
     inline GPUImage& Texture(uint32_t index) { return _textures[index]; }
 
     inline MaterialProperties Material(uint32_t index) { return _materials[index]; }
-    inline MaterialProperties DefaultMaterial() const { return _materials[0]; }
+    inline MaterialProperties DefaultMaterial() const { return _materials[_defaultMaterialIndex]; }
+    inline uint32_t DefaultMaterialIndex() const { return _defaultMaterialIndex; }
     inline uint32_t MaterialsCount() const { return _materials.size(); }
 
     inline uint32_t GetMaterialBufferGPUIndex() const { return _materialBuffer.GetGPUIndex(); }
@@ -36,6 +37,7 @@ public:
     uint32_t _lastFreeTextureIndex = 0;
 
     std::vector<MaterialProperties> _materials;
+    uint32_t _defaultMaterialIndex;
 
     std::vector<GPUImage> _textures;
     GeometryBuffer _materialBuffer;

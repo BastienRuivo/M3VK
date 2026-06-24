@@ -30,7 +30,7 @@ class StageBuffer
     void* Map(VkDeviceSize offset, VkDeviceSize size);
     void Unmap();
 
-    void MapAndCopyToBuffer(void* srcData, VkDeviceSize offset, VkDeviceSize copySize);
+    void MapAndCopyToBuffer(const void* srcData, VkDeviceSize offset, VkDeviceSize copySize);
     void MapAndCopyToData(void* dstData, VkDeviceSize offset, VkDeviceSize copySize);
 
     inline VkBuffer Internal() const { return _internal; };
@@ -57,7 +57,7 @@ class PoolStageBuffer : protected StageBuffer
 
     void Map();
     void Unmap();
-    void CopyToBuffer(void* srcData, VkDeviceSize copySize);
+    void CopyToBuffer(const void* srcData, VkDeviceSize copySize);
     void Clear();
 
     inline bool CanAllocate(VkDeviceSize size) const { return _offset + size <= _capacity; }

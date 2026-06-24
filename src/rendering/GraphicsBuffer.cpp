@@ -55,7 +55,7 @@ StageBuffer::StageBuffer(VkDeviceSize size, enum Usage bufferUsage)
     }
 }
 
-void StageBuffer::MapAndCopyToBuffer(void* srcData, VkDeviceSize offset, VkDeviceSize copySize)
+void StageBuffer::MapAndCopyToBuffer(const void* srcData, VkDeviceSize offset, VkDeviceSize copySize)
 {
     void* data;
     if(vkMapMemory(ApplicationInfo::Device(), _memoryInternal, offset, copySize, 0, &data) != VK_SUCCESS)
@@ -136,7 +136,7 @@ void PoolStageBuffer::Unmap()
     StageBuffer::Unmap();
 }
 
-void PoolStageBuffer::CopyToBuffer(void* srcData, VkDeviceSize copySize)
+void PoolStageBuffer::CopyToBuffer(const void* srcData, VkDeviceSize copySize)
 {
     if(_data == nullptr)
     {

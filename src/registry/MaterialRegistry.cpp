@@ -1,5 +1,6 @@
 #include "registry/MaterialRegistry.h"
 #include "application/ApplicationInfo.h"
+#include "asset/MaterialImporter.h"
 #include "rendering/DescriptorAllocator.h"
 #include "rendering/GPUImage.h"
 #include "rendering/GraphicsBuffer.h"
@@ -43,13 +44,13 @@ uint32_t MaterialRegistry::RegisterMaterial(MaterialProperties material)
     return _materials.size() - 1;
 }
 
-MaterialRegistry::MaterialRegistry(DescriptorAllocator& allocator, uint32_t maxTexturesCount)
+MaterialRegistry::MaterialRegistry(DescriptorAllocator& allocator, uint32_t maxTexturesCount, VkCommandPool uploadPool, VkQueue uploadQueue, VkSampler sampler)
     :   _maxTexturesCount(maxTexturesCount),
         _textureIndicesState(std::vector<int32_t>(_maxTexturesCount, -1)),
         _lastFreeTextureIndex(0),
         _materialBuffer(allocator, STATIC_BINDING_MATERIAL_BUFFER, GraphicsBuffer::BufferType::STORAGE, RessourceUsage::Static, ApplicationInfo::Constant::MaterialBufferMaxSize, sizeof(MaterialProperties))
 {
-
+    _defaultMaterialIndex = MaterialImporter::LoadDefaultMaterial(allocator, *this, uploadPool, uploadQueue, sampler);
 }
 
 MaterialRegistry::~MaterialRegistry()

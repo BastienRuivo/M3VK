@@ -381,27 +381,6 @@ void Application::RecordCommandBuffer(const CommandBuffer& cmdBuffer, uint32_t i
     cmdBuffer.End();
 }
 
-uint32_t Application::LoadDefaultMaterial()
-{
-    MaterialRegistry& materialRegistry = static_cast<MaterialRegistry&>(*_registries[(size_t)RegistryType::Material]);
-
-    GPUImage baseColorTex = GPUImage(ImporterHelper::ImageFromCPU(CPUImage("data/default/BaseColor.png", STBI_rgb_alpha), _graphicsCommandPool.Internal(), _graphicsComputeQueue.Internal()));
-    uint32_t baseIndex = materialRegistry.RegisterTexture(_descriptorAllocator, std::move(baseColorTex), _samplerLinear.Internal());
-
-    GPUImage normalMapTex = GPUImage(ImporterHelper::ImageFromCPU(CPUImage("data/default/BaseNormal.png", STBI_rgb_alpha), _graphicsCommandPool.Internal(), _graphicsComputeQueue.Internal()));
-    uint32_t normalIndex = materialRegistry.RegisterTexture(_descriptorAllocator, std::move(normalMapTex), _samplerLinear.Internal());
-
-    GPUImage mraoTex = GPUImage(ImporterHelper::ImageFromCPU(CPUImage("data/default/BaseMRAO.png", STBI_rgb_alpha), _graphicsCommandPool.Internal(), _graphicsComputeQueue.Internal()));
-    uint32_t mraoIndex = materialRegistry.RegisterTexture(_descriptorAllocator, std::move(mraoTex), _samplerLinear.Internal());
-
-    MaterialProperties matProperties = MaterialProperties::Default();
-    matProperties.BaseColorTexId = baseIndex;
-    matProperties.NormalMapTexId = normalIndex;
-    matProperties.MRAOTexId = mraoIndex;
-
-    return materialRegistry.RegisterMaterial(matProperties);
-}
-
 std::array<DrawModule, MaterialType::Count> Application::InitDrawModule(bool DebugOn)
 {
     std::vector<Shader::SpecializationConstant> constants
@@ -472,7 +451,7 @@ Application::Application() :
     _registries(
         {
             std::make_unique<MeshRegistry>(_descriptorAllocator),
-            std::make_unique<MaterialRegistry>(_descriptorAllocator),
+            std::make_unique<MaterialRegistry>(_descriptorAllocator, ApplicationInfo::Constant::MaxMaterialTextureCount, _graphicsCommandPool.Internal(), _graphicsComputeQueue.Internal(), _samplerLinear.Internal())
         }),
     // Command pool
     _graphicsCommandPool(ApplicationInfo::GetGraphicsQueueId()),
@@ -515,14 +494,12 @@ Application::Application() :
     MeshRegistry& meshRegistry = static_cast<MeshRegistry&>(*_registries[(size_t)RegistryType::Mesh]);
     MaterialRegistry& materialRegistry = static_cast<MaterialRegistry&>(*_registries[(size_t)RegistryType::Material]);
 
-    uint32_t defaultMaterial = LoadDefaultMaterial();
-
     const float axisLength = 10.0f;
     const float axisThickness = 0.00625f;
 
     glm::vec3 aabbMin, aabbMax;
     uint32_t cube = MeshHelper::CubeMesh(meshRegistry, MaterialType::Opaque, aabbMin, aabbMax);
-    MaterialProperties defaultMat = materialRegistry.Material(defaultMaterial);
+    MaterialProperties defaultMat = materialRegistry.Material(materialRegistry.DefaultMaterialIndex());
 
     {
         defaultMat.BaseColor = {1.0f, 0.0f, 0.0f, 1.0f};
