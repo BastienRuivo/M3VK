@@ -9,6 +9,7 @@
 #include "rendering/DescriptorAllocator.h"
 #include "registry/Registry.h"
 #include "rendering/CommandBuffer.h"
+#include "rendering/GraphicsImage.h"
 #include "rendering/MultiFrame.h"
 #include "handler/Handlers.h"
 #include "handler/VkPhysicalDeviceHandler.h"
@@ -30,8 +31,6 @@
 #include <glm/glm.hpp>
 
 #include "application/DebugLayer.h"
-
-#include "rendering/GPUImage.h"
 
 class Application
 {
@@ -66,6 +65,7 @@ class Application
     VkCommandPoolHandler _graphicsCommandPool;
     VkSamplerHandler _samplerLinear;
     VkSamplerHandler _samplerNearest;
+    UserInterface _UserInterface;
 
     std::array<std::unique_ptr<Registry>, 2> _registries;
     enum class RegistryType
@@ -75,8 +75,10 @@ class Application
     };
     ShaderLibrary _shaderLibrary;
 
-    std::unique_ptr<GPUImage> _colorBackBuffer;
-    std::unique_ptr<GPUImage> _depthBuffer;
+    std::unique_ptr<GraphicsImage> _msaaColorTarget;
+    std::unique_ptr<GraphicsImage> MakeMsaaColorTarget() const;
+    std::unique_ptr<GraphicsImage> _msaaDepthTarget;
+    std::unique_ptr<GraphicsImage> MakeDepthTarget() const;
 
     // Datas
 
@@ -89,7 +91,6 @@ class Application
     MultiFrameHandler<VkSemaphoreHandler> _renderFinishedSemaphores;
     MultiFrameHandler<VkFenceHandler>  _waitFence;
 
-    UserInterface _UserInterface;
     CullingModule _cullingModule;
     std::array<DrawModule, MaterialType::Count> _drawModules;
     SkyboxModule _skyboxModule;
@@ -103,17 +104,32 @@ class Application
 
     enum DebugMode
     {
-        None,
-        VertexNormal,
-        Normal,
-        Count
+        DB_None,
+        DB_VertexNormal,
+        DB_Normal,
+        DB_Count
     };
-    DebugMode _debug = DebugMode::None;
-    const char* DebugModeNames[DebugMode::Count] =
+    DebugMode _debug = DebugMode::DB_None;
+    const char* DebugModeNames[DebugMode::DB_Count] =
     {
         "None",
         "VertexNormal",
         "Normal"
+    };
+
+    enum ImageVizualizationMode
+    {
+        IMV_None,
+        IMV_BackBuffer,
+        IMV_DepthBuffer,
+        IMV_Count
+    };
+    ImageVizualizationMode _imageVizualizationMode = ImageVizualizationMode::IMV_None;
+    const char* ImageVizualizationModeNames[ImageVizualizationMode::IMV_Count] =
+    {
+        "None",
+        "BackBuffer",
+        "DepthBuffer"
     };
 
     static void MouseMoveCallback(GLFWwindow* window, double xpos, double ypos);

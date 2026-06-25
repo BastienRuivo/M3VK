@@ -4,6 +4,7 @@
 #include "asset/AssetImporter.h"
 #include "asset/MeshHelper.h"
 #include "glm/matrix.hpp"
+#include "imgui.h"
 #include "modules/DrawModule.h"
 #include "rendering/DescriptorAllocator.h"
 #include "rendering/GraphicsBuffer.h"
@@ -13,10 +14,11 @@
 #include "rendering/GraphicsBuffer.h"
 #include "registry/MaterialRegistry.h"
 #include "registry/MeshRegistry.h"
+#include "rendering/GraphicsImage.h"
 #include "rendering/ImageHelper.h"
 #include "rendering/MultiFrame.h"
-#include "asset/ImporterHelper.h"
 #include "registry/Registry.h"
+#include "rendering/RessourceUsage.h"
 #include "rendering/Shaders/ShaderLibrary.h"
 #include "rendering/SwapChain.h"
 #include "application/DebugLayer.h"
@@ -169,20 +171,11 @@ void Application::RefreshSwapChain()
 
     _camera._aspect = static_cast<float>(_swapChain->GetExtent().width) / static_cast<float>(_swapChain->GetExtent().height);
 
-    _colorBackBuffer.reset();
-    _colorBackBuffer = std::make_unique<GPUImage>(_swapChain->GetExtent().width, _swapChain->GetExtent().height,
-        VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-        _swapChain->GetImageFormat(), 1,
-        VK_IMAGE_TILING_OPTIMAL,
-        ApplicationInfo::GetMsaaSample());
+    _msaaColorTarget.reset();
+    _msaaColorTarget = MakeMsaaColorTarget();
 
-    _depthBuffer.reset();
-    _depthBuffer = std::make_unique<GPUImage>(
-        _swapChain->GetExtent().width, _swapChain->GetExtent().height,
-        VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-        ApplicationInfo::Constant::DepthFormat, 1, VK_IMAGE_TILING_OPTIMAL, ApplicationInfo::GetMsaaSample());
+    _msaaDepthTarget.reset();
+    _msaaDepthTarget = MakeDepthTarget();
 }
 
 void Application::DrawFrame()
@@ -212,7 +205,7 @@ void Application::DrawFrame()
     ImGui::Checkbox("Wireframe", &_wireframe);
     if(ImGui::BeginCombo("Draw Debug Mode", DebugModeNames[_debug]))
     {
-        for (int n = 0; n < DebugMode::Count; n++)
+        for (int n = 0; n < DebugMode::DB_Count; n++)
         {
             // Track if the current item in the loop is the selected one
             const bool isSelected = (_debug == n);
@@ -221,7 +214,7 @@ void Application::DrawFrame()
             {
                 DebugMode newVal = static_cast<DebugMode>(n);
 
-                if((newVal == DebugMode::None && _debug  != DebugMode::None) || (newVal != DebugMode::None && _debug  == DebugMode::None))
+                if((newVal == DebugMode::DB_None && _debug  != DebugMode::DB_None) || (newVal != DebugMode::DB_None && _debug  == DebugMode::DB_None))
                 {
                     vkDeviceWaitIdle(ApplicationInfo::Device());
                     for(auto& module : _drawModules)
@@ -229,7 +222,7 @@ void Application::DrawFrame()
                         _shaderLibrary.DisposeShader(module.VertexBinding.LibraryIndex);
                         _shaderLibrary.DisposeShader(module.FragmentBinding.LibraryIndex);
                     }
-                    _drawModules = InitDrawModule(newVal != DebugMode::None);
+                    _drawModules = InitDrawModule(newVal != DebugMode::DB_None);
                 }
                 _debug = newVal;
             }
@@ -240,6 +233,35 @@ void Application::DrawFrame()
             }
         }
         ImGui::EndCombo();
+    }
+    if(ImGui::BeginCombo("Image Viewer", ImageVizualizationModeNames[_imageVizualizationMode]))
+    {
+        for (int n = 0; n < ImageVizualizationMode::IMV_Count; n++)
+        {
+            // Track if the current item in the loop is the selected one
+            const bool isSelected = (_imageVizualizationMode == n);
+
+            if (ImGui::Selectable(ImageVizualizationModeNames[n], isSelected))
+            {
+                ImageVizualizationMode newVal = static_cast<ImageVizualizationMode>(n);
+                _imageVizualizationMode = newVal;
+            }
+
+            if (isSelected)
+            {
+                ImGui::SetItemDefaultFocus();
+            }
+        }
+        ImGui::EndCombo();
+    }
+
+    if(_imageVizualizationMode == ImageVizualizationMode::IMV_BackBuffer)
+    {
+        ImGui::Image((ImTextureID) _msaaColorTarget->ImGuiSet(), ImVec2(500, 500), ImVec2(0, 1), ImVec2(1, 0));
+    }
+    else if(_imageVizualizationMode == ImageVizualizationMode::IMV_DepthBuffer)
+    {
+        ImGui::Image((ImTextureID) _msaaDepthTarget->ImGuiSet(), ImVec2(500, 500), ImVec2(0, 1), ImVec2(1, 0));
     }
 
     ImGui::End();
@@ -289,7 +311,7 @@ void Application::RecordCommandBuffer(const CommandBuffer& cmdBuffer, uint32_t i
 {
     VkRect2D renderArea = {0, 0, _swapChain->GetExtent().width, _swapChain->GetExtent().height};
 
-    VkRenderingAttachmentInfo colorAttachment = ImageHelper::AttachmentInfo(_colorBackBuffer->View(),
+    VkRenderingAttachmentInfo colorAttachment = ImageHelper::AttachmentInfo(_msaaColorTarget->View(),
         VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
         _swapChain->View(imageIndex),
         VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
@@ -297,7 +319,7 @@ void Application::RecordCommandBuffer(const CommandBuffer& cmdBuffer, uint32_t i
         VK_ATTACHMENT_STORE_OP_STORE,
         {{}});
 
-    VkRenderingAttachmentInfo depthAttachment = ImageHelper::AttachmentInfo(_depthBuffer->View(), VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE, {1.0f, 0.0});
+    VkRenderingAttachmentInfo depthAttachment = ImageHelper::AttachmentInfo(_msaaDepthTarget->View(), VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE, {1.0f, 0.0});
     // there is no stencil buffer
     VkRenderingAttachmentInfo stencilAttachment { .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO };
 
@@ -324,8 +346,8 @@ void Application::RecordCommandBuffer(const CommandBuffer& cmdBuffer, uint32_t i
             cmdBuffer.SetAlphaToCoverageEnable(false);
             cmdBuffer.SetAlphaToOneEnable(false);
 
-            ImageHelper::TransitionLayoutCommand(cmdBuffer, _colorBackBuffer->Internal(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-            ImageHelper::TransitionLayoutCommand(cmdBuffer, _depthBuffer->Internal(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
+            ImageHelper::TransitionLayoutCommand(cmdBuffer, _msaaColorTarget->Internal(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+            ImageHelper::TransitionLayoutCommand(cmdBuffer, _msaaDepthTarget->Internal(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
             ImageHelper::TransitionLayoutCommand(cmdBuffer, backBuffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
             cmdBuffer.SetViewport(0, 0, renderArea.extent.width, renderArea.extent.height);
@@ -364,6 +386,11 @@ void Application::RecordCommandBuffer(const CommandBuffer& cmdBuffer, uint32_t i
                 _skyboxModule.Execute(cmdBuffer, _descriptorAllocator.GlobalLayout());
             }
             cmdBuffer.EndRendering();
+
+            if(_imageVizualizationMode == ImageVizualizationMode::IMV_DepthBuffer)
+            {
+                ImageHelper::TransitionLayoutCommand(cmdBuffer,_msaaDepthTarget->Internal(), VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL);
+            }
 
             VkRenderingAttachmentInfo uiColorAttachment = ImageHelper::AttachmentInfo(backBuffer.View, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_ATTACHMENT_LOAD_OP_LOAD, VK_ATTACHMENT_STORE_OP_STORE);
 
@@ -434,6 +461,26 @@ std::array<DrawModule, MaterialType::Count> Application::InitDrawModule(bool Deb
     };
 }
 
+std::unique_ptr<GraphicsImage> Application::MakeMsaaColorTarget() const
+{
+    return std::make_unique<GraphicsImage>(_samplerLinear.Internal(), RessourceUsage::Static,
+        _swapChain->GetExtent().width, _swapChain->GetExtent().height,
+        VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+        _swapChain->GetImageFormat(),
+        1, VK_IMAGE_TILING_OPTIMAL, ApplicationInfo::GetMsaaSample());
+}
+
+std::unique_ptr<GraphicsImage> Application::MakeDepthTarget() const
+{
+    return std::make_unique<GraphicsImage>(_samplerNearest.Internal(), RessourceUsage::Static,
+        _swapChain->GetExtent().width, _swapChain->GetExtent().height,
+        VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+        ApplicationInfo::Constant::DepthFormat, 1, VK_IMAGE_TILING_OPTIMAL, ApplicationInfo::GetMsaaSample());
+}
+
+
 Application::Application() :
     // Core Window & Instance
     _window(1920, 1080, "Window", this, Application::ResizeCallback, Application::MouseMoveCallback, Application::WindowFocusCallback),
@@ -456,15 +503,8 @@ Application::Application() :
     // Command pool
     _graphicsCommandPool(ApplicationInfo::GetGraphicsQueueId()),
     // Geometry & Data Buffers
-    _colorBackBuffer(std::make_unique<GPUImage>(_swapChain->GetExtent().width, _swapChain->GetExtent().height,
-        VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-        _swapChain->GetImageFormat(),
-        1, VK_IMAGE_TILING_OPTIMAL, ApplicationInfo::GetMsaaSample())),
-    _depthBuffer(std::make_unique<GPUImage>(
-        _swapChain->GetExtent().width, _swapChain->GetExtent().height,
-        VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-        ApplicationInfo::Constant::DepthFormat, 1, VK_IMAGE_TILING_OPTIMAL, ApplicationInfo::GetMsaaSample())),
+    _msaaColorTarget(MakeMsaaColorTarget()),
+    _msaaDepthTarget(MakeDepthTarget()),
 
     _cameraDataBuffer(_descriptorAllocator, BINDING_CAMERA_BUFFER, GraphicsBuffer::STORAGE, RessourceUsage::PerFrame, 1, sizeof(CameraData)),
     _samplerLinear(),

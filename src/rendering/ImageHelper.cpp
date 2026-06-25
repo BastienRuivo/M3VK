@@ -180,7 +180,12 @@ VkImageMemoryBarrier ImageHelper::TransitionLayoutBarrier(const ImageReference &
         },
     };
 
-    if(newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL || newLayout == VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL)
+    if(newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+        || newLayout == VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL
+        || newLayout == VK_IMAGE_LAYOUT_STENCIL_ATTACHMENT_OPTIMAL
+        || newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL
+        || newLayout == VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL
+        || newLayout == VK_IMAGE_LAYOUT_STENCIL_READ_ONLY_OPTIMAL)
     {
         barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
         if(ApplicationHelper::HasStencilComponent(image.Format))
@@ -225,6 +230,12 @@ VkImageMemoryBarrier ImageHelper::TransitionLayoutBarrier(const ImageReference &
             sourceStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
             break;
         }
+        case VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL:  // after rendering, i want to read from the depth buffer to create a HiZ buffer
+        {
+            barrier.srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
+            sourceStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+            break;
+        }
         default:
         {
             throw std::runtime_error("Unsupported old layout");
@@ -267,6 +278,14 @@ VkImageMemoryBarrier ImageHelper::TransitionLayoutBarrier(const ImageReference &
         {
             barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
             destinationStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+            break;
+        }
+        case VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL:
+        case VK_IMAGE_LAYOUT_STENCIL_READ_ONLY_OPTIMAL:
+        case VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL:
+        {
+            barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+            destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
             break;
         }
 
