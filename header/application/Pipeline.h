@@ -48,7 +48,7 @@ class Pipeline
     GraphicsImage _msaaColorTarget;
     GraphicsImage _msaaDepthTarget;
     GraphicsImage _finalColorTarget;
-    //GraphicsImage _finalDepthTarget;
+    GraphicsImage _finalDepthTarget;
 
     GraphicsBuffer _cameraDataBuffer;
     Camera _camera;
