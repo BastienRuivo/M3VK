@@ -1,5 +1,7 @@
 #include "application/ApplicationInfo.h"
+#include "application/DebugLayer.h"
 #include "rendering/QueueFamilyIds.h"
+#include <cstdint>
 #include <stdexcept>
 #include <vulkan/vulkan_core.h>
 
@@ -38,5 +40,6 @@ uint32_t ApplicationInfo::FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFl
         }
     }
 
-    throw std::runtime_error("Can't find suitable memory type for buffer");
+    DebugLayer::Log(DebugLayer::LogType::WARNING, "Can't find suitable memory type for flags {" + std::to_string(properties) +"}");
+    return UINT32_MAX;
 }

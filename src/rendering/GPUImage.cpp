@@ -1,5 +1,6 @@
 #include "rendering/GPUImage.h"
 #include "application/ApplicationHelper.h"
+#include "application/DebugLayer.h"
 #include "rendering/ImageHelper.h"
 #include "application/ApplicationInfo.h"
 #include "rendering/CommandBuffer.h"
@@ -10,20 +11,38 @@
 #include <utility>
 #include <vulkan/vulkan_core.h>
 
-GPUImage::GPUImage(uint32_t width, uint32_t height, VkImageUsageFlags usageFlags, VkMemoryPropertyFlags memoryFlags, VkFormat format, VkImageTiling tiling, VkSampleCountFlagBits msaaSampleCount)
-: GPUImage(width, height, 1, 0, usageFlags, memoryFlags, format, ImageHelper::GetMipCount(width, height), tiling, msaaSampleCount)
+GPUImage::GPUImage(uint32_t width, uint32_t height, VkImageUsageFlags usageFlags, VkFormat format, VkImageTiling tiling, VkSampleCountFlagBits msaaSampleCount)
+: GPUImage(width, height, 1, 0, usageFlags, format, ImageHelper::GetMipCount(width, height), tiling, msaaSampleCount)
 {
 
 }
 
-GPUImage::GPUImage(uint32_t width, uint32_t height, VkImageUsageFlags usageFlags, VkMemoryPropertyFlags memoryFlags, VkFormat format, uint32_t mipCount, VkImageTiling tiling, VkSampleCountFlagBits msaaSampleCount)
-: GPUImage(width, height, 1, 0, usageFlags, memoryFlags, format, mipCount, tiling, msaaSampleCount)
+GPUImage::GPUImage(uint32_t width, uint32_t height, VkImageUsageFlags usageFlags, VkFormat format, uint32_t mipCount, VkImageTiling tiling, VkSampleCountFlagBits msaaSampleCount)
+: GPUImage(width, height, 1, 0, usageFlags, format, mipCount, tiling, msaaSampleCount)
 {
 
 }
 
-GPUImage::GPUImage(uint32_t width, uint32_t height, uint32_t arrayLayers, VkImageCreateFlags createFlags, VkImageUsageFlags usageFlags, VkMemoryPropertyFlags memoryFlags, VkFormat format, uint32_t mipCount, VkImageTiling tiling, VkSampleCountFlagBits msaaSampleCount)
+GPUImage::GPUImage(uint32_t width, uint32_t height, uint32_t arrayLayers, VkImageCreateFlags createFlags, VkImageUsageFlags usageFlags, VkFormat format, uint32_t mipCount, VkImageTiling tiling, VkSampleCountFlagBits msaaSampleCount)
 {
+    VkMemoryPropertyFlags memoryFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+
+    if(usageFlags & VK_IMAGE_USAGE_TRANSFER_SRC_BIT)
+    {
+        memoryFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+    }
+
+    if(usageFlags & VK_IMAGE_USAGE_TRANSFER_DST_BIT)
+    {
+        memoryFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+    }
+
+    bool isTransient = usageFlags & VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT;
+    if(isTransient)
+    {
+        memoryFlags = VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT;
+    }
+
     VkImageCreateInfo createInfo
     {
         .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
@@ -55,11 +74,27 @@ GPUImage::GPUImage(uint32_t width, uint32_t height, uint32_t arrayLayers, VkImag
     VkMemoryRequirements memRequirements;
     vkGetImageMemoryRequirements(ApplicationInfo::Device(), image, &memRequirements);
 
+    uint32_t memoryTypeIndex = ApplicationInfo::FindMemoryType(memRequirements.memoryTypeBits, memoryFlags);
+
+    if(memoryTypeIndex == UINT32_MAX)
+    {
+        if(isTransient)
+        {
+            DebugLayer::Log(DebugLayer::LogType::WARNING, "Device can't find Lazily allocated memory, fallbacking to allocated one");
+            memoryTypeIndex = ApplicationInfo::FindMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+        }
+
+        if(memoryTypeIndex == UINT32_MAX)
+        {
+            throw std::runtime_error("Can't find replacement for memory type" + std::to_string(memoryFlags));
+        }
+    }
+
     VkMemoryAllocateInfo allocInfo
     {
         .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
         .allocationSize = memRequirements.size,
-        .memoryTypeIndex = ApplicationInfo::FindMemoryType(memRequirements.memoryTypeBits, memoryFlags)
+        .memoryTypeIndex = memoryTypeIndex
     };
 
     if(vkAllocateMemory(ApplicationInfo::Device(), &allocInfo, nullptr, &_memoryInternal) != VK_SUCCESS)

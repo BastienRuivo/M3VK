@@ -38,7 +38,6 @@ uint32_t ImporterHelper::LoadTexture(DescriptorAllocator& allocator, const std::
     const TextureImport & texture = textures[textureIndex];
     GPUImage gpuTexture(texture.Width, texture.Height,
         VK_IMAGE_USAGE_TRANSFER_SRC_BIT |VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
         texture.Format,
         texture.MipCount);
 
@@ -103,7 +102,6 @@ GPUImage ImporterHelper::ImageFromCPU(const CPUImage& cpuImg, VkCommandPool pool
     GPUImage gpuImg(cpuImg.Width(),
         cpuImg.Height(),
         VK_IMAGE_USAGE_TRANSFER_SRC_BIT |VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
         cpuImg.GetGPUFormat());
     gpuImg.UploadAndGenerateMip(cpuImg.Data(), cpuImg.Width(), cpuImg.Height(), cpuImg.Channels(), pool, queue);
 
@@ -120,7 +118,6 @@ GraphicsImage ImporterHelper::CubemapFromCPU(DescriptorAllocator& allocator, uin
         front.Width(), front.Height(),
         6, VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT,
         VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
         front.GetGPUFormat(), ImageHelper::GetMipCount(front.Width(), front.Height()), VK_IMAGE_TILING_OPTIMAL, VK_SAMPLE_COUNT_1_BIT);
 
     const CPUImage* stage[6] = { &right, &left, &top, &bottom, &front, &back };

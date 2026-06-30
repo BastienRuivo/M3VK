@@ -234,7 +234,7 @@ void Application::DrawFrame()
         }
         ImGui::EndCombo();
     }
-    if(ImGui::BeginCombo("Image Viewer", ImageVizualizationModeNames[_imageVizualizationMode]))
+    /*if(ImGui::BeginCombo("Image Viewer", ImageVizualizationModeNames[_imageVizualizationMode]))
     {
         for (int n = 0; n < ImageVizualizationMode::IMV_Count; n++)
         {
@@ -262,7 +262,9 @@ void Application::DrawFrame()
     else if(_imageVizualizationMode == ImageVizualizationMode::IMV_DepthBuffer)
     {
         ImGui::Image((ImTextureID) _msaaDepthTarget->ImGuiSet(), ImVec2(500, 500), ImVec2(0, 1), ImVec2(1, 0));
-    }
+    }*/
+
+    ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 
     ImGui::End();
 
@@ -466,7 +468,6 @@ std::unique_ptr<GraphicsImage> Application::MakeMsaaColorTarget() const
     return std::make_unique<GraphicsImage>(_samplerLinear.Internal(), RessourceUsage::Static,
         _swapChain->GetExtent().width, _swapChain->GetExtent().height,
         VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
         _swapChain->GetImageFormat(),
         1, VK_IMAGE_TILING_OPTIMAL, ApplicationInfo::GetMsaaSample());
 }
@@ -476,7 +477,6 @@ std::unique_ptr<GraphicsImage> Application::MakeDepthTarget() const
     return std::make_unique<GraphicsImage>(_samplerNearest.Internal(), RessourceUsage::Static,
         _swapChain->GetExtent().width, _swapChain->GetExtent().height,
         VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
         ApplicationInfo::Constant::DepthFormat, 1, VK_IMAGE_TILING_OPTIMAL, ApplicationInfo::GetMsaaSample());
 }
 

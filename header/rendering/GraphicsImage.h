@@ -1,7 +1,6 @@
 #pragma once
 
 
-#include "imgui_impl_vulkan.h"
 #include "rendering/DescriptorAllocator.h"
 #include "rendering/GPUImage.h"
 #include "rendering/ImageHelper.h"
@@ -33,7 +32,6 @@ class GraphicsImage
         for (uint32_t i = 0; i < count; i++)
         {
             const auto& texture = _images.emplace_back(std::forward<Args>(args)...);
-            //_imGuiSets.emplace_back(ImGui_ImplVulkan_AddTexture(_sampler, texture.Internal().View, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL));
         }
     }
 
@@ -60,13 +58,7 @@ class GraphicsImage
     inline uint32_t MipCount() const { return Current().Internal().MipCount; }
     VkDescriptorSet ImGuiSet() const { return _imGuiSets[CurrentIndex()]; }
 
-    ~GraphicsImage()
-    {
-        for (auto& set : _imGuiSets)
-        {
-            ImGui_ImplVulkan_RemoveTexture(set);
-        }
-    }
+    ~GraphicsImage() { }
 
     protected:
     std::vector<GPUImage> _images;
