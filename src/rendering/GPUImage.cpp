@@ -5,7 +5,6 @@
 #include "application/ApplicationInfo.h"
 #include "rendering/CommandBuffer.h"
 #include "rendering/GraphicsBuffer.h"
-#include "handler/VkImageViewHandler.h"
 #include <cstdint>
 #include <stdexcept>
 #include <utility>
@@ -23,7 +22,56 @@ GPUImage::GPUImage(uint32_t width, uint32_t height, VkImageUsageFlags usageFlags
 
 }
 
-GPUImage::GPUImage(uint32_t width, uint32_t height, uint32_t arrayLayers, VkImageCreateFlags createFlags, VkImageUsageFlags usageFlags, VkFormat format, uint32_t mipCount, VkImageTiling tiling, VkSampleCountFlagBits msaaSampleCount)
+void GPUImage::Resize(uint32_t width, uint32_t height)
+{
+    if(width != _internal.Width || height != _internal.Height)
+    {
+        DisposeInternal();
+        CreateImageInternal(width, height, _internal.ArrayLayerCount, _internal.CreateFlags, _internal.UsageFlags, _internal.Format, _internal.MipCount, _internal.Tiling, _internal.MsaaSampleCount);
+    }
+
+    _internal.Width = width;
+    _internal.Height = height;
+}
+
+void GPUImage::DisposeInternal()
+{
+    vkDestroyImageView(ApplicationInfo::Device(), _internal.View, nullptr);
+    vkDestroyImage(ApplicationInfo::Device(), _internal.Image, nullptr);
+    vkFreeMemory(ApplicationInfo::Device(), _memoryInternal, nullptr);
+
+    _internal.Image = VK_NULL_HANDLE;
+    _memoryInternal = VK_NULL_HANDLE;
+}
+
+VkImageView CreateImageView(ImageReference& image, VkImageAspectFlags aspectMask, VkImageViewType type)
+{
+    VkImageViewCreateInfo createInfo
+    {
+        .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+        .image = image.Image,
+        .viewType = type,
+        .format = image.Format,
+        .subresourceRange =
+        {
+            .aspectMask = aspectMask,
+            .baseMipLevel = 0,
+            .levelCount = image.MipCount,
+            .baseArrayLayer = 0,
+            .layerCount = image.ArrayLayerCount
+        }
+    };
+
+    VkImageView view;
+    if(vkCreateImageView(ApplicationInfo::Device(), &createInfo, nullptr, &view) != VK_SUCCESS)
+    {
+        throw std::runtime_error("Failed to create swap chain images !");
+    }
+
+    return view;
+}
+
+void GPUImage::CreateImageInternal(uint32_t width, uint32_t height, uint32_t arrayLayers, VkImageCreateFlags createFlags, VkImageUsageFlags usageFlags, VkFormat format, uint32_t mipCount, VkImageTiling tiling, VkSampleCountFlagBits msaaSampleCount)
 {
     VkMemoryPropertyFlags memoryFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 
@@ -110,19 +158,26 @@ GPUImage::GPUImage(uint32_t width, uint32_t height, uint32_t arrayLayers, VkImag
         throw  std::runtime_error("Can't bind image memory !");
     }
 
-    _view = VkImageViewHandler(image, format, mipCount, ApplicationHelper::GetImageAspectFlags(format), createFlags & VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT ? VK_IMAGE_VIEW_TYPE_CUBE : VK_IMAGE_VIEW_TYPE_2D);
-
-    _internal =
-    {
+    _internal = ImageReference {
         .Image = image,
-        .View = _view.Internal(),
+        .CreateFlags = createFlags,
+        .UsageFlags = usageFlags,
+        .Tiling = tiling,
+        .MsaaSampleCount = msaaSampleCount,
         .Format = format,
         .Width = static_cast<uint32_t>(width),
         .Height = static_cast<uint32_t>(height),
         .MipCount = mipCount,
         .ArrayLayerCount = arrayLayers,
-        .Size = memRequirements.size
+        .Size = memRequirements.size,
     };
+
+    _internal.View = CreateImageView(_internal, ApplicationHelper::GetImageAspectFlags(_internal.Format), createFlags & VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT ? VK_IMAGE_VIEW_TYPE_CUBE : VK_IMAGE_VIEW_TYPE_2D);
+}
+
+GPUImage::GPUImage(uint32_t width, uint32_t height, uint32_t arrayLayers, VkImageCreateFlags createFlags, VkImageUsageFlags usageFlags, VkFormat format, uint32_t mipCount, VkImageTiling tiling, VkSampleCountFlagBits msaaSampleCount)
+{
+   CreateImageInternal(width, height, arrayLayers, createFlags, usageFlags, format, mipCount, tiling, msaaSampleCount);
 }
 
 
@@ -155,8 +210,7 @@ void GPUImage::UploadAndGenerateMip(void* data, uint32_t width, uint32_t height,
 
 GPUImage::~GPUImage()
 {
-    vkDestroyImage(ApplicationInfo::Device(), _internal.Image, nullptr);
-    vkFreeMemory(ApplicationInfo::Device(), _memoryInternal, nullptr);
+    DisposeInternal();
 }
 
 GPUImage::GPUImage(GPUImage&& other) noexcept

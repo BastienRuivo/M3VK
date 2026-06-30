@@ -3,12 +3,15 @@
 #include <cstddef>
 #include <cstdint>
 #include <stb_image.h>
-#include "handler/VkImageViewHandler.h"
 #include <vulkan/vulkan_core.h>
 
 struct ImageReference
 {
     VkImage Image = VK_NULL_HANDLE;
+    VkImageCreateFlags CreateFlags = 0;
+    VkImageUsageFlags UsageFlags = 0;
+    VkImageTiling Tiling = VK_IMAGE_TILING_OPTIMAL;
+    VkSampleCountFlagBits MsaaSampleCount = VK_SAMPLE_COUNT_1_BIT;
     VkImageView View = VK_NULL_HANDLE;
     VkFormat Format = VK_FORMAT_UNDEFINED;
     uint32_t Width = 0;
@@ -43,9 +46,12 @@ class GPUImage
     inline uint32_t Width() const { return _internal.Width; }
     inline uint32_t Height() const { return _internal.Height; }
     inline uint32_t MipCount() const { return _internal.MipCount; }
+    void Resize(uint32_t width, uint32_t height);
 
     protected:
+    void CreateImageInternal(uint32_t width, uint32_t height, uint32_t arrayLayers, VkImageCreateFlags createFlags, VkImageUsageFlags usageFlags, VkFormat format, uint32_t mipCount, VkImageTiling tiling, VkSampleCountFlagBits msaaSampleCount);
+    void DisposeInternal();
     VkDeviceMemory _memoryInternal = VK_NULL_HANDLE;
     ImageReference _internal;
-    VkImageViewHandler _view;
+    VkImageView _view;
 };

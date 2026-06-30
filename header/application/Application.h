@@ -17,6 +17,7 @@
 #include "rendering/GraphicsBuffer.h"
 #include "rendering/Shaders/ShaderLibrary.h"
 #include "rendering/SwapChain.h"
+#include <array>
 #include <chrono>
 #include <cstdint>
 #include <glm/ext/vector_float2.hpp>
@@ -75,10 +76,8 @@ class Application
     };
     ShaderLibrary _shaderLibrary;
 
-    std::unique_ptr<GraphicsImage> _msaaColorTarget;
-    std::unique_ptr<GraphicsImage> MakeMsaaColorTarget() const;
-    std::unique_ptr<GraphicsImage> _msaaDepthTarget;
-    std::unique_ptr<GraphicsImage> MakeDepthTarget() const;
+    GraphicsImage _msaaColorTarget;
+    GraphicsImage _msaaDepthTarget;
 
     // Datas
 

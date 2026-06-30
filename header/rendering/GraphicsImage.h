@@ -35,6 +35,14 @@ class GraphicsImage
         }
     }
 
+    void Resize(uint32_t Width, uint32_t Height)
+    {
+        for(auto & image : _images)
+        {
+            image.Resize(Width, Height);
+        }
+    }
+
     GraphicsImage(GraphicsImage&& other) : _images(std::move(other._images)), _imGuiSets(std::move(other._imGuiSets)), _sampler(other._sampler), _usage(other._usage) {}
     GraphicsImage(const GraphicsImage& other) = delete;
 
@@ -58,14 +66,13 @@ class GraphicsImage
     inline uint32_t MipCount() const { return Current().Internal().MipCount; }
     VkDescriptorSet ImGuiSet() const { return _imGuiSets[CurrentIndex()]; }
 
-    ~GraphicsImage() { }
+    ~GraphicsImage() {}
 
     protected:
     std::vector<GPUImage> _images;
     std::vector<VkDescriptorSet> _imGuiSets;
     VkSampler _sampler;
     RessourceUsage _usage;
-
 
     inline const GPUImage& Current() const { return _images[CurrentIndex()]; }
     inline uint32_t CurrentIndex() const { return _usage == RessourceUsage::PerFrame ? ApplicationInfo::CurrentFrame() : 0; }

@@ -2,7 +2,6 @@
 #include "application/DebugLayer.h"
 #include "rendering/QueueFamilyIds.h"
 #include <cstdint>
-#include <stdexcept>
 #include <vulkan/vulkan_core.h>
 
 VkSampleCountFlagBits ApplicationInfo::GetMaxUsableSampleCount(VkSampleCountFlagBits maxSample) const
