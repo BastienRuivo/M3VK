@@ -133,7 +133,7 @@ SwapChain::SwapChain(const Window& window, VkSurfaceKHR windowSurface)
         .imageColorSpace = format.colorSpace,
         .imageExtent = extents,
         .imageArrayLayers = 1,
-        .imageUsage =VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT
+        .imageUsage =VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
     };
 
     _minImageCount = createInfo.minImageCount;

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "rendering/DescriptorPool.h"
+#include "rendering/GPUImage.h"
 #include "rendering/GraphicsBuffer.h"
 #include <cstdint>
 #include <vulkan/vulkan_core.h>
@@ -94,6 +95,47 @@ class CommandBuffer
     inline void Blit(VkImage src, VkImageLayout srcLayout, VkImage dst, VkImageLayout dstLayout, uint32_t regionCount, VkImageBlit* pRegions, VkFilter filter) const
     {
         vkCmdBlitImage(_internal, src, srcLayout, dst, dstLayout, regionCount, pRegions, filter);
+    }
+
+    inline void Blit(ImageReference src, VkImageLayout srcLayout, ImageReference dst, VkImageLayout dstLayout, VkFilter filter = VK_FILTER_NEAREST) const
+    {
+        VkImageAspectFlags aspect = VK_IMAGE_ASPECT_COLOR_BIT;
+        if(src.UsageFlags & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT) aspect = VK_IMAGE_ASPECT_DEPTH_BIT;
+        VkImageBlit region
+        {
+            .srcSubresource = { aspect, 0, 0, src.ArrayLayerCount },
+            .srcOffsets = { { 0, 0, 0 }, { static_cast<int32_t>(src.Width), static_cast<int32_t>(src.Height), 1 } },
+            .dstSubresource = { aspect, 0, 0, dst.ArrayLayerCount },
+            .dstOffsets = { { 0, 0, 0 }, { static_cast<int32_t>(dst.Width), static_cast<int32_t>(dst.Height), 1 } }
+        };
+        vkCmdBlitImage(_internal, src.Image, srcLayout, dst.Image, dstLayout, 1, &region, filter);
+    }
+
+    inline void CopyImage(ImageReference src, VkImageLayout srcLayout, ImageReference dst, VkImageLayout dstLayout) const
+    {
+        VkImageAspectFlags aspect = VK_IMAGE_ASPECT_COLOR_BIT;
+        if(src.UsageFlags & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT) aspect = VK_IMAGE_ASPECT_DEPTH_BIT;
+
+        VkImageCopy2 region
+        {
+            .sType = VK_STRUCTURE_TYPE_IMAGE_COPY_2,
+            .srcSubresource = { aspect, 0, 0, src.ArrayLayerCount },
+            .srcOffset = { 0, 0, 0 },
+            .dstSubresource = { aspect, 0, 0, dst.ArrayLayerCount },
+            .dstOffset = { 0, 0, 0 },
+            .extent = { static_cast<uint32_t>(src.Width), static_cast<uint32_t>(src.Height), 1 }
+        };
+        VkCopyImageInfo2 copyInfo
+        {
+            .sType = VK_STRUCTURE_TYPE_COPY_IMAGE_INFO_2,
+            .srcImage = src.Image,
+            .srcImageLayout = srcLayout,
+            .dstImage = dst.Image,
+            .dstImageLayout = dstLayout,
+            .regionCount = 1,
+            .pRegions = &region
+        };
+        vkCmdCopyImage2(_internal, &copyInfo);
     }
 
     inline void CopyBufferToImage(VkBuffer buffer, VkImage image, VkImageLayout layout, VkBufferImageCopy* pRegions, int regionCount) const

@@ -3,5 +3,6 @@
 enum RessourceUsage
 {
     Static,
-    PerFrame
+    PerFrame,
+    Transient
 };
