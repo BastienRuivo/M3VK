@@ -310,7 +310,7 @@ void Pipeline::Execute(const CommandBuffer& cmdBuffer, const SwapChain& swapChai
             };
             cmdBuffer.PushConstants(_descriptorAllocator.GlobalLayout(), 0, sizeof(CommonIndexes), &indexes);
 
-            cmdBuffer.BeginRendering(renderArea, &colorAttachment, 1, depthAttachment, stencilAttachment);
+            cmdBuffer.BeginRendering(renderArea,  {&colorAttachment, 1}, depthAttachment, stencilAttachment);
             {
                 for(uint32_t i = 0; i < _drawModules.size(); i++)
                 {
@@ -337,7 +337,7 @@ void Pipeline::Execute(const CommandBuffer& cmdBuffer, const SwapChain& swapChai
         {
             VkRenderingAttachmentInfo uiColorAttachment = ImageHelper::AttachmentInfo(backBuffer.View, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_ATTACHMENT_LOAD_OP_LOAD, VK_ATTACHMENT_STORE_OP_STORE);
             VkRenderingAttachmentInfo uiDepthAttachment { .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO };
-            cmdBuffer.BeginRendering(renderArea, &uiColorAttachment, 1, uiDepthAttachment, stencilAttachment);
+            cmdBuffer.BeginRendering(renderArea, {&uiColorAttachment, 1}, uiDepthAttachment, stencilAttachment);
             {
                 ui.Draw(cmdBuffer.GetInternal());
             }

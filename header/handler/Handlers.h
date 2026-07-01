@@ -96,6 +96,16 @@ public:
 
     VkSemaphoreHandler(VkSemaphoreHandler&& other) noexcept = default;
     VkSemaphoreHandler& operator=(VkSemaphoreHandler&& other) noexcept = default;
+
+    inline VkSemaphoreSubmitInfo GetSubmitInfo(VkPipelineStageFlags2 stage = VK_PIPELINE_STAGE_2_NONE) const
+    {
+        return VkSemaphoreSubmitInfo
+        {
+            .sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
+            .semaphore = _internal,
+            .stageMask = stage
+        };
+    }
 };
 
 class VkInstanceHandler : public Handler<VkInstance>

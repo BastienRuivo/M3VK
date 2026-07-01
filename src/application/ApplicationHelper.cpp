@@ -84,15 +84,22 @@ void ApplicationHelper::CopyBufferToBuffer(const VkQueue queue, const VkCommandP
 
     vkEndCommandBuffer(cmdBuffer);
 
-    VkSubmitInfo submitInfo
+    VkCommandBufferSubmitInfo cmdBufferSubmit
     {
-        .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-        .commandBufferCount = 1,
-        .pCommandBuffers = &cmdBuffer
+        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO,
+        .commandBuffer = cmdBuffer
+    };
+
+    VkSubmitInfo2 submitInfo
+    {
+        .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2,
+        .pNext = &submitInfo,
+        .commandBufferInfoCount = 1,
+        .pCommandBufferInfos = &cmdBufferSubmit
     };
 
     // wait for the queue idle, we can use a fence to submit multiple shit later
-    vkQueueSubmit(queue, 1, &submitInfo, VK_NULL_HANDLE);
+    vkQueueSubmit2(queue, 1, &submitInfo, VK_NULL_HANDLE);
     vkQueueWaitIdle(queue);
 
     vkFreeCommandBuffers(device,cmdPool, 1, &cmdBuffer);

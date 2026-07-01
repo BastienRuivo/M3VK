@@ -51,27 +51,28 @@ void CommandBuffer::End() const
     }
 }
 
-void CommandBuffer::Submit(VkSemaphore waitSemaphores[], int waitCount,
-    VkPipelineStageFlags waitStages[],
-    VkSemaphore signalSemaphores[], int signalCount,
+void CommandBuffer::Submit(std::span<const VkSemaphoreSubmitInfo> waitSemaphores,
+    std::span<const VkSemaphoreSubmitInfo> signalSemaphores,
     VkFence fence) const
 {
-    VkSubmitInfo submitInfo
+    VkCommandBufferSubmitInfo commandBufferSubmitInfo
     {
-        .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-
-        .waitSemaphoreCount = static_cast<uint32_t>(waitCount),
-        .pWaitSemaphores = waitSemaphores,
-        .pWaitDstStageMask = waitStages,
-
-        .commandBufferCount = 1,
-        .pCommandBuffers = &_internal,
-
-        .signalSemaphoreCount = static_cast<uint32_t>(signalCount),
-        .pSignalSemaphores = signalSemaphores
+        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO,
+        .commandBuffer = _internal
     };
 
-    if(vkQueueSubmit(_queue, 1, &submitInfo, fence) != VK_SUCCESS)
+    VkSubmitInfo2 submitInfo
+    {
+        .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2,
+        .waitSemaphoreInfoCount = static_cast<uint32_t>(waitSemaphores.size()),
+        .pWaitSemaphoreInfos = waitSemaphores.data(),
+        .commandBufferInfoCount = 1,
+        .pCommandBufferInfos = &commandBufferSubmitInfo,
+        .signalSemaphoreInfoCount = static_cast<uint32_t>(signalSemaphores.size()),
+        .pSignalSemaphoreInfos = signalSemaphores.data(),
+    };
+
+    if(vkQueueSubmit2(_queue, 1, &submitInfo, fence) != VK_SUCCESS)
     {
         throw std::runtime_error("Failed to submit draw command");
     }
@@ -136,14 +137,19 @@ void CommandBuffer::SetViewport(float x, float y, float width, float height) con
 
 void CommandBuffer::WaitCompletion() const
 {
-    VkSubmitInfo submitInfo
+    VkCommandBufferSubmitInfo commandBufferSubmitInfo
     {
-        .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-        .commandBufferCount = 1,
-        .pCommandBuffers = &_internal
+        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO,
+        .commandBuffer = _internal
+    };
+    VkSubmitInfo2 submitInfo
+    {
+        .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2,
+        .commandBufferInfoCount = 1,
+        .pCommandBufferInfos = &commandBufferSubmitInfo
     };
 
-    vkQueueSubmit(_queue, 1, &submitInfo, VK_NULL_HANDLE);
+    vkQueueSubmit2(_queue, 1, &submitInfo, VK_NULL_HANDLE);
     vkQueueWaitIdle(_queue);
 }
 

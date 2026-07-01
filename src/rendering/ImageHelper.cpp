@@ -129,8 +129,8 @@ VkImageMemoryBarrier2 ImageHelper::TransitionLayoutBarrier(const ImageReference 
     VkImageMemoryBarrier2 barrier
     {
         .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
-        .srcAccessMask = 0,
-        .dstAccessMask = 0,
+        .srcAccessMask = VK_ACCESS_2_NONE,
+        .dstAccessMask = VK_ACCESS_2_NONE,
         .oldLayout = oldLayout,
         .newLayout = newLayout,
         .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED, // used to transfer queue ownership if someday I do a copy queue
@@ -168,7 +168,7 @@ VkImageMemoryBarrier2 ImageHelper::TransitionLayoutBarrier(const ImageReference 
     {
         case VK_IMAGE_LAYOUT_UNDEFINED:
         {
-            barrier.srcAccessMask = 0;
+            barrier.srcAccessMask = VK_ACCESS_2_NONE;
             barrier.srcStageMask = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT;
             break;
         }

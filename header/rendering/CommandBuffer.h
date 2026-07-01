@@ -27,10 +27,9 @@ class CommandBuffer
 
     void End() const;
 
-    void Submit(VkSemaphore waitSemaphores[], int waitCount,
-        VkPipelineStageFlags waitStages[],
-        VkSemaphore signalSemaphores[], int signalCount,
-        VkFence fence = VK_NULL_HANDLE) const;
+    void Submit(std::span<const VkSemaphoreSubmitInfo> waitSemaphores,
+    std::span<const VkSemaphoreSubmitInfo> signalSemaphores,
+    VkFence fence = VK_NULL_HANDLE) const;
 
     inline void BeginSingleTime() const
     {
@@ -206,15 +205,15 @@ class CommandBuffer
         vkCmdCopyBuffer(_internal, src, dst, 1, &region);
     }
 
-    inline void BeginRendering(VkRect2D renderArea, const VkRenderingAttachmentInfo * colorAttachment, uint32_t colorAttachmentCount, const VkRenderingAttachmentInfo& depthAttachment, const VkRenderingAttachmentInfo& stencilAttachment) const
+    inline void BeginRendering(VkRect2D renderArea, std::span<const VkRenderingAttachmentInfo> colorAttachments, const VkRenderingAttachmentInfo& depthAttachment, const VkRenderingAttachmentInfo& stencilAttachment) const
     {
         VkRenderingInfo renderingInfo
         {
             .sType = VK_STRUCTURE_TYPE_RENDERING_INFO,
             .renderArea = renderArea,
             .layerCount = 1,
-            .colorAttachmentCount = colorAttachmentCount,
-            .pColorAttachments = colorAttachment,
+            .colorAttachmentCount = static_cast<uint32_t>(colorAttachments.size()),
+            .pColorAttachments = colorAttachments.data(),
             .pDepthAttachment = &depthAttachment,
             .pStencilAttachment = &stencilAttachment
         };

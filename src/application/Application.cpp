@@ -124,12 +124,10 @@ void Application::DrawFrame()
     commandBuffer.Reset();
     _pipeline.Execute(commandBuffer, *_swapChain, _userInterface, imageIndex);
 
-    // stackallocs that can be cached.
-    VkSemaphore wait[] = {_availableImageSemaphore.Internal(currentFrame)};
-    VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
-    VkSemaphore signalSemaphore[] = {_renderFinishedSemaphores.Internal(imageIndex)};
+    VkSemaphoreSubmitInfo waitSemaphore = _availableImageSemaphore.Get(currentFrame).GetSubmitInfo(VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+    VkSemaphoreSubmitInfo signalSemaphore = _renderFinishedSemaphores.Get(imageIndex).GetSubmitInfo();
 
-    commandBuffer.Submit(wait, 1, waitStages, signalSemaphore, 1, _waitFence.Internal(currentFrame));
+    commandBuffer.Submit({&waitSemaphore, 1}, {&signalSemaphore, 1}, _waitFence.Internal(currentFrame));
 
     // actually present the frame
     VkSwapchainKHR swapChain = _swapChain->Internal();
@@ -137,7 +135,7 @@ void Application::DrawFrame()
     {
         .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
         .waitSemaphoreCount = 1,
-        .pWaitSemaphores = signalSemaphore,
+        .pWaitSemaphores = &signalSemaphore.semaphore,
         .swapchainCount = 1,
         .pSwapchains = &swapChain,
         .pImageIndices = &imageIndex
