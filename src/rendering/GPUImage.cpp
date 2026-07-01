@@ -75,16 +75,6 @@ void GPUImage::CreateImageInternal(uint32_t width, uint32_t height, uint32_t arr
 {
     VkMemoryPropertyFlags memoryFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 
-    if(usageFlags & VK_IMAGE_USAGE_TRANSFER_SRC_BIT)
-    {
-        memoryFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-    }
-
-    if(usageFlags & VK_IMAGE_USAGE_TRANSFER_DST_BIT)
-    {
-        memoryFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-    }
-
     bool isTransient = usageFlags & VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT;
     if(isTransient)
     {
