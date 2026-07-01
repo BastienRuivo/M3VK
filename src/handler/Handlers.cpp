@@ -54,17 +54,24 @@ VkDeviceHandler::VkDeviceHandler(VkInstance instance, VkSurfaceKHR windowSurface
         queueCreateInfos.push_back(queueCreateInfo);
     }
 
+    VkPhysicalDeviceSynchronization2Features sync2Features
+    {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES,
+        .pNext = nullptr,
+        .synchronization2 = VK_TRUE
+    };
+
     VkPhysicalDeviceExtendedDynamicState3FeaturesEXT extendedDynamicState3Features{};
-    extendedDynamicState3Features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTENDED_DYNAMIC_STATE_3_FEATURES_EXT,
-    extendedDynamicState3Features.pNext = nullptr,
-    extendedDynamicState3Features.extendedDynamicState3RasterizationSamples = VK_TRUE,
-    extendedDynamicState3Features.extendedDynamicState3ColorBlendEnable = VK_TRUE,
-    extendedDynamicState3Features.extendedDynamicState3ColorBlendEquation = VK_TRUE,
-    extendedDynamicState3Features.extendedDynamicState3ColorWriteMask = VK_TRUE,
-    extendedDynamicState3Features.extendedDynamicState3PolygonMode = VK_TRUE,
-    extendedDynamicState3Features.extendedDynamicState3AlphaToCoverageEnable = VK_TRUE,
-    extendedDynamicState3Features.extendedDynamicState3DepthClampEnable = VK_TRUE,
-    extendedDynamicState3Features.extendedDynamicState3LogicOpEnable = VK_TRUE,
+    extendedDynamicState3Features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTENDED_DYNAMIC_STATE_3_FEATURES_EXT;
+    extendedDynamicState3Features.pNext = &sync2Features;
+    extendedDynamicState3Features.extendedDynamicState3RasterizationSamples = VK_TRUE;
+    extendedDynamicState3Features.extendedDynamicState3ColorBlendEnable = VK_TRUE;
+    extendedDynamicState3Features.extendedDynamicState3ColorBlendEquation = VK_TRUE;
+    extendedDynamicState3Features.extendedDynamicState3ColorWriteMask = VK_TRUE;
+    extendedDynamicState3Features.extendedDynamicState3PolygonMode = VK_TRUE;
+    extendedDynamicState3Features.extendedDynamicState3AlphaToCoverageEnable = VK_TRUE;
+    extendedDynamicState3Features.extendedDynamicState3DepthClampEnable = VK_TRUE;
+    extendedDynamicState3Features.extendedDynamicState3LogicOpEnable = VK_TRUE;
     extendedDynamicState3Features.extendedDynamicState3AlphaToOneEnable = VK_TRUE;
 
     VkPhysicalDeviceExtendedDynamicState2FeaturesEXT extendedDynamicState2Features

@@ -18,10 +18,6 @@
 #include <stdexcept>
 #include "asset/CPUImage.h"
 
-#ifdef M3VK_VERBOSE_LOG
-#include <string>
-#endif
-
 #include <vulkan/vulkan_core.h>
 
 #include <glm/glm.hpp>

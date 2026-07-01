@@ -30,12 +30,14 @@ namespace BufferHelper
         };
     }
 
-    static inline VkBufferMemoryBarrier BufferBarrier(const GraphicsBuffer& buffer, uint32_t offset,uint32_t size, VkAccessFlagBits srcAccessMask, VkAccessFlagBits dstAccessMask)
+    static inline VkBufferMemoryBarrier2 BufferBarrier(const GraphicsBuffer& buffer, uint32_t offset,uint32_t size, VkAccessFlagBits2 srcAccessMask, VkPipelineStageFlagBits2 srcStageMask, VkAccessFlagBits2 dstAccessMask, VkPipelineStageFlagBits2 dstStageMask)
     {
-        return
+        return VkBufferMemoryBarrier2
         {
-            .sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
+            .sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2,
+            .srcStageMask = srcStageMask,
             .srcAccessMask = srcAccessMask,
+            .dstStageMask = dstStageMask,
             .dstAccessMask = dstAccessMask,
             .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
             .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,

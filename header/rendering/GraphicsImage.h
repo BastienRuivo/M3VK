@@ -27,7 +27,6 @@ class GraphicsImage
     {
         uint32_t count = usage == RessourceUsage::PerFrame ? ApplicationInfo::Constant::MaxFrameInFlight : 1;
         _images.reserve(count);
-        _imGuiSets.reserve(count);
 
         for (uint32_t i = 0; i < count; i++)
         {
@@ -43,7 +42,7 @@ class GraphicsImage
         }
     }
 
-    GraphicsImage(GraphicsImage&& other) : _images(std::move(other._images)), _imGuiSets(std::move(other._imGuiSets)), _sampler(other._sampler), _usage(other._usage) {}
+    GraphicsImage(GraphicsImage&& other) : _images(std::move(other._images)), _sampler(other._sampler), _usage(other._usage) {}
     GraphicsImage(const GraphicsImage& other) = delete;
 
     GraphicsImage& operator=(const GraphicsImage& other) = delete;
@@ -52,7 +51,6 @@ class GraphicsImage
         if (this != &other)
         {
             _images = std::move(other._images);
-            _imGuiSets = std::move(other._imGuiSets);
             _sampler = other._sampler;
             _usage = other._usage;
         }
@@ -64,16 +62,22 @@ class GraphicsImage
     inline uint32_t Width() const { return Current().Internal().Width; }
     inline uint32_t Height() const { return Current().Internal().Height; }
     inline uint32_t MipCount() const { return Current().Internal().MipCount; }
-    VkDescriptorSet ImGuiSet() const { return _imGuiSets[CurrentIndex()]; }
+
+    inline ImageReference PreviousInternal() const { return Previous().Internal(); }
+    inline VkImageView PreviousView() const { return Previous().Internal().View; }
+    inline uint32_t PreviousWidth() const { return Previous().Internal().Width; }
+    inline uint32_t PreviousHeight() const { return Previous().Internal().Height; }
+    inline uint32_t PreviousMipCount() const { return Previous().Internal().MipCount; }
 
     ~GraphicsImage() {}
 
     protected:
     std::vector<GPUImage> _images;
-    std::vector<VkDescriptorSet> _imGuiSets;
     VkSampler _sampler;
     RessourceUsage _usage;
 
     inline const GPUImage& Current() const { return _images[CurrentIndex()]; }
+    inline const GPUImage& Previous() const { return _images[PreviousIndex()]; }
     inline uint32_t CurrentIndex() const { return _usage == RessourceUsage::PerFrame ? ApplicationInfo::CurrentFrame() : 0; }
+    inline uint32_t PreviousIndex() const { return _usage == RessourceUsage::PerFrame ? ApplicationInfo::PreviousFrame() : 0; }
 };

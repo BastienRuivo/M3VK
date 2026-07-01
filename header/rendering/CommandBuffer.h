@@ -81,20 +81,61 @@ class CommandBuffer
         vkCmdPushConstants(_internal, layout, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT, offset, size, pValues);
     }
 
-    inline void Barrier(VkPipelineStageFlags srcAccesMask, VkPipelineStageFlags dstAccesMask, VkMemoryBarrier* memoryBarriers, uint32_t memoryBarrierCount, VkBufferMemoryBarrier* bufferBarriers, uint32_t bufferBarrierCount, VkImageMemoryBarrier* imgBarriers, uint32_t imgBarrierCount) const
+    inline void Barrier(std::span<const VkMemoryBarrier2> memoryBarriers) const
     {
-        vkCmdPipelineBarrier(_internal,
-            srcAccesMask, dstAccesMask,
-            0,
-            memoryBarrierCount, memoryBarriers,
-            bufferBarrierCount, bufferBarriers,
-            imgBarrierCount, imgBarriers
-        );
+        VkDependencyInfo dependencyInfo
+        {
+            .sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
+            .dependencyFlags = 0,
+            .memoryBarrierCount = static_cast<uint32_t>(memoryBarriers.size()),
+            .pMemoryBarriers = memoryBarriers.data()
+        };
+        vkCmdPipelineBarrier2(_internal, &dependencyInfo);
     }
 
-    inline void Blit(VkImage src, VkImageLayout srcLayout, VkImage dst, VkImageLayout dstLayout, uint32_t regionCount, VkImageBlit* pRegions, VkFilter filter) const
+    inline void Barrier(std::span<const VkBufferMemoryBarrier2> bufferBarriers) const
     {
-        vkCmdBlitImage(_internal, src, srcLayout, dst, dstLayout, regionCount, pRegions, filter);
+        VkDependencyInfo dependencyInfo
+        {
+            .sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
+            .dependencyFlags = 0,
+            .bufferMemoryBarrierCount = static_cast<uint32_t>(bufferBarriers.size()),
+            .pBufferMemoryBarriers = bufferBarriers.data()
+        };
+        vkCmdPipelineBarrier2(_internal, &dependencyInfo);
+    }
+
+    inline void Barrier(std::span<const VkImageMemoryBarrier2> imgBarriers) const
+    {
+        VkDependencyInfo dependencyInfo
+        {
+            .sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
+            .dependencyFlags = 0,
+            .imageMemoryBarrierCount = static_cast<uint32_t>(imgBarriers.size()),
+            .pImageMemoryBarriers = imgBarriers.data()
+        };
+        vkCmdPipelineBarrier2(_internal, &dependencyInfo);
+    }
+
+    inline void Barrier(std::span<const VkMemoryBarrier2> memoryBarriers, std::span<const VkBufferMemoryBarrier2> bufferBarriers, std::span<const VkImageMemoryBarrier2> imgBarriers) const
+    {
+        VkDependencyInfo dependencyInfo
+        {
+            .sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
+            .dependencyFlags = 0,
+            .memoryBarrierCount = static_cast<uint32_t>(memoryBarriers.size()),
+            .pMemoryBarriers = memoryBarriers.data(),
+            .bufferMemoryBarrierCount = static_cast<uint32_t>(bufferBarriers.size()),
+            .pBufferMemoryBarriers = bufferBarriers.data(),
+            .imageMemoryBarrierCount = static_cast<uint32_t>(imgBarriers.size()),
+            .pImageMemoryBarriers = imgBarriers.data()
+        };
+        vkCmdPipelineBarrier2(_internal, &dependencyInfo);
+    }
+
+    inline void Blit(VkImage src, VkImageLayout srcLayout, VkImage dst, VkImageLayout dstLayout, std::span<const VkImageBlit> regions, VkFilter filter) const
+    {
+        vkCmdBlitImage(_internal, src, srcLayout, dst, dstLayout, regions.size(), regions.data(), filter);
     }
 
     inline void Blit(ImageReference src, VkImageLayout srcLayout, ImageReference dst, VkImageLayout dstLayout, VkFilter filter = VK_FILTER_NEAREST) const

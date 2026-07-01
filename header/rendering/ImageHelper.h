@@ -53,8 +53,8 @@ namespace ImageHelper
         return info;
     }
 
-    VkImageMemoryBarrier TransitionLayoutBarrier(const ImageReference& image, uint32_t mipLevel, uint32_t mipCount, uint32_t arrayLayer, uint32_t arrayLayerCount, VkPipelineStageFlags& sourceStage, VkPipelineStageFlags& destinationStage, VkImageLayout oldLayout, VkImageLayout newLayout);
-    VkImageMemoryBarrier TransitionLayoutBarrier(const VkImageView& image, uint32_t mipLevel, uint32_t mipCount, uint32_t arrayLayer, uint32_t arrayLayerCount, VkPipelineStageFlags& sourceStage, VkPipelineStageFlags& destinationStage, VkImageLayout oldLayout, VkImageLayout newLayout);
+    VkImageMemoryBarrier2 TransitionLayoutBarrier(const ImageReference& image, uint32_t mipLevel, uint32_t mipCount, uint32_t arrayLayer, uint32_t arrayLayerCount, VkImageLayout oldLayout, VkImageLayout newLayout);
+    VkImageMemoryBarrier2 TransitionLayoutBarrier(const VkImageView& image, uint32_t mipLevel, uint32_t mipCount, uint32_t arrayLayer, uint32_t arrayLayerCount, VkImageLayout oldLayout, VkImageLayout newLayout);
 
     uint32_t GetMipCount(uint32_t width, uint32_t height);
     uint32_t GetBytePerPixel(VkFormat format);

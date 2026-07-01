@@ -83,13 +83,13 @@ void CullingModule::Execute(const CommandBuffer& cmdBuffer, const GraphicsBuffer
     cmdBuffer.EndMarker();
 }
 
-void CullingModule::Barrier(const CommandBuffer& cmdBuffer, uint32_t instanceCount, uint32_t drawCount, VkAccessFlagBits src, VkAccessFlagBits dst) const
+void CullingModule::Barrier(const CommandBuffer& cmdBuffer, uint32_t instanceCount, uint32_t drawCount, VkAccessFlagBits2 src, VkAccessFlagBits2 dst) const
 {
-    std::array<VkBufferMemoryBarrier, 2> bufferBarrier =
+    std::array<VkBufferMemoryBarrier2, 2> bufferBarrier =
     {
-        BufferHelper::BufferBarrier(_visibleIndirectBuffer, 0, drawCount, src, dst),
-        BufferHelper::BufferBarrier(_visibleIndirectionBuffer, 0, instanceCount, src, dst)
+        BufferHelper::BufferBarrier(_visibleIndirectBuffer, 0, drawCount, src, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, dst, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT),
+        BufferHelper::BufferBarrier(_visibleIndirectionBuffer, 0, instanceCount, src, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, dst, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT)
     };
 
-    cmdBuffer.Barrier(VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT, nullptr, 0, bufferBarrier.data(), bufferBarrier.size(), nullptr, 0);
+    cmdBuffer.Barrier(bufferBarrier);
 }

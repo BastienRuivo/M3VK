@@ -20,7 +20,7 @@ public:
     ~CullingModule();
 
     void Execute(const CommandBuffer& cmdBuffer, const GraphicsBuffer& cameraBuffer, const GeometryBuffer& indirectBuffer, const GeometryBuffer& instanceBuffer, VkPipelineLayout layout) const;
-    void Barrier(const CommandBuffer& cmdBuffer, uint32_t instanceCount, uint32_t drawCount, VkAccessFlagBits src, VkAccessFlagBits dst) const;
+    void Barrier(const CommandBuffer& cmdBuffer, uint32_t instanceCount, uint32_t drawCount, VkAccessFlagBits2 src, VkAccessFlagBits2 dst) const;
     inline const GraphicsBuffer& VisibleInstanceIndirectionBuffer() const { return _visibleIndirectionBuffer; }
     inline const GraphicsBuffer& VisibleIndirectBuffer() const { return _visibleIndirectBuffer; }
 
