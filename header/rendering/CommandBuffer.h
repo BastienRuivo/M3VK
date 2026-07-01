@@ -363,6 +363,15 @@ class CommandBuffer
         VkFunctions::vkCmdEndDebugUtilsLabelEXT(_internal);
     }
 
+    inline VkCommandBufferSubmitInfo GetSubmitInfo() const
+    {
+        return VkCommandBufferSubmitInfo
+        {
+            .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO,
+            .commandBuffer = _internal
+        };
+    }
+
     inline VkCommandBuffer GetInternal() const { return _internal; }
 
     private:

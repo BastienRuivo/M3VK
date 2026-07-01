@@ -55,11 +55,7 @@ void CommandBuffer::Submit(std::span<const VkSemaphoreSubmitInfo> waitSemaphores
     std::span<const VkSemaphoreSubmitInfo> signalSemaphores,
     VkFence fence) const
 {
-    VkCommandBufferSubmitInfo commandBufferSubmitInfo
-    {
-        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO,
-        .commandBuffer = _internal
-    };
+    VkCommandBufferSubmitInfo commandBufferSubmitInfo = GetSubmitInfo();
 
     VkSubmitInfo2 submitInfo
     {
@@ -137,11 +133,8 @@ void CommandBuffer::SetViewport(float x, float y, float width, float height) con
 
 void CommandBuffer::WaitCompletion() const
 {
-    VkCommandBufferSubmitInfo commandBufferSubmitInfo
-    {
-        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO,
-        .commandBuffer = _internal
-    };
+    VkCommandBufferSubmitInfo commandBufferSubmitInfo = GetSubmitInfo();
+
     VkSubmitInfo2 submitInfo
     {
         .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2,
