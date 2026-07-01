@@ -72,9 +72,10 @@ class ApplicationInfo
     }
 
     static uint32_t FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
-    static inline uint32_t CurrentFrame() { return ApplicationInfo::Get()._currentFrame; }
+    static inline uint32_t CurrentFrame() { return (ApplicationInfo::Get()._currentFrame) % Constant::MaxFrameInFlight; }
     static inline uint32_t PreviousFrame() { return (ApplicationInfo::Get()._currentFrame + Constant::MaxFrameInFlight - 1) % Constant::MaxFrameInFlight; }
-    static inline void NextFrame() { ApplicationInfo::Get()._currentFrame = (ApplicationInfo::Get()._currentFrame + 1) % Constant::MaxFrameInFlight; }
+    static inline void NextFrame() { ApplicationInfo::Get()._currentFrame++; }
+    static inline uint32_t GetFrameCount() { return ApplicationInfo::Get()._currentFrame; }
 
     private:
     void SetPhysicalDeviceInformation(VkPhysicalDevice physicalDevice, VkPhysicalDeviceProperties properties, const QueueFamilyIds& queueFamilyIds);

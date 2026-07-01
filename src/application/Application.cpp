@@ -98,7 +98,6 @@ void Application::DrawFrame()
     // Acquire image to draw on
     uint32_t imageIndex;
     VkResult result = vkAcquireNextImageKHR(ApplicationInfo::Device(), _swapChain->Internal(), UINT64_MAX, _availableImageSemaphore.Internal(currentFrame), VK_NULL_HANDLE, &imageIndex);
-    ApplicationInfo::NextFrame();
     if(result == VK_ERROR_OUT_OF_DATE_KHR)
     {
         RefreshSwapChain();
@@ -117,7 +116,7 @@ void Application::DrawFrame()
     _pipeline.DoUI(_userInterface);
     _userInterface.Render();
 
-    _pipeline.UpdateCameraData(_swapChain->GetExtent());
+    _pipeline.PreRender(_swapChain->GetExtent());
 
     const CommandBuffer& commandBuffer = _commandBuffer.Get(currentFrame);
 

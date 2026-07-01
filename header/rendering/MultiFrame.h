@@ -75,6 +75,7 @@ class MultiFrameObject
 
     inline size_t Size() const { return _internals.size(); }
     inline T* Data() { return _internals.data(); }
+    inline const T& operator[](size_t index) const { return _internals[index]; }
 
     protected:
     std::vector<T> _internals;

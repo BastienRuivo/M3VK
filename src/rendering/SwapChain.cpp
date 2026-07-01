@@ -200,5 +200,7 @@ SwapChain::SwapChain(const Window& window, VkSurfaceKHR windowSurface)
 
 SwapChain::~SwapChain()
 {
+    // if the system throw an error, ensure that the current frame is finished before destroying
+    vkDeviceWaitIdle(ApplicationInfo::Device());
     vkDestroySwapchainKHR(ApplicationInfo::Device(), _internal, nullptr);
 }

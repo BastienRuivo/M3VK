@@ -202,6 +202,18 @@ VkImageMemoryBarrier2 ImageHelper::TransitionLayoutBarrier(const ImageReference 
             barrier.srcStageMask = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT;
             break;
         }
+        case VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL:
+        {
+            barrier.srcAccessMask = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
+            barrier.srcStageMask = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
+            break;
+        }
+        case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:
+        {
+            barrier.srcAccessMask = VK_ACCESS_2_MEMORY_READ_BIT;
+            barrier.srcStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+            break;
+        }
         default:
         {
             throw std::runtime_error("Unsupported old layout");
