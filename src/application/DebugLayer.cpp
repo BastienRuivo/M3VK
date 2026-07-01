@@ -1,5 +1,6 @@
 #include "application/DebugLayer.h"
 #include <ostream>
+#include <string_view>
 #include <vulkan/vulkan_core.h>
 #include <iostream>
 #include <cstring>
@@ -21,7 +22,7 @@ void M3VK_DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMesseng
     }
 }
 
-void DebugLayer::Log(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, const std::string& message)
+void DebugLayer::Log(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, std::string_view message)
 {
     DebugLayer::LogType logType;
     switch (messageSeverity)
@@ -35,7 +36,7 @@ void DebugLayer::Log(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, con
     Log(logType, message);
 }
 
-void DebugLayer::Log(DebugLayer::LogType LogType, const std::string& message)
+void DebugLayer::Log(DebugLayer::LogType LogType, std::string_view message)
 {
     if(!Enabled) return;
 

@@ -3,6 +3,7 @@
 #include <cstddef>
 #include <utility>
 #include <vector>
+
 template <typename T>
 class MultiFrameObject
 {
@@ -79,7 +80,12 @@ class MultiFrameObject
     std::vector<T> _internals;
 };
 
-template <typename T>
+template<typename T>
+concept HandlerType = requires(T t) {
+    t.Internal();
+};
+
+template <HandlerType T>
 class MultiFrameHandler : public MultiFrameObject<T>
 {
     public:

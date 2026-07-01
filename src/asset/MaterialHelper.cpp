@@ -112,7 +112,7 @@ uint32_t LoadMaterialInternal(DescriptorAllocator& allocator, MaterialImporter& 
     return materialId;
 }
 
-uint32_t MaterialImporter::LoadMaterial(DescriptorAllocator& allocator, const std::string & modelPath, MaterialRegistry & materialRegistry, VkCommandPool uploadPool, VkQueue uploadQueue, VkSampler sampler)
+uint32_t MaterialImporter::LoadMaterial(DescriptorAllocator& allocator, const std::filesystem::path & modelPath, MaterialRegistry & materialRegistry, VkCommandPool uploadPool, VkQueue uploadQueue, VkSampler sampler)
 {
     MaterialImporter importer;
 

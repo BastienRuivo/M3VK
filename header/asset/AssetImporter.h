@@ -38,7 +38,7 @@ struct AssetImporter : public Importer
     AssetImporter& operator=(AssetImporter&& other) noexcept;
     ~AssetImporter() = default;
 
-    static void LoadAsset(DescriptorAllocator& allocator, const std::string & modelPath, MeshRegistry & meshRegistry, MaterialRegistry & materialRegistry, VkCommandPool uploadPool, VkQueue uploadQueue, VkSampler sampler);
+    static void LoadAsset(DescriptorAllocator& allocator, const std::filesystem::path & modelPath, MeshRegistry & meshRegistry, MaterialRegistry & materialRegistry, VkCommandPool uploadPool, VkQueue uploadQueue, VkSampler sampler);
     bool Load(const std::filesystem::path& path) override;
     void Clear() override;
 };

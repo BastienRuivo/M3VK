@@ -2,14 +2,13 @@
 #include "application/DebugLayer.h"
 #include <filesystem>
 #include <stdexcept>
-#include <string>
 #include <vulkan/vulkan_core.h>
 
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
-CPUImage::CPUImage(const std::string& path, int channelFormat)
+CPUImage::CPUImage(const std::filesystem::path& path, int channelFormat)
 {
     _data = stbi_load(path.c_str(), &_width, &_height, &_channels, channelFormat);
 
@@ -21,7 +20,7 @@ CPUImage::CPUImage(const std::string& path, int channelFormat)
         const char* reason = stbi_failure_reason();
         if (reason)
         {
-            DebugLayer::Log(DebugLayer::LogType::ERROR, "Failed to load texture image : " + std::filesystem::current_path().string() + "/" + path + " : " + reason);
+            DebugLayer::Log(DebugLayer::LogType::ERROR, "Failed to load texture image : " + std::filesystem::current_path().string() + "/" + path.string() + " : " + reason);
         }
 
         throw std::runtime_error("Failed to load texture image");

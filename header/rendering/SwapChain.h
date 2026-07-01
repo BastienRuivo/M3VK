@@ -14,7 +14,7 @@ class SwapChain
 {
     public:
 
-    MultiFrameHandler<ImageReference> Images;
+    MultiFrameObject<ImageReference> Images;
     SwapChain(const Window & window, VkSurfaceKHR windowSurface);
     ~SwapChain();
 

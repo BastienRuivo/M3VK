@@ -104,7 +104,7 @@ void AssetImporter::Clear()
     TextureDatas.clear();
 }
 
-void AssetImporter::LoadAsset(DescriptorAllocator& allocator, const std::string & modelPath, MeshRegistry & meshRegistry, MaterialRegistry & materialRegistry, VkCommandPool uploadPool, VkQueue uploadQueue, VkSampler sampler)
+void AssetImporter::LoadAsset(DescriptorAllocator& allocator, const std::filesystem::path & modelPath, MeshRegistry & meshRegistry, MaterialRegistry & materialRegistry, VkCommandPool uploadPool, VkQueue uploadQueue, VkSampler sampler)
 {
     AssetImporter importer;
 

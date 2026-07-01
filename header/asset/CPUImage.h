@@ -1,14 +1,14 @@
 #pragma once
 
+#include <filesystem>
 #pragma once
 
 #include <stb_image.h>
-#include <string>
 #include <vulkan/vulkan_core.h>
 class CPUImage
 {
     public:
-    CPUImage(const std::string& path, int channelFormat);
+    CPUImage(const std::filesystem::path& path, int channelFormat);
     ~CPUImage();
 
     CPUImage(CPUImage&& other) noexcept;

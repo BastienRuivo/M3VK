@@ -29,7 +29,7 @@ struct MaterialImporter : public Importer
     MaterialImporter& operator=(MaterialImporter&& other) noexcept;
     ~MaterialImporter() = default;
 
-    static uint32_t LoadMaterial(DescriptorAllocator& allocator, const std::string & modelPath, MaterialRegistry & materialRegistry, VkCommandPool uploadPool, VkQueue uploadQueue, VkSampler sampler);
+    static uint32_t LoadMaterial(DescriptorAllocator& allocator, const std::filesystem::path & modelPath, MaterialRegistry & materialRegistry, VkCommandPool uploadPool, VkQueue uploadQueue, VkSampler sampler);
     static uint32_t LoadDefaultMaterial(DescriptorAllocator& allocator, MaterialRegistry & materialRegistry, VkCommandPool uploadPool, VkQueue uploadQueue, VkSampler sampler);
     bool Load(const std::filesystem::path& path) override;
     void Clear() override;

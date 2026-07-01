@@ -2,7 +2,7 @@
 
 #include "glm/ext/matrix_float4x4.hpp"
 #include <cstdint>
-#include <string>
+#include <filesystem>
 #include <vector>
 #include <vulkan/vulkan_core.h>
 #include <glm/gtc/quaternion.hpp>
@@ -22,7 +22,7 @@ namespace ApplicationHelper
         }
     };
 
-    std::vector<char> ReadFile(const std::string& filename);
+    std::vector<char> ReadFile(const std::filesystem::path& filename);
     SwapChainSupportDetails QuerySwapChainSupportDetail(VkPhysicalDevice physicalDevice, const VkSurfaceKHR& windowSurface);
     void CopyBufferToBuffer(const VkQueue queue, const VkCommandPool& cmdPool, const VkBuffer& src, VkDeviceSize srcOffset, const VkBuffer& dst, VkDeviceSize dstOffset, VkDeviceSize size);
     bool IsFormatSupported(VkFormat format, VkImageTiling tiling, VkFormatFeatureFlags features);

@@ -1,5 +1,5 @@
 #pragma once
-#include <string>
+#include <string_view>
 #include <vulkan/vk_platform.h>
 #include <vulkan/vulkan_core.h>
 #include <GLFW/glfw3.h>
@@ -55,8 +55,8 @@ class DebugLayer
 
     static void PopulateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
     static void SetupCreateInfo(VkInstanceCreateInfo& instanceCreateInfo, VkDebugUtilsMessengerCreateInfoEXT& debugInfoCreate);
-    static void Log(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, const std::string& message);
-    static void Log(LogType LogType, const std::string& message);
+    static void Log(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, std::string_view message);
+    static void Log(LogType LogType, std::string_view message);
     static bool CheckValidationLayerSupport();
 
     private:

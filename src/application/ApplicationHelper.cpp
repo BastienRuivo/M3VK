@@ -11,14 +11,14 @@
 #include <stdexcept>
 
 
-std::vector<char> ApplicationHelper::ReadFile(const std::string& filename)
+std::vector<char> ApplicationHelper::ReadFile(const std::filesystem::path& path)
 {
-    std::ifstream file(filename, std::ios::ate | std::ios::binary);
+    std::ifstream file(path, std::ios::ate | std::ios::binary);
 
     if(!file.is_open())
     {
-        DebugLayer::Log(DebugLayer::LogType::ERROR, "Can't open " + std::string(std::filesystem::current_path()) + "/" + filename);
-        throw std::runtime_error("Can't open file " + filename);
+        DebugLayer::Log(DebugLayer::LogType::ERROR, "Can't open " + std::string(std::filesystem::current_path()) + "/" + path.string());
+        throw std::runtime_error("Can't open file " + path.string());
     }
 
     size_t fileSize = file.tellg();
