@@ -24,21 +24,25 @@ Pipeline::Pipeline(const SwapChain& swapChain, VkCommandPool graphicsCommandPool
         }),
     _cameraDataBuffer(_descriptorAllocator, BINDING_CAMERA_BUFFER, GraphicsBuffer::STORAGE, RessourceUsage::PerFrame, 1, sizeof(CameraData)),
     _camera(glm::vec3(0.0f, 0.5f, 4.0f), glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, 1.0f, 0.0f), 45.0f, (float)swapChain.GetExtent().width / (float)swapChain.GetExtent().height, 0.1f, 1000.0f),
-    _msaaColorTarget(_samplerLinear.Internal(), RessourceUsage::Transient,
+    _msaaColorTarget(RessourceUsage::Transient, graphicsCommandPool, graphicsComputeQueue,
+        VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
         swapChain.GetExtent().width, swapChain.GetExtent().height,
         VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
         swapChain.GetImageFormat(),
         1, VK_IMAGE_TILING_OPTIMAL, ApplicationInfo::GetMsaaSample()),
-    _msaaDepthTarget(_samplerNearest.Internal(), RessourceUsage::Transient,
+    _msaaDepthTarget(RessourceUsage::Transient, graphicsCommandPool, graphicsComputeQueue,
+        VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
         swapChain.GetExtent().width, swapChain.GetExtent().height,
         VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT,
         ApplicationInfo::Constant::DepthFormat, 1, VK_IMAGE_TILING_OPTIMAL, ApplicationInfo::GetMsaaSample()),
-    _finalColorTarget(_samplerLinear.Internal(), RessourceUsage::PerFrame,
+    _finalColorTarget(RessourceUsage::PerFrame, graphicsCommandPool, graphicsComputeQueue,
+        VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
         swapChain.GetExtent().width, swapChain.GetExtent().height,
         VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
         swapChain.GetImageFormat(),
         1),
-    _finalDepthTarget(_samplerLinear.Internal(), RessourceUsage::PerFrame,
+    _finalDepthTarget(RessourceUsage::PerFrame, graphicsCommandPool, graphicsComputeQueue,
+        VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
         swapChain.GetExtent().width, swapChain.GetExtent().height,
         VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
         ApplicationInfo::Constant::DepthFormat,
@@ -274,11 +278,7 @@ void Pipeline::Execute(const CommandBuffer& cmdBuffer, const SwapChain& swapChai
             cmdBuffer.SetAlphaToCoverageEnable(false);
             cmdBuffer.SetAlphaToOneEnable(false);
 
-            ImageHelper::TransitionLayoutCommand(cmdBuffer, _msaaColorTarget.Internal(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-            ImageHelper::TransitionLayoutCommand(cmdBuffer, _msaaDepthTarget.Internal(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
-
-            ImageHelper::TransitionLayoutCommand(cmdBuffer, _finalColorTarget.Internal(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-            ImageHelper::TransitionLayoutCommand(cmdBuffer, _finalDepthTarget.Internal(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
+            ImageHelper::TransitionLayoutCommand(cmdBuffer, _finalColorTarget.Internal(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
             ImageHelper::TransitionLayoutCommand(cmdBuffer, backBuffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 

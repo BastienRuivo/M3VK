@@ -1,6 +1,7 @@
 #pragma once
 
 
+#include "rendering/CommandBuffer.h"
 #include "rendering/DescriptorAllocator.h"
 #include "rendering/GPUImage.h"
 #include "rendering/ImageHelper.h"
@@ -10,9 +11,17 @@
 class GraphicsImage
 {
     public:
+
+    template <typename... Args>
+    GraphicsImage(DescriptorAllocator& allocator, uint32_t dstBinding, VkSampler sampler, RessourceUsage usage, VkCommandPool pool, VkQueue queue, VkImageLayout layout, Args&&... args)
+    : GraphicsImage(allocator, dstBinding, sampler, usage, std::forward<Args>(args)...)
+    {
+        TransitionLayout(pool, queue, layout);
+    }
+
     template <typename... Args>
     GraphicsImage(DescriptorAllocator& allocator, uint32_t dstBinding, VkSampler sampler, RessourceUsage usage, Args&&... args)
-    : GraphicsImage(sampler, usage, std::forward<Args>(args)...)
+    : GraphicsImage(usage, std::forward<Args>(args)...)
     {
         for (uint32_t i = 0; i < _images.size(); i++)
         {
@@ -22,8 +31,15 @@ class GraphicsImage
     }
 
     template <typename... Args>
-    GraphicsImage(VkSampler sampler, RessourceUsage usage, Args&&... args)
-    : _sampler(sampler), _usage(usage)
+    GraphicsImage(RessourceUsage usage, VkCommandPool pool, VkQueue queue, VkImageLayout layout, Args&&... args)
+    : GraphicsImage(usage, std::forward<Args>(args)...)
+    {
+        TransitionLayout(pool, queue, layout);
+    }
+
+    template <typename... Args>
+    GraphicsImage(RessourceUsage usage, Args&&... args)
+    : _usage(usage)
     {
         uint32_t count = usage == RessourceUsage::PerFrame ? ApplicationInfo::Constant::MaxFrameInFlight : 1;
         _images.reserve(count);
@@ -80,4 +96,16 @@ class GraphicsImage
     inline const GPUImage& Previous() const { return _images[PreviousIndex()]; }
     inline uint32_t CurrentIndex() const { return _usage == RessourceUsage::PerFrame ? ApplicationInfo::CurrentFrame() : 0; }
     inline uint32_t PreviousIndex() const { return _usage == RessourceUsage::PerFrame ? ApplicationInfo::PreviousFrame() : 0; }
+
+    void TransitionLayout(VkCommandPool pool, VkQueue queue, VkImageLayout newLayout) const
+    {
+        CommandBuffer cmdBuffer(pool, queue);
+        cmdBuffer.BeginSingleTime();
+        for (auto& image : _images)
+        {
+            ImageHelper::TransitionLayoutCommand(cmdBuffer, image.Internal(), VK_IMAGE_LAYOUT_UNDEFINED, newLayout);
+        }
+        cmdBuffer.End();
+        cmdBuffer.WaitCompletion();
+    }
 };
