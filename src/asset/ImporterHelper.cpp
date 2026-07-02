@@ -15,16 +15,16 @@
 #include "rendering/ImageHelper.h"
 #include "rendering/RessourceUsage.h"
 
-void ImporterHelper::UploadTexture(ImporterHelper::UploadCommand* commands, uint32_t commandCount, PoolStageBuffer& buffer, VkQueue queue, VkCommandPool pool)
+void ImporterHelper::UploadTexture(std::span<const ImporterHelper::UploadCommand> commands, PoolStageBuffer& buffer, VkQueue queue, VkCommandPool pool)
 {
     CommandBuffer cmdBuffer(pool, queue);
     cmdBuffer.BeginSingleTime();
     {
-        for (uint32_t i = 0; i < commandCount; i++)
+        for (uint32_t i = 0; i < commands.size(); i++)
         {
-            ImporterHelper::UploadCommand& command = commands[i];
+            const ImporterHelper::UploadCommand& command = commands[i];
             ImageHelper::TransitionLayoutCommand(cmdBuffer, command.Image, 0, command.MipCount, 0, 1, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-            cmdBuffer.CopyBufferToImage(buffer.Internal(), command.Image.Image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, command.CopyRegion, command.MipCount);
+            cmdBuffer.CopyBufferToImage(buffer.Internal(), command.Image.Image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, {command.CopyRegion, command.MipCount});
             ImageHelper::TransitionLayoutCommand(cmdBuffer, command.Image, 0, command.MipCount, 0, 1, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
         }
     }
@@ -56,7 +56,7 @@ uint32_t ImporterHelper::LoadTexture(DescriptorAllocator& allocator, const std::
 
     if(!uploadBuffer.CanAllocate(offset) || commandCount >= 16)
     {
-        UploadTexture(commands, commandCount, uploadBuffer, uploadQueue, uploadPool);
+        UploadTexture({commands, commandCount}, uploadBuffer, uploadQueue, uploadPool);
         uploadBuffer.Clear();
         commandCount = 0;
     }
@@ -122,6 +122,7 @@ GraphicsImage ImporterHelper::CubemapFromCPU(DescriptorAllocator& allocator, uin
 
     const CPUImage* stage[6] = { &right, &left, &top, &bottom, &front, &back };
     VkBufferImageCopy copyRegions[6];
+    std::span<VkBufferImageCopy> regions(copyRegions, 6);
     VkBufferImageCopy base = {};
     base.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     base.imageSubresource.layerCount = 1;
@@ -149,7 +150,7 @@ GraphicsImage ImporterHelper::CubemapFromCPU(DescriptorAllocator& allocator, uin
     cmdBuffer.BeginSingleTime();
     {
         ImageHelper::TransitionLayoutCommand(cmdBuffer, image, 0, 1, 0, 6, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-        cmdBuffer.CopyBufferToImage(stageBuffer.Internal(), image.Image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, copyRegions, 6);
+        cmdBuffer.CopyBufferToImage(stageBuffer.Internal(), image.Image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, regions);
         ImageHelper::GenerateMipmapsCommand(cmdBuffer, gpuCubeMap.Internal());
     }
     cmdBuffer.End();

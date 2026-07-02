@@ -149,7 +149,7 @@ void AssetImporter::LoadAsset(DescriptorAllocator& allocator, const std::filesys
             materialRegistry.RegisterMaterial(gpuMaterial);
         }
 
-        ImporterHelper::UploadTexture(uploadCommands.data(), uploadCommandCount, uploadBuffer, uploadQueue, uploadPool);
+        ImporterHelper::UploadTexture({uploadCommands.data(), uploadCommandCount}, uploadBuffer, uploadQueue, uploadPool);
         uploadBuffer.Unmap();
     }
 

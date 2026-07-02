@@ -106,7 +106,7 @@ uint32_t LoadMaterialInternal(DescriptorAllocator& allocator, MaterialImporter& 
 
     uint32_t materialId = materialRegistry.RegisterMaterial(gpuMaterial);
 
-    ImporterHelper::UploadTexture(uploadCommands.data(), uploadCommandCount, uploadBuffer, uploadQueue, uploadPool);
+    ImporterHelper::UploadTexture({uploadCommands.data(), uploadCommandCount}, uploadBuffer, uploadQueue, uploadPool);
     uploadBuffer.Unmap();
 
     return materialId;

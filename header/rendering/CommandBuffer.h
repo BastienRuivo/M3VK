@@ -178,19 +178,19 @@ class CommandBuffer
         vkCmdCopyImage2(_internal, &copyInfo);
     }
 
-    inline void CopyBufferToImage(VkBuffer buffer, VkImage image, VkImageLayout layout, VkBufferImageCopy* pRegions, int regionCount) const
+    inline void CopyBufferToImage(VkBuffer buffer, VkImage image, VkImageLayout layout, std::span<const VkBufferImageCopy> regions) const
     {
-        vkCmdCopyBufferToImage(_internal, buffer, image, layout, regionCount, pRegions);
+        vkCmdCopyBufferToImage(_internal, buffer, image, layout, static_cast<uint32_t>(regions.size()), regions.data());
     }
 
-    inline void CopyImageToBuffer(VkImage image, VkImageLayout layout, VkBuffer buffer, VkBufferImageCopy* pRegions, int regionCount) const
+    inline void CopyImageToBuffer(VkImage image, VkImageLayout layout, VkBuffer buffer, std::span<const VkBufferImageCopy> regions) const
     {
-        vkCmdCopyImageToBuffer(_internal, image, layout, buffer, regionCount, pRegions);
+        vkCmdCopyImageToBuffer(_internal, image, layout, buffer, static_cast<uint32_t>(regions.size()), regions.data());
     }
 
-    inline void CopyBuffer(VkBuffer src, VkBuffer dst, VkDeviceSize size, VkBufferCopy* pRegions, int regionCount)
+    inline void CopyBuffer(VkBuffer src, VkBuffer dst, VkDeviceSize size, std::span<const VkBufferCopy> pRegions) const
     {
-        vkCmdCopyBuffer(_internal, src, dst, regionCount, pRegions);
+        vkCmdCopyBuffer(_internal, src, dst, static_cast<uint32_t>(pRegions.size()), pRegions.data());
     }
 
     inline void CopyBuffer(VkBuffer src, VkBuffer dst, VkDeviceSize size, uint32_t srcIndexInBytes = 0, uint32_t dstIndexInBytes = 0) const
@@ -335,14 +335,14 @@ class CommandBuffer
         VkFunctions::vkCmdSetDepthClampEnableEXT(_internal, enable);
     }
 
-    inline void SetVertexInput(uint32_t bindingCount, const VkVertexInputBindingDescription2EXT* pVertexBindingDescriptions, uint32_t vertexAttributeDescriptionCount, const VkVertexInputAttributeDescription2EXT* pVertexAttributeDescriptions) const
+    inline void SetVertexInput(std::span<const VkVertexInputBindingDescription2EXT> vertexBindingDescriptions, std::span<const VkVertexInputAttributeDescription2EXT> vertexAttributeDescriptions) const
     {
-        VkFunctions::vkCmdSetVertexInputEXT(_internal, bindingCount, pVertexBindingDescriptions, vertexAttributeDescriptionCount, pVertexAttributeDescriptions);
+        VkFunctions::vkCmdSetVertexInputEXT(_internal, static_cast<uint32_t>(vertexBindingDescriptions.size()), vertexBindingDescriptions.data(), static_cast<uint32_t>(vertexAttributeDescriptions.size()), vertexAttributeDescriptions.data());
     }
 
-    inline void BindShaders(uint32_t stageCount, const VkShaderStageFlagBits* pStages, const VkShaderEXT* pShaders) const
+    inline void BindShaders(std::span<const VkShaderStageFlagBits> stages, const VkShaderEXT* pShaders) const
     {
-        VkFunctions::vkCmdBindShadersEXT(_internal, stageCount, pStages, pShaders);
+        VkFunctions::vkCmdBindShadersEXT(_internal, static_cast<uint32_t>(stages.size()), stages.data(), pShaders);
     }
 
     inline void Dispatch(uint32_t x, uint32_t y, uint32_t z) const

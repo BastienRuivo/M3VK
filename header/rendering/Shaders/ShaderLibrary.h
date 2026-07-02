@@ -26,7 +26,7 @@ class ShaderLibrary
         {
             State.Bind(cmdBuffer);
             const VkShaderStageFlagBits stage = VK_SHADER_STAGE_VERTEX_BIT;
-            cmdBuffer.BindShaders(1, &stage, &Handle);
+            cmdBuffer.BindShaders({&stage, 1}, &Handle);
         }
     };
 
@@ -39,7 +39,7 @@ class ShaderLibrary
         {
             State.Bind(cmdBuffer);
             const VkShaderStageFlagBits stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-            cmdBuffer.BindShaders(1, &stage, &Handle);
+            cmdBuffer.BindShaders({&stage, 1}, &Handle);
         }
     };
 
@@ -51,7 +51,7 @@ class ShaderLibrary
         void Bind(const CommandBuffer& cmdBuffer) const
         {
             const VkShaderStageFlagBits stage = VK_SHADER_STAGE_COMPUTE_BIT;
-            cmdBuffer.BindShaders(1, &stage, &Handle);
+            cmdBuffer.BindShaders({&stage, 1}, &Handle);
         }
 
         void CeilDispatch(const CommandBuffer& cmdBuffer, uint32_t x = 1, uint32_t y = 1, uint32_t z = 1) const

@@ -19,7 +19,7 @@ struct VertexState
 
     void Bind(const CommandBuffer& cmdBuffer) const
     {
-        cmdBuffer.SetVertexInput(1, &BindingDescription, static_cast<uint32_t>(VertexAttributeDescriptions.size()), VertexAttributeDescriptions.data());
+        cmdBuffer.SetVertexInput({&BindingDescription, 1}, VertexAttributeDescriptions);
         cmdBuffer.SetCullMode(CullMode);
     }
 };

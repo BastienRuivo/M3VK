@@ -46,7 +46,7 @@ void ImageHelper::CopyToImageCommand(const CommandBuffer &cmdBuffer, const Image
             .depth = 1
         },
     };
-    cmdBuffer.CopyBufferToImage(srcData, image.Image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &region, 1);
+    cmdBuffer.CopyBufferToImage(srcData, image.Image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,  {&region, 1});
 }
 
 void ImageHelper::GenerateMipmapsCommand(const CommandBuffer& cmdBuffer, const ImageReference& image)
