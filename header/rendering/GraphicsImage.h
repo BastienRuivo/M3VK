@@ -2,7 +2,7 @@
 
 
 #include "rendering/CommandBuffer.h"
-#include "rendering/DescriptorAllocator.h"
+#include "allocation/DescriptorAllocator.h"
 #include "rendering/GPUImage.h"
 #include "rendering/ImageHelper.h"
 #include "rendering/RessourceUsage.h"
@@ -41,7 +41,7 @@ class GraphicsImage
     GraphicsImage(RessourceUsage usage, Args&&... args)
     : _usage(usage)
     {
-        uint32_t count = usage == RessourceUsage::PerFrame ? ApplicationInfo::Constant::MaxFrameInFlight : 1;
+        uint32_t count = RessourceUsageCount(usage);
         _images.reserve(count);
 
         for (uint32_t i = 0; i < count; i++)
@@ -92,10 +92,8 @@ class GraphicsImage
     VkSampler _sampler;
     RessourceUsage _usage;
 
-    inline const GPUImage& Current() const { return _images[CurrentIndex()]; }
-    inline const GPUImage& Previous() const { return _images[PreviousIndex()]; }
-    inline uint32_t CurrentIndex() const { return _usage == RessourceUsage::PerFrame ? ApplicationInfo::CurrentFrame() : 0; }
-    inline uint32_t PreviousIndex() const { return _usage == RessourceUsage::PerFrame ? ApplicationInfo::PreviousFrame() : 0; }
+    inline const GPUImage& Current() const { return _images[RessourceUsageToCurrentIndex(_usage)]; }
+    inline const GPUImage& Previous() const { return _images[RessourceUsageToPreviousIndex(_usage)]; }
 
     void TransitionLayout(VkCommandPool pool, VkQueue queue, VkImageLayout newLayout) const
     {

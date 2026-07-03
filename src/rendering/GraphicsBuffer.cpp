@@ -1,7 +1,8 @@
 #include "rendering/GraphicsBuffer.h"
 #include "application/ApplicationInfo.h"
 #include "rendering/CommandBuffer.h"
-#include "rendering/DescriptorAllocator.h"
+#include "allocation/DescriptorAllocator.h"
+#include "rendering/RessourceUsage.h"
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
@@ -271,11 +272,7 @@ GraphicsBuffer::GraphicsBuffer(BufferType type, RessourceUsage bufferUsage, VkDe
         properties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
     }
 
-    int frameCount = ApplicationInfo::Constant::MaxFrameInFlight;
-    if(_usage == RessourceUsage::Static)
-    {
-        frameCount = 1;
-    }
+    int frameCount = RessourceUsageCount(_usage);
 
     _buffers.resize(frameCount);
     for(int i = 0; i < _buffers.size(); i++)

@@ -1,8 +1,8 @@
 #pragma once
 
-#include "application/ApplicationInfo.h"
 #include "application/DebugLayer.h"
-#include "rendering/DescriptorAllocator.h"
+#include "allocation/DescriptorAllocator.h"
+#include "rendering/RessourceUsage.h"
 #include <cstdint>
 #include <stdexcept>
 #include <vulkan/vulkan_core.h>
@@ -149,7 +149,7 @@ class GraphicsBuffer
         uint32_t _gpuIndex = UINT32_MAX; // only filled if uniform or storage
     };
 
-    inline const BufferInternal& Current() const { return _usage == RessourceUsage::Static ? _buffers[0] : _buffers[ApplicationInfo::CurrentFrame()]; }
+    inline const BufferInternal& Current() const { return _buffers[RessourceUsageToCurrentIndex(_usage)]; }
     BufferInternal CreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties);
 
     std::vector<BufferInternal> _buffers;

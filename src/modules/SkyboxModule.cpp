@@ -1,6 +1,6 @@
 #include "modules/SkyboxModule.h"
 #include "asset/ImporterHelper.h"
-#include "rendering/DescriptorAllocator.h"
+#include "allocation/DescriptorAllocator.h"
 #include "rendering/Shaders/ShaderLibrary.h"
 #include <cstdint>
 #include <vulkan/vulkan_core.h>

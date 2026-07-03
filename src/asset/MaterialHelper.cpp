@@ -6,7 +6,7 @@
 #include "asset/MaterialImporter.h"
 #include "application/DebugLayer.h"
 #include "asset/ImporterHelper.h"
-#include "rendering/DescriptorAllocator.h"
+#include "allocation/DescriptorAllocator.h"
 #include <cstddef>
 #include <cstdint>
 #include <string>
@@ -100,9 +100,9 @@ uint32_t LoadMaterialInternal(DescriptorAllocator& allocator, MaterialImporter& 
         .Roughness = material.Roughness
     };
 
-    gpuMaterial.BaseColorTexId = material.BaseColorTexId == UINT32_MAX ? defaultMaterial.BaseColorTexId : ImporterHelper::LoadTexture(allocator, importer.Textures, importer.TextureDatas, material.BaseColorTexId, materialRegistry, uploadBuffer, uploadCommands.data(), uploadCommandCount, sampler, uploadPool, uploadQueue);
-    gpuMaterial.NormalMapTexId = material.NormalMapTexId == UINT32_MAX ? defaultMaterial.NormalMapTexId : ImporterHelper::LoadTexture(allocator, importer.Textures, importer.TextureDatas, material.NormalMapTexId, materialRegistry, uploadBuffer, uploadCommands.data(), uploadCommandCount, sampler, uploadPool, uploadQueue);
-    gpuMaterial.MRAOTexId = material.MRAOTexId == UINT32_MAX ? defaultMaterial.MRAOTexId : ImporterHelper::LoadTexture(allocator, importer.Textures, importer.TextureDatas, material.MRAOTexId, materialRegistry, uploadBuffer, uploadCommands.data(), uploadCommandCount, sampler, uploadPool, uploadQueue);
+    gpuMaterial.BaseColorTexId = material.BaseColorTexId == UINT32_MAX ? defaultMaterial.BaseColorTexId : ImporterHelper::LoadTexture(allocator, importer.Textures, importer.TextureDatas, material.BaseColorTexId, materialRegistry, uploadBuffer, uploadCommands.data(), uploadCommandCount, sampler, uploadPool, uploadQueue).StaticIndex();
+    gpuMaterial.NormalMapTexId = material.NormalMapTexId == UINT32_MAX ? defaultMaterial.NormalMapTexId : ImporterHelper::LoadTexture(allocator, importer.Textures, importer.TextureDatas, material.NormalMapTexId, materialRegistry, uploadBuffer, uploadCommands.data(), uploadCommandCount, sampler, uploadPool, uploadQueue).StaticIndex();
+    gpuMaterial.MRAOTexId = material.MRAOTexId == UINT32_MAX ? defaultMaterial.MRAOTexId : ImporterHelper::LoadTexture(allocator, importer.Textures, importer.TextureDatas, material.MRAOTexId, materialRegistry, uploadBuffer, uploadCommands.data(), uploadCommandCount, sampler, uploadPool, uploadQueue).StaticIndex();
 
     uint32_t materialId = materialRegistry.RegisterMaterial(gpuMaterial);
 

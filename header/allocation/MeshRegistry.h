@@ -4,7 +4,7 @@
 #include "application/ApplicationInfo.h"
 #include "rendering/CommandBuffer.h"
 #include "rendering/GraphicsBuffer.h"
-#include "registry/Registry.h"
+#include "allocation/Registry.h"
 #include "asset/Vertex.h"
 #include <cstdint>
 #include <span>

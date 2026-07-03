@@ -1,6 +1,6 @@
 #pragma once
 
-#include "rendering/DescriptorPool.h"
+#include "allocation/DescriptorPool.h"
 #include "rendering/GPUImage.h"
 #include "rendering/GraphicsBuffer.h"
 #include <cstdint>

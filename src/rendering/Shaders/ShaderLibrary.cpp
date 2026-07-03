@@ -1,5 +1,5 @@
 #include "rendering/Shaders/ShaderLibrary.h"
-#include "rendering/DescriptorAllocator.h"
+#include "allocation/DescriptorAllocator.h"
 
 ShaderLibrary::ShaderLibrary()
 {

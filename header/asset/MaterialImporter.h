@@ -1,8 +1,8 @@
 #pragma once
 
 #include "asset/Importer.h"
-#include "registry/MaterialRegistry.h"
-#include "rendering/DescriptorAllocator.h"
+#include "allocation/MaterialRegistry.h"
+#include "allocation/DescriptorAllocator.h"
 #include <cstddef>
 #include <cstdint>
 #include <vector>

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "rendering/DescriptorAllocator.h"
+#include "allocation/DescriptorAllocator.h"
 #include "rendering/Shaders/Shader.h"
 #include "rendering/Shaders/ShaderState.h"
 #include <cstdint>

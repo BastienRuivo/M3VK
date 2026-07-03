@@ -7,8 +7,8 @@
 #include "application/Window.h"
 #include "asset/AssetImporter.h"
 #include "asset/MeshHelper.h"
-#include "registry/MaterialRegistry.h"
-#include "registry/MeshRegistry.h"
+#include "allocation/MaterialRegistry.h"
+#include "allocation/MeshRegistry.h"
 #include "rendering/SwapChain.h"
 #include <cstring>
 #include <vulkan/vulkan_core.h>
@@ -20,7 +20,7 @@ Pipeline::Pipeline(const SwapChain& swapChain, VkCommandPool graphicsCommandPool
     _registries(
         {
             std::make_unique<MeshRegistry>(_descriptorAllocator),
-            std::make_unique<MaterialRegistry>(_descriptorAllocator, ApplicationInfo::Constant::MaxMaterialTextureCount, graphicsCommandPool, graphicsComputeQueue, _samplerLinear.Internal())
+            std::make_unique<MaterialRegistry>(_descriptorAllocator, graphicsCommandPool, graphicsComputeQueue, _samplerLinear.Internal())
         }),
     _cameraDataBuffer(_descriptorAllocator, BINDING_CAMERA_BUFFER, GraphicsBuffer::STORAGE, RessourceUsage::PerFrame, 1, sizeof(CameraData)),
     _camera(glm::vec3(0.0f, 0.5f, 4.0f), glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, 1.0f, 0.0f), 45.0f, (float)swapChain.GetExtent().width / (float)swapChain.GetExtent().height, 0.1f, 1000.0f),

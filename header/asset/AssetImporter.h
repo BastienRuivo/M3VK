@@ -2,9 +2,9 @@
 
 #include "asset/Importer.h"
 #include "asset/Vertex.h"
-#include "registry/MaterialRegistry.h"
-#include "registry/MeshRegistry.h"
-#include "rendering/DescriptorAllocator.h"
+#include "allocation/MaterialRegistry.h"
+#include "allocation/MeshRegistry.h"
+#include "allocation/DescriptorAllocator.h"
 #include <cstddef>
 #include <cstdint>
 #include <vector>

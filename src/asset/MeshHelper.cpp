@@ -1,7 +1,7 @@
 #include "asset/MeshHelper.h"
 #include "Material.h"
 #include "asset/Vertex.h"
-#include "registry/MeshRegistry.h"
+#include "allocation/MeshRegistry.h"
 #include <cstdint>
 
 uint32_t MeshHelper::CubeMesh(MeshRegistry& meshRegistry, MaterialType materialType, glm::vec3& aabbMin, glm::vec3& aabbMax)

@@ -1,4 +1,4 @@
-#include "registry/MeshRegistry.h"
+#include "allocation/MeshRegistry.h"
 #include "Material.h"
 #include "application/ApplicationInfo.h"
 #include <cassert>

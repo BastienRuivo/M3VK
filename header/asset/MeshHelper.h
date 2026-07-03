@@ -2,7 +2,7 @@
 
 #include "Material.h"
 #include "glm/ext/vector_float3.hpp"
-#include "registry/MeshRegistry.h"
+#include "allocation/MeshRegistry.h"
 #include <cstdint>
 namespace MeshHelper
 {

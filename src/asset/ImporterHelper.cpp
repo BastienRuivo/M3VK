@@ -6,9 +6,9 @@
 #include <vulkan/vulkan_core.h>
 
 #include "asset/Importer.h"
-#include "registry/MaterialRegistry.h"
+#include "allocation/MaterialRegistry.h"
 #include "rendering/CommandBuffer.h"
-#include "rendering/DescriptorAllocator.h"
+#include "allocation/DescriptorAllocator.h"
 #include "rendering/GPUImage.h"
 #include "rendering/GraphicsBuffer.h"
 #include "rendering/GraphicsImage.h"
@@ -32,14 +32,16 @@ void ImporterHelper::UploadTexture(std::span<const ImporterHelper::UploadCommand
     cmdBuffer.WaitCompletion();
 }
 
-uint32_t ImporterHelper::LoadTexture(DescriptorAllocator& allocator, const std::vector<TextureImport>& textures, const std::vector<std::byte>& textureDatas, uint32_t textureIndex, MaterialRegistry& materialRegistry, PoolStageBuffer & uploadBuffer, ImporterHelper::UploadCommand* commands, uint32_t& commandCount, VkSampler sampler, VkCommandPool uploadPool, VkQueue uploadQueue)
+DescriptorAllocator::BindlessTextureHandle ImporterHelper::LoadTexture(DescriptorAllocator& allocator, const std::vector<TextureImport>& textures, const std::vector<std::byte>& textureDatas, uint32_t textureIndex, MaterialRegistry& materialRegistry, PoolStageBuffer & uploadBuffer, ImporterHelper::UploadCommand* commands, uint32_t& commandCount, VkSampler sampler, VkCommandPool uploadPool, VkQueue uploadQueue)
 {
     //DebugLayer::Log(DebugLayer::LogType::INFO, "Loading texture " + std::to_string(textureIndex) + " of type " + std::to_string(textures[textureIndex].Type) + " with " + std::to_string(textures[textureIndex].MipCount) + " mips, with size " + std::to_string(textures[textureIndex].Size) + " width, height = " + std::to_string(textures[textureIndex].Width) + ", " + std::to_string(textures[textureIndex].Height) + " and format " + std::to_string(textures[textureIndex].Format));
     const TextureImport & texture = textures[textureIndex];
-    GPUImage gpuTexture(texture.Width, texture.Height,
+    auto gpuTextureIndex = allocator.RegisterBindlessTexture(RessourceUsage::Static, sampler, texture.Width, texture.Height,
         VK_IMAGE_USAGE_TRANSFER_SRC_BIT |VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
         texture.Format,
         texture.MipCount);
+
+    auto& gpuTexture = allocator.Texture(gpuTextureIndex);
 
     UploadCommand uploadCommand
     {
@@ -94,7 +96,7 @@ uint32_t ImporterHelper::LoadTexture(DescriptorAllocator& allocator, const std::
     uploadBuffer.CopyToBuffer(textureDatas.data() + texture.Offset, offset);
     commands[commandCount++] = uploadCommand;
 
-    return materialRegistry.RegisterTexture(allocator, std::move(gpuTexture), sampler);
+    return gpuTextureIndex;
 }
 
 GPUImage ImporterHelper::ImageFromCPU(const CPUImage& cpuImg, VkCommandPool pool, VkQueue queue)
