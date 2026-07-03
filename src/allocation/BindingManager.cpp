@@ -1,4 +1,4 @@
-#include "allocation/DescriptorAllocator.h"
+#include "allocation/BindingManager.h"
 #include "application/ApplicationInfo.h"
 #include "allocation/DescriptorPool.h"
 #include <cstdint>
@@ -8,7 +8,7 @@
 #include "rendering/CommandBuffer.h"
 #include "rendering/ImageHelper.h"
 
-DescriptorAllocator::DescriptorAllocator()
+BindingManager::BindingManager()
 :
 _globalSetLayouts({
     DescriptorPool::LayoutBuilder()
@@ -54,7 +54,7 @@ _bindlessPool(DescriptorPool::Builder()
     _globalSet = AllocateBindlessInternal({staticCounts}, _globalSetLayouts[0]);
 }
 
-DescriptorSetHandle DescriptorAllocator::AllocateBindlessInternal(std::span<uint32_t> counts, VkDescriptorSetLayout layout)
+DescriptorSetHandle BindingManager::AllocateBindlessInternal(std::span<uint32_t> counts, VkDescriptorSetLayout layout)
 {
     VkDescriptorSetVariableDescriptorCountAllocateInfo countInfo{
         .sType              = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_VARIABLE_DESCRIPTOR_COUNT_ALLOCATE_INFO,
@@ -85,7 +85,7 @@ DescriptorSetHandle DescriptorAllocator::AllocateBindlessInternal(std::span<uint
     };
 }
 
-uint32_t DescriptorAllocator::RegisterBindlessTextureInternal(GPUImage&& texture, VkSampler sampler)
+uint32_t BindingManager::RegisterBindlessTextureInternal(GPUImage&& texture, VkSampler sampler)
 {
     VkFormat format = texture.Internal().Format;
     bool isDepthFormat = format == VK_FORMAT_D32_SFLOAT || format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT || format == VK_FORMAT_D16_UNORM;
@@ -119,7 +119,7 @@ uint32_t DescriptorAllocator::RegisterBindlessTextureInternal(GPUImage&& texture
     return index;
 }
 
-void DescriptorAllocator::RegisterBuffer(const VkDescriptorBufferInfo& info, VkDescriptorType type, uint32_t dstBinding, uint32_t dstArrayElement)
+void BindingManager::RegisterBuffer(const VkDescriptorBufferInfo& info, VkDescriptorType type, uint32_t dstBinding, uint32_t dstArrayElement)
 {
     VkDescriptorSet set = _globalSet.Set;
 
@@ -139,7 +139,7 @@ void DescriptorAllocator::RegisterBuffer(const VkDescriptorBufferInfo& info, VkD
     DescriptorHelper::UpdateDescriptorSet(std::span(&write, 1), {});
 }
 
-void DescriptorAllocator::RegisterTexture(const VkDescriptorImageInfo& info, uint32_t dstBinding, uint32_t dstArrayElement)
+void BindingManager::RegisterTexture(const VkDescriptorImageInfo& info, uint32_t dstBinding, uint32_t dstArrayElement)
 {
     VkDescriptorSet set = _globalSet.Set;
 
@@ -159,7 +159,7 @@ void DescriptorAllocator::RegisterTexture(const VkDescriptorImageInfo& info, uin
     DescriptorHelper::UpdateDescriptorSet(std::span(&write, 1), {});
 }
 
-DescriptorAllocator::~DescriptorAllocator()
+BindingManager::~BindingManager()
 {
     for(uint32_t i = 0; i < _globalSetLayouts.size(); i++)
     {
@@ -167,7 +167,7 @@ DescriptorAllocator::~DescriptorAllocator()
     }
 }
 
-void DescriptorAllocator::BindlessTexture::Dispose(DescriptorAllocator& allocator)
+void BindingManager::BindlessTexture::Dispose(BindingManager& allocator)
 {
     for (size_t i = 0; i < RessourceUsageCount(usage); i++)
     {
@@ -175,7 +175,7 @@ void DescriptorAllocator::BindlessTexture::Dispose(DescriptorAllocator& allocato
     }
 }
 
-void DescriptorAllocator::BindlessTexture::Resize(DescriptorAllocator& allocator, uint32_t width, uint32_t height)
+void BindingManager::BindlessTexture::Resize(BindingManager& allocator, uint32_t width, uint32_t height)
 {
     uint32_t count = RessourceUsageCount(usage);
     for (size_t i = 0; i < count; i++)
@@ -185,7 +185,7 @@ void DescriptorAllocator::BindlessTexture::Resize(DescriptorAllocator& allocator
     }
 }
 
-void DescriptorAllocator::BindlessTexture::TransistionAllLayoutCommand(const DescriptorAllocator& allocator, const CommandBuffer& cmdBuffer, VkImageLayout layout)
+void BindingManager::BindlessTexture::TransistionAllLayoutCommand(const BindingManager& allocator, const CommandBuffer& cmdBuffer, VkImageLayout layout)
 {
     uint32_t count = RessourceUsageCount(usage);
     for (size_t i = 0; i < count; i++)

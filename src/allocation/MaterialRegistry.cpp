@@ -1,7 +1,7 @@
 #include "allocation/MaterialRegistry.h"
 #include "application/ApplicationInfo.h"
 #include "asset/MaterialImporter.h"
-#include "allocation/DescriptorAllocator.h"
+#include "allocation/BindingManager.h"
 #include "rendering/GraphicsBuffer.h"
 #include <cstdint>
 #include <stdexcept>
@@ -42,7 +42,7 @@ uint32_t MaterialRegistry::RegisterMaterial(MaterialProperties material)
     return _materials.size() - 1;
 }
 
-MaterialRegistry::MaterialRegistry(DescriptorAllocator& allocator, VkCommandPool uploadPool, VkQueue uploadQueue, VkSampler sampler)
+MaterialRegistry::MaterialRegistry(BindingManager& allocator, VkCommandPool uploadPool, VkQueue uploadQueue, VkSampler sampler)
     :   _materialBuffer(allocator, STATIC_BINDING_MATERIAL_BUFFER, GraphicsBuffer::BufferType::STORAGE, RessourceUsage::Static, ApplicationInfo::Constant::MaterialBufferMaxSize, sizeof(MaterialProperties))
 {
     _defaultMaterialIndex = MaterialImporter::LoadDefaultMaterial(allocator, *this, uploadPool, uploadQueue, sampler);

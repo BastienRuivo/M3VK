@@ -6,7 +6,7 @@
 #include "asset/MaterialImporter.h"
 #include "application/DebugLayer.h"
 #include "asset/ImporterHelper.h"
-#include "allocation/DescriptorAllocator.h"
+#include "allocation/BindingManager.h"
 #include <cstddef>
 #include <cstdint>
 #include <string>
@@ -80,7 +80,7 @@ void MaterialImporter::Clear()
     TextureDatas.clear();
 }
 
-uint32_t LoadMaterialInternal(DescriptorAllocator& allocator, MaterialImporter& importer, const MaterialProperties& defaultMaterial, MaterialRegistry & materialRegistry, VkCommandPool uploadPool, VkQueue uploadQueue, VkSampler sampler)
+uint32_t LoadMaterialInternal(BindingManager& allocator, MaterialImporter& importer, const MaterialProperties& defaultMaterial, MaterialRegistry & materialRegistry, VkCommandPool uploadPool, VkQueue uploadQueue, VkSampler sampler)
 {
     uint32_t materialOffset = materialRegistry.MaterialsCount();
     PoolStageBuffer uploadBuffer(4096 * 4096 * 4, StageBuffer::Usage::Upload);
@@ -112,7 +112,7 @@ uint32_t LoadMaterialInternal(DescriptorAllocator& allocator, MaterialImporter& 
     return materialId;
 }
 
-uint32_t MaterialImporter::LoadMaterial(DescriptorAllocator& allocator, const std::filesystem::path & modelPath, MaterialRegistry & materialRegistry, VkCommandPool uploadPool, VkQueue uploadQueue, VkSampler sampler)
+uint32_t MaterialImporter::LoadMaterial(BindingManager& allocator, const std::filesystem::path & modelPath, MaterialRegistry & materialRegistry, VkCommandPool uploadPool, VkQueue uploadQueue, VkSampler sampler)
 {
     MaterialImporter importer;
 
@@ -134,7 +134,7 @@ uint32_t MaterialImporter::LoadMaterial(DescriptorAllocator& allocator, const st
     return materialId;
 }
 
-uint32_t MaterialImporter::LoadDefaultMaterial(DescriptorAllocator& allocator, MaterialRegistry & materialRegistry, VkCommandPool uploadPool, VkQueue uploadQueue, VkSampler sampler)
+uint32_t MaterialImporter::LoadDefaultMaterial(BindingManager& allocator, MaterialRegistry & materialRegistry, VkCommandPool uploadPool, VkQueue uploadQueue, VkSampler sampler)
 {
     MaterialImporter importer;
 

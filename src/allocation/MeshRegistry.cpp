@@ -7,7 +7,7 @@
 
 #include "ShaderBindings.h"
 
-MeshRegistry::MeshRegistry(DescriptorAllocator& allocator, size_t vertexBufferSize, size_t indexBufferSize, size_t indirectBufferSize)
+MeshRegistry::MeshRegistry(BindingManager& allocator, size_t vertexBufferSize, size_t indexBufferSize, size_t indirectBufferSize)
 : _vertexBuffer(GraphicsBuffer::BufferType::VERTEX, RessourceUsage::Static, vertexBufferSize, sizeof(Vertex)),
     _indexBuffer(GraphicsBuffer::BufferType::INDEX, RessourceUsage::Static, indexBufferSize, sizeof(uint32_t)),
     _indirectBuffer(allocator, STATIC_BINDING_CLEAR_DRAW_INDIRECT_BUFFER, GraphicsBuffer::BufferType::STORAGE, RessourceUsage::Static, indirectBufferSize, sizeof(DrawIndexedIndirectPadded)),

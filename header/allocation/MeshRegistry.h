@@ -28,7 +28,7 @@ class MeshRegistry : public Registry
         uint32_t count;
     };
 
-    MeshRegistry(DescriptorAllocator& allocator, size_t vertexBufferSize = ApplicationInfo::Constant::VertexBufferMaxSize, size_t indexBufferSize = ApplicationInfo::Constant::IndexBufferMaxSize, size_t indirectBufferSize = ApplicationInfo::Constant::DrawIndirectBufferMaxSize);
+    MeshRegistry(BindingManager& allocator, size_t vertexBufferSize = ApplicationInfo::Constant::VertexBufferMaxSize, size_t indexBufferSize = ApplicationInfo::Constant::IndexBufferMaxSize, size_t indirectBufferSize = ApplicationInfo::Constant::DrawIndirectBufferMaxSize);
 
     uint32_t RegisterMesh(MaterialType type, std::span<const Vertex> vertices, std::span<const uint32_t> indices);
     uint32_t RegisterInstance(MaterialType type, InstanceData instance);

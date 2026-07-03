@@ -1,12 +1,12 @@
 #include "modules/SkyboxModule.h"
 #include "asset/ImporterHelper.h"
-#include "allocation/DescriptorAllocator.h"
+#include "allocation/BindingManager.h"
 #include "rendering/Shaders/ShaderLibrary.h"
 #include <cstdint>
 #include <vulkan/vulkan_core.h>
 #include "ShaderBindings.h"
 
-SkyboxModule::SkyboxModule(ShaderLibrary& shaderLibrary, DescriptorAllocator& allocator, VkCommandPool pool, VkQueue queue)
+SkyboxModule::SkyboxModule(ShaderLibrary& shaderLibrary, BindingManager& allocator, VkCommandPool pool, VkQueue queue)
 :
     _sampler(VK_FILTER_LINEAR, VK_FILTER_LINEAR),
     _skyboxTexture(ImporterHelper::CubemapFromCPU(allocator, STATIC_BINDING_SKYBOX_TEXTURE, pool, queue, _sampler.Internal(),

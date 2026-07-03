@@ -1,5 +1,5 @@
 #include "rendering/Shaders/ShaderLibrary.h"
-#include "allocation/DescriptorAllocator.h"
+#include "allocation/BindingManager.h"
 
 ShaderLibrary::ShaderLibrary()
 {
@@ -29,7 +29,7 @@ ShaderLibrary& ShaderLibrary::operator=(ShaderLibrary&& other) noexcept
     return *this;
 }
 
-uint32_t ShaderLibrary::RegisterShader(std::filesystem::path path, ShaderType type, const DescriptorAllocator& descriptorAllocator, std::span<const Shader::SpecializationConstant> speConstants)
+uint32_t ShaderLibrary::RegisterShader(std::filesystem::path path, ShaderType type, const BindingManager& descriptorAllocator, std::span<const Shader::SpecializationConstant> speConstants)
 {
     return RegisterShader(path, type, descriptorAllocator.GlobalSetLayouts(), descriptorAllocator.GlobalPushConstantRanges(), speConstants);
 }

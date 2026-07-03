@@ -2,14 +2,14 @@
 
 #include "Material.h"
 #include "allocation/Registry.h"
-#include "allocation/DescriptorAllocator.h"
+#include "allocation/BindingManager.h"
 #include <cstdint>
 
 class MaterialRegistry : public Registry
 {
 public:
 
-    MaterialRegistry(DescriptorAllocator& pool, VkCommandPool uploadPool, VkQueue uploadQueue, VkSampler sampler);
+    MaterialRegistry(BindingManager& pool, VkCommandPool uploadPool, VkQueue uploadQueue, VkSampler sampler);
     ~MaterialRegistry();
 
     void UploadAndRelease(VkQueue queue, VkCommandPool cmdPool) override;

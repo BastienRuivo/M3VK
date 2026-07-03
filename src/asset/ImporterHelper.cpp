@@ -8,7 +8,7 @@
 #include "asset/Importer.h"
 #include "allocation/MaterialRegistry.h"
 #include "rendering/CommandBuffer.h"
-#include "allocation/DescriptorAllocator.h"
+#include "allocation/BindingManager.h"
 #include "rendering/GPUImage.h"
 #include "rendering/GraphicsBuffer.h"
 #include "rendering/GraphicsImage.h"
@@ -32,7 +32,7 @@ void ImporterHelper::UploadTexture(std::span<const ImporterHelper::UploadCommand
     cmdBuffer.WaitCompletion();
 }
 
-DescriptorAllocator::BindlessTexture ImporterHelper::LoadTexture(DescriptorAllocator& allocator, const std::vector<TextureImport>& textures, const std::vector<std::byte>& textureDatas, uint32_t textureIndex, MaterialRegistry& materialRegistry, PoolStageBuffer & uploadBuffer, ImporterHelper::UploadCommand* commands, uint32_t& commandCount, VkSampler sampler, VkCommandPool uploadPool, VkQueue uploadQueue)
+BindingManager::BindlessTexture ImporterHelper::LoadTexture(BindingManager& allocator, const std::vector<TextureImport>& textures, const std::vector<std::byte>& textureDatas, uint32_t textureIndex, MaterialRegistry& materialRegistry, PoolStageBuffer & uploadBuffer, ImporterHelper::UploadCommand* commands, uint32_t& commandCount, VkSampler sampler, VkCommandPool uploadPool, VkQueue uploadQueue)
 {
     //DebugLayer::Log(DebugLayer::LogType::INFO, "Loading texture " + std::to_string(textureIndex) + " of type " + std::to_string(textures[textureIndex].Type) + " with " + std::to_string(textures[textureIndex].MipCount) + " mips, with size " + std::to_string(textures[textureIndex].Size) + " width, height = " + std::to_string(textures[textureIndex].Width) + ", " + std::to_string(textures[textureIndex].Height) + " and format " + std::to_string(textures[textureIndex].Format));
     const TextureImport & texture = textures[textureIndex];
@@ -110,7 +110,7 @@ GPUImage ImporterHelper::ImageFromCPU(const CPUImage& cpuImg, VkCommandPool pool
     return gpuImg;
 }
 
-GraphicsImage ImporterHelper::CubemapFromCPU(DescriptorAllocator& allocator, uint32_t dstBinding, VkCommandPool pool, VkQueue queue, VkSampler sampler, const CPUImage& front, const CPUImage& back, const CPUImage& left, const CPUImage& right, const CPUImage& top, const CPUImage& bottom)
+GraphicsImage ImporterHelper::CubemapFromCPU(BindingManager& allocator, uint32_t dstBinding, VkCommandPool pool, VkQueue queue, VkSampler sampler, const CPUImage& front, const CPUImage& back, const CPUImage& left, const CPUImage& right, const CPUImage& top, const CPUImage& bottom)
 {
     assert(front.Width() == back.Width() && front.Width() == left.Width() && front.Width() == right.Width() && front.Width() == top.Width() && front.Width() == bottom.Width());
     assert(front.Height() == back.Height() && front.Height() == left.Height() && front.Height() == right.Height() && front.Height() == top.Height() && front.Height() == bottom.Height());

@@ -8,7 +8,7 @@
 #include "modules/SkyboxModule.h"
 #include "allocation/Registry.h"
 #include "rendering/Camera.h"
-#include "allocation/DescriptorAllocator.h"
+#include "allocation/BindingManager.h"
 #include "rendering/GraphicsImage.h"
 #include "rendering/Shaders/ShaderLibrary.h"
 #include "rendering/SwapChain.h"
@@ -32,7 +32,7 @@ class Pipeline
     protected:
     std::array<DrawModule, MaterialType::Count> InitDrawModule(bool DebugOn);
 
-    DescriptorAllocator _descriptorAllocator;
+    BindingManager _bindingManager;
     VkSamplerHandler _samplerLinear;
     VkSamplerHandler _samplerNearest;
     ShaderLibrary _shaderLibrary;
@@ -47,7 +47,7 @@ class Pipeline
     // Pipeline
     GraphicsImage _msaaColorTarget;
     GraphicsImage _msaaDepthTarget;
-    DescriptorAllocator::BindlessTexture _finalColorTarget;
+    BindingManager::BindlessTexture _finalColorTarget;
     GraphicsImage _finalDepthTarget;
 
     GraphicsBuffer _cameraDataBuffer;

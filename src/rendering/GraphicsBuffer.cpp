@@ -1,7 +1,7 @@
 #include "rendering/GraphicsBuffer.h"
 #include "application/ApplicationInfo.h"
 #include "rendering/CommandBuffer.h"
-#include "allocation/DescriptorAllocator.h"
+#include "allocation/BindingManager.h"
 #include "rendering/RessourceUsage.h"
 #include <cmath>
 #include <cstddef>
@@ -281,7 +281,7 @@ GraphicsBuffer::GraphicsBuffer(BufferType type, RessourceUsage bufferUsage, VkDe
     }
 }
 
-GraphicsBuffer::GraphicsBuffer(DescriptorAllocator& allocator, uint32_t dstBinding, BufferType type, RessourceUsage bufferUsage, VkDeviceSize count, VkDeviceSize stride, bool isSource)
+GraphicsBuffer::GraphicsBuffer(BindingManager& allocator, uint32_t dstBinding, BufferType type, RessourceUsage bufferUsage, VkDeviceSize count, VkDeviceSize stride, bool isSource)
 : GraphicsBuffer(type, bufferUsage, count, stride, isSource)
 {
     for(int i = 0; i < _buffers.size(); i++)

@@ -2,7 +2,7 @@
 
 
 #include "rendering/CommandBuffer.h"
-#include "allocation/DescriptorAllocator.h"
+#include "allocation/BindingManager.h"
 #include "rendering/GPUImage.h"
 #include "rendering/ImageHelper.h"
 #include "rendering/RessourceUsage.h"
@@ -13,14 +13,14 @@ class GraphicsImage
     public:
 
     template <typename... Args>
-    GraphicsImage(DescriptorAllocator& allocator, uint32_t dstBinding, VkSampler sampler, RessourceUsage usage, VkCommandPool pool, VkQueue queue, VkImageLayout layout, Args&&... args)
+    GraphicsImage(BindingManager& allocator, uint32_t dstBinding, VkSampler sampler, RessourceUsage usage, VkCommandPool pool, VkQueue queue, VkImageLayout layout, Args&&... args)
     : GraphicsImage(allocator, dstBinding, sampler, usage, std::forward<Args>(args)...)
     {
         TransitionLayout(pool, queue, layout);
     }
 
     template <typename... Args>
-    GraphicsImage(DescriptorAllocator& allocator, uint32_t dstBinding, VkSampler sampler, RessourceUsage usage, Args&&... args)
+    GraphicsImage(BindingManager& allocator, uint32_t dstBinding, VkSampler sampler, RessourceUsage usage, Args&&... args)
     : GraphicsImage(usage, std::forward<Args>(args)...)
     {
         for (uint32_t i = 0; i < _images.size(); i++)

@@ -9,7 +9,7 @@
 #include <cstdint>
 #include <vulkan/vulkan_core.h>
 
-class DescriptorAllocator
+class BindingManager
 {
     public:
     struct BindlessTexture
@@ -19,7 +19,7 @@ class DescriptorAllocator
         uint32_t StaticIndex() const { assert(usage == RessourceUsage::Static); return index[0]; }
 
         template<typename... Args>
-        static BindlessTexture Register(DescriptorAllocator& allocator, RessourceUsage usage, VkSampler sampler, Args&&... args)
+        static BindlessTexture Register(BindingManager& allocator, RessourceUsage usage, VkSampler sampler, Args&&... args)
         {
             BindlessTexture handle
             {
@@ -36,7 +36,7 @@ class DescriptorAllocator
         }
 
         template<typename... Args>
-        static BindlessTexture Register(DescriptorAllocator& allocator, RessourceUsage usage, VkSampler sampler, VkCommandPool pool, VkQueue queue, VkImageLayout layout, Args&&... args)
+        static BindlessTexture Register(BindingManager& allocator, RessourceUsage usage, VkSampler sampler, VkCommandPool pool, VkQueue queue, VkImageLayout layout, Args&&... args)
         {
             BindlessTexture handle = BindlessTexture::Register(allocator, usage, sampler, std::forward<Args>(args)...);
 
@@ -51,15 +51,15 @@ class DescriptorAllocator
             return handle;
         }
 
-        void Resize(DescriptorAllocator& allocator, uint32_t width, uint32_t height);
-        void TransistionAllLayoutCommand(const DescriptorAllocator& allocator, const CommandBuffer& cmdBuffer, VkImageLayout layout);
-        inline GPUImage& Texture(DescriptorAllocator& allocator) { return allocator._texturePool.Texture(index[RessourceUsageToCurrentIndex(usage)]); }
-        inline GPUImage& PreviousTexture(DescriptorAllocator& allocator) { return allocator._texturePool.Texture(index[RessourceUsageToPreviousIndex(usage)]); }
-        void Dispose(DescriptorAllocator& allocator);
+        void Resize(BindingManager& allocator, uint32_t width, uint32_t height);
+        void TransistionAllLayoutCommand(const BindingManager& allocator, const CommandBuffer& cmdBuffer, VkImageLayout layout);
+        inline GPUImage& Texture(BindingManager& allocator) { return allocator._texturePool.Texture(index[RessourceUsageToCurrentIndex(usage)]); }
+        inline GPUImage& PreviousTexture(BindingManager& allocator) { return allocator._texturePool.Texture(index[RessourceUsageToPreviousIndex(usage)]); }
+        void Dispose(BindingManager& allocator);
     };
 
-    DescriptorAllocator();
-    ~DescriptorAllocator();
+    BindingManager();
+    ~BindingManager();
 
     static constexpr uint32_t ShaderConstantsSize = 64;
 
@@ -84,4 +84,4 @@ class DescriptorAllocator
     VkPipelineLayoutHandler _globalLayout;
 };
 
-using BindlessTexture = DescriptorAllocator::BindlessTexture;
+using BindlessTexture = BindingManager::BindlessTexture;

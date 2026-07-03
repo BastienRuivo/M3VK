@@ -1,6 +1,6 @@
 #pragma once
 
-#include "allocation/DescriptorAllocator.h"
+#include "allocation/BindingManager.h"
 #include "rendering/Shaders/Shader.h"
 #include "rendering/Shaders/ShaderState.h"
 #include <cstdint>
@@ -81,7 +81,7 @@ class ShaderLibrary
     ShaderLibrary& operator=(ShaderLibrary&& other) noexcept;
 
     uint32_t RegisterShader(std::filesystem::path, ShaderType type, std::span<const VkDescriptorSetLayout> descriptorLayouts, std::span<const VkPushConstantRange> pushConstantRanges, std::span<const Shader::SpecializationConstant> speConstants = {});
-    uint32_t RegisterShader(std::filesystem::path, ShaderType type, const DescriptorAllocator& descriptorAllocator, std::span<const Shader::SpecializationConstant> speConstants = {});
+    uint32_t RegisterShader(std::filesystem::path, ShaderType type, const BindingManager& descriptorAllocator, std::span<const Shader::SpecializationConstant> speConstants = {});
     void DisposeShader(uint32_t);
     inline VkShaderEXT GetHandle(uint32_t id) const { return _shaders[id].Handle; }
     inline const Shader& Get(uint32_t id) const { return _shaders[id]; }

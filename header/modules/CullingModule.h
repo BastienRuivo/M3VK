@@ -16,7 +16,7 @@ public:
         uint32_t DrawCount;
     };
 
-    CullingModule(ShaderLibrary& shaderLibrary, DescriptorAllocator& descriptorAllocator);
+    CullingModule(ShaderLibrary& shaderLibrary, BindingManager& descriptorAllocator);
     ~CullingModule();
 
     void Execute(const CommandBuffer& cmdBuffer, const GraphicsBuffer& cameraBuffer, const GeometryBuffer& indirectBuffer, const GeometryBuffer& instanceBuffer, VkPipelineLayout layout) const;
