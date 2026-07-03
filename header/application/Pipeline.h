@@ -20,7 +20,7 @@ class Pipeline
     ~Pipeline();
 
     void PreRender(VkExtent2D size);
-    void Refresh(VkExtent2D size);
+    void Refresh(VkExtent2D size, VkCommandPool graphicsCommandPool, VkQueue graphicsComputeQueue);
 
     void DoUI(const UserInterface& ui);
     void DoKeyboardInput(const Window& window, float deltaTime);
@@ -47,7 +47,7 @@ class Pipeline
     // Pipeline
     GraphicsImage _msaaColorTarget;
     GraphicsImage _msaaDepthTarget;
-    GraphicsImage _finalColorTarget;
+    DescriptorAllocator::BindlessTexture _finalColorTarget;
     GraphicsImage _finalDepthTarget;
 
     GraphicsBuffer _cameraDataBuffer;

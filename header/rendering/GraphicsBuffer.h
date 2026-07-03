@@ -1,11 +1,12 @@
 #pragma once
 
 #include "application/DebugLayer.h"
-#include "allocation/DescriptorAllocator.h"
 #include "rendering/RessourceUsage.h"
 #include <cstdint>
 #include <stdexcept>
 #include <vulkan/vulkan_core.h>
+
+class DescriptorAllocator;
 
 class StageBuffer
 {

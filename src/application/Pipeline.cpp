@@ -1,6 +1,7 @@
 #include "application/Pipeline.h"
 #include "Camera.h"
 #include "ShaderBindings.h"
+#include "allocation/DescriptorAllocator.h"
 #include "application/ApplicationHelper.h"
 #include "application/ApplicationInfo.h"
 #include "application/UserInterface.h"
@@ -9,6 +10,7 @@
 #include "asset/MeshHelper.h"
 #include "allocation/MaterialRegistry.h"
 #include "allocation/MeshRegistry.h"
+#include "rendering/CommandBuffer.h"
 #include "rendering/SwapChain.h"
 #include <cstring>
 #include <vulkan/vulkan_core.h>
@@ -35,12 +37,12 @@ Pipeline::Pipeline(const SwapChain& swapChain, VkCommandPool graphicsCommandPool
         swapChain.GetExtent().width, swapChain.GetExtent().height,
         VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT,
         ApplicationInfo::Constant::DepthFormat, 1, VK_IMAGE_TILING_OPTIMAL, ApplicationInfo::GetMsaaSample()),
-    _finalColorTarget(RessourceUsage::PerFrame, graphicsCommandPool, graphicsComputeQueue,
+    _finalColorTarget(BindlessTexture::Register(_descriptorAllocator, RessourceUsage::PerFrame, _samplerNearest.Internal(), graphicsCommandPool, graphicsComputeQueue,
         VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
         swapChain.GetExtent().width, swapChain.GetExtent().height,
         VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
         swapChain.GetImageFormat(),
-        1),
+        1)),
     _finalDepthTarget(RessourceUsage::PerFrame, graphicsCommandPool, graphicsComputeQueue,
         VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
         swapChain.GetExtent().width, swapChain.GetExtent().height,
@@ -234,11 +236,12 @@ void Pipeline::OnMouseMove(float dx, float dy)
 
 void Pipeline::Execute(const CommandBuffer& cmdBuffer, const SwapChain& swapChain, const UserInterface& ui, uint32_t imageIndex)
 {
+    const auto & finalColorTarget = _finalColorTarget.Texture(_descriptorAllocator);
     VkRect2D renderArea = {0, 0, swapChain.GetExtent().width, swapChain.GetExtent().height};
 
     VkRenderingAttachmentInfo colorAttachment = ImageHelper::AttachmentInfo(_msaaColorTarget.View(),
         VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-        _finalColorTarget.View(),
+        finalColorTarget.View(),
         VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
         VK_ATTACHMENT_LOAD_OP_CLEAR,
         VK_ATTACHMENT_STORE_OP_STORE,
@@ -278,7 +281,7 @@ void Pipeline::Execute(const CommandBuffer& cmdBuffer, const SwapChain& swapChai
             cmdBuffer.SetAlphaToCoverageEnable(false);
             cmdBuffer.SetAlphaToOneEnable(false);
 
-            ImageHelper::TransitionLayoutCommand(cmdBuffer, _finalColorTarget.Internal(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+            ImageHelper::TransitionLayoutCommand(cmdBuffer, finalColorTarget.Internal(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
             ImageHelper::TransitionLayoutCommand(cmdBuffer, backBuffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
@@ -327,8 +330,8 @@ void Pipeline::Execute(const CommandBuffer& cmdBuffer, const SwapChain& swapChai
         {
             cmdBuffer.SetViewport(0, 0, renderArea.extent.width, renderArea.extent.height);
             cmdBuffer.SetScissor(renderArea);
-            ImageHelper::TransitionLayoutCommand(cmdBuffer, _finalColorTarget.Internal(), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
-            cmdBuffer.CopyImage(_finalColorTarget.Internal(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, backBuffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+            ImageHelper::TransitionLayoutCommand(cmdBuffer, finalColorTarget.Internal(), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+            cmdBuffer.CopyImage(finalColorTarget.Internal(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, backBuffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
             ImageHelper::TransitionLayoutCommand(cmdBuffer, backBuffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
         }
         cmdBuffer.EndMarker();
@@ -355,13 +358,20 @@ void Pipeline::PreRender(VkExtent2D size)
     UpdateCameraData(size);
 }
 
-void Pipeline::Refresh(VkExtent2D newSize)
+void Pipeline::Refresh(VkExtent2D newSize, VkCommandPool pool, VkQueue queue)
 {
     _camera._aspect = static_cast<float>(newSize.width) / static_cast<float>(newSize.height);
 
     _msaaColorTarget.Resize(newSize.width, newSize.height);
     _msaaDepthTarget.Resize(newSize.width, newSize.height);
-    _finalColorTarget.Resize(newSize.width, newSize.height);
+    _finalColorTarget.Resize(_descriptorAllocator, newSize.width, newSize.height);
+
+    CommandBuffer cmdBuffer(pool, queue);
+    cmdBuffer.BeginSingleTime();
+    {
+        _finalColorTarget.TransistionAllLayoutCommand(_descriptorAllocator, cmdBuffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+    }
+    cmdBuffer.End();
     _finalDepthTarget.Resize(newSize.width, newSize.height);
 }
 

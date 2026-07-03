@@ -12,6 +12,7 @@ public:
     ~BindlessTexturePool();
 
     inline GPUImage& Texture(uint32_t textureIndex) { return _textures[textureIndex].value(); }
+    inline const GPUImage& Texture(uint32_t textureIndex) const { return _textures[textureIndex].value(); }
     uint32_t Register(GPUImage&& texture);
     void Remove(uint32_t textureIndex);
 

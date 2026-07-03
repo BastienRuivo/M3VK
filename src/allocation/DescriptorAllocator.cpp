@@ -5,6 +5,8 @@
 #include <vulkan/vulkan_core.h>
 
 #include "ShaderBindings.h"
+#include "rendering/CommandBuffer.h"
+#include "rendering/ImageHelper.h"
 
 DescriptorAllocator::DescriptorAllocator()
 :
@@ -165,10 +167,30 @@ DescriptorAllocator::~DescriptorAllocator()
     }
 }
 
-void DescriptorAllocator::RemoveTexture(BindlessTextureHandle handle)
+void DescriptorAllocator::BindlessTexture::Dispose(DescriptorAllocator& allocator)
 {
-    for (size_t i = 0; i < RessourceUsageCount(handle.usage); i++)
+    for (size_t i = 0; i < RessourceUsageCount(usage); i++)
     {
-        _texturePool.Remove(handle.index[i]);
+        allocator._texturePool.Remove(index[i]);
+    }
+}
+
+void DescriptorAllocator::BindlessTexture::Resize(DescriptorAllocator& allocator, uint32_t width, uint32_t height)
+{
+    uint32_t count = RessourceUsageCount(usage);
+    for (size_t i = 0; i < count; i++)
+    {
+        GPUImage& image = allocator._texturePool.Texture(index[i]);
+        image.Resize(width, height);
+    }
+}
+
+void DescriptorAllocator::BindlessTexture::TransistionAllLayoutCommand(const DescriptorAllocator& allocator, const CommandBuffer& cmdBuffer, VkImageLayout layout)
+{
+    uint32_t count = RessourceUsageCount(usage);
+    for (size_t i = 0; i < count; i++)
+    {
+        const GPUImage& image = allocator._texturePool.Texture(index[i]);
+        ImageHelper::TransitionLayoutCommand(cmdBuffer, image.Internal(), VK_IMAGE_LAYOUT_UNDEFINED, layout);
     }
 }

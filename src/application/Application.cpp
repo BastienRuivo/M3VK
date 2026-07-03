@@ -87,7 +87,7 @@ void Application::RefreshSwapChain()
     _swapChain = std::make_unique<SwapChain>(_window, _windowSurface.Internal());
 
     auto extents = _swapChain->GetExtent();
-    _pipeline.Refresh(extents);
+    _pipeline.Refresh(extents, _graphicsCommandPool.Internal(), _graphicsComputeQueue.Internal());
 }
 
 void Application::DrawFrame()
