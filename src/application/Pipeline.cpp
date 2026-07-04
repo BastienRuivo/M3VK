@@ -234,16 +234,45 @@ void Pipeline::OnMouseMove(float dx, float dy)
     _camera.Rotate(dx, dy);
 }
 
+void Pipeline::PipelineInit(const CommandBuffer& cmdBuffer, VkRect2D renderArea) const
+{
+    cmdBuffer.BeginMarker("Pipeline Init");
+    {
+        cmdBuffer.SetPrimitiveTopology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
+        cmdBuffer.SetPrimitiveRestart(false);
+        cmdBuffer.SetRasterizerDiscard(false);
+        cmdBuffer.SetDepthClampEnable(false);
+        cmdBuffer.SetPolygonMode(VK_POLYGON_MODE_FILL);
+        cmdBuffer.SetFrontFace(VK_FRONT_FACE_COUNTER_CLOCKWISE);
+        cmdBuffer.SetDepthBiasEnable(false);
+        cmdBuffer.SetLineWidth(1.0f);
+
+        cmdBuffer.SetRasterizationSamples(ApplicationInfo::Constant::MaxMSAASample);
+        cmdBuffer.SetSampleMask(ApplicationInfo::Constant::MaxMSAASample, 0xFFFFFFFF);
+        cmdBuffer.SetAlphaToCoverageEnable(false);
+        cmdBuffer.SetAlphaToOneEnable(false);
+
+        cmdBuffer.SetViewport(0, 0, renderArea.extent.width, renderArea.extent.height);
+        cmdBuffer.SetScissor(renderArea);
+
+        for(const auto& registry : _registries)
+        {
+            registry->Bind(cmdBuffer, _bindingManager.GlobalLayout());
+        }
+    }
+    cmdBuffer.EndMarker();
+}
+
 void Pipeline::Execute(const CommandBuffer& cmdBuffer, const SwapChain& swapChain, const UserInterface& ui, uint32_t imageIndex)
 {
-    const auto & finalColorTarget = _finalColorTarget.Texture(_bindingManager);
-    const auto & finalDepthTarget = _finalDepthTarget.Texture(_bindingManager);
+    const auto & finalColorTarget = _finalColorTarget.Texture(_bindingManager).Internal();
+    const auto & finalDepthTarget = _finalDepthTarget.Texture(_bindingManager).Internal();
 
     VkRect2D renderArea = {0, 0, swapChain.GetExtent().width, swapChain.GetExtent().height};
 
     VkRenderingAttachmentInfo colorAttachment = ImageHelper::AttachmentInfo(_msaaColorTarget.View(),
         VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-        finalColorTarget.View(),
+        finalColorTarget.View,
         VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
         VK_ATTACHMENT_LOAD_OP_CLEAR,
         VK_ATTACHMENT_STORE_OP_STORE,
@@ -251,7 +280,7 @@ void Pipeline::Execute(const CommandBuffer& cmdBuffer, const SwapChain& swapChai
 
     VkRenderingAttachmentInfo depthAttachment = ImageHelper::AttachmentInfo(_msaaDepthTarget.View(),
         VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
-        finalDepthTarget.View(),
+        finalDepthTarget.View,
         VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
         VK_ATTACHMENT_LOAD_OP_CLEAR,
         VK_ATTACHMENT_STORE_OP_STORE,
@@ -266,36 +295,9 @@ void Pipeline::Execute(const CommandBuffer& cmdBuffer, const SwapChain& swapChai
 
     cmdBuffer.Begin();
     {
-          // base param
-        cmdBuffer.BeginMarker("Pipeline Init");
-        {
-            cmdBuffer.SetPrimitiveTopology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
-            cmdBuffer.SetPrimitiveRestart(false);
-            cmdBuffer.SetRasterizerDiscard(false);
-            cmdBuffer.SetDepthClampEnable(false);
-            cmdBuffer.SetPolygonMode(VK_POLYGON_MODE_FILL);
-            cmdBuffer.SetFrontFace(VK_FRONT_FACE_COUNTER_CLOCKWISE);
-            cmdBuffer.SetDepthBiasEnable(false);
-            cmdBuffer.SetLineWidth(1.0f);
-
-            cmdBuffer.SetRasterizationSamples(ApplicationInfo::Constant::MaxMSAASample);
-            cmdBuffer.SetSampleMask(ApplicationInfo::Constant::MaxMSAASample, 0xFFFFFFFF);
-            cmdBuffer.SetAlphaToCoverageEnable(false);
-            cmdBuffer.SetAlphaToOneEnable(false);
-
-            ImageHelper::TransitionLayoutCommand(cmdBuffer, finalColorTarget.Internal(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-
-            ImageHelper::TransitionLayoutCommand(cmdBuffer, backBuffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-
-            cmdBuffer.SetViewport(0, 0, renderArea.extent.width, renderArea.extent.height);
-            cmdBuffer.SetScissor(renderArea);
-
-            for(const auto& registry : _registries)
-            {
-                registry->Bind(cmdBuffer, _bindingManager.GlobalLayout());
-            }
-        }
-        cmdBuffer.EndMarker();
+        PipelineInit(cmdBuffer, renderArea);
+        ImageHelper::TransitionLayoutCommand(cmdBuffer, finalColorTarget, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+        ImageHelper::TransitionLayoutCommand(cmdBuffer, backBuffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
         cmdBuffer.BeginMarker("Culling Compute Pass");
         {
@@ -332,8 +334,8 @@ void Pipeline::Execute(const CommandBuffer& cmdBuffer, const SwapChain& swapChai
         {
             cmdBuffer.SetViewport(0, 0, renderArea.extent.width, renderArea.extent.height);
             cmdBuffer.SetScissor(renderArea);
-            ImageHelper::TransitionLayoutCommand(cmdBuffer, finalColorTarget.Internal(), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
-            cmdBuffer.CopyImage(finalColorTarget.Internal(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, backBuffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+            ImageHelper::TransitionLayoutCommand(cmdBuffer, finalColorTarget, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+            cmdBuffer.CopyImage(finalColorTarget, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, backBuffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
             ImageHelper::TransitionLayoutCommand(cmdBuffer, backBuffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
         }
         cmdBuffer.EndMarker();

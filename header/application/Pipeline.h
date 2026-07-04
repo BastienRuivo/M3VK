@@ -31,6 +31,7 @@ class Pipeline
 
     protected:
     std::array<DrawModule, MaterialType::Count> InitDrawModule(bool DebugOn);
+    void PipelineInit(const CommandBuffer& cmdBuffer, VkRect2D renderArea) const;
 
     BindingManager _bindingManager;
     VkSamplerHandler _samplerLinear;
