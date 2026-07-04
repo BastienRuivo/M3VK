@@ -43,12 +43,12 @@ Pipeline::Pipeline(const SwapChain& swapChain, VkCommandPool graphicsCommandPool
         VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
         swapChain.GetImageFormat(),
         1)),
-    _finalDepthTarget(RessourceUsage::PerFrame, graphicsCommandPool, graphicsComputeQueue,
+    _finalDepthTarget(BindlessTexture::Register(_bindingManager,RessourceUsage::PerFrame, _samplerNearest.Internal(), graphicsCommandPool, graphicsComputeQueue,
         VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
         swapChain.GetExtent().width, swapChain.GetExtent().height,
         VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
         ApplicationInfo::Constant::DepthFormat,
-        1),
+        1)),
     _drawModules(InitDrawModule(false)),
     _skyboxModule(_shaderLibrary, _bindingManager, graphicsCommandPool, graphicsComputeQueue),
 
@@ -237,6 +237,8 @@ void Pipeline::OnMouseMove(float dx, float dy)
 void Pipeline::Execute(const CommandBuffer& cmdBuffer, const SwapChain& swapChain, const UserInterface& ui, uint32_t imageIndex)
 {
     const auto & finalColorTarget = _finalColorTarget.Texture(_bindingManager);
+    const auto & finalDepthTarget = _finalDepthTarget.Texture(_bindingManager);
+
     VkRect2D renderArea = {0, 0, swapChain.GetExtent().width, swapChain.GetExtent().height};
 
     VkRenderingAttachmentInfo colorAttachment = ImageHelper::AttachmentInfo(_msaaColorTarget.View(),
@@ -249,7 +251,7 @@ void Pipeline::Execute(const CommandBuffer& cmdBuffer, const SwapChain& swapChai
 
     VkRenderingAttachmentInfo depthAttachment = ImageHelper::AttachmentInfo(_msaaDepthTarget.View(),
         VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
-        _finalDepthTarget.View(),
+        finalDepthTarget.View(),
         VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
         VK_ATTACHMENT_LOAD_OP_CLEAR,
         VK_ATTACHMENT_STORE_OP_STORE,
@@ -365,14 +367,18 @@ void Pipeline::Refresh(VkExtent2D newSize, VkCommandPool pool, VkQueue queue)
     _msaaColorTarget.Resize(newSize.width, newSize.height);
     _msaaDepthTarget.Resize(newSize.width, newSize.height);
     _finalColorTarget.Resize(_bindingManager, newSize.width, newSize.height);
+    _finalDepthTarget.Resize(_bindingManager, newSize.width, newSize.height);
 
     CommandBuffer cmdBuffer(pool, queue);
     cmdBuffer.BeginSingleTime();
     {
-        _finalColorTarget.TransistionAllLayoutCommand(_bindingManager, cmdBuffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+        ImageHelper::TransitionLayoutCommand(cmdBuffer, _msaaColorTarget.Internal(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+        ImageHelper::TransitionLayoutCommand(cmdBuffer, _msaaDepthTarget.Internal(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+        _finalColorTarget.TransistionAllLayoutCommand(_bindingManager, cmdBuffer, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+        _finalDepthTarget.TransistionAllLayoutCommand(_bindingManager, cmdBuffer, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
     }
     cmdBuffer.End();
-    _finalDepthTarget.Resize(newSize.width, newSize.height);
+    cmdBuffer.WaitCompletion();
 }
 
 void Pipeline::DoKeyboardInput(const Window& window, float deltaTime)

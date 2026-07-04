@@ -48,7 +48,7 @@ class Pipeline
     GraphicsImage _msaaColorTarget;
     GraphicsImage _msaaDepthTarget;
     BindingManager::BindlessTexture _finalColorTarget;
-    GraphicsImage _finalDepthTarget;
+    BindingManager::BindlessTexture _finalDepthTarget;
 
     GraphicsBuffer _cameraDataBuffer;
     Camera _camera;
