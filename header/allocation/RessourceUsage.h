@@ -9,6 +9,12 @@ enum RessourceUsage
     Transient
 };
 
+struct DeviceMemory
+{
+    VkDeviceMemory Memory;
+    VkDeviceSize Size;
+};
+
 inline uint32_t RessourceUsageToCurrentIndex(RessourceUsage usage)
 {
     return usage == RessourceUsage::PerFrame ? ApplicationInfo::CurrentFrame() : 0;

@@ -234,7 +234,7 @@ void Pipeline::OnMouseMove(float dx, float dy)
     _camera.Rotate(dx, dy);
 }
 
-void Pipeline::PipelineInit(const CommandBuffer& cmdBuffer, VkRect2D renderArea) const
+void Pipeline::FrameInit(const CommandBuffer& cmdBuffer, VkRect2D renderArea) const
 {
     cmdBuffer.BeginMarker("Pipeline Init");
     {
@@ -295,7 +295,8 @@ void Pipeline::Execute(const CommandBuffer& cmdBuffer, const SwapChain& swapChai
 
     cmdBuffer.Begin();
     {
-        PipelineInit(cmdBuffer, renderArea);
+        FrameInit(cmdBuffer, renderArea);
+
         ImageHelper::TransitionLayoutCommand(cmdBuffer, finalColorTarget, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
         ImageHelper::TransitionLayoutCommand(cmdBuffer, backBuffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
@@ -462,7 +463,10 @@ void Pipeline::DoUI(const UserInterface& ui)
         ImGui::Image((ImTextureID) _msaaDepthTarget->ImGuiSet(), ImVec2(500, 500), ImVec2(0, 1), ImVec2(1, 0));
     }*/
 
+    double currentSize = (double)ApplicationInfo::GetVRAMUsage() / 1048576; //(MB)
+
     ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+    ImGui::Text("VRAM Usage = %.3f MB", currentSize);
 
     ImGui::End();
 }

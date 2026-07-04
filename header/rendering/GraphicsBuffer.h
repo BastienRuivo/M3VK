@@ -2,7 +2,7 @@
 
 #include "allocation/MultiFrameRessource.h"
 #include "application/DebugLayer.h"
-#include "rendering/RessourceUsage.h"
+#include "allocation/RessourceUsage.h"
 #include <cstdint>
 #include <stdexcept>
 #include <vulkan/vulkan_core.h>
@@ -36,13 +36,13 @@ class StageBuffer
     void MapAndCopyToData(void* dstData, VkDeviceSize offset, VkDeviceSize copySize);
 
     inline VkBuffer Internal() const { return _internal; };
-    inline VkDeviceMemory MemoryInternal() const { return _memoryInternal; };
+    inline DeviceMemory MemoryInternal() const { return _memoryInternal; };
     inline Usage Usage() const { return _usage; };
     inline VkDeviceSize Capacity() const { return _capacity; };
 
     protected:
     VkBuffer _internal = VK_NULL_HANDLE;
-    VkDeviceMemory _memoryInternal = VK_NULL_HANDLE;
+    DeviceMemory _memoryInternal = {};
     void* _data = nullptr;
 
     enum Usage _usage;
@@ -71,10 +71,10 @@ class PoolStageBuffer : protected StageBuffer
 
 struct BufferInternal
 {
-    VkBuffer _internal = VK_NULL_HANDLE;
-    VkDeviceMemory _memoryInternal = VK_NULL_HANDLE;
-    void* _dataPtr = nullptr; // Currently used for persistent mapping for Uniform buffers, we only map it once to avoid the cost of mapping it each time
-    uint32_t _gpuIndex = UINT32_MAX; // only filled if uniform or storage
+    VkBuffer Internal = VK_NULL_HANDLE;
+    DeviceMemory MemoryInternal = {};
+    void* DataPtr = nullptr; // Currently used for persistent mapping for Uniform buffers, we only map it once to avoid the cost of mapping it each time
+    uint32_t GpuIndex = UINT32_MAX; // only filled if uniform or storage
 };
 
 class GraphicsBuffer : public MultiFrameRessource<BufferInternal>
@@ -108,28 +108,28 @@ class GraphicsBuffer : public MultiFrameRessource<BufferInternal>
         uint32_t srcIndex = 0,
         uint32_t dstIndex = 0);
 
-    VkBuffer Internal() const { return Current()._internal; }
+    VkBuffer Internal() const { return Current().Internal; }
     BufferType GetType() const { return _type; }
 
     inline RessourceUsage GetUsage() const { return _usage; }
     inline VkDeviceSize GetSize() const { return _count * _stride; }
     inline VkDeviceSize GetCount() const { return _count; }
     inline VkDeviceSize GetStride() const { return _stride; }
-    inline uint32_t GetGPUIndex() const { return Current()._gpuIndex; }
+    inline uint32_t GetGPUIndex() const { return Current().GpuIndex; }
     inline void* GetDataPtr() const
     {
         if(_usage != RessourceUsage::PerFrame)
         {
             DebugLayer::Log(DebugLayer::LogType::ERROR, "Trying to get data pointer for non uniform buffer");
         }
-        return Current()._dataPtr;
+        return Current().DataPtr;
     }
 
     inline VkDescriptorBufferInfo GetDescriptorBufferInfo(uint32_t index, uint32_t count) const
     {
         return
         {
-            .buffer = Current()._internal,
+            .buffer = Current().Internal,
             .offset = index * _stride,
             .range = _stride * count
         };

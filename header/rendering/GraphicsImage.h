@@ -6,7 +6,7 @@
 #include "rendering/GPUImage.h"
 #include "rendering/ImageHelper.h"
 #include "allocation/MultiFrameRessource.h"
-#include "rendering/RessourceUsage.h"
+#include "allocation/RessourceUsage.h"
 #include <cstdint>
 #include <vulkan/vulkan_core.h>
 

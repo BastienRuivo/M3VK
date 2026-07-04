@@ -1,5 +1,6 @@
 #pragma once
 
+#include "allocation/RessourceUsage.h"
 #include <cstddef>
 #include <cstdint>
 #include <stb_image.h>
@@ -51,7 +52,6 @@ class GPUImage
     protected:
     void CreateImageInternal(uint32_t width, uint32_t height, uint32_t arrayLayers, VkImageCreateFlags createFlags, VkImageUsageFlags usageFlags, VkFormat format, uint32_t mipCount, VkImageTiling tiling, VkSampleCountFlagBits msaaSampleCount);
     void DisposeInternal();
-    VkDeviceMemory _memoryInternal = VK_NULL_HANDLE;
+    DeviceMemory _memoryInternal = {};
     ImageReference _internal;
-    VkImageView _view;
 };

@@ -5,7 +5,7 @@
 #include <vector>
 
 #include "application/DebugLayer.h"
-#include "rendering/RessourceUsage.h"
+#include "allocation/RessourceUsage.h"
 
 #include <stdexcept>
 #include <vulkan/vulkan_core.h>

@@ -2,7 +2,7 @@
 
 #include "application/ApplicationInfo.h"
 #include "rendering/GPUImage.h"
-#include "rendering/RessourceUsage.h"
+#include "allocation/RessourceUsage.h"
 #include <cstdint>
 #include <span>
 #include <vulkan/vulkan_core.h>

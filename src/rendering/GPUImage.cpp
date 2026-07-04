@@ -38,10 +38,13 @@ void GPUImage::DisposeInternal()
 {
     vkDestroyImageView(ApplicationInfo::Device(), _internal.View, nullptr);
     vkDestroyImage(ApplicationInfo::Device(), _internal.Image, nullptr);
-    vkFreeMemory(ApplicationInfo::Device(), _memoryInternal, nullptr);
+    vkFreeMemory(ApplicationInfo::Device(), _memoryInternal.Memory, nullptr);
+
+    ApplicationInfo::VRAMRelease(_memoryInternal.Size, ApplicationInfo::AllocType::Image);
 
     _internal.Image = VK_NULL_HANDLE;
-    _memoryInternal = VK_NULL_HANDLE;
+    _internal.View = VK_NULL_HANDLE;
+    _memoryInternal = {};
 }
 
 VkImageView CreateImageView(ImageReference& image, VkImageAspectFlags aspectMask, VkImageViewType type)
@@ -135,16 +138,20 @@ void GPUImage::CreateImageInternal(uint32_t width, uint32_t height, uint32_t arr
         .memoryTypeIndex = memoryTypeIndex
     };
 
-    if(vkAllocateMemory(ApplicationInfo::Device(), &allocInfo, nullptr, &_memoryInternal) != VK_SUCCESS)
+    VkResult memoryResult = vkAllocateMemory(ApplicationInfo::Device(), &allocInfo, nullptr, &_memoryInternal.Memory) ;
+    if(memoryResult != VK_SUCCESS)
     {
         vkDestroyImage(ApplicationInfo::Device(), image, nullptr);
         throw  std::runtime_error("Can't allocate image memory !");
     }
+    _memoryInternal.Size = allocInfo.allocationSize;
+    ApplicationInfo::VRAMAllocate(_memoryInternal.Size, ApplicationInfo::AllocType::Image);
 
-    if(vkBindImageMemory(ApplicationInfo::Device(), image, _memoryInternal, 0) != VK_SUCCESS)
+    if(vkBindImageMemory(ApplicationInfo::Device(), image, _memoryInternal.Memory, 0) != VK_SUCCESS)
     {
         vkDestroyImage(ApplicationInfo::Device(), image, nullptr);
-        vkFreeMemory(ApplicationInfo::Device(), _memoryInternal, nullptr);
+        vkFreeMemory(ApplicationInfo::Device(), _memoryInternal.Memory, nullptr);
+        ApplicationInfo::VRAMRelease(_memoryInternal.Size, ApplicationInfo::AllocType::Image);
         throw  std::runtime_error("Can't bind image memory !");
     }
 
@@ -206,8 +213,7 @@ GPUImage::~GPUImage()
 GPUImage::GPUImage(GPUImage&& other) noexcept
 {
     _internal = std::exchange(other._internal, {});
-    _memoryInternal = std::exchange(other._memoryInternal, VK_NULL_HANDLE);
-    _view = std::move(other._view);
+    _memoryInternal = std::exchange(other._memoryInternal, {});
 }
 
 GPUImage& GPUImage::operator=(GPUImage&& other) noexcept
@@ -215,8 +221,7 @@ GPUImage& GPUImage::operator=(GPUImage&& other) noexcept
     if(this != &other)
     {
         _internal = std::exchange(other._internal, {});
-        _memoryInternal = std::exchange(other._memoryInternal, VK_NULL_HANDLE);
-        _view = std::move(other._view);
+        _memoryInternal = std::exchange(other._memoryInternal, {});
     }
     return *this;
 }

@@ -2,7 +2,7 @@
 #include "application/ApplicationInfo.h"
 #include "rendering/CommandBuffer.h"
 #include "allocation/BindingManager.h"
-#include "rendering/RessourceUsage.h"
+#include "allocation/RessourceUsage.h"
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
@@ -42,16 +42,20 @@ StageBuffer::StageBuffer(VkDeviceSize size, enum Usage bufferUsage)
         .memoryTypeIndex = ApplicationInfo::FindMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)
     };
 
-    if(vkAllocateMemory(ApplicationInfo::Device(), &allocateInfo, nullptr, &_memoryInternal) != VK_SUCCESS)
+    VkResult memoryResult = vkAllocateMemory(ApplicationInfo::Device(), &allocateInfo, nullptr, &_memoryInternal.Memory) ;
+    if(memoryResult != VK_SUCCESS)
     {
         vkDestroyBuffer(ApplicationInfo::Device(), _internal, nullptr);
         throw std::runtime_error("Failed to allocate Stage Buffer memory");
     }
+    _memoryInternal.Size = allocateInfo.allocationSize;
+    ApplicationInfo::VRAMAllocate(_memoryInternal.Size, ApplicationInfo::AllocType::Buffer);
 
-    if(vkBindBufferMemory(ApplicationInfo::Device(), _internal, _memoryInternal, 0) != VK_SUCCESS)
+    if(vkBindBufferMemory(ApplicationInfo::Device(), _internal, _memoryInternal.Memory, 0) != VK_SUCCESS)
     {
         vkDestroyBuffer(ApplicationInfo::Device(), _internal, nullptr);
-        vkFreeMemory(ApplicationInfo::Device(), _memoryInternal, nullptr);
+        vkFreeMemory(ApplicationInfo::Device(), _memoryInternal.Memory, nullptr);
+        ApplicationInfo::VRAMRelease(_memoryInternal.Size, ApplicationInfo::AllocType::Buffer);
         throw std::runtime_error("Failed to bind stage buffer memory");
     }
 }
@@ -59,28 +63,28 @@ StageBuffer::StageBuffer(VkDeviceSize size, enum Usage bufferUsage)
 void StageBuffer::MapAndCopyToBuffer(const void* srcData, VkDeviceSize offset, VkDeviceSize copySize)
 {
     void* data;
-    if(vkMapMemory(ApplicationInfo::Device(), _memoryInternal, offset, copySize, 0, &data) != VK_SUCCESS)
+    if(vkMapMemory(ApplicationInfo::Device(), _memoryInternal.Memory, offset, copySize, 0, &data) != VK_SUCCESS)
     {
         throw std::runtime_error("Failed to map stage buffer memory");
     }
     memcpy(data, srcData, (size_t)copySize);
-    vkUnmapMemory(ApplicationInfo::Device(), _memoryInternal);
+    vkUnmapMemory(ApplicationInfo::Device(), _memoryInternal.Memory);
 };
 
 void StageBuffer::MapAndCopyToData(void* dstData, VkDeviceSize offset, VkDeviceSize copySize)
 {
     void* data;
-    if(vkMapMemory(ApplicationInfo::Device(), _memoryInternal, offset, copySize, 0, &data) != VK_SUCCESS)
+    if(vkMapMemory(ApplicationInfo::Device(), _memoryInternal.Memory, offset, copySize, 0, &data) != VK_SUCCESS)
     {
         throw std::runtime_error("Failed to map stage buffer memory");
     }
     memcpy(dstData, data, (size_t)copySize);
-    vkUnmapMemory(ApplicationInfo::Device(), _memoryInternal);
+    vkUnmapMemory(ApplicationInfo::Device(), _memoryInternal.Memory);
 }
 
 void* StageBuffer::Map(VkDeviceSize offset = 0, VkDeviceSize size = VK_WHOLE_SIZE)
 {
-    if(vkMapMemory(ApplicationInfo::Device(), _memoryInternal, offset, size, 0, &_data) != VK_SUCCESS)
+    if(vkMapMemory(ApplicationInfo::Device(), _memoryInternal.Memory, offset, size, 0, &_data) != VK_SUCCESS)
     {
         throw std::runtime_error("Failed to map stage buffer memory");
     }
@@ -90,7 +94,7 @@ void* StageBuffer::Map(VkDeviceSize offset = 0, VkDeviceSize size = VK_WHOLE_SIZ
 
 void StageBuffer::Unmap()
 {
-    vkUnmapMemory(ApplicationInfo::Device(), _memoryInternal);
+    vkUnmapMemory(ApplicationInfo::Device(), _memoryInternal.Memory);
     _data = nullptr;
 }
 
@@ -98,10 +102,11 @@ StageBuffer::~StageBuffer()
 {
     if(_data != nullptr)
     {
-        vkUnmapMemory(ApplicationInfo::Device(), _memoryInternal);
+        vkUnmapMemory(ApplicationInfo::Device(), _memoryInternal.Memory);
     }
     vkDestroyBuffer(ApplicationInfo::Device(), _internal, nullptr);
-    vkFreeMemory(ApplicationInfo::Device(), _memoryInternal, nullptr);
+    vkFreeMemory(ApplicationInfo::Device(), _memoryInternal.Memory, nullptr);
+    ApplicationInfo::VRAMRelease(_memoryInternal.Size, ApplicationInfo::AllocType::Buffer);
 }
 
 StageBuffer::StageBuffer(StageBuffer && other) noexcept
@@ -110,7 +115,7 @@ StageBuffer::StageBuffer(StageBuffer && other) noexcept
     _memoryInternal = other._memoryInternal;
 
     other._internal = VK_NULL_HANDLE;
-    other._memoryInternal = VK_NULL_HANDLE;
+    other._memoryInternal = {};
 }
 
 StageBuffer& StageBuffer::operator=(StageBuffer&& other) noexcept
@@ -121,7 +126,7 @@ StageBuffer& StageBuffer::operator=(StageBuffer&& other) noexcept
         _memoryInternal = other._memoryInternal;
 
         other._internal = VK_NULL_HANDLE;
-        other._memoryInternal = VK_NULL_HANDLE;
+        other._memoryInternal = {};
     }
 
     return *this;
@@ -175,13 +180,13 @@ BufferInternal GraphicsBuffer::CreateBuffer(VkDeviceSize size, VkBufferUsageFlag
 
     // // If note exclusive, need to add a queue family index
 
-    if(vkCreateBuffer(ApplicationInfo::Device(), &info, nullptr, &buffer._internal) != VK_SUCCESS)
+    if(vkCreateBuffer(ApplicationInfo::Device(), &info, nullptr, &buffer.Internal) != VK_SUCCESS)
     {
         throw std::runtime_error("Failed to create buffer !");
     }
 
     VkMemoryRequirements memRequirements;
-    vkGetBufferMemoryRequirements(ApplicationInfo::Device(), buffer._internal, &memRequirements);
+    vkGetBufferMemoryRequirements(ApplicationInfo::Device(), buffer.Internal, &memRequirements);
 
     VkMemoryAllocateInfo allocateInfo
     {
@@ -190,16 +195,19 @@ BufferInternal GraphicsBuffer::CreateBuffer(VkDeviceSize size, VkBufferUsageFlag
         .memoryTypeIndex = ApplicationInfo::FindMemoryType(memRequirements.memoryTypeBits, properties)
     };
 
-    if(vkAllocateMemory(ApplicationInfo::Device(),&allocateInfo, nullptr, &buffer._memoryInternal) != VK_SUCCESS)
+    VkResult memoryResult = vkAllocateMemory(ApplicationInfo::Device(), &allocateInfo, nullptr, &buffer.MemoryInternal.Memory) ;
+    if(memoryResult != VK_SUCCESS)
     {
         throw std::runtime_error("Failed to allocate buffer memory");
     }
+    buffer.MemoryInternal.Size = allocateInfo.allocationSize;
+    ApplicationInfo::VRAMAllocate(allocateInfo.allocationSize, ApplicationInfo::AllocType::Buffer);
 
-    vkBindBufferMemory(ApplicationInfo::Device(), buffer._internal, buffer._memoryInternal, 0);
+    vkBindBufferMemory(ApplicationInfo::Device(), buffer.Internal, buffer.MemoryInternal.Memory, 0);
 
     if(_usage == RessourceUsage::PerFrame)
     {
-        if(vkMapMemory(ApplicationInfo::Device(), buffer._memoryInternal, 0, memRequirements.size, 0, &buffer._dataPtr) != VK_SUCCESS)
+        if(vkMapMemory(ApplicationInfo::Device(), buffer.MemoryInternal.Memory, 0, memRequirements.size, 0, &buffer.DataPtr) != VK_SUCCESS)
         {
             throw std::runtime_error("Failed to map buffer memory");
         }
@@ -290,12 +298,12 @@ GraphicsBuffer::GraphicsBuffer(BindingManager& allocator, uint32_t dstBinding, B
         if(_type == UNIFORM || _type == STORAGE || _type == INDIRECT_DRAW)
         {
             VkDescriptorBufferInfo desc = {
-                .buffer = _internals[i]._internal,
+                .buffer = _internals[i].Internal,
                 .offset = 0,
                 .range = _stride * _count
             };
             allocator.RegisterBuffer(desc, GetDescriptorType(), dstBinding, i);
-            _internals[i]._gpuIndex = i;
+            _internals[i].GpuIndex = i;
         }
     }
 }
@@ -313,7 +321,7 @@ void GraphicsBuffer::CopyToBuffer(const VkQueue& queue,
     CommandBuffer cmdBuffer(pool, queue);
     cmdBuffer.BeginSingleTime();
     {
-        cmdBuffer.CopyBuffer(copyBuffer.Internal(), Current()._internal, size, srcOffsetInBytes, dstOffsetInBytes);
+        cmdBuffer.CopyBuffer(copyBuffer.Internal(), Current().Internal, size, srcOffsetInBytes, dstOffsetInBytes);
     }
     cmdBuffer.End();
     cmdBuffer.WaitCompletion();
@@ -323,9 +331,10 @@ GraphicsBuffer::~GraphicsBuffer()
 {
     for(int i = 0; i < _internals.size(); i++)
     {
-        vkDestroyBuffer(ApplicationInfo::Device(), _internals[i]._internal, nullptr);
-        if(_internals[i]._dataPtr != nullptr) vkUnmapMemory(ApplicationInfo::Device(), _internals[i]._memoryInternal);
-        vkFreeMemory(ApplicationInfo::Device(), _internals[i]._memoryInternal, nullptr);
+        vkDestroyBuffer(ApplicationInfo::Device(), _internals[i].Internal, nullptr);
+        if(_internals[i].DataPtr != nullptr) vkUnmapMemory(ApplicationInfo::Device(), _internals[i].MemoryInternal.Memory);
+        vkFreeMemory(ApplicationInfo::Device(), _internals[i].MemoryInternal.Memory, nullptr);
+        ApplicationInfo::VRAMRelease(_internals[i].MemoryInternal.Size, ApplicationInfo::AllocType::Buffer);
     }
 }
 

@@ -2,7 +2,7 @@
 
 
 
-#include "rendering/RessourceUsage.h"
+#include "allocation/RessourceUsage.h"
 template<typename T>
 class MultiFrameRessource
 {

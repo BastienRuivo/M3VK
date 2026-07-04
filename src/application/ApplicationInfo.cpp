@@ -17,6 +17,20 @@ VkSampleCountFlagBits ApplicationInfo::GetMaxUsableSampleCount(VkSampleCountFlag
     else return VK_SAMPLE_COUNT_1_BIT;
 }
 
+
+
+void ApplicationInfo::VRAMAllocate(size_t size, AllocType aType)
+{
+    //DebugLayer::Log(DebugLayer::INFO, "Allocating " + std::to_string(size) + " Of type " + AllocTypeNames[aType]);
+    ApplicationInfo::Get()._currentVRAM = ApplicationInfo::Get()._currentVRAM + size;
+}
+
+void ApplicationInfo::VRAMRelease(size_t size, AllocType aType)
+{
+    //DebugLayer::Log(DebugLayer::INFO, "Releasing " + std::to_string(size) + " Of type " + AllocTypeNames[aType]);
+    ApplicationInfo::Get()._currentVRAM = ApplicationInfo::Get()._currentVRAM - size;
+}
+
 void ApplicationInfo::SetPhysicalDeviceInformation(VkPhysicalDevice physicalDevice, VkPhysicalDeviceProperties properties, const QueueFamilyIds& queueFamilyIds)
 {
     _physicalDevice = physicalDevice;

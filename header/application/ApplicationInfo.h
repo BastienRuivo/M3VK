@@ -41,41 +41,32 @@ class ApplicationInfo
         static inline constexpr uint32_t MaxBufferCount = 1024;
     };
 
-    static inline const QueueFamilyIds& GetQueueFamilyIds()
-    {
-        return ApplicationInfo::Get()._queueFamilyIds;
-    }
-
-    static inline uint32_t GetGraphicsQueueId()
-    {
-        return ApplicationInfo::Get()._queueFamilyIds.GraphicsCompute.value();
-    }
-
-    static inline uint32_t GetPresentQueueId()
-    {
-        return ApplicationInfo::Get()._queueFamilyIds.Present.value();
-    }
-
-    static inline uint32_t GetTransferQueueId()
-    {
-        return ApplicationInfo::Get()._queueFamilyIds.Transfer.value();
-    }
-
-    static inline const VkPhysicalDeviceProperties& GetProperties()
-    {
-        return ApplicationInfo::Get()._properties;
-    }
-
-    static inline VkSampleCountFlagBits GetMsaaSample()
-    {
-        return ApplicationInfo::Get()._msaaSample;
-    }
+    static inline const QueueFamilyIds& GetQueueFamilyIds() { return ApplicationInfo::Get()._queueFamilyIds; }
+    static inline uint32_t GetGraphicsQueueId() { return ApplicationInfo::Get()._queueFamilyIds.GraphicsCompute.value(); }
+    static inline uint32_t GetPresentQueueId() { return ApplicationInfo::Get()._queueFamilyIds.Present.value(); }
+    static inline uint32_t GetTransferQueueId() { return ApplicationInfo::Get()._queueFamilyIds.Transfer.value(); }
+    static inline const VkPhysicalDeviceProperties& GetProperties() { return ApplicationInfo::Get()._properties; }
+    static inline VkSampleCountFlagBits GetMsaaSample()    { return ApplicationInfo::Get()._msaaSample; }
 
     static uint32_t FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
     static inline uint32_t CurrentFrame() { return (ApplicationInfo::Get()._currentFrame) % Constant::MaxFrameInFlight; }
     static inline uint32_t PreviousFrame() { return (ApplicationInfo::Get()._currentFrame + Constant::MaxFrameInFlight - 1) % Constant::MaxFrameInFlight; }
     static inline void NextFrame() { ApplicationInfo::Get()._currentFrame++; }
     static inline uint32_t GetFrameCount() { return ApplicationInfo::Get()._currentFrame; }
+    static inline size_t GetVRAMUsage() { return ApplicationInfo::Get()._currentVRAM; }
+
+    enum AllocType
+    {
+        Buffer,
+        Image
+    };
+    static constexpr std::string AllocTypeNames[4]
+    {
+        "Buffer",
+        "Image",
+    };
+    static void VRAMAllocate(size_t size, AllocType aType);
+    static void VRAMRelease(size_t size, AllocType aType);
 
     private:
     void SetPhysicalDeviceInformation(VkPhysicalDevice physicalDevice, VkPhysicalDeviceProperties properties, const QueueFamilyIds& queueFamilyIds);
@@ -89,6 +80,7 @@ class ApplicationInfo
     VkDevice _device = VK_NULL_HANDLE;
     VkInstance _vkInstance = VK_NULL_HANDLE;
     uint32_t _currentFrame = 0;
+    uint32_t _currentVRAM = 0;
 
     friend class VkPhysicalDeviceHandler;
     friend class VkDeviceHandler;

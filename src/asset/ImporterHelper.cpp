@@ -13,7 +13,7 @@
 #include "rendering/GraphicsBuffer.h"
 #include "rendering/GraphicsImage.h"
 #include "rendering/ImageHelper.h"
-#include "rendering/RessourceUsage.h"
+#include "allocation/RessourceUsage.h"
 
 void ImporterHelper::UploadTexture(std::span<const ImporterHelper::UploadCommand> commands, PoolStageBuffer& buffer, VkQueue queue, VkCommandPool pool)
 {
