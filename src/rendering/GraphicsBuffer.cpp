@@ -161,7 +161,7 @@ void PoolStageBuffer::Clear()
     _offset = 0;
 }
 
-GraphicsBuffer::BufferInternal GraphicsBuffer::CreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties)
+BufferInternal GraphicsBuffer::CreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties)
 {
     BufferInternal buffer;
 
@@ -208,8 +208,9 @@ GraphicsBuffer::BufferInternal GraphicsBuffer::CreateBuffer(VkDeviceSize size, V
     return buffer;
 }
 
-GraphicsBuffer::GraphicsBuffer(BufferType type, RessourceUsage bufferUsage, VkDeviceSize count, VkDeviceSize stride, bool isSource) : _type(type), _stride(stride), _count(count), _usage(bufferUsage)
+GraphicsBuffer::GraphicsBuffer(BufferType type, RessourceUsage bufferUsage, VkDeviceSize count, VkDeviceSize stride, bool isSource) : _type(type), _stride(stride), _count(count)
 {
+    _usage = bufferUsage;
     // mean it's a dst buffer, already in good memory shape but cant be writable directly by cpu
     VkBufferUsageFlags usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 
@@ -274,27 +275,27 @@ GraphicsBuffer::GraphicsBuffer(BufferType type, RessourceUsage bufferUsage, VkDe
 
     int frameCount = RessourceUsageCount(_usage);
 
-    _buffers.resize(frameCount);
-    for(int i = 0; i < _buffers.size(); i++)
+    _internals.resize(frameCount);
+    for(int i = 0; i < _internals.size(); i++)
     {
-        _buffers[i] = CreateBuffer(size, usage, properties);
+        _internals[i] = CreateBuffer(size, usage, properties);
     }
 }
 
 GraphicsBuffer::GraphicsBuffer(BindingManager& allocator, uint32_t dstBinding, BufferType type, RessourceUsage bufferUsage, VkDeviceSize count, VkDeviceSize stride, bool isSource)
 : GraphicsBuffer(type, bufferUsage, count, stride, isSource)
 {
-    for(int i = 0; i < _buffers.size(); i++)
+    for(int i = 0; i < _internals.size(); i++)
     {
         if(_type == UNIFORM || _type == STORAGE || _type == INDIRECT_DRAW)
         {
             VkDescriptorBufferInfo desc = {
-                .buffer = _buffers[i]._internal,
+                .buffer = _internals[i]._internal,
                 .offset = 0,
                 .range = _stride * _count
             };
             allocator.RegisterBuffer(desc, GetDescriptorType(), dstBinding, i);
-            _buffers[i]._gpuIndex = i;
+            _internals[i]._gpuIndex = i;
         }
     }
 }
@@ -320,17 +321,17 @@ void GraphicsBuffer::CopyToBuffer(const VkQueue& queue,
 
 GraphicsBuffer::~GraphicsBuffer()
 {
-    for(int i = 0; i < _buffers.size(); i++)
+    for(int i = 0; i < _internals.size(); i++)
     {
-        vkDestroyBuffer(ApplicationInfo::Device(), _buffers[i]._internal, nullptr);
-        if(_buffers[i]._dataPtr != nullptr) vkUnmapMemory(ApplicationInfo::Device(), _buffers[i]._memoryInternal);
-        vkFreeMemory(ApplicationInfo::Device(), _buffers[i]._memoryInternal, nullptr);
+        vkDestroyBuffer(ApplicationInfo::Device(), _internals[i]._internal, nullptr);
+        if(_internals[i]._dataPtr != nullptr) vkUnmapMemory(ApplicationInfo::Device(), _internals[i]._memoryInternal);
+        vkFreeMemory(ApplicationInfo::Device(), _internals[i]._memoryInternal, nullptr);
     }
 }
 
 GraphicsBuffer::GraphicsBuffer(GraphicsBuffer && other) noexcept
 {
-    _buffers = std::move(other._buffers);
+    _internals = std::move(other._internals);
 
     _count = std::exchange(other._count, 0);
     _stride = std::exchange(other._stride, 0);
@@ -342,7 +343,7 @@ GraphicsBuffer& GraphicsBuffer::operator=(GraphicsBuffer&& other) noexcept
 {
     if(this != &other)
     {
-        _buffers = std::move(other._buffers);
+        _internals = std::move(other._internals);
 
         _count = std::exchange(other._count, 0);
         _stride = std::exchange(other._stride, 0);

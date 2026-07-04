@@ -5,10 +5,12 @@
 #include "allocation/BindingManager.h"
 #include "rendering/GPUImage.h"
 #include "rendering/ImageHelper.h"
+#include "allocation/MultiFrameRessource.h"
 #include "rendering/RessourceUsage.h"
 #include <cstdint>
 #include <vulkan/vulkan_core.h>
-class GraphicsImage
+
+class GraphicsImage : public MultiFrameRessource<GPUImage>
 {
     public:
 
@@ -23,9 +25,9 @@ class GraphicsImage
     GraphicsImage(BindingManager& allocator, uint32_t dstBinding, VkSampler sampler, RessourceUsage usage, Args&&... args)
     : GraphicsImage(usage, std::forward<Args>(args)...)
     {
-        for (uint32_t i = 0; i < _images.size(); i++)
+        for (uint32_t i = 0; i < _internals.size(); i++)
         {
-            const auto& texture = _images[i];
+            const auto& texture = _internals[i];
             allocator.RegisterTexture(ImageHelper::ImageBinding(texture.Internal(), sampler).Descriptor, dstBinding, i);
         }
     }
@@ -39,39 +41,24 @@ class GraphicsImage
 
     template <typename... Args>
     GraphicsImage(RessourceUsage usage, Args&&... args)
-    : _usage(usage)
     {
+        _usage = usage;
         uint32_t count = RessourceUsageCount(usage);
-        _images.reserve(count);
+        _internals.reserve(count);
 
         for (uint32_t i = 0; i < count; i++)
         {
-            const auto& texture = _images.emplace_back(std::forward<Args>(args)...);
+            const auto& texture = _internals.emplace_back(std::forward<Args>(args)...);
         }
     }
 
-    void Resize(uint32_t Width, uint32_t Height)
-    {
-        for(auto & image : _images)
-        {
-            image.Resize(Width, Height);
-        }
-    }
+    void Resize(uint32_t Width, uint32_t Height);
 
-    GraphicsImage(GraphicsImage&& other) : _images(std::move(other._images)), _sampler(other._sampler), _usage(other._usage) {}
+    GraphicsImage(GraphicsImage&& other) noexcept;
     GraphicsImage(const GraphicsImage& other) = delete;
 
     GraphicsImage& operator=(const GraphicsImage& other) = delete;
-    GraphicsImage& operator=(GraphicsImage&& other)
-    {
-        if (this != &other)
-        {
-            _images = std::move(other._images);
-            _sampler = other._sampler;
-            _usage = other._usage;
-        }
-        return *this;
-    }
+    GraphicsImage& operator=(GraphicsImage&& other) noexcept;
 
     inline ImageReference Internal() const { return Current().Internal(); }
     inline VkImageView View() const { return Current().Internal().View; }
@@ -88,22 +75,7 @@ class GraphicsImage
     ~GraphicsImage() {}
 
     protected:
-    std::vector<GPUImage> _images;
     VkSampler _sampler;
-    RessourceUsage _usage;
 
-    inline const GPUImage& Current() const { return _images[RessourceUsageToCurrentIndex(_usage)]; }
-    inline const GPUImage& Previous() const { return _images[RessourceUsageToPreviousIndex(_usage)]; }
-
-    void TransitionLayout(VkCommandPool pool, VkQueue queue, VkImageLayout newLayout) const
-    {
-        CommandBuffer cmdBuffer(pool, queue);
-        cmdBuffer.BeginSingleTime();
-        for (auto& image : _images)
-        {
-            ImageHelper::TransitionLayoutCommand(cmdBuffer, image.Internal(), VK_IMAGE_LAYOUT_UNDEFINED, newLayout);
-        }
-        cmdBuffer.End();
-        cmdBuffer.WaitCompletion();
-    }
+    void TransitionLayout(VkCommandPool pool, VkQueue queue, VkImageLayout newLayout) const;
 };

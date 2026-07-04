@@ -1,5 +1,6 @@
 #pragma once
 
+#include "allocation/MultiFrameRessource.h"
 #include "application/DebugLayer.h"
 #include "rendering/RessourceUsage.h"
 #include <cstdint>
@@ -68,7 +69,15 @@ class PoolStageBuffer : protected StageBuffer
     uint32_t _offset = 0;
 };
 
-class GraphicsBuffer
+struct BufferInternal
+{
+    VkBuffer _internal = VK_NULL_HANDLE;
+    VkDeviceMemory _memoryInternal = VK_NULL_HANDLE;
+    void* _dataPtr = nullptr; // Currently used for persistent mapping for Uniform buffers, we only map it once to avoid the cost of mapping it each time
+    uint32_t _gpuIndex = UINT32_MAX; // only filled if uniform or storage
+};
+
+class GraphicsBuffer : public MultiFrameRessource<BufferInternal>
 {
     public:
     enum BufferType
@@ -141,21 +150,9 @@ class GraphicsBuffer
     }
 
     protected:
-
-    struct BufferInternal
-    {
-        VkBuffer _internal = VK_NULL_HANDLE;
-        VkDeviceMemory _memoryInternal = VK_NULL_HANDLE;
-        void* _dataPtr = nullptr; // Currently used for persistent mapping for Uniform buffers, we only map it once to avoid the cost of mapping it each time
-        uint32_t _gpuIndex = UINT32_MAX; // only filled if uniform or storage
-    };
-
-    inline const BufferInternal& Current() const { return _buffers[RessourceUsageToCurrentIndex(_usage)]; }
     BufferInternal CreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties);
 
-    std::vector<BufferInternal> _buffers;
     BufferType _type;
-    RessourceUsage _usage;
     VkDeviceSize _stride = 0;
     VkDeviceSize _count = 0;
 };
