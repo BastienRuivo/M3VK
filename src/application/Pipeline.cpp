@@ -333,8 +333,6 @@ void Pipeline::Execute(const CommandBuffer& cmdBuffer, const SwapChain& swapChai
 
         cmdBuffer.BeginMarker("Copy To Back Buffer");
         {
-            cmdBuffer.SetViewport(0, 0, renderArea.extent.width, renderArea.extent.height);
-            cmdBuffer.SetScissor(renderArea);
             ImageHelper::TransitionLayoutCommand(cmdBuffer, finalColorTarget, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
             cmdBuffer.CopyImage(finalColorTarget, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, backBuffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
             ImageHelper::TransitionLayoutCommand(cmdBuffer, backBuffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
@@ -350,7 +348,6 @@ void Pipeline::Execute(const CommandBuffer& cmdBuffer, const SwapChain& swapChai
                 ui.Draw(cmdBuffer.GetInternal());
             }
             cmdBuffer.EndRendering();
-
             ImageHelper::TransitionLayoutCommand(cmdBuffer, backBuffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
         }
         cmdBuffer.EndMarker();

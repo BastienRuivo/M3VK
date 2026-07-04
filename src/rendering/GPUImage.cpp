@@ -78,12 +78,6 @@ void GPUImage::CreateImageInternal(uint32_t width, uint32_t height, uint32_t arr
 {
     VkMemoryPropertyFlags memoryFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 
-    bool isTransient = usageFlags & VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT;
-    if(isTransient)
-    {
-        memoryFlags = VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT;
-    }
-
     VkImageCreateInfo createInfo
     {
         .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
@@ -119,16 +113,7 @@ void GPUImage::CreateImageInternal(uint32_t width, uint32_t height, uint32_t arr
 
     if(memoryTypeIndex == UINT32_MAX)
     {
-        if(isTransient)
-        {
-            DebugLayer::Log(DebugLayer::LogType::WARNING, "Device can't find Lazily allocated memory, fallbacking to allocated one");
-            memoryTypeIndex = ApplicationInfo::FindMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-        }
-
-        if(memoryTypeIndex == UINT32_MAX)
-        {
-            throw std::runtime_error("Can't find replacement for memory type" + std::to_string(memoryFlags));
-        }
+        throw std::runtime_error("Can't find replacement for memory type" + std::to_string(memoryFlags));
     }
 
     VkMemoryAllocateInfo allocInfo
