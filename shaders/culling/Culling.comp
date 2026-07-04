@@ -7,7 +7,7 @@ layout(set = GLOBAL_SET, binding = BINDING_CAMERA_BUFFER) readonly buffer Camera
     CameraData data;
 } _Camera[];
 
-layout(set = GLOBAL_SET, binding = STATIC_BINDING_INSTANCE_DATA_BUFFER, std430) readonly buffer InstanceDataBuffer
+layout(set = GLOBAL_SET, binding = BINDING_INSTANCE_DATA_BUFFER, std430) readonly buffer InstanceDataBuffer
 {
     InstanceData data[];
 } _Instances;

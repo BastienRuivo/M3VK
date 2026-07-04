@@ -1,0 +1,28 @@
+#version 460
+
+#include "../header/GlobalIncludes.glsl"
+
+struct HizGenerateConstants
+{
+    vec2 srcPixelSize;
+    uvec2 srcSize;
+
+    vec2 dstPixelSize;
+    uvec2 dstSize;
+
+    uint srcIndex;
+};
+
+layout(push_constant) uniform PushConstants
+{
+    CommonIndexes Indexes;
+    HizGenerateConstants Constants;
+} push;
+
+layout(set = GLOBAL_SET, binding = BINDING_TEXTURES) uniform sampler2D uTextures[];
+
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+void main()
+{
+    if (gl_GlobalInvocationID.x >= push.Constants.srcSize.x || gl_GlobalInvocationID.y >= push.Constants.srcSize.y ) return;
+}

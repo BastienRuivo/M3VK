@@ -14,7 +14,7 @@ layout(set = GLOBAL_SET, binding = BINDING_CAMERA_BUFFER, std430) readonly buffe
 } _Cameras[];
 
 // TODO WHEN HERE : CHANGE _INSTANCES TO ARRAY
-layout(set = GLOBAL_SET, binding = STATIC_BINDING_INSTANCE_DATA_BUFFER, std430) readonly buffer VisibleInstanceDataBuffer
+layout(set = GLOBAL_SET, binding = BINDING_INSTANCE_DATA_BUFFER, std430) readonly buffer VisibleInstanceDataBuffer
 {
     InstanceData data[];
 } _Instances;

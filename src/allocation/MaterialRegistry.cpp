@@ -43,7 +43,7 @@ uint32_t MaterialRegistry::RegisterMaterial(MaterialProperties material)
 }
 
 MaterialRegistry::MaterialRegistry(BindingManager& allocator, VkCommandPool uploadPool, VkQueue uploadQueue, VkSampler sampler)
-    :   _materialBuffer(allocator, STATIC_BINDING_MATERIAL_BUFFER, GraphicsBuffer::BufferType::STORAGE, RessourceUsage::Static, ApplicationInfo::Constant::MaterialBufferMaxSize, sizeof(MaterialProperties))
+    :   _materialBuffer(allocator, BINDING_MATERIAL_BUFFER, GraphicsBuffer::BufferType::STORAGE, RessourceUsage::Static, ApplicationInfo::Constant::MaterialBufferMaxSize, sizeof(MaterialProperties))
 {
     _defaultMaterialIndex = MaterialImporter::LoadDefaultMaterial(allocator, *this, uploadPool, uploadQueue, sampler);
 }

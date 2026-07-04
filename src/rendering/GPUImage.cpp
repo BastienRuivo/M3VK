@@ -1,6 +1,5 @@
 #include "rendering/GPUImage.h"
 #include "application/ApplicationHelper.h"
-#include "application/DebugLayer.h"
 #include "rendering/ImageHelper.h"
 #include "application/ApplicationInfo.h"
 #include "rendering/CommandBuffer.h"

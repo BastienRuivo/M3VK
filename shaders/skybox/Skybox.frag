@@ -10,7 +10,7 @@ layout(push_constant) uniform PushConstants
 layout(location = 0) in vec3 vViewDir;
 layout(location = 0) out vec4 outColor;
 
-layout(set = GLOBAL_SET, binding = STATIC_BINDING_SKYBOX_TEXTURE) uniform samplerCube skyboxSampler;
+layout(set = GLOBAL_SET, binding = BINDING_SKYBOX_TEXTURE) uniform samplerCube skyboxSampler;
 
 //layout(early_fragment_tests) in;
 void main()

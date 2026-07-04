@@ -9,7 +9,7 @@
 SkyboxModule::SkyboxModule(ShaderLibrary& shaderLibrary, BindingManager& allocator, VkCommandPool pool, VkQueue queue)
 :
     _sampler(VK_FILTER_LINEAR, VK_FILTER_LINEAR),
-    _skyboxTexture(ImporterHelper::CubemapFromCPU(allocator, STATIC_BINDING_SKYBOX_TEXTURE, pool, queue, _sampler.Internal(),
+    _skyboxTexture(ImporterHelper::CubemapFromCPU(allocator, BINDING_SKYBOX_TEXTURE, pool, queue, _sampler.Internal(),
         CPUImage("data/skybox/front.jpg", STBI_rgb_alpha),
         CPUImage("data/skybox/back.jpg", STBI_rgb_alpha),
         CPUImage("data/skybox/left.jpg", STBI_rgb_alpha),

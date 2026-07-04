@@ -12,7 +12,7 @@ layout(push_constant) uniform PushConstants
     CullingConstants _CullingConstants;
 } push;
 
-layout(set = GLOBAL_SET, binding = STATIC_BINDING_CLEAR_DRAW_INDIRECT_BUFFER, std430) readonly buffer DrawIndirectBuffer
+layout(set = GLOBAL_SET, binding = BINDING_CLEAR_DRAW_INDIRECT_BUFFER, std430) readonly buffer DrawIndirectBuffer
 {
     DrawIndexedIndirectPadded data[];
 } _DrawIndexedIndirect;

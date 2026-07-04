@@ -13,7 +13,7 @@ layout(push_constant) uniform PushConstants
 
 layout(set = GLOBAL_SET, binding = BINDING_TEXTURES) uniform sampler2D uTextures[];
 
-layout(set = GLOBAL_SET, binding = STATIC_BINDING_MATERIAL_BUFFER, std430) readonly buffer MaterialPropertiesBuffer
+layout(set = GLOBAL_SET, binding = BINDING_MATERIAL_BUFFER, std430) readonly buffer MaterialPropertiesBuffer
 {
     MaterialProperties data[];
 } _Materials;
