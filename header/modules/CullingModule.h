@@ -1,12 +1,13 @@
 #pragma once
 
+#include "modules/Module.h"
 #include "rendering/CommandBuffer.h"
 #include "rendering/GraphicsBuffer.h"
 #include "rendering/Shaders/ShaderLibrary.h"
 #include <cstdint>
 #include <vulkan/vulkan_core.h>
 
-class CullingModule
+class CullingModule : public Module
 {
 public:
 

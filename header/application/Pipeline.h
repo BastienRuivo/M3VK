@@ -5,6 +5,7 @@
 #include "application/Window.h"
 #include "modules/CullingModule.h"
 #include "modules/DrawModule.h"
+#include "modules/HiZGenerateModule.h"
 #include "modules/SkyboxModule.h"
 #include "allocation/Registry.h"
 #include "rendering/Camera.h"
@@ -54,10 +55,14 @@ class Pipeline
     GraphicsBuffer _cameraDataBuffer;
     Camera _camera;
 
-
+    // Modules
     CullingModule _cullingModule;
     std::array<DrawModule, MaterialType::Count> _drawModules;
     SkyboxModule _skyboxModule;
+    HiZGenerateModule _hizGenerateModule;
+
+
+
 
     // debug
     bool _wireframe = false;

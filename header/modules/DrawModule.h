@@ -1,9 +1,11 @@
 #pragma once
 
+#include "modules/Module.h"
 #include "rendering/GraphicsBuffer.h"
 #include "rendering/Shaders/ShaderLibrary.h"
 #include <cstdint>
-class DrawModule
+
+class DrawModule : public Module
 {
 public:
     DrawModule(ShaderLibrary::VertexBinding vertexBinding, ShaderLibrary::FragmentBinding fragmentBinding);

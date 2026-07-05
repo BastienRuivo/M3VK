@@ -23,16 +23,17 @@ layout(push_constant) uniform PushConstants
 } push;
 
 layout(set = GLOBAL_SET, binding = BINDING_TEXTURES) uniform sampler2D uTextures[];
-layout(set = GLOBAL_SET, binding = BINDING_HIZ_TEXTURE, r32f) uniform sampler2D srcTexture[];
-layout(set = GLOBAL_SET, binding = BINDING_HIZ_TEXTURE, r32f) uniform sampler2D dstTexture[];
+layout(set = GLOBAL_SET, binding = BINDING_HIZ_TEXTURE, r32f) uniform readonly image2D srcTexture[];
+layout(set = GLOBAL_SET, binding = BINDING_HIZ_TEXTURE, r32f) uniform writeonly image2D dstTexture[];
 
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 void main()
 {
     if (gl_GlobalInvocationID.x >= push.Constants.srcSize.x || gl_GlobalInvocationID.y >= push.Constants.srcSize.y ) return;
 
+    ivec2 threadID = ivec2(gl_GlobalInvocationID.xy);
     uint srcIndex = nonuniformEXT(push.Constants.srcIndex);
     uint dstIndex = nonuniformEXT(push.Constants.dstIndex);
 
-    imageStore(dstTexture[dstIndex], ivec2(threadID), 0.5);
+    imageStore(dstTexture[dstIndex], ivec2(threadID), vec4(0.5));
 }

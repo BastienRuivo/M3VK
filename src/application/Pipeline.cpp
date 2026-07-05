@@ -53,7 +53,8 @@ Pipeline::Pipeline(const SwapChain& swapChain, VkCommandPool graphicsCommandPool
     _skyboxModule(_shaderLibrary, _bindingManager, graphicsCommandPool, graphicsComputeQueue),
 
     // modules
-    _cullingModule(_shaderLibrary, _bindingManager)
+    _cullingModule(_shaderLibrary, _bindingManager),
+    _hizGenerateModule(swapChain, _shaderLibrary, _bindingManager, graphicsCommandPool, graphicsComputeQueue, _samplerNearest.Internal())
 {
     MeshRegistry& meshRegistry = static_cast<MeshRegistry&>(*_registries[(size_t)RegistryType::Mesh]);
     MaterialRegistry& materialRegistry = static_cast<MaterialRegistry&>(*_registries[(size_t)RegistryType::Material]);

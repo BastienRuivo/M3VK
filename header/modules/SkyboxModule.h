@@ -1,11 +1,12 @@
 #pragma once
 
 #include "handler/Handlers.h"
+#include "modules/Module.h"
 #include "rendering/CommandBuffer.h"
 #include "rendering/GPUImage.h"
 #include "rendering/GraphicsImage.h"
 #include "rendering/Shaders/ShaderLibrary.h"
-class SkyboxModule
+class SkyboxModule : public Module
 {
 public:
     SkyboxModule(ShaderLibrary& shaderLibrary, BindingManager& allocator, VkCommandPool pool, VkQueue queue);

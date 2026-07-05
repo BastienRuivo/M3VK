@@ -106,15 +106,18 @@ VkDeviceHandler::VkDeviceHandler(VkInstance instance, VkSurfaceKHR windowSurface
     VkPhysicalDeviceDescriptorIndexingFeatures descriptorIndexingFeatures
     {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES,
-        .pNext = &vulkan11Features,
-
-        .shaderSampledImageArrayNonUniformIndexing = VK_TRUE, // different instance in the same wave can access different textures
-        .descriptorBindingSampledImageUpdateAfterBind = VK_TRUE, // descriptor can be updated while bound
-        .descriptorBindingStorageBufferUpdateAfterBind = VK_TRUE,
-        .descriptorBindingPartiallyBound = VK_TRUE, // slot can be empty
-        .descriptorBindingVariableDescriptorCount = VK_TRUE, // actual count set at all location
-        .runtimeDescriptorArray = VK_TRUE, // unsized array in shaders
+        .pNext = &vulkan11Features
     };
+
+    descriptorIndexingFeatures.shaderSampledImageArrayNonUniformIndexing = VK_TRUE; // different instance in the same wave can access different textures
+    descriptorIndexingFeatures.shaderStorageImageArrayNonUniformIndexing = VK_TRUE;
+    descriptorIndexingFeatures.shaderStorageBufferArrayNonUniformIndexing = VK_TRUE;
+    descriptorIndexingFeatures.descriptorBindingSampledImageUpdateAfterBind = VK_TRUE; // descriptor can be updated while bound
+    descriptorIndexingFeatures.descriptorBindingStorageBufferUpdateAfterBind = VK_TRUE;
+    descriptorIndexingFeatures.descriptorBindingStorageImageUpdateAfterBind = VK_TRUE;
+    descriptorIndexingFeatures.descriptorBindingPartiallyBound = VK_TRUE; // slot can be empty
+    descriptorIndexingFeatures.descriptorBindingVariableDescriptorCount = VK_TRUE; // actual count set at all location
+    descriptorIndexingFeatures.runtimeDescriptorArray = VK_TRUE; // unsized array in shaders
 
     VkPhysicalDeviceDynamicRenderingFeatures dynamicRenderingFeatures
     {
