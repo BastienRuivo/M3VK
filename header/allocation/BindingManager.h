@@ -17,6 +17,8 @@ class BindingManager
         RessourceUsage usage;
         std::array<uint32_t, ApplicationInfo::Constant::MaxFrameInFlight> index;
         uint32_t StaticIndex() const { assert(usage == RessourceUsage::Static); return index[0]; }
+        uint32_t CurrentIndex() const { return RessourceUsageToCurrentIndex(usage); }
+        uint32_t PreviousIndex() const { return RessourceUsageToPreviousIndex(usage); }
 
         template<typename... Args>
         static BindlessTexture Register(BindingManager& allocator, RessourceUsage usage, VkSampler sampler, Args&&... args)
@@ -55,7 +57,10 @@ class BindingManager
         void TransistionAllLayoutCommand(const BindingManager& allocator, const CommandBuffer& cmdBuffer, VkImageLayout layout);
         inline GPUImage& Texture(BindingManager& allocator) { return allocator._texturePool.Texture(index[RessourceUsageToCurrentIndex(usage)]); }
         inline GPUImage& PreviousTexture(BindingManager& allocator) { return allocator._texturePool.Texture(index[RessourceUsageToPreviousIndex(usage)]); }
+        inline const GPUImage& Texture(const BindingManager& allocator) const { return allocator._texturePool.Texture(index[RessourceUsageToCurrentIndex(usage)]); }
+        inline const GPUImage& PreviousTexture(const BindingManager& allocator) const { return allocator._texturePool.Texture(index[RessourceUsageToPreviousIndex(usage)]); }
         void Dispose(BindingManager& allocator);
+        void Bind(const BindingManager& allocator, bool hasImage, uint32_t binding, VkSampler sampler) const;
     };
 
     BindingManager();
@@ -64,7 +69,8 @@ class BindingManager
     static constexpr uint32_t ShaderConstantsSize = 64;
 
     void RegisterBuffer(const VkDescriptorBufferInfo& info, VkDescriptorType type, uint32_t dstBinding, uint32_t dstArrayElement);
-    void RegisterTexture(const VkDescriptorImageInfo& info, uint32_t dstBinding, uint32_t dstArrayElement);
+    void RegisterTexture(const VkDescriptorImageInfo& info, uint32_t dstBinding, uint32_t dstArrayElement) const;
+    void RegisterImage(const VkDescriptorImageInfo& info, uint32_t dstBinding, uint32_t dstArrayElement) const;
 
     inline DescriptorSetHandle GlobalDescriptorSet() const { return _globalSet; }
     inline VkPipelineLayout GlobalLayout() const { return _globalLayout.Internal(); }

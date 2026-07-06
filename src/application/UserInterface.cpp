@@ -1,5 +1,7 @@
 #include "application/UserInterface.h"
+#include "allocation/RessourceUsage.h"
 #include "application/ApplicationInfo.h"
+#include "imgui_impl_vulkan.h"
 
 void UserInterface::StartFrame() const
 {
@@ -88,4 +90,49 @@ UserInterface::~UserInterface()
     ImGui::DestroyContext();
 
     vkDestroyDescriptorPool(ApplicationInfo::Device(), _imGuiPool, nullptr);
+}
+
+UserInterfaceImageSet::UserInterfaceImageSet(const GraphicsImage& image, VkImageLayout layout, VkSampler sampler)
+{
+    RessourceUsage usage = image.Usage();
+
+    _internals.resize(RessourceUsageCount(usage));
+
+    for (uint32_t i = 0; i < RessourceUsageCount(usage); i++)
+    {
+        const auto& texture = image[i];
+        _internals[i] = ImGui_ImplVulkan_AddTexture(sampler, texture.View(), layout);
+    }
+}
+
+UserInterfaceImageSet::UserInterfaceImageSet(const BindingManager& manager, BindlessTexture handle, VkImageLayout layout, VkSampler sampler)
+{
+    RessourceUsage usage = handle.usage;
+
+    _internals.resize(RessourceUsageCount(usage));
+
+    for (uint32_t i = 0; i < RessourceUsageCount(usage); i++)
+    {
+        const auto& bindlessTexture = handle.Texture(manager);
+        _internals[i] = ImGui_ImplVulkan_AddTexture(sampler, bindlessTexture.View(), layout);
+    }
+}
+
+UserInterfaceImageSet::~UserInterfaceImageSet()
+{
+    for (uint32_t i = 0; i < _internals.size(); i++)
+    {
+        ImGui_ImplVulkan_RemoveTexture(_internals[i]);
+    }
+}
+
+UserInterfaceImageSet::UserInterfaceImageSet(UserInterfaceImageSet&& other) noexcept
+{
+    _internals = std::move(other._internals);
+}
+
+UserInterfaceImageSet& UserInterfaceImageSet::operator=(UserInterfaceImageSet&& other) noexcept
+{
+    _internals = std::move(other._internals);
+    return *this;
 }

@@ -17,6 +17,18 @@ void ImageHelper::TransitionLayoutCommand(const CommandBuffer& cmdBuffer, const 
     cmdBuffer.Barrier({&barrier, 1});
 }
 
+void ImageHelper::StorageImageReadWriteCommand(const CommandBuffer &cmdBuffer, const ImageReference &image, bool isWrite, uint32_t mipLevel, uint32_t mipCount, uint32_t arrayLayer, uint32_t arrayLayerCount, VkImageLayout oldLayout)
+{
+    VkImageMemoryBarrier2 barrier = StorageImageReadWriteBarrier(image, isWrite, mipLevel, mipCount, arrayLayer, arrayLayerCount, oldLayout);
+    cmdBuffer.Barrier({&barrier, 1});
+}
+
+void ImageHelper::StorageImageGeneralToLayoutCommand(const CommandBuffer &cmdBuffer, const ImageReference &image, bool isWrite, uint32_t mipLevel, uint32_t mipCount, uint32_t arrayLayer, uint32_t arrayLayerCount, VkImageLayout newLayout)
+{
+    VkImageMemoryBarrier2 barrier = StorageImageGeneralToLayoutBarrier(image, isWrite, mipLevel, mipCount, arrayLayer, arrayLayerCount, newLayout);
+    cmdBuffer.Barrier({&barrier, 1});
+}
+
 void ImageHelper::CopyToImageCommand(const CommandBuffer &cmdBuffer, const ImageReference &image, uint32_t mipLevel, VkBuffer srcData)
 {
     ImageHelper::TransitionLayoutCommand(cmdBuffer, image, mipLevel, 1, 0, 1, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
@@ -124,47 +136,9 @@ uint32_t ImageHelper::GetBytePerPixel(VkFormat format)
     }
 }
 
-VkImageMemoryBarrier2 ImageHelper::TransitionLayoutBarrier(const ImageReference &image, uint32_t mipLevel, uint32_t mipCount, uint32_t arrayLayer, uint32_t arrayLayerCount, VkImageLayout oldLayout, VkImageLayout newLayout)
+void FillSrcLayout(VkImageMemoryBarrier2& barrier, VkImageLayout srcLayout)
 {
-    VkImageMemoryBarrier2 barrier
-    {
-        .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
-        .srcAccessMask = VK_ACCESS_2_NONE,
-        .dstAccessMask = VK_ACCESS_2_NONE,
-        .oldLayout = oldLayout,
-        .newLayout = newLayout,
-        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED, // used to transfer queue ownership if someday I do a copy queue
-        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-        .image = image.Image,
-        .subresourceRange
-        {
-            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-            .baseMipLevel = mipLevel,
-            .levelCount = mipCount,
-            .baseArrayLayer = arrayLayer,
-            .layerCount = arrayLayerCount
-        },
-    };
-
-    if(newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
-        || newLayout == VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL
-        || newLayout == VK_IMAGE_LAYOUT_STENCIL_ATTACHMENT_OPTIMAL
-        || newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL
-        || newLayout == VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL
-        || newLayout == VK_IMAGE_LAYOUT_STENCIL_READ_ONLY_OPTIMAL)
-    {
-        barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-        if(ApplicationHelper::HasStencilComponent(image.Format))
-        {
-            barrier.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
-        }
-    }
-    else
-    {
-        barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    }
-
-    switch(oldLayout)
+    switch(srcLayout)
     {
         case VK_IMAGE_LAYOUT_UNDEFINED:
         {
@@ -219,8 +193,11 @@ VkImageMemoryBarrier2 ImageHelper::TransitionLayoutBarrier(const ImageReference 
             throw std::runtime_error("Unsupported old layout");
         }
     }
+}
 
-    switch (newLayout)
+void FillDstLayout(VkImageMemoryBarrier2& barrier, VkImageLayout dstlayout)
+{
+    switch (dstlayout)
     {
         case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
         {
@@ -273,6 +250,102 @@ VkImageMemoryBarrier2 ImageHelper::TransitionLayoutBarrier(const ImageReference 
             throw std::runtime_error("Unsupported new layout");
         }
     }
+}
+
+VkImageAspectFlags ImageHelper::GetAspect(VkFormat format)
+{
+    VkImageAspectFlags aspect = VK_IMAGE_ASPECT_COLOR_BIT;
+    if(format == VK_FORMAT_D32_SFLOAT || format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT)
+    {
+        aspect = VK_IMAGE_ASPECT_DEPTH_BIT;
+        if(ApplicationHelper::HasStencilComponent(format))
+        {
+            aspect |= VK_IMAGE_ASPECT_STENCIL_BIT;
+        }
+    }
+    return aspect;
+}
+
+VkImageMemoryBarrier2 ImageHelper::StorageImageReadWriteBarrier(const ImageReference &image, bool isWrite, uint32_t mipLevel, uint32_t mipCount, uint32_t arrayLayer, uint32_t arrayLayerCount, VkImageLayout oldLayout)
+{
+    VkImageMemoryBarrier2 barrier
+    {
+        .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
+        .srcStageMask = VK_PIPELINE_STAGE_2_NONE,
+        .srcAccessMask = VK_ACCESS_2_NONE,
+        .dstStageMask = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+        .dstAccessMask = isWrite ? VK_ACCESS_2_SHADER_WRITE_BIT : VK_ACCESS_2_SHADER_READ_BIT,
+        .oldLayout = oldLayout,
+        .newLayout = VK_IMAGE_LAYOUT_GENERAL,
+        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED, // used to transfer queue ownership if someday I do a copy queue
+        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+        .image = image.Image,
+        .subresourceRange
+        {
+            .aspectMask = GetAspect(image.Format),
+            .baseMipLevel = mipLevel,
+            .levelCount = mipCount,
+            .baseArrayLayer = arrayLayer,
+            .layerCount = arrayLayerCount
+        },
+    };
+
+    FillSrcLayout(barrier, oldLayout);
+
+    return barrier;
+}
+
+VkImageMemoryBarrier2 ImageHelper::StorageImageGeneralToLayoutBarrier(const ImageReference &image, bool isWrite, uint32_t mipLevel, uint32_t mipCount, uint32_t arrayLayer, uint32_t arrayLayerCount, VkImageLayout newLayout)
+{
+    VkImageMemoryBarrier2 barrier
+    {
+        .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
+        .srcStageMask = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
+        .srcAccessMask = isWrite ? VK_ACCESS_2_SHADER_WRITE_BIT : VK_ACCESS_2_SHADER_READ_BIT,
+        .oldLayout = VK_IMAGE_LAYOUT_GENERAL,
+        .newLayout = newLayout,
+        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED, // used to transfer queue ownership if someday I do a copy queue
+        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+        .image = image.Image,
+        .subresourceRange
+        {
+            .aspectMask = GetAspect(image.Format),
+            .baseMipLevel = mipLevel,
+            .levelCount = mipCount,
+            .baseArrayLayer = arrayLayer,
+            .layerCount = arrayLayerCount
+        },
+    };
+
+    FillDstLayout(barrier, newLayout);
+
+    return barrier;
+}
+
+VkImageMemoryBarrier2 ImageHelper::TransitionLayoutBarrier(const ImageReference &image, uint32_t mipLevel, uint32_t mipCount, uint32_t arrayLayer, uint32_t arrayLayerCount, VkImageLayout oldLayout, VkImageLayout newLayout)
+{
+    VkImageMemoryBarrier2 barrier
+    {
+        .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
+        .srcAccessMask = VK_ACCESS_2_NONE,
+        .dstAccessMask = VK_ACCESS_2_NONE,
+        .oldLayout = oldLayout,
+        .newLayout = newLayout,
+        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED, // used to transfer queue ownership if someday I do a copy queue
+        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+        .image = image.Image,
+        .subresourceRange
+        {
+            .aspectMask = GetAspect(image.Format),
+            .baseMipLevel = mipLevel,
+            .levelCount = mipCount,
+            .baseArrayLayer = arrayLayer,
+            .layerCount = arrayLayerCount
+        },
+    };
+
+    FillSrcLayout(barrier, oldLayout);
+    FillDstLayout(barrier, newLayout);
 
     return barrier;
 }

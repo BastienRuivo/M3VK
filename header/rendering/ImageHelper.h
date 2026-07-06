@@ -13,13 +13,13 @@ namespace ImageHelper
         VkDescriptorImageInfo Descriptor;
         VkSampler Sampler = VK_NULL_HANDLE;
 
-        ImageBinding(const ImageReference& image, VkSampler sampler) : Image(image), Sampler(sampler)
+        ImageBinding(const ImageReference& image, VkSampler sampler, VkImageLayout layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) : Image(image), Sampler(sampler)
         {
             Descriptor =
             {
                 .sampler = sampler,
                 .imageView = image.View,
-                .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+                .imageLayout = layout
             };
         }
         ImageBinding() = default;
@@ -28,6 +28,8 @@ namespace ImageHelper
     void GenerateMipmapsCommand(const CommandBuffer& cmdBuffer, const ImageReference& image);
     void TransitionLayoutCommand(const CommandBuffer& cmdBuffer, const ImageReference& image, VkImageLayout oldLayout, VkImageLayout newLayout);
     void TransitionLayoutCommand(const CommandBuffer& cmdBuffer, const ImageReference& image, uint32_t mipLevel, uint32_t mipCount, uint32_t arrayLayer, uint32_t arrayLayerCount, VkImageLayout oldLayout, VkImageLayout newLayout);
+    void StorageImageReadWriteCommand(const CommandBuffer& cmdBuffer, const ImageReference& image, bool isWrite, uint32_t mipLevel, uint32_t mipCount, uint32_t arrayLayer, uint32_t arrayLayerCount, VkImageLayout oldLayout);
+    void StorageImageGeneralToLayoutCommand(const CommandBuffer& cmdBuffer, const ImageReference& image, bool isWrite, uint32_t mipLevel, uint32_t mipCount, uint32_t arrayLayer, uint32_t arrayLayerCount, VkImageLayout newLayout);
 
     void CopyToImageCommand(const CommandBuffer& cmdBuffer, const ImageReference& image, uint32_t mipLevel, VkBuffer srcData);
 
@@ -55,7 +57,9 @@ namespace ImageHelper
 
     VkImageMemoryBarrier2 TransitionLayoutBarrier(const ImageReference& image, uint32_t mipLevel, uint32_t mipCount, uint32_t arrayLayer, uint32_t arrayLayerCount, VkImageLayout oldLayout, VkImageLayout newLayout);
     VkImageMemoryBarrier2 TransitionLayoutBarrier(const VkImageView& image, uint32_t mipLevel, uint32_t mipCount, uint32_t arrayLayer, uint32_t arrayLayerCount, VkImageLayout oldLayout, VkImageLayout newLayout);
-
+    VkImageMemoryBarrier2 StorageImageReadWriteBarrier(const ImageReference &image, bool isWrite, uint32_t mipLevel, uint32_t mipCount, uint32_t arrayLayer, uint32_t arrayLayerCount, VkImageLayout oldLayout);
+    VkImageMemoryBarrier2 StorageImageGeneralToLayoutBarrier(const ImageReference &image, bool isWrite, uint32_t mipLevel, uint32_t mipCount, uint32_t arrayLayer, uint32_t arrayLayerCount, VkImageLayout newLayout);
+    VkImageAspectFlags GetAspect(VkFormat format);
     uint32_t GetMipCount(uint32_t width, uint32_t height);
     uint32_t GetBytePerPixel(VkFormat format);
 }

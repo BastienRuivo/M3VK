@@ -144,7 +144,27 @@ void BindingManager::RegisterBuffer(const VkDescriptorBufferInfo& info, VkDescri
     DescriptorHelper::UpdateDescriptorSet(std::span(&write, 1), {});
 }
 
-void BindingManager::RegisterTexture(const VkDescriptorImageInfo& info, uint32_t dstBinding, uint32_t dstArrayElement)
+void BindingManager::RegisterImage(const VkDescriptorImageInfo& info, uint32_t dstBinding, uint32_t dstArrayElement) const
+{
+    VkDescriptorSet set = _globalSet.Set;
+
+    VkWriteDescriptorSet write =
+    {
+        .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+        .dstSet = set,
+        .dstBinding = dstBinding,
+        .dstArrayElement = dstArrayElement,
+        .descriptorCount = 1,
+        .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+        .pImageInfo = &info,
+        .pBufferInfo = nullptr,
+        .pTexelBufferView = nullptr
+    };
+
+    DescriptorHelper::UpdateDescriptorSet(std::span(&write, 1), {});
+}
+
+void BindingManager::RegisterTexture(const VkDescriptorImageInfo& info, uint32_t dstBinding, uint32_t dstArrayElement) const
 {
     VkDescriptorSet set = _globalSet.Set;
 
@@ -177,6 +197,23 @@ void BindingManager::BindlessTexture::Dispose(BindingManager& allocator)
     for (size_t i = 0; i < RessourceUsageCount(usage); i++)
     {
         allocator._texturePool.Remove(index[i]);
+    }
+}
+
+void BindingManager::BindlessTexture::Bind(const BindingManager& allocator, bool asImage, uint32_t binding, VkSampler sampler) const
+{
+    uint32_t count  = RessourceUsageCount(usage);
+    for(int i = 0; i < count; i++)
+    {
+        const auto & tex = Texture(allocator).Internal();
+        if(asImage)
+        {
+            allocator.RegisterImage(ImageHelper::ImageBinding(tex, sampler, VK_IMAGE_LAYOUT_GENERAL).Descriptor, binding, i);
+        }
+        else
+        {
+            allocator.RegisterTexture(ImageHelper::ImageBinding(tex, sampler).Descriptor, binding, i);
+        }
     }
 }
 

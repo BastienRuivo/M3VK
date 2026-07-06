@@ -332,6 +332,8 @@ void Pipeline::Execute(const CommandBuffer& cmdBuffer, const SwapChain& swapChai
         }
         cmdBuffer.EndMarker();
 
+        _hizGenerateModule.Execute(cmdBuffer, _bindingManager, finalDepthTarget, _bindingManager.GlobalLayout());
+
         cmdBuffer.BeginMarker("Copy To Back Buffer");
         {
             ImageHelper::TransitionLayoutCommand(cmdBuffer, finalColorTarget, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
@@ -431,35 +433,6 @@ void Pipeline::DoUI(const UserInterface& ui)
         }
         ImGui::EndCombo();
     }
-    /*if(ImGui::BeginCombo("Image Viewer", ImageVizualizationModeNames[_imageVizualizationMode]))
-    {
-        for (int n = 0; n < ImageVizualizationMode::IMV_Count; n++)
-        {
-            // Track if the current item in the loop is the selected one
-            const bool isSelected = (_imageVizualizationMode == n);
-
-            if (ImGui::Selectable(ImageVizualizationModeNames[n], isSelected))
-            {
-                ImageVizualizationMode newVal = static_cast<ImageVizualizationMode>(n);
-                _imageVizualizationMode = newVal;
-            }
-
-            if (isSelected)
-            {
-                ImGui::SetItemDefaultFocus();
-            }
-        }
-        ImGui::EndCombo();
-    }
-
-    if(_imageVizualizationMode == ImageVizualizationMode::IMV_BackBuffer)
-    {
-        ImGui::Image((ImTextureID) _msaaColorTarget->ImGuiSet(), ImVec2(500, 500), ImVec2(0, 1), ImVec2(1, 0));
-    }
-    else if(_imageVizualizationMode == ImageVizualizationMode::IMV_DepthBuffer)
-    {
-        ImGui::Image((ImTextureID) _msaaDepthTarget->ImGuiSet(), ImVec2(500, 500), ImVec2(0, 1), ImVec2(1, 0));
-    }*/
 
     double currentSize = (double)ApplicationInfo::GetVRAMUsage() / 1048576; //(MB)
 
@@ -467,6 +440,8 @@ void Pipeline::DoUI(const UserInterface& ui)
     ImGui::Text("VRAM Usage = %.3f MB", currentSize);
 
     ImGui::End();
+
+    _hizGenerateModule.DoUI(ui);
 }
 
 void ExtractFrusumPlane(CameraData& data)
