@@ -46,33 +46,6 @@ void GPUImage::DisposeInternal()
     _memoryInternal = {};
 }
 
-VkImageView CreateImageView(ImageReference& image, VkImageAspectFlags aspectMask, VkImageViewType type)
-{
-    VkImageViewCreateInfo createInfo
-    {
-        .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-        .image = image.Image,
-        .viewType = type,
-        .format = image.Format,
-        .subresourceRange =
-        {
-            .aspectMask = aspectMask,
-            .baseMipLevel = 0,
-            .levelCount = image.MipCount,
-            .baseArrayLayer = 0,
-            .layerCount = image.ArrayLayerCount
-        }
-    };
-
-    VkImageView view;
-    if(vkCreateImageView(ApplicationInfo::Device(), &createInfo, nullptr, &view) != VK_SUCCESS)
-    {
-        throw std::runtime_error("Failed to create swap chain images !");
-    }
-
-    return view;
-}
-
 void GPUImage::CreateImageInternal(uint32_t width, uint32_t height, uint32_t arrayLayers, VkImageCreateFlags createFlags, VkImageUsageFlags usageFlags, VkFormat format, uint32_t mipCount, VkImageTiling tiling, VkSampleCountFlagBits msaaSampleCount)
 {
     VkMemoryPropertyFlags memoryFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
@@ -153,7 +126,7 @@ void GPUImage::CreateImageInternal(uint32_t width, uint32_t height, uint32_t arr
         .Size = memRequirements.size,
     };
 
-    _internal.View = CreateImageView(_internal, ApplicationHelper::GetImageAspectFlags(_internal.Format), createFlags & VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT ? VK_IMAGE_VIEW_TYPE_CUBE : VK_IMAGE_VIEW_TYPE_2D);
+    _internal.View = ImageHelper::CreateImageView(_internal, ApplicationHelper::GetImageAspectFlags(_internal.Format), createFlags & VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT ? VK_IMAGE_VIEW_TYPE_CUBE : VK_IMAGE_VIEW_TYPE_2D);
 }
 
 GPUImage::GPUImage(uint32_t width, uint32_t height, uint32_t arrayLayers, VkImageCreateFlags createFlags, VkImageUsageFlags usageFlags, VkFormat format, uint32_t mipCount, VkImageTiling tiling, VkSampleCountFlagBits msaaSampleCount)

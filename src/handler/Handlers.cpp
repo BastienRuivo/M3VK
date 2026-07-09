@@ -280,9 +280,21 @@ VkInstanceHandler::VkInstanceHandler()
         throw std::runtime_error("Validation layer requested but not available !");
     }
 
+    // 1. Declare the synchronization feature you want to force-enable
+    VkValidationFeatureEnableEXT enabledFeatures[] = {
+        VK_VALIDATION_FEATURE_ENABLE_SYNCHRONIZATION_VALIDATION_EXT
+    };
+
+    // 2. Wrap it inside the validation features structure
+    VkValidationFeaturesEXT validationFeatures{};
+    validationFeatures.sType = VK_STRUCTURE_TYPE_VALIDATION_FEATURES_EXT;
+    validationFeatures.enabledValidationFeatureCount = 1;
+    validationFeatures.pEnabledValidationFeatures = enabledFeatures;
+
     VkInstanceCreateInfo createInfo
     {
         .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
+        .pNext = &validationFeatures,
         .pApplicationInfo = &appInfo,
         .enabledExtensionCount = static_cast<uint32_t>(requiredExtensions.size()),
         .ppEnabledExtensionNames = requiredExtensions.data(),

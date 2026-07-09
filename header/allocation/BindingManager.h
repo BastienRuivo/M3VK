@@ -14,18 +14,20 @@ class BindingManager
     public:
     struct BindlessTexture
     {
-        RessourceUsage usage;
+        RessourceUsage Usage;
         std::array<uint32_t, ApplicationInfo::Constant::MaxFrameInFlight> index;
-        uint32_t StaticIndex() const { assert(usage == RessourceUsage::Static); return index[0]; }
-        uint32_t CurrentIndex() const { return RessourceUsageToCurrentIndex(usage); }
-        uint32_t PreviousIndex() const { return RessourceUsageToPreviousIndex(usage); }
+        uint32_t StaticIndex() const { assert(Usage == RessourceUsage::Static); return index[0]; }
+        uint32_t CurrentBindlessIndex () const { return index[RessourceUsageToCurrentIndex(Usage)]; }
+        uint32_t PreviousBindlessIndex () const { return index[RessourceUsageToPreviousIndex(Usage)]; }
+        uint32_t CurrentIndex() const { return RessourceUsageToCurrentIndex(Usage); }
+        uint32_t PreviousIndex() const { return RessourceUsageToPreviousIndex(Usage); }
 
         template<typename... Args>
         static BindlessTexture Register(BindingManager& allocator, RessourceUsage usage, VkSampler sampler, Args&&... args)
         {
             BindlessTexture handle
             {
-                .usage = usage,
+                .Usage = usage,
                 .index = {UINT32_MAX, UINT32_MAX}
             };
             uint32_t count = RessourceUsageCount(usage);
@@ -55,10 +57,11 @@ class BindingManager
 
         void Resize(BindingManager& allocator, uint32_t width, uint32_t height);
         void TransistionAllLayoutCommand(const BindingManager& allocator, const CommandBuffer& cmdBuffer, VkImageLayout layout);
-        inline GPUImage& Texture(BindingManager& allocator) { return allocator._texturePool.Texture(index[RessourceUsageToCurrentIndex(usage)]); }
-        inline GPUImage& PreviousTexture(BindingManager& allocator) { return allocator._texturePool.Texture(index[RessourceUsageToPreviousIndex(usage)]); }
-        inline const GPUImage& Texture(const BindingManager& allocator) const { return allocator._texturePool.Texture(index[RessourceUsageToCurrentIndex(usage)]); }
-        inline const GPUImage& PreviousTexture(const BindingManager& allocator) const { return allocator._texturePool.Texture(index[RessourceUsageToPreviousIndex(usage)]); }
+        inline GPUImage& Texture(BindingManager& allocator) { return allocator._texturePool.Texture(index[RessourceUsageToCurrentIndex(Usage)]); }
+        inline GPUImage& PreviousTexture(BindingManager& allocator) { return allocator._texturePool.Texture(index[RessourceUsageToPreviousIndex(Usage)]); }
+        inline const GPUImage& Texture(const BindingManager& allocator) const { return allocator._texturePool.Texture(index[RessourceUsageToCurrentIndex(Usage)]); }
+        inline const GPUImage& Texture(const BindingManager& allocator, uint32_t texIndex) const { return allocator._texturePool.Texture(index[texIndex]); }
+        inline const GPUImage& PreviousTexture(const BindingManager& allocator) const { return allocator._texturePool.Texture(index[RessourceUsageToPreviousIndex(Usage)]); }
         void Dispose(BindingManager& allocator);
         void Bind(const BindingManager& allocator, bool hasImage, uint32_t binding, VkSampler sampler) const;
     };

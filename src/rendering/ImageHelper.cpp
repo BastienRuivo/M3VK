@@ -290,7 +290,15 @@ VkImageMemoryBarrier2 ImageHelper::StorageImageReadWriteBarrier(const ImageRefer
         },
     };
 
-    FillSrcLayout(barrier, oldLayout);
+    if(oldLayout == VK_IMAGE_LAYOUT_GENERAL)
+    {
+        barrier.srcStageMask = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
+        barrier.srcAccessMask = isWrite ? VK_ACCESS_2_SHADER_READ_BIT : VK_ACCESS_2_SHADER_WRITE_BIT;
+    }
+    else
+    {
+        FillSrcLayout(barrier, oldLayout);
+    }
 
     return barrier;
 }
@@ -348,4 +356,36 @@ VkImageMemoryBarrier2 ImageHelper::TransitionLayoutBarrier(const ImageReference 
     FillDstLayout(barrier, newLayout);
 
     return barrier;
+}
+
+VkImageView ImageHelper::CreateImageView(ImageReference& image, VkImageAspectFlags aspectMask, VkImageViewType type)
+{
+    return CreateImageView(image, aspectMask, type, 0, image.MipCount, 0, type == VK_IMAGE_VIEW_TYPE_CUBE ? 6u : 1u);
+}
+
+VkImageView ImageHelper::CreateImageView(ImageReference& image, VkImageAspectFlags aspectMask, VkImageViewType type, uint32_t mipLevel, uint32_t mipCount, uint32_t arrayLayer, uint32_t arrayLayerCount)
+{
+    VkImageViewCreateInfo createInfo
+    {
+        .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+        .image = image.Image,
+        .viewType = type,
+        .format = image.Format,
+        .subresourceRange =
+        {
+            .aspectMask = aspectMask,
+            .baseMipLevel = mipLevel,
+            .levelCount = mipCount,
+            .baseArrayLayer = arrayLayer,
+            .layerCount = arrayLayerCount
+        }
+    };
+
+    VkImageView view;
+    if(vkCreateImageView(ApplicationInfo::Device(), &createInfo, nullptr, &view) != VK_SUCCESS)
+    {
+        throw std::runtime_error("Failed to create swap chain images !");
+    }
+
+    return view;
 }

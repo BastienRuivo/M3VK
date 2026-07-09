@@ -2,7 +2,7 @@
 
 #include "../header/GlobalIncludes.glsl"
 
-//layout(constant_id = 0) const bool USE_ORIGINAL_DEPTH = true;
+layout(constant_id = 0) const bool USE_ORIGINAL_DEPTH = true;
 
 struct HizGenerateConstants
 {
@@ -29,11 +29,32 @@ layout(set = GLOBAL_SET, binding = BINDING_HIZ_TEXTURE, r32f) uniform writeonly 
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 void main()
 {
-    if (gl_GlobalInvocationID.x >= push.Constants.srcSize.x || gl_GlobalInvocationID.y >= push.Constants.srcSize.y ) return;
+    if (gl_GlobalInvocationID.x >= push.Constants.dstSize.x || gl_GlobalInvocationID.y >= push.Constants.dstSize.y ) return;
 
     ivec2 threadID = ivec2(gl_GlobalInvocationID.xy);
     uint srcIndex = nonuniformEXT(push.Constants.srcIndex);
     uint dstIndex = nonuniformEXT(push.Constants.dstIndex);
 
-    imageStore(dstTexture[dstIndex], ivec2(threadID), vec4(0.5));
+    ivec2 baseCoords = threadID.xy * 2;
+    float v0, v1, v2, v3;
+
+    if(USE_ORIGINAL_DEPTH)
+    {
+        vec2 uv = vec2(baseCoords) * push.Constants.srcPixelSize;
+        vec4 v = textureGather(uTextures[srcIndex], uv);
+        v0 = v.r;
+        v1 = v.g;
+        v2 = v.b;
+        v3 = v.a;
+    }
+    else
+    {
+        v0 = imageLoad(srcTexture[srcIndex], baseCoords).r;
+        v1 = imageLoad(srcTexture[srcIndex], baseCoords + ivec2(1, 0)).r;
+        v2 = imageLoad(srcTexture[srcIndex], baseCoords + ivec2(0, 1)).r;
+        v3 = imageLoad(srcTexture[srcIndex], baseCoords + ivec2(1, 1)).r;
+    }
+
+    float maxDepth = max(max(v0, v1), max(v2, v3));
+    imageStore(dstTexture[dstIndex], threadID.xy, vec4(maxDepth, 0.0, 0.0, 0.0));
 }

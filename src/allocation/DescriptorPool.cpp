@@ -128,11 +128,11 @@ DescriptorPool::LayoutBuilder& DescriptorPool::LayoutBuilder::AddBinding(uint32_
     return *this;
 }
 
-DescriptorPool::LayoutBuilder& DescriptorPool::LayoutBuilder::AddBinding(uint32_t binding, VkDescriptorType type, VkShaderStageFlags stageFlags, VkDescriptorBindingFlags bindingFlags, RessourceUsage usage)
+DescriptorPool::LayoutBuilder& DescriptorPool::LayoutBuilder::AddBinding(uint32_t binding, VkDescriptorType type, VkShaderStageFlags stageFlags, VkDescriptorBindingFlags bindingFlags, RessourceUsage usage, uint32_t perFrameCount)
 {
     uint32_t count = RessourceUsageCount(usage);
 
-    return AddBinding(binding, type, stageFlags, bindingFlags, count);
+    return AddBinding(binding, type, stageFlags, bindingFlags, count * perFrameCount);
 }
 
 VkDescriptorSetLayout DescriptorPool::LayoutBuilder::Build() const

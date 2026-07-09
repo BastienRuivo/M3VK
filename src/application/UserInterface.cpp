@@ -2,6 +2,7 @@
 #include "allocation/RessourceUsage.h"
 #include "application/ApplicationInfo.h"
 #include "imgui_impl_vulkan.h"
+#include <cstdint>
 
 void UserInterface::StartFrame() const
 {
@@ -95,8 +96,11 @@ UserInterface::~UserInterface()
 UserInterfaceImageSet::UserInterfaceImageSet(const GraphicsImage& image, VkImageLayout layout, VkSampler sampler)
 {
     RessourceUsage usage = image.Usage();
+    _usage = usage;
 
-    _internals.resize(RessourceUsageCount(usage));
+    uint32_t count = RessourceUsageCount(usage);
+
+    _internals.resize(count);
 
     for (uint32_t i = 0; i < RessourceUsageCount(usage); i++)
     {
@@ -107,11 +111,14 @@ UserInterfaceImageSet::UserInterfaceImageSet(const GraphicsImage& image, VkImage
 
 UserInterfaceImageSet::UserInterfaceImageSet(const BindingManager& manager, BindlessTexture handle, VkImageLayout layout, VkSampler sampler)
 {
-    RessourceUsage usage = handle.usage;
+    RessourceUsage usage = handle.Usage;
+    _usage = usage;
 
-    _internals.resize(RessourceUsageCount(usage));
+    uint32_t count = RessourceUsageCount(usage);
+    _internals.resize(count);
 
-    for (uint32_t i = 0; i < RessourceUsageCount(usage); i++)
+
+    for (uint32_t i = 0; i < count; i++)
     {
         const auto& bindlessTexture = handle.Texture(manager);
         _internals[i] = ImGui_ImplVulkan_AddTexture(sampler, bindlessTexture.View(), layout);

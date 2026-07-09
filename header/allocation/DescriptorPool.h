@@ -31,7 +31,7 @@ class DescriptorPool
         LayoutBuilder() = default;
 
         LayoutBuilder& AddBinding(uint32_t binding, VkDescriptorType type, VkShaderStageFlags stageFlags, VkDescriptorBindingFlags bindingFlags, uint32_t count);
-        LayoutBuilder& AddBinding(uint32_t binding, VkDescriptorType type, VkShaderStageFlags stageFlags, VkDescriptorBindingFlags bindingFlags, RessourceUsage usage);
+        LayoutBuilder& AddBinding(uint32_t binding, VkDescriptorType type, VkShaderStageFlags stageFlags, VkDescriptorBindingFlags bindingFlags, RessourceUsage usage, uint32_t perFrameCount = 1);
         inline LayoutBuilder& SetFlags(VkDescriptorSetLayoutCreateFlags flags) { _flags = flags; return *this; }
         VkDescriptorSetLayout Build() const;
 

@@ -39,6 +39,7 @@ class ApplicationInfo
         static inline constexpr uint32_t MaxBindlessTextureCount = 1024;
         static inline constexpr uint32_t MaxOtherTextureCount = 1024;
         static inline constexpr uint32_t MaxBufferCount = 1024;
+        static inline constexpr uint32_t MaxMipCount = 16;
     };
 
     static inline const QueueFamilyIds& GetQueueFamilyIds() { return ApplicationInfo::Get()._queueFamilyIds; }

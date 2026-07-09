@@ -332,7 +332,7 @@ void Pipeline::Execute(const CommandBuffer& cmdBuffer, const SwapChain& swapChai
         }
         cmdBuffer.EndMarker();
 
-        _hizGenerateModule.Execute(cmdBuffer, _bindingManager, finalDepthTarget, _bindingManager.GlobalLayout());
+        _hizGenerateModule.Execute(cmdBuffer, _bindingManager, _finalDepthTarget, _bindingManager.GlobalLayout());
 
         cmdBuffer.BeginMarker("Copy To Back Buffer");
         {

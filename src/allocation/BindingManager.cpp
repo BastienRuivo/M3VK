@@ -20,7 +20,7 @@ _globalSetLayouts({
     .AddBinding(BINDING_VISIBLE_DRAW_INDIRECT_BUFFER, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT, 0, RessourceUsage::PerFrame)
     .AddBinding(BINDING_VISIBLE_INSTANCE_INDIRECTION_BUFFER, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_COMPUTE_BIT, 0, RessourceUsage::PerFrame)
     .AddBinding(BINDING_SKYBOX_TEXTURE, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0, RessourceUsage::Static)
-    .AddBinding(BINDING_HIZ_TEXTURE, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, VK_SHADER_STAGE_COMPUTE_BIT, 0, RessourceUsage::PerFrame)
+    .AddBinding(BINDING_HIZ_TEXTURE, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, VK_SHADER_STAGE_COMPUTE_BIT, 0, RessourceUsage::PerFrame, ApplicationInfo::Constant::MaxMipCount)
     .Build(),
 }),
 _globalPushConstantRanges({
@@ -194,7 +194,7 @@ BindingManager::~BindingManager()
 
 void BindingManager::BindlessTexture::Dispose(BindingManager& allocator)
 {
-    for (size_t i = 0; i < RessourceUsageCount(usage); i++)
+    for (size_t i = 0; i < RessourceUsageCount(Usage); i++)
     {
         allocator._texturePool.Remove(index[i]);
     }
@@ -202,7 +202,7 @@ void BindingManager::BindlessTexture::Dispose(BindingManager& allocator)
 
 void BindingManager::BindlessTexture::Bind(const BindingManager& allocator, bool asImage, uint32_t binding, VkSampler sampler) const
 {
-    uint32_t count  = RessourceUsageCount(usage);
+    uint32_t count  = RessourceUsageCount(Usage);
     for(int i = 0; i < count; i++)
     {
         const auto & tex = Texture(allocator).Internal();
@@ -219,7 +219,7 @@ void BindingManager::BindlessTexture::Bind(const BindingManager& allocator, bool
 
 void BindingManager::BindlessTexture::Resize(BindingManager& allocator, uint32_t width, uint32_t height)
 {
-    uint32_t count = RessourceUsageCount(usage);
+    uint32_t count = RessourceUsageCount(Usage);
     for (size_t i = 0; i < count; i++)
     {
         GPUImage& image = allocator._texturePool.Texture(index[i]);
@@ -229,7 +229,7 @@ void BindingManager::BindlessTexture::Resize(BindingManager& allocator, uint32_t
 
 void BindingManager::BindlessTexture::TransistionAllLayoutCommand(const BindingManager& allocator, const CommandBuffer& cmdBuffer, VkImageLayout layout)
 {
-    uint32_t count = RessourceUsageCount(usage);
+    uint32_t count = RessourceUsageCount(Usage);
     for (size_t i = 0; i < count; i++)
     {
         const GPUImage& image = allocator._texturePool.Texture(index[i]);
