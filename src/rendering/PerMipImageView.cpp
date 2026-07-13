@@ -1,5 +1,4 @@
 #include "rendering/PerMipImageView.h"
-#include "ShaderBindings.h"
 #include "allocation/BindingManager.h"
 #include "application/ApplicationHelper.h"
 #include "application/ApplicationInfo.h"
@@ -74,4 +73,21 @@ void MultiFramePerMipImageView::Bind(const BindingManager& manager, uint32_t bin
     {
         _internals[i].Bind(manager, binding, i * ApplicationInfo::Constant::MaxMipCount);
     }
+}
+
+MultiFramePerMipImageView::MultiFramePerMipImageView(MultiFramePerMipImageView&& other) noexcept
+{
+    _internals = std::move(other._internals);
+    _usage = std::exchange(other._usage, RessourceUsage::Static);
+}
+
+MultiFramePerMipImageView& MultiFramePerMipImageView::operator=(MultiFramePerMipImageView&& other) noexcept
+{
+    if(this != &other)
+    {
+        _internals = std::move(other._internals);
+        _usage = std::exchange(other._usage, RessourceUsage::Static);
+    }
+
+    return *this;
 }

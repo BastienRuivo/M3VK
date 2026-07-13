@@ -22,7 +22,7 @@ struct PerMipImageView
     PerMipImageView& operator=(const PerMipImageView&) = delete;
 };
 
-class MultiFramePerMipImageView: public MultiFrameRessource<PerMipImageView>
+class  MultiFramePerMipImageView: public MultiFrameRessource<PerMipImageView>
 {
 public:
     MultiFramePerMipImageView(const BindlessTexture& texture, const BindingManager & manager);

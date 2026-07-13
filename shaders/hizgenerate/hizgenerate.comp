@@ -23,8 +23,7 @@ layout(push_constant) uniform PushConstants
 } push;
 
 layout(set = GLOBAL_SET, binding = BINDING_TEXTURES) uniform sampler2D uTextures[];
-layout(set = GLOBAL_SET, binding = BINDING_HIZ_TEXTURE, r32f) uniform readonly image2D srcTexture[];
-layout(set = GLOBAL_SET, binding = BINDING_HIZ_TEXTURE, r32f) uniform writeonly image2D dstTexture[];
+layout(set = GLOBAL_SET, binding = BINDING_HIZ_TEXTURE, r32f) uniform image2D hizTexture[];
 
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 void main()
@@ -49,12 +48,13 @@ void main()
     }
     else
     {
-        v0 = imageLoad(srcTexture[srcIndex], baseCoords).r;
-        v1 = imageLoad(srcTexture[srcIndex], baseCoords + ivec2(1, 0)).r;
-        v2 = imageLoad(srcTexture[srcIndex], baseCoords + ivec2(0, 1)).r;
-        v3 = imageLoad(srcTexture[srcIndex], baseCoords + ivec2(1, 1)).r;
+        ivec2 maxCoords = ivec2(push.Constants.srcSize) - ivec2(1);
+        v0 = imageLoad(hizTexture[srcIndex], min(baseCoords, maxCoords)).r;
+        v1 = imageLoad(hizTexture[srcIndex], min(baseCoords + ivec2(1, 0), maxCoords)).r;
+        v2 = imageLoad(hizTexture[srcIndex], min(baseCoords + ivec2(0, 1), maxCoords)).r;
+        v3 = imageLoad(hizTexture[srcIndex], min(baseCoords + ivec2(1, 1), maxCoords)).r;
     }
 
     float maxDepth = max(max(v0, v1), max(v2, v3));
-    imageStore(dstTexture[dstIndex], threadID.xy, vec4(maxDepth, 0.0, 0.0, 0.0));
+    imageStore(hizTexture[dstIndex], threadID.xy, vec4(maxDepth, 0.0, 0.0, 0.0));
 }

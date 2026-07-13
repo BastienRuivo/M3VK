@@ -20,6 +20,12 @@ public:
     CullingModule(ShaderLibrary& shaderLibrary, BindingManager& descriptorAllocator);
     ~CullingModule();
 
+    CullingModule(CullingModule&& other) noexcept;
+    CullingModule& operator=(CullingModule&& other) noexcept;
+
+    CullingModule(const CullingModule&) = delete;
+    CullingModule& operator=(const CullingModule&) = delete;
+
     void Execute(const CommandBuffer& cmdBuffer, const GraphicsBuffer& cameraBuffer, const GeometryBuffer& indirectBuffer, const GeometryBuffer& instanceBuffer, VkPipelineLayout layout) const;
     void Barrier(const CommandBuffer& cmdBuffer, uint32_t instanceCount, uint32_t drawCount, VkAccessFlagBits2 src, VkAccessFlagBits2 dst) const;
     inline const GraphicsBuffer& VisibleInstanceIndirectionBuffer() const { return _visibleIndirectionBuffer; }

@@ -49,13 +49,10 @@ Pipeline::Pipeline(const SwapChain& swapChain, VkCommandPool graphicsCommandPool
         VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
         ApplicationInfo::Constant::DepthFormat,
         1)),
-    _drawModules(InitDrawModule(false)),
-    _skyboxModule(_shaderLibrary, _bindingManager, graphicsCommandPool, graphicsComputeQueue),
-
-    // modules
-    _cullingModule(_shaderLibrary, _bindingManager),
-    _hizGenerateModule(swapChain, _shaderLibrary, _bindingManager, graphicsCommandPool, graphicsComputeQueue, _samplerNearest.Internal())
+        _drawModules({}),
+        _drawDebug(_shaderLibrary, _bindingManager)
 {
+    InitModules(swapChain, graphicsCommandPool, graphicsComputeQueue);
     MeshRegistry& meshRegistry = static_cast<MeshRegistry&>(*_registries[(size_t)RegistryType::Mesh]);
     MaterialRegistry& materialRegistry = static_cast<MaterialRegistry&>(*_registries[(size_t)RegistryType::Material]);
 
@@ -177,9 +174,27 @@ Pipeline::~Pipeline()
 
 }
 
-std::array<DrawModule, MaterialType::Count> Pipeline::InitDrawModule(bool DebugOn)
+void Pipeline::RefreshDrawModule(MaterialType type, const ShaderLibrary::VertexBinding& vertex, const ShaderLibrary::FragmentBinding& frag)
 {
-    std::vector<Shader::SpecializationConstant> constants
+    auto drawModule = std::make_unique<DrawModule>(vertex, frag);
+    drawModule->ModuleId = _modules.size();
+
+    if(_drawModules[type] == nullptr)
+    {
+        _drawModules[type] = drawModule.get();
+        _modules.push_back(std::move(drawModule));
+    }
+    else
+    {
+        uint32_t index = _drawModules[type]->ModuleId;
+        _drawModules[type] = drawModule.get();
+        _modules[index] = std::move(drawModule);
+    }
+}
+
+void Pipeline::InitDrawModules(bool DebugOn)
+{
+     std::vector<Shader::SpecializationConstant> constants
     {
         Shader::SpecializationConstant{
             .name = "ENABLE_DEBUG",
@@ -220,14 +235,23 @@ std::array<DrawModule, MaterialType::Count> Pipeline::InitDrawModule(bool DebugO
         .State = fragmentOpaque.State
     };
 
+    RefreshDrawModule(MaterialType::Opaque, vertexCullBack, fragmentOpaque);
+    RefreshDrawModule(MaterialType::Cutout, vertexCullBack, fragmentCutout);
+    RefreshDrawModule(MaterialType::CutoutTwoSided, vertexCullOff, fragmentCutout);
 
-    return std::array<DrawModule, MaterialType::Count>
-    {
-        DrawModule(vertexCullBack, fragmentOpaque),
-        DrawModule(vertexCullBack, fragmentCutout),
-        DrawModule(vertexCullOff, fragmentCutout),
-        DrawModule(vertexCullBack, fragmentOpaque)
-    };
+    // TODO Transparent handling
+    RefreshDrawModule(MaterialType::Transparent, vertexCullBack, fragmentOpaque);
+}
+
+void Pipeline::InitModules(const SwapChain& swapChain, VkCommandPool pool, VkQueue queue)
+{
+    InitDrawModules(false);
+    _modules.push_back(std::make_unique<SkyboxModule>(_shaderLibrary, _bindingManager, pool, queue));
+    _skyboxModule = static_cast<SkyboxModule*>(_modules.back().get());
+    _modules.push_back(std::make_unique<CullingModule>(_shaderLibrary, _bindingManager));
+    _cullingModule = static_cast<CullingModule*>(_modules.back().get());
+    _modules.push_back(std::make_unique<HiZGenerateModule>(swapChain, _shaderLibrary, _bindingManager, pool, queue, _samplerNearest.Internal()));
+    _hizGenerateModule = static_cast<HiZGenerateModule*>(_modules.back().get());
 }
 
 void Pipeline::OnMouseMove(float dx, float dy)
@@ -304,7 +328,7 @@ void Pipeline::Execute(const CommandBuffer& cmdBuffer, const SwapChain& swapChai
         cmdBuffer.BeginMarker("Culling Compute Pass");
         {
             cmdBuffer.BindDescriptorSets(_bindingManager.GlobalLayout(), _bindingManager.GlobalDescriptorSet(), VK_PIPELINE_BIND_POINT_COMPUTE, 0);
-            _cullingModule.Execute(cmdBuffer, _cameraDataBuffer, meshRegistry.IndirectBuffer(), meshRegistry.InstanceDataBuffer(), _bindingManager.GlobalLayout());
+            _cullingModule->Execute(cmdBuffer, _cameraDataBuffer, meshRegistry.IndirectBuffer(), meshRegistry.InstanceDataBuffer(), _bindingManager.GlobalLayout());
         }
         cmdBuffer.EndMarker();
 
@@ -315,30 +339,31 @@ void Pipeline::Execute(const CommandBuffer& cmdBuffer, const SwapChain& swapChai
             {
                 .DebugIndex = _debug,
                 .Cameras = _cameraDataBuffer.GetGPUIndex(),
-                .VisibleInstanceIndirections = _cullingModule.VisibleInstanceIndirectionBuffer().GetGPUIndex(),
+                .VisibleInstanceIndirections = _cullingModule->VisibleInstanceIndirectionBuffer().GetGPUIndex(),
             };
             cmdBuffer.PushConstants(_bindingManager.GlobalLayout(), 0, sizeof(CommonIndexes), &indexes);
 
             cmdBuffer.BeginRendering(renderArea,  {&colorAttachment, 1}, depthAttachment, stencilAttachment);
             {
-                for(uint32_t i = 0; i < _drawModules.size(); i++)
+                for(uint32_t i = 0; i < MaterialType::Count; ++i)
                 {
-                    MeshRegistry::LayerMaterialInfo drawInfo = meshRegistry.GetIndirectDrawInfo(static_cast<MaterialType>(i));
-                    _drawModules[i].Execute(cmdBuffer, _bindingManager.GlobalLayout(), _cullingModule.VisibleIndirectBuffer(), drawInfo.offset, drawInfo.count, _wireframe);
+                    auto drawInfo = meshRegistry.GetIndirectDrawInfo(static_cast<MaterialType>(i));
+                    _drawModules[i]->Execute(cmdBuffer, _bindingManager.GlobalLayout(), _cullingModule->VisibleIndirectBuffer(), drawInfo.offset, drawInfo.count, _wireframe);
                 }
-                _skyboxModule.Execute(cmdBuffer, _bindingManager.GlobalLayout());
+                _skyboxModule->Execute(cmdBuffer, _bindingManager.GlobalLayout());
             }
             cmdBuffer.EndRendering();
+            cmdBuffer.SetRasterizationSamples(VK_SAMPLE_COUNT_1_BIT);
         }
         cmdBuffer.EndMarker();
 
-        _hizGenerateModule.Execute(cmdBuffer, _bindingManager, _finalDepthTarget, _bindingManager.GlobalLayout());
+        _hizGenerateModule->Execute(cmdBuffer, _bindingManager, _finalDepthTarget, _bindingManager.GlobalLayout());
 
         cmdBuffer.BeginMarker("Copy To Back Buffer");
         {
             ImageHelper::TransitionLayoutCommand(cmdBuffer, finalColorTarget, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
             cmdBuffer.CopyImage(finalColorTarget, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, backBuffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-            ImageHelper::TransitionLayoutCommand(cmdBuffer, backBuffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+            ImageHelper::TransitionLayoutCommand(cmdBuffer, backBuffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
         }
         cmdBuffer.EndMarker();
 
@@ -348,12 +373,16 @@ void Pipeline::Execute(const CommandBuffer& cmdBuffer, const SwapChain& swapChai
             VkRenderingAttachmentInfo uiDepthAttachment { .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO };
             cmdBuffer.BeginRendering(renderArea, {&uiColorAttachment, 1}, uiDepthAttachment, stencilAttachment);
             {
+                for(const auto & module : _modules)
+                {
+                    module->RenderUI(cmdBuffer, _drawDebug, _bindingManager.GlobalLayout());
+                }
                 ui.Draw(cmdBuffer.GetInternal());
             }
             cmdBuffer.EndRendering();
-            ImageHelper::TransitionLayoutCommand(cmdBuffer, backBuffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
         }
         cmdBuffer.EndMarker();
+        ImageHelper::TransitionLayoutCommand(cmdBuffer, backBuffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
     }
     cmdBuffer.End();
 }
@@ -363,25 +392,30 @@ void Pipeline::PreRender(VkExtent2D size)
     UpdateCameraData(size);
 }
 
-void Pipeline::Refresh(VkExtent2D newSize, VkCommandPool pool, VkQueue queue)
+void Pipeline::Refresh(const CommandBuffer& cmdBuffer, VkExtent2D newSize)
 {
     _camera._aspect = static_cast<float>(newSize.width) / static_cast<float>(newSize.height);
 
-    _msaaColorTarget.Resize(newSize.width, newSize.height);
-    _msaaDepthTarget.Resize(newSize.width, newSize.height);
-    _finalColorTarget.Resize(_bindingManager, newSize.width, newSize.height);
-    _finalDepthTarget.Resize(_bindingManager, newSize.width, newSize.height);
-
-    CommandBuffer cmdBuffer(pool, queue);
-    cmdBuffer.BeginSingleTime();
+    if(_msaaColorTarget.Resize(newSize.width, newSize.height))
     {
         ImageHelper::TransitionLayoutCommand(cmdBuffer, _msaaColorTarget.Internal(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-        ImageHelper::TransitionLayoutCommand(cmdBuffer, _msaaDepthTarget.Internal(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+    }
+    if(_msaaDepthTarget.Resize(newSize.width, newSize.height))
+    {
+    ImageHelper::TransitionLayoutCommand(cmdBuffer, _msaaDepthTarget.Internal(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+    }
+    if(_finalColorTarget.Resize(_bindingManager, newSize.width, newSize.height))
+    {
         _finalColorTarget.TransistionAllLayoutCommand(_bindingManager, cmdBuffer, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+    }
+    if(_finalDepthTarget.Resize(_bindingManager, newSize.width, newSize.height))
+    {
         _finalDepthTarget.TransistionAllLayoutCommand(_bindingManager, cmdBuffer, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
     }
-    cmdBuffer.End();
-    cmdBuffer.WaitCompletion();
+    for(auto & module : _modules)
+    {
+        module->Resize(cmdBuffer, _bindingManager, newSize.width, newSize.height);
+    }
 }
 
 void Pipeline::DoKeyboardInput(const Window& window, float deltaTime)
@@ -418,10 +452,10 @@ void Pipeline::DoUI(const UserInterface& ui)
                     vkDeviceWaitIdle(ApplicationInfo::Device());
                     for(auto& module : _drawModules)
                     {
-                        _shaderLibrary.DisposeShader(module.VertexBinding.LibraryIndex);
-                        _shaderLibrary.DisposeShader(module.FragmentBinding.LibraryIndex);
+                        _shaderLibrary.DisposeShader(module->VertexBinding.LibraryIndex);
+                        _shaderLibrary.DisposeShader(module->FragmentBinding.LibraryIndex);
                     }
-                    _drawModules = InitDrawModule(newVal != DebugMode::DB_None);
+                    InitDrawModules(newVal != DebugMode::DB_None);
                 }
                 _debug = newVal;
             }
@@ -441,7 +475,10 @@ void Pipeline::DoUI(const UserInterface& ui)
 
     ImGui::End();
 
-    _hizGenerateModule.DoUI(ui);
+    for(auto& module : _modules)
+    {
+        module->DoUI(ui);
+    }
 }
 
 void ExtractFrusumPlane(CameraData& data)

@@ -6,16 +6,10 @@
 
 struct VertexState
 {
-    VertexState() :
-        CullMode(VK_CULL_MODE_BACK_BIT),
-        BindingDescription(Vertex::GetBindingDescription()),
-        topology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST),
-        VertexAttributeDescriptions(Vertex::GetAttributeDescription()) {};
-
-    VkCullModeFlags CullMode;
-    VkVertexInputBindingDescription2EXT BindingDescription;
-    VkPrimitiveTopology topology;
-    std::vector<VkVertexInputAttributeDescription2EXT> VertexAttributeDescriptions;
+    VkCullModeFlags CullMode = VK_CULL_MODE_BACK_BIT;
+    VkVertexInputBindingDescription2EXT BindingDescription = Vertex::GetBindingDescription();
+    VkPrimitiveTopology topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+    std::vector<VkVertexInputAttributeDescription2EXT> VertexAttributeDescriptions = Vertex::GetAttributeDescription();
 
     void Bind(const CommandBuffer& cmdBuffer) const
     {

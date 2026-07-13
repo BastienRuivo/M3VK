@@ -68,9 +68,10 @@ void CommandBuffer::Submit(std::span<const VkSemaphoreSubmitInfo> waitSemaphores
         .pSignalSemaphoreInfos = signalSemaphores.data(),
     };
 
-    if(vkQueueSubmit2(_queue, 1, &submitInfo, fence) != VK_SUCCESS)
+    VkResult result = vkQueueSubmit2(_queue, 1, &submitInfo, fence);
+    if(result != VK_SUCCESS)
     {
-        throw std::runtime_error("Failed to submit draw command");
+        throw std::runtime_error("Failed to submit command queue with error " + std::to_string(result));
     }
 }
 

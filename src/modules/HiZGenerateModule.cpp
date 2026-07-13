@@ -2,7 +2,6 @@
 #include "ShaderBindings.h"
 #include "allocation/BindingManager.h"
 #include "allocation/RessourceUsage.h"
-#include "glm/fwd.hpp"
 #include "imgui.h"
 #include "rendering/CommandBuffer.h"
 #include "rendering/GPUImage.h"
@@ -17,8 +16,7 @@ HiZGenerateModule::HiZGenerateModule(const SwapChain& swapChain, ShaderLibrary& 
     swapChain.GetExtent().width >> 1, swapChain.GetExtent().height >> 1,
     VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
     VK_FORMAT_R32_SFLOAT)),
-    _hizImageViews(_hizTexture, bindingManager),
-    _hizImageSet(bindingManager, _hizTexture, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, samplerNearest)
+    _hizImageViews(_hizTexture, bindingManager)
 {
     Shader::SpecializationConstant constants[] = {Shader::SpecializationConstant{"USE_ORIGINAL_DEPTH", false}};
     uint32_t hizGenerateShader = shaderLibrary.RegisterShader(std::filesystem::path(SHADER_DIRECTORY) / "hizgenerate.comp.spv", ShaderLibrary::Compute, bindingManager, constants);
@@ -52,17 +50,7 @@ void HiZGenerateModule::Execute(const CommandBuffer& cmdBuffer, const BindingMan
     const auto & hiz = _hizTexture.Texture(manager).Internal();
     const auto & depth = depthTarget.Texture(manager).Internal();
 
-    ComputeConstants constants =
-    {
-        .srcPixelSize = glm::vec2(1.0f / hiz.Width, 1.0f / hiz.Height),
-        .srcSize = glm::uvec2(hiz.Width, hiz.Height),
-
-        .dstPixelSize = glm::vec2(1.0f / hiz.Width, 1.0f / hiz.Height),
-        .dstSize = glm::uvec2(hiz.Width, hiz.Height),
-
-        .srcIndex = _hizTexture.CurrentIndex(),
-        .dstIndex = _hizTexture.CurrentIndex()
-    };
+    ComputeConstants constants;
 
     uint32_t previousWidth = depth.Width;
     uint32_t previousHeight = depth.Height;
@@ -84,8 +72,8 @@ void HiZGenerateModule::Execute(const CommandBuffer& cmdBuffer, const BindingMan
             constants.srcIndex = useOriginalDepth ? depthTarget.CurrentBindlessIndex() : _hizImageViews.CurrentIndex(i - 1);
             constants.dstIndex = _hizImageViews.CurrentIndex(i);
 
-            constants.srcSize = glm::uvec2(currentWidth, currentHeight);
-            constants.srcPixelSize = glm::vec2(1.0f / currentWidth, 1.0f / currentHeight);
+            constants.srcSize = glm::uvec2(previousWidth, previousHeight);
+            constants.srcPixelSize = glm::vec2(1.0f / previousWidth, 1.0f / previousHeight);
             constants.dstSize = glm::uvec2(currentWidth, currentHeight);
             constants.dstPixelSize = glm::vec2(1.0f / currentWidth, 1.0f / currentHeight);
 
@@ -98,8 +86,8 @@ void HiZGenerateModule::Execute(const CommandBuffer& cmdBuffer, const BindingMan
             previousWidth = currentWidth;
             previousHeight = currentHeight;
 
-            currentWidth >>= 1;
-            currentHeight >>= 1;
+            currentWidth = std::max(currentWidth >> 1, 1u);
+            currentHeight = std::max(currentHeight >> 1, 1u);
         }
 
         ImageHelper::StorageImageGeneralToLayoutCommand(cmdBuffer, hiz, false, 0, hiz.MipCount, 0, 1, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
@@ -108,20 +96,56 @@ void HiZGenerateModule::Execute(const CommandBuffer& cmdBuffer, const BindingMan
     cmdBuffer.EndMarker();
 }
 
-void HiZGenerateModule::DoUI(const UserInterface& ui) const
+void HiZGenerateModule::Resize(const CommandBuffer& cmdBuffer, BindingManager& bindingManager, uint32_t width, uint32_t height)
+{
+    if(_hizTexture.Resize(bindingManager, width >> 1, height >> 1))
+    {
+        _hizImageViews = MultiFramePerMipImageView(_hizTexture, bindingManager);
+        _hizImageViews.Bind(bindingManager, BINDING_HIZ_TEXTURE);
+        _hizTexture.TransistionAllLayoutCommand(bindingManager, cmdBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    }
+}
+
+void HiZGenerateModule::DoUI(const UserInterface& ui)
 {
     ImGui::Begin("HiZ Generate");
     {
-        ImGui::Image((ImTextureID)_hizImageSet.Current(), ImVec2(512, 512));
+        ImGui::SliderInt("Hiz Mip", &_drawHiZMip, -1, 13);
     }
     ImGui::End();
 }
 
-void HiZGenerateModule::Resize(const CommandBuffer& cmdBuffer, uint32_t width, uint32_t height)
+void HiZGenerateModule::RenderUI(const CommandBuffer& cmdBuffer, const FullscreenDrawDebug& debugDrawModule, VkPipelineLayout layout) const
 {
-
+    if(_drawHiZMip >= 0)
+    {
+        debugDrawModule.Draw(cmdBuffer, _hizTexture.CurrentBindlessIndex(), layout, _drawHiZMip);
+    }
 }
 
 HiZGenerateModule::~HiZGenerateModule()
 {
+
+}
+
+ HiZGenerateModule::HiZGenerateModule(HiZGenerateModule&& other) noexcept
+ :  _hizTexture(std::move(other._hizTexture)),
+    _hizImageViews(std::move(other._hizImageViews)),
+    _hizGenerateMip0Kernel(std::move(other._hizGenerateMip0Kernel)),
+    _hizGenerateKernel(std::move(other._hizGenerateKernel))
+ {
+
+ }
+
+HiZGenerateModule& HiZGenerateModule::operator=(HiZGenerateModule&& other) noexcept
+{
+    if(this != &other)
+    {
+        _hizTexture = std::move(other._hizTexture);
+        _hizImageViews = std::move(other._hizImageViews);
+        _hizGenerateMip0Kernel = std::move(other._hizGenerateMip0Kernel);
+        _hizGenerateKernel = std::move(other._hizGenerateKernel);
+    }
+
+    return *this;
 }

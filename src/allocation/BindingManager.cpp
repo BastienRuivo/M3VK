@@ -90,26 +90,22 @@ DescriptorSetHandle BindingManager::AllocateBindlessInternal(std::span<uint32_t>
     };
 }
 
-uint32_t BindingManager::RegisterBindlessTextureInternal(GPUImage&& texture, VkSampler sampler)
+void BindingManager::UpdateBindlessTextureInternal(uint32_t index, const ImageReference& img, VkSampler sampler)
 {
-    VkFormat format = texture.Internal().Format;
+    VkFormat format = img.Format;
     bool isDepthFormat = format == VK_FORMAT_D32_SFLOAT || format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT || format == VK_FORMAT_D16_UNORM;
     bool hasStencil = format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT || format == VK_FORMAT_D16_UNORM_S8_UINT;
     VkDescriptorImageInfo imageInfo
     {
         .sampler = sampler,
-        .imageView = texture.View(),
+        .imageView = img.View,
         .imageLayout = isDepthFormat ? (hasStencil ? VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL : VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL) : VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
     };
-
-    uint32_t index = _texturePool.Register(std::move(texture));
-
-    VkDescriptorSet set = _globalSet.Set;
 
     VkWriteDescriptorSet write =
     {
         .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-        .dstSet = set,
+        .dstSet = _globalSet.Set,
         .dstBinding = 0,
         .dstArrayElement = index,
         .descriptorCount = 1,
@@ -120,6 +116,17 @@ uint32_t BindingManager::RegisterBindlessTextureInternal(GPUImage&& texture, VkS
     };
 
     DescriptorHelper::UpdateDescriptorSet(std::span(&write, 1), {});
+}
+
+uint32_t BindingManager::RegisterBindlessTextureInternal(GPUImage&& texture, VkSampler sampler)
+{
+    VkFormat format = texture.Internal().Format;
+
+    ImageReference ref = texture.Internal();
+
+    uint32_t index = _texturePool.Register(std::move(texture));
+
+    UpdateBindlessTextureInternal(index, ref, sampler);
 
     return index;
 }
@@ -196,7 +203,7 @@ void BindingManager::BindlessTexture::Dispose(BindingManager& allocator)
 {
     for (size_t i = 0; i < RessourceUsageCount(Usage); i++)
     {
-        allocator._texturePool.Remove(index[i]);
+        allocator._texturePool.Remove(Index[i]);
     }
 }
 
@@ -217,14 +224,17 @@ void BindingManager::BindlessTexture::Bind(const BindingManager& allocator, bool
     }
 }
 
-void BindingManager::BindlessTexture::Resize(BindingManager& allocator, uint32_t width, uint32_t height)
+bool BindingManager::BindlessTexture::Resize(BindingManager& allocator, uint32_t width, uint32_t height)
 {
     uint32_t count = RessourceUsageCount(Usage);
+    bool hasResize = false;
     for (size_t i = 0; i < count; i++)
     {
-        GPUImage& image = allocator._texturePool.Texture(index[i]);
-        image.Resize(width, height);
+        GPUImage& image = allocator._texturePool.Texture(Index[i]);
+        hasResize |= image.Resize(width, height);
+        allocator.UpdateBindlessTextureInternal(Index[i], image.Internal(), Sampler);
     }
+    return hasResize;
 }
 
 void BindingManager::BindlessTexture::TransistionAllLayoutCommand(const BindingManager& allocator, const CommandBuffer& cmdBuffer, VkImageLayout layout)
@@ -232,7 +242,7 @@ void BindingManager::BindlessTexture::TransistionAllLayoutCommand(const BindingM
     uint32_t count = RessourceUsageCount(Usage);
     for (size_t i = 0; i < count; i++)
     {
-        const GPUImage& image = allocator._texturePool.Texture(index[i]);
+        const GPUImage& image = allocator._texturePool.Texture(Index[i]);
         ImageHelper::TransitionLayoutCommand(cmdBuffer, image.Internal(), VK_IMAGE_LAYOUT_UNDEFINED, layout);
     }
 }

@@ -1,11 +1,13 @@
 #include "rendering/GraphicsImage.h"
 
-void GraphicsImage::Resize(uint32_t Width, uint32_t Height)
+bool GraphicsImage::Resize(uint32_t Width, uint32_t Height)
 {
+    bool hasResize = false;
     for(auto & image : _internals)
     {
-        image.Resize(Width, Height);
+        hasResize |= image.Resize(Width, Height);
     }
+    return hasResize;
 }
 
 GraphicsImage::GraphicsImage(GraphicsImage&& other) noexcept

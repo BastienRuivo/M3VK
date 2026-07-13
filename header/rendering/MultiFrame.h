@@ -45,9 +45,9 @@ class MultiFrameObject
         _internals.reserve(size);
     }
 
-    inline void Resize(size_t size)
+    inline bool Resize(size_t size)
     {
-        _internals.resize(size);
+        return _internals.resize(size);
     }
 
     // VkHandles can be destroyed by one of the two object when copying, so we enable moving and disable copying.

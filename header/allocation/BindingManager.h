@@ -15,10 +15,11 @@ class BindingManager
     struct BindlessTexture
     {
         RessourceUsage Usage;
-        std::array<uint32_t, ApplicationInfo::Constant::MaxFrameInFlight> index;
-        uint32_t StaticIndex() const { assert(Usage == RessourceUsage::Static); return index[0]; }
-        uint32_t CurrentBindlessIndex () const { return index[RessourceUsageToCurrentIndex(Usage)]; }
-        uint32_t PreviousBindlessIndex () const { return index[RessourceUsageToPreviousIndex(Usage)]; }
+        std::array<uint32_t, ApplicationInfo::Constant::MaxFrameInFlight> Index;
+        VkSampler Sampler;
+        uint32_t StaticIndex() const { assert(Usage == RessourceUsage::Static); return Index[0]; }
+        uint32_t CurrentBindlessIndex () const { return Index[RessourceUsageToCurrentIndex(Usage)]; }
+        uint32_t PreviousBindlessIndex () const { return Index[RessourceUsageToPreviousIndex(Usage)]; }
         uint32_t CurrentIndex() const { return RessourceUsageToCurrentIndex(Usage); }
         uint32_t PreviousIndex() const { return RessourceUsageToPreviousIndex(Usage); }
 
@@ -28,13 +29,14 @@ class BindingManager
             BindlessTexture handle
             {
                 .Usage = usage,
-                .index = {UINT32_MAX, UINT32_MAX}
+                .Index = {UINT32_MAX, UINT32_MAX},
+                .Sampler = sampler
             };
             uint32_t count = RessourceUsageCount(usage);
             for (size_t i = 0; i < count; i++)
             {
                 GPUImage image = GPUImage(std::forward<Args>(args)...);
-                handle.index[i] = allocator.RegisterBindlessTextureInternal(std::move(image), sampler);
+                handle.Index[i] = allocator.RegisterBindlessTextureInternal(std::move(image), handle.Sampler);
             }
             return handle;
         }
@@ -55,13 +57,13 @@ class BindingManager
             return handle;
         }
 
-        void Resize(BindingManager& allocator, uint32_t width, uint32_t height);
+        bool Resize(BindingManager& allocator, uint32_t width, uint32_t height);
         void TransistionAllLayoutCommand(const BindingManager& allocator, const CommandBuffer& cmdBuffer, VkImageLayout layout);
-        inline GPUImage& Texture(BindingManager& allocator) { return allocator._texturePool.Texture(index[RessourceUsageToCurrentIndex(Usage)]); }
-        inline GPUImage& PreviousTexture(BindingManager& allocator) { return allocator._texturePool.Texture(index[RessourceUsageToPreviousIndex(Usage)]); }
-        inline const GPUImage& Texture(const BindingManager& allocator) const { return allocator._texturePool.Texture(index[RessourceUsageToCurrentIndex(Usage)]); }
-        inline const GPUImage& Texture(const BindingManager& allocator, uint32_t texIndex) const { return allocator._texturePool.Texture(index[texIndex]); }
-        inline const GPUImage& PreviousTexture(const BindingManager& allocator) const { return allocator._texturePool.Texture(index[RessourceUsageToPreviousIndex(Usage)]); }
+        inline GPUImage& Texture(BindingManager& allocator) { return allocator._texturePool.Texture(Index[RessourceUsageToCurrentIndex(Usage)]); }
+        inline GPUImage& PreviousTexture(BindingManager& allocator) { return allocator._texturePool.Texture(Index[RessourceUsageToPreviousIndex(Usage)]); }
+        inline const GPUImage& Texture(const BindingManager& allocator) const { return allocator._texturePool.Texture(Index[RessourceUsageToCurrentIndex(Usage)]); }
+        inline const GPUImage& Texture(const BindingManager& allocator, uint32_t texIndex) const { return allocator._texturePool.Texture(Index[texIndex]); }
+        inline const GPUImage& PreviousTexture(const BindingManager& allocator) const { return allocator._texturePool.Texture(Index[RessourceUsageToPreviousIndex(Usage)]); }
         void Dispose(BindingManager& allocator);
         void Bind(const BindingManager& allocator, bool hasImage, uint32_t binding, VkSampler sampler) const;
     };
@@ -83,6 +85,7 @@ class BindingManager
     private:
     DescriptorSetHandle AllocateBindlessInternal(std::span<uint32_t> counts, VkDescriptorSetLayout layout);
     uint32_t RegisterBindlessTextureInternal(GPUImage&& texture, VkSampler sampler);
+    void UpdateBindlessTextureInternal(uint32_t index, const ImageReference& img, VkSampler sampler);
 
     BindlessTexturePool _texturePool;
     DescriptorPool _bindlessPool;

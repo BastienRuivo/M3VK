@@ -143,7 +143,7 @@ void FillSrcLayout(VkImageMemoryBarrier2& barrier, VkImageLayout srcLayout)
         case VK_IMAGE_LAYOUT_UNDEFINED:
         {
             barrier.srcAccessMask = VK_ACCESS_2_NONE;
-            barrier.srcStageMask = VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT;
+            barrier.srcStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
             break;
         }
         case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
@@ -160,7 +160,7 @@ void FillSrcLayout(VkImageMemoryBarrier2& barrier, VkImageLayout srcLayout)
         }
         case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
         {
-            barrier.srcAccessMask = VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT;
+            barrier.srcAccessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT;
             barrier.srcStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
             break;
         }
@@ -172,8 +172,8 @@ void FillSrcLayout(VkImageMemoryBarrier2& barrier, VkImageLayout srcLayout)
         }
         case VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL:  // after rendering, i want to read from the depth buffer to create a HiZ buffer
         {
-            barrier.srcAccessMask = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
-            barrier.srcStageMask = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT;
+            barrier.srcAccessMask = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT | VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT;
+            barrier.srcStageMask = VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
             break;
         }
         case VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL:
@@ -241,7 +241,7 @@ void FillDstLayout(VkImageMemoryBarrier2& barrier, VkImageLayout dstlayout)
         case VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL:
         {
             barrier.dstAccessMask = VK_ACCESS_2_SHADER_READ_BIT;
-            barrier.dstStageMask = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
+            barrier.dstStageMask = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
             break;
         }
 
@@ -274,7 +274,7 @@ VkImageMemoryBarrier2 ImageHelper::StorageImageReadWriteBarrier(const ImageRefer
         .srcStageMask = VK_PIPELINE_STAGE_2_NONE,
         .srcAccessMask = VK_ACCESS_2_NONE,
         .dstStageMask = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
-        .dstAccessMask = isWrite ? VK_ACCESS_2_SHADER_WRITE_BIT : VK_ACCESS_2_SHADER_READ_BIT,
+        .dstAccessMask = isWrite ? VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT : VK_ACCESS_2_SHADER_STORAGE_READ_BIT,
         .oldLayout = oldLayout,
         .newLayout = VK_IMAGE_LAYOUT_GENERAL,
         .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED, // used to transfer queue ownership if someday I do a copy queue
@@ -293,7 +293,7 @@ VkImageMemoryBarrier2 ImageHelper::StorageImageReadWriteBarrier(const ImageRefer
     if(oldLayout == VK_IMAGE_LAYOUT_GENERAL)
     {
         barrier.srcStageMask = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
-        barrier.srcAccessMask = isWrite ? VK_ACCESS_2_SHADER_READ_BIT : VK_ACCESS_2_SHADER_WRITE_BIT;
+        barrier.srcAccessMask = isWrite ? VK_ACCESS_2_SHADER_STORAGE_READ_BIT : VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT;
     }
     else
     {
@@ -309,7 +309,7 @@ VkImageMemoryBarrier2 ImageHelper::StorageImageGeneralToLayoutBarrier(const Imag
     {
         .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
         .srcStageMask = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
-        .srcAccessMask = isWrite ? VK_ACCESS_2_SHADER_WRITE_BIT : VK_ACCESS_2_SHADER_READ_BIT,
+        .srcAccessMask = isWrite ? VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT : VK_ACCESS_2_SHADER_STORAGE_READ_BIT,
         .oldLayout = VK_IMAGE_LAYOUT_GENERAL,
         .newLayout = newLayout,
         .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED, // used to transfer queue ownership if someday I do a copy queue

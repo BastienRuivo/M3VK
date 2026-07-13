@@ -21,16 +21,22 @@ GPUImage::GPUImage(uint32_t width, uint32_t height, VkImageUsageFlags usageFlags
 
 }
 
-void GPUImage::Resize(uint32_t width, uint32_t height)
+bool GPUImage::Resize(uint32_t width, uint32_t height)
 {
     if(width != _internal.Width || height != _internal.Height)
     {
         DisposeInternal();
+        if(_internal.MipCount > 1)
+        {
+            _internal.MipCount = ImageHelper::GetMipCount(width, height);
+        }
         CreateImageInternal(width, height, _internal.ArrayLayerCount, _internal.CreateFlags, _internal.UsageFlags, _internal.Format, _internal.MipCount, _internal.Tiling, _internal.MsaaSampleCount);
+        _internal.Width = width;
+        _internal.Height = height;
+        return true;
     }
 
-    _internal.Width = width;
-    _internal.Height = height;
+    return false;
 }
 
 void GPUImage::DisposeInternal()

@@ -47,7 +47,7 @@ class GPUImage
     inline uint32_t Width() const { return _internal.Width; }
     inline uint32_t Height() const { return _internal.Height; }
     inline uint32_t MipCount() const { return _internal.MipCount; }
-    void Resize(uint32_t width, uint32_t height);
+    bool Resize(uint32_t width, uint32_t height);
 
     protected:
     void CreateImageInternal(uint32_t width, uint32_t height, uint32_t arrayLayers, VkImageCreateFlags createFlags, VkImageUsageFlags usageFlags, VkFormat format, uint32_t mipCount, VkImageTiling tiling, VkSampleCountFlagBits msaaSampleCount);

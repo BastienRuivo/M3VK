@@ -112,7 +112,7 @@ foreach(SHADER_SOURCE ${SHADER_SOURCES})
 
     add_custom_command(
         OUTPUT ${SPIRV_OUTPUT}
-        COMMAND ${GLSLC_EXECUTABLE} -MD -MF ${DEP_FILE} ${ABSOLUTE_SHADER_SOURCE} -o ${SPIRV_OUTPUT}
+        COMMAND ${GLSLC_EXECUTABLE} -g -MD -MF ${DEP_FILE} ${ABSOLUTE_SHADER_SOURCE} -o ${SPIRV_OUTPUT}
         DEPENDS ${ABSOLUTE_SHADER_SOURCE}
         DEPFILE ${DEP_FILE} # Tells CMake to read this file to discover hidden .glsl dependencies
         COMMENT "Compiling shader with dependencies: ${FILE_NAME}"

@@ -87,7 +87,13 @@ void Application::RefreshSwapChain()
     _swapChain = std::make_unique<SwapChain>(_window, _windowSurface.Internal());
 
     auto extents = _swapChain->GetExtent();
-    _pipeline.Refresh(extents, _graphicsCommandPool.Internal(), _graphicsComputeQueue.Internal());
+    CommandBuffer cmdBuffer(_graphicsCommandPool.Internal(), _graphicsComputeQueue.Internal());
+    cmdBuffer.BeginSingleTime();
+    {
+        _pipeline.Refresh(cmdBuffer, extents);
+    }
+    cmdBuffer.End();
+    cmdBuffer.WaitCompletion();
 }
 
 void Application::DrawFrame()
@@ -124,7 +130,7 @@ void Application::DrawFrame()
     _pipeline.Execute(commandBuffer, *_swapChain, _userInterface, imageIndex);
 
     VkSemaphoreSubmitInfo waitSemaphore = _availableImageSemaphore.Get(currentFrame).GetSubmitInfo(VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
-    VkSemaphoreSubmitInfo signalSemaphore = _renderFinishedSemaphores.Get(imageIndex).GetSubmitInfo();
+    VkSemaphoreSubmitInfo signalSemaphore = _renderFinishedSemaphores.Get(imageIndex).GetSubmitInfo(VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT);
 
     commandBuffer.Submit({&waitSemaphore, 1}, {&signalSemaphore, 1}, _waitFence.Internal(currentFrame));
 

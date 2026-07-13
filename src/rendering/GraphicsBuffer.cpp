@@ -203,7 +203,12 @@ BufferInternal GraphicsBuffer::CreateBuffer(VkDeviceSize size, VkBufferUsageFlag
     buffer.MemoryInternal.Size = allocateInfo.allocationSize;
     ApplicationInfo::VRAMAllocate(allocateInfo.allocationSize, ApplicationInfo::AllocType::Buffer);
 
-    vkBindBufferMemory(ApplicationInfo::Device(), buffer.Internal, buffer.MemoryInternal.Memory, 0);
+    VkResult memoryBind = vkBindBufferMemory(ApplicationInfo::Device(), buffer.Internal, buffer.MemoryInternal.Memory, 0);
+
+    if(memoryBind != VK_SUCCESS)
+    {
+        throw std::runtime_error("Can't bind buffer memory");
+    }
 
     if(_usage == RessourceUsage::PerFrame)
     {

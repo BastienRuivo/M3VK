@@ -51,7 +51,7 @@ class GraphicsImage : public MultiFrameRessource<GPUImage>
         }
     }
 
-    void Resize(uint32_t Width, uint32_t Height);
+    bool Resize(uint32_t Width, uint32_t Height);
 
     GraphicsImage(GraphicsImage&& other) noexcept;
     GraphicsImage(const GraphicsImage& other) = delete;

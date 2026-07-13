@@ -21,7 +21,7 @@ class Pipeline
     ~Pipeline();
 
     void PreRender(VkExtent2D size);
-    void Refresh(VkExtent2D size, VkCommandPool graphicsCommandPool, VkQueue graphicsComputeQueue);
+    void Refresh(const CommandBuffer& cmdBuffer, VkExtent2D size);
 
     void DoUI(const UserInterface& ui);
     void DoKeyboardInput(const Window& window, float deltaTime);
@@ -31,7 +31,10 @@ class Pipeline
     void OnMouseMove(float dx, float dy);
 
     protected:
-    std::array<DrawModule, MaterialType::Count> InitDrawModule(bool DebugOn);
+    void InitModules(const SwapChain& swapChain, VkCommandPool pool, VkQueue queue);
+
+    void RefreshDrawModule(MaterialType type, const ShaderLibrary::VertexBinding& vertex, const ShaderLibrary::FragmentBinding& frag) ;
+    void InitDrawModules(bool DebugOn);
     void FrameInit(const CommandBuffer& cmdBuffer, VkRect2D renderArea) const;
 
     BindingManager _bindingManager;
@@ -56,13 +59,15 @@ class Pipeline
     Camera _camera;
 
     // Modules
-    CullingModule _cullingModule;
-    std::array<DrawModule, MaterialType::Count> _drawModules;
-    SkyboxModule _skyboxModule;
-    HiZGenerateModule _hizGenerateModule;
+    std::vector<std::unique_ptr<Module>> _modules;
 
+    CullingModule* _cullingModule;
+    std::array<DrawModule*, MaterialType::Count> _drawModules;
+    DrawModule* _drawCutoutTwoSided;
+    SkyboxModule* _skyboxModule;
+    HiZGenerateModule* _hizGenerateModule;
 
-
+    FullscreenDrawDebug _drawDebug;
 
     // debug
     bool _wireframe = false;
