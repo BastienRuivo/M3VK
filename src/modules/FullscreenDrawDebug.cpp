@@ -27,6 +27,13 @@ FullscreenDrawDebug::FullscreenDrawDebug(ShaderLibrary& shaderLibrary, const Bin
             .depthWrite = VK_FALSE
         }
     };
+
+    Shader::SpecializationConstant constant{.name = "DRAW_DEPTH", .enabled = true};
+    uint32_t fullscreenDrawDepthFragment = shaderLibrary.RegisterShader(std::filesystem::path(SHADER_DIRECTORY) / "FullscreenDraw.frag.spv", ShaderLibrary::Fragment, manager, {&constant, 1});
+    auto& fullscreenDrawDepthFragmentInfo = shaderLibrary.Get(fullscreenDrawDepthFragment);
+    FragmentDepthBinding = FragmentBinding;
+    FragmentDepthBinding.LibraryIndex = fullscreenDrawDepthFragment;
+    FragmentDepthBinding.Handle = fullscreenDrawDepthFragmentInfo.Handle;
 }
 
 FullscreenDrawDebug::~FullscreenDrawDebug()
@@ -36,10 +43,16 @@ FullscreenDrawDebug::~FullscreenDrawDebug()
 
 void FullscreenDrawDebug::Draw(const CommandBuffer& cmdBuffer, uint32_t textureIndex, VkPipelineLayout layout, uint32_t mipLevel) const
 {
+    Draw(cmdBuffer, textureIndex, layout, mipLevel);
+}
+
+void FullscreenDrawDebug::Draw(const CommandBuffer& cmdBuffer, DrawOption option, uint32_t textureIndex, VkPipelineLayout layout, uint32_t mipLevel) const
+{
     cmdBuffer.BeginMarker("Draw Debug");
     {
         VertexBinding.Bind(cmdBuffer);
-        FragmentBinding.Bind(cmdBuffer);
+        if(option == DrawOption_Depth) FragmentDepthBinding.Bind(cmdBuffer);
+        else FragmentBinding.Bind(cmdBuffer);
 
         TextureConstant constant =
         {
@@ -56,7 +69,8 @@ void FullscreenDrawDebug::Draw(const CommandBuffer& cmdBuffer, uint32_t textureI
 
  FullscreenDrawDebug::FullscreenDrawDebug(FullscreenDrawDebug&& other) noexcept
  :  VertexBinding(std::move(other.VertexBinding)),
-    FragmentBinding(std::move(other.FragmentBinding))
+    FragmentBinding(std::move(other.FragmentBinding)),
+    FragmentDepthBinding(std::move(other.FragmentDepthBinding))
  {
 
  }
@@ -67,6 +81,7 @@ FullscreenDrawDebug& FullscreenDrawDebug::operator=(FullscreenDrawDebug&& other)
     {
         VertexBinding = std::move(other.VertexBinding);
         FragmentBinding = std::move(other.FragmentBinding);
+        FragmentDepthBinding = std::move(other.FragmentDepthBinding);
     }
 
     return *this;

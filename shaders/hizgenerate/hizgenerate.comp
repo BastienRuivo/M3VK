@@ -37,24 +37,60 @@ void main()
     ivec2 baseCoords = threadID.xy * 2;
     float v0, v1, v2, v3;
 
+    vec3 extra = vec3(0.0f);
+
+    bool oddX = (push.Constants.srcSize.x & 1u) != 0u;
+    bool oddY = (push.Constants.srcSize.y & 1u) != 0u;
+    ivec2 maxCoords = ivec2(push.Constants.srcSize) - ivec2(1);
+
     if(USE_ORIGINAL_DEPTH)
     {
-        vec2 uv = vec2(baseCoords) * push.Constants.srcPixelSize;
+        vec2 uv = (vec2(baseCoords)+ vec2(1.0)) * push.Constants.srcPixelSize;
         vec4 v = textureGather(uTextures[srcIndex], uv);
         v0 = v.r;
         v1 = v.g;
         v2 = v.b;
         v3 = v.a;
+
+        if (oddX && baseCoords.x == int(push.Constants.srcSize.x) - 3)
+        {
+            extra.x = texelFetch(uTextures[srcIndex], min(baseCoords + ivec2(2, 0), maxCoords), 0).r;
+            extra.y = texelFetch(uTextures[srcIndex], min(baseCoords + ivec2(2, 1), maxCoords), 0).r;
+
+            if (oddY && baseCoords.y == int(push.Constants.srcSize.y) - 3)
+            {
+                extra.z = texelFetch(uTextures[srcIndex], min(baseCoords + ivec2(2, 2), maxCoords), 0).r;
+            }
+        }
+        else if (oddY && baseCoords.y == int(push.Constants.srcSize.y) - 3)
+        {
+            extra.x = texelFetch(uTextures[srcIndex], min(baseCoords + ivec2(0, 2), maxCoords), 0).r;
+            extra.y = texelFetch(uTextures[srcIndex], min(baseCoords + ivec2(1, 2), maxCoords), 0).r;
+        }
     }
     else
     {
-        ivec2 maxCoords = ivec2(push.Constants.srcSize) - ivec2(1);
         v0 = imageLoad(hizTexture[srcIndex], min(baseCoords, maxCoords)).r;
         v1 = imageLoad(hizTexture[srcIndex], min(baseCoords + ivec2(1, 0), maxCoords)).r;
-        v2 = imageLoad(hizTexture[srcIndex], min(baseCoords + ivec2(0, 1), maxCoords)).r;
-        v3 = imageLoad(hizTexture[srcIndex], min(baseCoords + ivec2(1, 1), maxCoords)).r;
+        v2 = imageLoad(hizTexture[srcIndex], min(baseCoords + ivec2(1, 1), maxCoords)).r;
+        v3 = imageLoad(hizTexture[srcIndex], min(baseCoords + ivec2(0, 1), maxCoords)).r;
+
+        if (oddX && int(baseCoords.x) == push.Constants.srcSize.x-3)
+        {
+            extra.x =  imageLoad(hizTexture[srcIndex], min(baseCoords + ivec2(2, 0), maxCoords)).r;
+            extra.y =  imageLoad(hizTexture[srcIndex], min(baseCoords + ivec2(2, 1), maxCoords)).r;
+            if (oddY && int(baseCoords.y) == push.Constants.srcSize.y-3)
+            {
+                extra.z = imageLoad(hizTexture[srcIndex], min(baseCoords + ivec2(2, 2), maxCoords)).r;
+            }
+        }
+        else if (oddY && int(baseCoords.y) == push.Constants.srcSize.y-3)
+        {
+            extra.x = imageLoad(hizTexture[srcIndex], min(baseCoords + ivec2(0, 2), maxCoords)).r;
+            extra.y = imageLoad(hizTexture[srcIndex], min(baseCoords + ivec2(1, 2), maxCoords)).r;
+        }
     }
 
-    float maxDepth = max(max(v0, v1), max(v2, v3));
+    float maxDepth = max(max(max(v0, v1), max(v2, v3)), max(extra.x, max(extra.y, extra.z)));
     imageStore(hizTexture[dstIndex], threadID.xy, vec4(maxDepth, 0.0, 0.0, 0.0));
 }

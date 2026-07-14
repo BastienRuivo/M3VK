@@ -119,7 +119,7 @@ void HiZGenerateModule::RenderUI(const CommandBuffer& cmdBuffer, const Fullscree
 {
     if(_drawHiZMip >= 0)
     {
-        debugDrawModule.Draw(cmdBuffer, _hizTexture.CurrentBindlessIndex(), layout, _drawHiZMip);
+        debugDrawModule.Draw(cmdBuffer, FullscreenDrawDebug::DrawOption_Depth, _hizTexture.CurrentBindlessIndex(), layout, _drawHiZMip);
     }
 }
 
