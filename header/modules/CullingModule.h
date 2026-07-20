@@ -15,6 +15,7 @@ public:
     {
         uint32_t InstanceCount;
         uint32_t DrawCount;
+        uint32_t HizIndex;
     };
 
     CullingModule(ShaderLibrary& shaderLibrary, BindingManager& descriptorAllocator);
@@ -26,7 +27,8 @@ public:
     CullingModule(const CullingModule&) = delete;
     CullingModule& operator=(const CullingModule&) = delete;
 
-    void Execute(const CommandBuffer& cmdBuffer, const GraphicsBuffer& cameraBuffer, const GeometryBuffer& indirectBuffer, const GeometryBuffer& instanceBuffer, VkPipelineLayout layout) const;
+    void DoUI(const UserInterface& ui) override;
+    void Execute(const CommandBuffer& cmdBuffer, uint32_t hizIndex, const GraphicsBuffer& cameraBuffer, const GeometryBuffer& indirectBuffer, const GeometryBuffer& instanceBuffer, VkPipelineLayout layout) const;
     void Barrier(const CommandBuffer& cmdBuffer, uint32_t instanceCount, uint32_t drawCount, VkAccessFlagBits2 src, VkAccessFlagBits2 dst) const;
     inline const GraphicsBuffer& VisibleInstanceIndirectionBuffer() const { return _visibleIndirectionBuffer; }
     inline const GraphicsBuffer& VisibleIndirectBuffer() const { return _visibleIndirectBuffer; }

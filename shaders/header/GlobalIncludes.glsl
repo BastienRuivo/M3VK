@@ -2,6 +2,7 @@
 #define GLOBAL_INCLUDE
 
 #extension GL_EXT_nonuniform_qualifier : require
+#extension GL_EXT_debug_printf : enable
 
 #define UINT32_MAX 0xffffffff
 

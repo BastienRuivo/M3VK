@@ -9,7 +9,7 @@
 class Camera
 {
 public:
-    Camera(glm::vec3 position, glm::vec3 front, glm::vec3 up, float fov, float aspect, float near, float far);
+    Camera(glm::vec3 position, glm::vec3 target, float fov, float aspect, float near = 0.1f, float far = 1000.0f, glm::vec3 front = glm::vec3(0, 0, -1.0f), glm::vec3 up = glm::vec3(0, 1.0f, 0)) ;
     ~Camera();
 
     Camera(Camera&& other) noexcept;

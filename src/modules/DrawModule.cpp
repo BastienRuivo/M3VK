@@ -8,15 +8,23 @@ DrawModule::DrawModule(ShaderLibrary::VertexBinding vertexBinding, ShaderLibrary
 
 DrawModule::~DrawModule() {}
 
-void DrawModule::Execute(const CommandBuffer& cmdBuffer, VkPipelineLayout layout, const GraphicsBuffer& indirectBuffer, uint32_t drawOffset, uint32_t drawCount, bool wireframe) const
+void DrawModule::Execute(const CommandBuffer& cmdBuffer, VkPipelineLayout layout, const GraphicsBuffer& indirectBuffer, uint32_t drawOffset, uint32_t drawCount) const
 {
     VertexBinding.Bind(cmdBuffer);
     FragmentBinding.Bind(cmdBuffer);
 
-    if(wireframe)
-    {
-        cmdBuffer.SetPolygonMode(VK_POLYGON_MODE_LINE);
-    }
+    cmdBuffer.DrawIndexedIndirect(indirectBuffer.Internal(), drawOffset, drawCount, indirectBuffer.GetStride());
+}
+
+void DrawModule::Execute(const CommandBuffer& cmdBuffer, VkPipelineLayout layout, const VertexState& vertexState, const FragmentState& fragState, const GraphicsBuffer& indirectBuffer, uint32_t drawOffset, uint32_t drawCount) const
+{
+    const VkShaderStageFlagBits vertexStage = VK_SHADER_STAGE_VERTEX_BIT;
+    cmdBuffer.BindShaders({&vertexStage, 1}, &VertexBinding.Handle);
+    vertexState.Bind(cmdBuffer);
+
+    const VkShaderStageFlagBits fragStage = VK_SHADER_STAGE_FRAGMENT_BIT;
+    cmdBuffer.BindShaders({&fragStage, 1}, &FragmentBinding.Handle);
+    fragState.Bind(cmdBuffer);
 
     cmdBuffer.DrawIndexedIndirect(indirectBuffer.Internal(), drawOffset, drawCount, indirectBuffer.GetStride());
 }

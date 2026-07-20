@@ -29,23 +29,21 @@ vec3 Bbox[8] =
     vec3(1.0, 1.0, 1.0)
 };
 
-void TransformBBOX(mat4 transform, vec3 AabbMin, vec3 AabbMax, out vec3 outCenter, out vec3 outExtent)
+void TransformBBOX(mat4 transform, vec3 AabbMin, vec3 AabbMax, out vec3 outAabbMin, out vec3 outAabbMax)
 {
     vec3 center = (AabbMin + AabbMax) * 0.5;
     vec3 extent = (AabbMax - AabbMin) * 0.5;
 
-    vec3 transformedAabbmin = vec3(1e7);
-    vec3 transformedAabbMax = vec3(-1e7);
+    outAabbMin = vec3(1e7);
+    outAabbMax = vec3(-1e7);
     for(int i = 0; i < 8; i++)
     {
         vec4 point = vec4(center + Bbox[i] * extent, 1.0);
         point = transform * point;
-        transformedAabbmin = min(transformedAabbmin, point.xyz);
-        transformedAabbMax = max(transformedAabbMax, point.xyz);
+        point.xyz /= point.w;
+        outAabbMin = min(outAabbMin, point.xyz);
+        outAabbMax = max(outAabbMax, point.xyz);
     }
-
-    outCenter = (transformedAabbmin + transformedAabbMax) * 0.5;
-    outExtent = (transformedAabbMax - transformedAabbmin) * 0.5;
 }
 
 bool FustumCulling(CameraData camera, vec3 center, vec3 extent)
@@ -65,10 +63,39 @@ bool FustumCulling(CameraData camera, vec3 center, vec3 extent)
 
 bool Culling(CameraData camera, InstanceData instance)
 {
-    vec3 wsCenter, wsExtent;
-    TransformBBOX(instance.LocalToWorldMatrix, instance.AabbMin, instance.AabbMax, wsCenter, wsExtent);
+    vec3 wsAABBMin, wsAABBMax;
+    TransformBBOX(instance.LocalToWorldMatrix, instance.AabbMin, instance.AabbMax, wsAABBMin, wsAABBMax);
 
-    bool isVisible = FustumCulling(camera, wsCenter, wsExtent);
+    bool isVisible = FustumCulling(camera, (wsAABBMin + wsAABBMax) * 0.5, (wsAABBMax - wsAABBMin) * 0.5);
+
+    if(isVisible)
+    {
+        vec3 ssAABBMin, ssAABBMax;
+        TransformBBOX(camera.ViewProjectionMatrix, wsAABBMin, wsAABBMax, ssAABBMin, ssAABBMax);
+
+        vec2 aabbMin = clamp(ssAABBMin.xy * 0.5 + 0.5, 0.0, 1.0);
+        vec2 aabbMax = clamp(ssAABBMax.xy * 0.5 + 0.5, 0.0, 1.0);
+        float minZ = ssAABBMin.z;
+
+        uvec2 aabbMinSize = uvec2((aabbMax.xy - aabbMin.xy) * push.gConstants.ScreenSize);
+
+        uint LOD = uint(ceil(log2(max(aabbMinSize.x, aabbMinSize.y) * 0.5)));
+
+        aabbMin +=  push.gConstants.ScreenPixelSize;
+        aabbMax +=  push.gConstants.ScreenPixelSize;
+
+        float v0 = textureLod(uTextures[push.gConstants.HizIndex], vec2(aabbMin.x, aabbMin.y), LOD).r;
+        float v1 = textureLod(uTextures[push.gConstants.HizIndex], vec2(aabbMax.x, aabbMin.y), LOD).r;
+        float v2 = textureLod(uTextures[push.gConstants.HizIndex], vec2(aabbMax.x, aabbMax.y), LOD).r;
+        float v3 = textureLod(uTextures[push.gConstants.HizIndex], vec2(aabbMin.x, aabbMax.y), LOD).r;
+
+        float v = max(v0, max(v1, max(v2, v3)));
+
+        bool isBehindCamera = minZ <= 0.1;
+        bool isInFrontOfHiZ = minZ <= v;
+        isVisible = isBehindCamera || isInFrontOfHiZ;
+    }
+
     return isVisible;
 }
 
@@ -76,22 +103,18 @@ layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
 void main()
 {
     uint globalIndex = gl_GlobalInvocationID.x;
-    if (globalIndex >= push._CullingConstants.InstanceCount) return;
+    if (globalIndex >= push.Constants.InstanceCount) return;
 
-    uint cameraBufferIndex = push.indexes.Cameras;
-    uint bIndirectionIndex = push.indexes.VisibleInstanceIndirections;
-    uint bDrawIndex = push.indexes.VisibleDrawIndirects;
-
-    bool isVisible = Culling(_Camera[cameraBufferIndex].data, _Instances.data[globalIndex]);
+    bool isVisible = Culling(_Camera[push.gConstants.Cameras].data, _Instances.data[globalIndex]);
 
     if(isVisible)
     {
         uint meshIndex = _Instances.data[globalIndex].MeshIndex;
-        uint countIndex = atomicAdd(_VisibleDrawIndexedIndirect[bDrawIndex].data[meshIndex].instanceCount, 1);
+        uint countIndex = atomicAdd(_VisibleDrawIndexedIndirect[push.gConstants.VisibleDrawIndirects].data[meshIndex].instanceCount, 1);
 
         DrawIndexedIndirectPadded indirectCommand = _DrawIndexedIndirect.data[meshIndex];
         uint instanceIndex = indirectCommand.firstInstance + countIndex;
 
-        _VisibleInstanceIndirection[bIndirectionIndex].data[instanceIndex] = globalIndex;
+        _VisibleInstanceIndirection[push.gConstants.VisibleInstanceIndirections].data[instanceIndex] = globalIndex;
     }
 }

@@ -63,11 +63,10 @@ class Pipeline
 
     CullingModule* _cullingModule;
     std::array<DrawModule*, MaterialType::Count> _drawModules;
-    DrawModule* _drawCutoutTwoSided;
     SkyboxModule* _skyboxModule;
     HiZGenerateModule* _hizGenerateModule;
 
-    FullscreenDrawDebug _drawDebug;
+    FullscreenDrawDebug _drawTextureDebug;
 
     // debug
     bool _wireframe = false;

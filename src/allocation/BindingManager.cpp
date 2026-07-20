@@ -7,56 +7,42 @@
 #include "ShaderBindings.h"
 #include "rendering/CommandBuffer.h"
 #include "rendering/ImageHelper.h"
-
+const VkDescriptorBindingFlags bindlessFlags =
+    VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT |
+    VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT;
 BindingManager::BindingManager()
 :
-_globalSetLayouts({
-    DescriptorPool::LayoutBuilder()
-    .AddBinding(BINDING_TEXTURES, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT, 0, ApplicationInfo::Constant::MaxBindlessTextureCount)
-    .AddBinding(BINDING_CAMERA_BUFFER, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT, 0, RessourceUsage::PerFrame)
+_bindlessPool(DescriptorPool::Builder()
+    .SetMaxSets(1)
+    .SetFlags(VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT | VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT)
+    .AddLayout(DescriptorPool::LayoutBuilder()
+    .AddBinding(BINDING_TEXTURES, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT, bindlessFlags, ApplicationInfo::Constant::MaxBindlessTextureCount)
+    .AddBinding(BINDING_CAMERA_BUFFER, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT, bindlessFlags, RessourceUsage::PerFrame)
     .AddBinding(BINDING_MATERIAL_BUFFER, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, RessourceUsage::Static)
     .AddBinding(BINDING_INSTANCE_DATA_BUFFER, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_COMPUTE_BIT, 0, RessourceUsage::Static)
     .AddBinding(BINDING_CLEAR_DRAW_INDIRECT_BUFFER, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT, 0, RessourceUsage::Static)
-    .AddBinding(BINDING_VISIBLE_DRAW_INDIRECT_BUFFER, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT, 0, RessourceUsage::PerFrame)
-    .AddBinding(BINDING_VISIBLE_INSTANCE_INDIRECTION_BUFFER, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_COMPUTE_BIT, 0, RessourceUsage::PerFrame)
+    .AddBinding(BINDING_VISIBLE_DRAW_INDIRECT_BUFFER, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_COMPUTE_BIT, bindlessFlags, RessourceUsage::PerFrame)
+    .AddBinding(BINDING_VISIBLE_INSTANCE_INDIRECTION_BUFFER, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_COMPUTE_BIT, bindlessFlags, RessourceUsage::PerFrame)
     .AddBinding(BINDING_SKYBOX_TEXTURE, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT, 0, RessourceUsage::Static)
-    .AddBinding(BINDING_HIZ_TEXTURE, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, VK_SHADER_STAGE_COMPUTE_BIT, 0, RessourceUsage::PerFrame, ApplicationInfo::Constant::MaxMipCount)
-    .Build(),
-}),
+    .AddBinding(BINDING_HIZ_TEXTURE, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, VK_SHADER_STAGE_COMPUTE_BIT, bindlessFlags, RessourceUsage::PerFrame, ApplicationInfo::Constant::MaxMipCount)
+    .SetFlags(VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT)
+    )
+    .Build()),
 _globalPushConstantRanges({
     VkPushConstantRange
     {
         .stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT,
         .offset = 0,
-        .size = sizeof(CommonIndexes) + ShaderConstantsSize,
+        .size = COMMON_INDEXES_OFFSET + ShaderConstantsSize,
     }
 }),
-_globalLayout(_globalSetLayouts, _globalPushConstantRanges),
-_bindlessPool(DescriptorPool::Builder()
-    .SetMaxSets(1)
-    .SetFlags(VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT | VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT)
-    .AddLayout(DescriptorPool::LayoutBuilder()
-        .AddBinding(0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-            VK_SHADER_STAGE_FRAGMENT_BIT,
-            VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT
-            | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT, ApplicationInfo::Constant::MaxBindlessTextureCount + ApplicationInfo::Constant::MaxOtherTextureCount)
-        .AddBinding(1, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-            VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT | VK_SHADER_STAGE_VERTEX_BIT,
-            VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT
-            | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT, ApplicationInfo::Constant::MaxBufferCount)
-        .AddBinding(2, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
-            VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT | VK_SHADER_STAGE_VERTEX_BIT,
-            VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT
-            | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT, ApplicationInfo::Constant::MaxBindlessTextureCount)
-        .SetFlags(VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT)
-    )
-    .Build())
+_globalLayout(GlobalSetLayouts(), _globalPushConstantRanges)
 {
     uint32_t staticCounts[] =
     {
-        ApplicationInfo::Constant::MaxBufferCount
+        1
     };
-    _globalSet = AllocateBindlessInternal({staticCounts}, _globalSetLayouts[0]);
+    _globalSet = AllocateBindlessInternal({staticCounts}, _bindlessPool.Layout(0));
 }
 
 DescriptorSetHandle BindingManager::AllocateBindlessInternal(std::span<uint32_t> counts, VkDescriptorSetLayout layout)
@@ -193,10 +179,6 @@ void BindingManager::RegisterTexture(const VkDescriptorImageInfo& info, uint32_t
 
 BindingManager::~BindingManager()
 {
-    for(uint32_t i = 0; i < _globalSetLayouts.size(); i++)
-    {
-        vkDestroyDescriptorSetLayout(ApplicationInfo::Device(), _globalSetLayouts[i], nullptr);
-    }
 }
 
 void BindingManager::BindlessTexture::Dispose(BindingManager& allocator)

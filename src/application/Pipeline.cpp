@@ -25,7 +25,7 @@ Pipeline::Pipeline(const SwapChain& swapChain, VkCommandPool graphicsCommandPool
             std::make_unique<MaterialRegistry>(_bindingManager, graphicsCommandPool, graphicsComputeQueue, _samplerLinear.Internal())
         }),
     _cameraDataBuffer(_bindingManager, BINDING_CAMERA_BUFFER, GraphicsBuffer::STORAGE, RessourceUsage::PerFrame, 1, sizeof(CameraData)),
-    _camera(glm::vec3(0.0f, 0.5f, 4.0f), glm::vec3(0.0f, 0.0f, -1.0f), glm::vec3(0.0f, 1.0f, 0.0f), 45.0f, (float)swapChain.GetExtent().width / (float)swapChain.GetExtent().height, 0.1f, 1000.0f),
+    _camera(glm::vec3(-14.0f, 0.5f, 0.0f), glm::vec3(10, 0, 0), 45.0f, (float)swapChain.GetExtent().width / (float)swapChain.GetExtent().height),
     _msaaColorTarget(RessourceUsage::Transient, graphicsCommandPool, graphicsComputeQueue,
         VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
         swapChain.GetExtent().width, swapChain.GetExtent().height,
@@ -50,13 +50,13 @@ Pipeline::Pipeline(const SwapChain& swapChain, VkCommandPool graphicsCommandPool
         ApplicationInfo::Constant::DepthFormat,
         1)),
         _drawModules({}),
-        _drawDebug(_shaderLibrary, _bindingManager)
+        _drawTextureDebug(_shaderLibrary, _bindingManager)
 {
     InitModules(swapChain, graphicsCommandPool, graphicsComputeQueue);
     MeshRegistry& meshRegistry = static_cast<MeshRegistry&>(*_registries[(size_t)RegistryType::Mesh]);
     MaterialRegistry& materialRegistry = static_cast<MaterialRegistry&>(*_registries[(size_t)RegistryType::Material]);
 
-    const float axisLength = 10.0f;
+    /*const float axisLength = 10.0f;
     const float axisThickness = 0.00625f;
 
     glm::vec3 aabbMin, aabbMax;
@@ -75,7 +75,7 @@ Pipeline::Pipeline(const SwapChain& swapChain, VkCommandPool graphicsCommandPool
             .AabbMax = aabbMax,
             .MeshIndex = cube
         };
-        meshRegistry.RegisterInstance(MaterialType::Opaque, instance);
+        //meshRegistry.RegisterInstance(MaterialType::Opaque, instance);
     }
 
     {
@@ -90,7 +90,7 @@ Pipeline::Pipeline(const SwapChain& swapChain, VkCommandPool graphicsCommandPool
             .AabbMax = aabbMax,
             .MeshIndex = cube
         };
-        meshRegistry.RegisterInstance(MaterialType::Opaque, instance);
+        //meshRegistry.RegisterInstance(MaterialType::Opaque, instance);
     }
 
     {
@@ -105,14 +105,14 @@ Pipeline::Pipeline(const SwapChain& swapChain, VkCommandPool graphicsCommandPool
             .AabbMax = aabbMax,
             .MeshIndex = cube
         };
-        meshRegistry.RegisterInstance(MaterialType::Opaque, instance);
+        //meshRegistry.RegisterInstance(MaterialType::Opaque, instance);
     }
 
 
     InstanceData instance = {
-        .LocalToWorldMatrix = ApplicationHelper::TranslateRotateScale(glm::vec3(0.0f, 10.0f, 10.0f),
+        .LocalToWorldMatrix = ApplicationHelper::TranslateRotateScale(glm::vec3(0.0f, 0.0f, 0.0f),
             glm::vec3(0.0f, 0.0f, 0.0f),
-            glm::vec3(1, 1, 1)),
+            glm::vec3(0.1, 10, 10)),
         .AabbMin = aabbMin,
         .MaterialIndex = 1,
         .AabbMax = aabbMax,
@@ -120,48 +120,20 @@ Pipeline::Pipeline(const SwapChain& swapChain, VkCommandPool graphicsCommandPool
     };
 
     meshRegistry.RegisterInstance(MaterialType::Opaque, instance);
+
+    instance = {
+        .LocalToWorldMatrix = ApplicationHelper::TranslateRotateScale(glm::vec3(4.0f, 0.0f, 1.0f),
+            glm::vec3(0.0f, 0.0f, 0.0f),
+            glm::vec3(1, 1, 1)),
+        .AabbMin = aabbMin,
+        .MaterialIndex = 2,
+        .AabbMax = aabbMax,
+        .MeshIndex = cube
+    };
+    meshRegistry.RegisterInstance(MaterialType::Opaque, instance);*/
+
     AssetImporter::LoadAsset(_bindingManager, "data/BistroExterior.m3vkasset", meshRegistry, materialRegistry, graphicsCommandPool, graphicsComputeQueue, _samplerLinear.Internal());
     //ImporterHelper::Load3DModel(_descriptorAllocator, "data/BistroInterior_Wine.m3vkasset", meshRegistry, materialRegistry, _graphicsCommandPool.Internal(), _graphicsComputeQueue.Internal(), _samplerLinear.Internal());
-        /*for(uint32_t i = 0; i < 100; ++i)
-    {
-        float red = (rand() / (float)RAND_MAX);
-        float green = (rand() / (float)RAND_MAX);
-        float blue = (rand() / (float)RAND_MAX);
-        defaultMat.BaseColor = {red, green, blue, 1.0f};
-        uint32_t matBinding = materialRegistry.RegisterMaterial(defaultMat);
-    }
-
-    float sample = 300000;
-    float tr = 80.0f;
-
-    for(uint32_t i = 0; i < sample; ++i)
-    {
-        uint32_t matBinding = rand() % materialRegistry.MaterialsCount();
-
-        float x = (rand() / (float)RAND_MAX) * 2.0f - 1.0f;
-        float y = (rand() / (float)RAND_MAX) * 2.0f - 1.0f;
-        float z = (rand() / (float)RAND_MAX) * 2.0f - 1.0f;
-
-        float norm = sqrtf(x*x + y*y + z*z);
-
-        float radius = (rand() / (float)RAND_MAX) * tr;
-
-        x = (x / norm) * radius;
-        y = (y / norm) * radius;
-        z = (z / norm) * radius;
-
-        float scale = radius / tr * 25.0f;
-        InstanceData instance = {
-            .LocalToWorldMatrix = ApplicationHelper::TranslateRotateScale(glm::vec3(x, y, z),
-                glm::vec3(0.0f, 0.0f, 0.0f),
-                glm::vec3(axisThickness * scale, axisThickness * scale, axisThickness * scale)),
-            .AabbMin = aabbMin,
-            .MaterialIndex = matBinding,
-            .AabbMax = aabbMax,
-            .MeshIndex = cube
-        };
-        meshRegistry.RegisterInstance(MaterialType::Opaque, instance);
-    }*/
 
     for(auto& registry : _registries)
     {
@@ -188,6 +160,7 @@ void Pipeline::RefreshDrawModule(MaterialType type, const ShaderLibrary::VertexB
     {
         uint32_t index = _drawModules[type]->ModuleId;
         _drawModules[type] = drawModule.get();
+        drawModule->ModuleId = index;
         _modules[index] = std::move(drawModule);
     }
 }
@@ -325,31 +298,41 @@ void Pipeline::Execute(const CommandBuffer& cmdBuffer, const SwapChain& swapChai
         ImageHelper::TransitionLayoutCommand(cmdBuffer, finalColorTarget, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
         ImageHelper::TransitionLayoutCommand(cmdBuffer, backBuffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
+        GlobalConstants indexes
+        {
+            .DebugIndex = _debug,
+            .Cameras = _cameraDataBuffer.GetGPUIndex(),
+            .VisibleInstanceIndirections = _cullingModule->VisibleInstanceIndirectionBuffer().GetGPUIndex(),
+            .VisibleDrawIndirects = _cullingModule->VisibleIndirectBuffer().GetGPUIndex(),
+            .HizIndex = _hizGenerateModule->HiZTexture().PreviousBindlessIndex(),
+            .ScreenSize = glm::uvec2(backBuffer.Width, backBuffer.Height),
+            .ScreenPixelSize = glm::vec2(1.0f / backBuffer.Width, 1.0f/ backBuffer.Height)
+        };
+        cmdBuffer.PushConstants(_bindingManager.GlobalLayout(), 0, COMMON_INDEXES_OFFSET, &indexes);
+
         cmdBuffer.BeginMarker("Culling Compute Pass");
         {
             cmdBuffer.BindDescriptorSets(_bindingManager.GlobalLayout(), _bindingManager.GlobalDescriptorSet(), VK_PIPELINE_BIND_POINT_COMPUTE, 0);
-            _cullingModule->Execute(cmdBuffer, _cameraDataBuffer, meshRegistry.IndirectBuffer(), meshRegistry.InstanceDataBuffer(), _bindingManager.GlobalLayout());
+            _cullingModule->Execute(cmdBuffer, _hizGenerateModule->HiZTexture().PreviousBindlessIndex(), _cameraDataBuffer, meshRegistry.IndirectBuffer(), meshRegistry.InstanceDataBuffer(), _bindingManager.GlobalLayout());
         }
         cmdBuffer.EndMarker();
 
         cmdBuffer.BeginMarker("Render Pass");
         {
             cmdBuffer.BindDescriptorSets(_bindingManager.GlobalLayout(), _bindingManager.GlobalDescriptorSet(), VK_PIPELINE_BIND_POINT_GRAPHICS, 0);
-            CommonIndexes indexes
-            {
-                .DebugIndex = _debug,
-                .Cameras = _cameraDataBuffer.GetGPUIndex(),
-                .VisibleInstanceIndirections = _cullingModule->VisibleInstanceIndirectionBuffer().GetGPUIndex(),
-            };
-            cmdBuffer.PushConstants(_bindingManager.GlobalLayout(), 0, sizeof(CommonIndexes), &indexes);
 
             cmdBuffer.BeginRendering(renderArea,  {&colorAttachment, 1}, depthAttachment, stencilAttachment);
             {
+                if(_wireframe)
+                {
+                    cmdBuffer.SetPolygonMode(VK_POLYGON_MODE_LINE);
+                }
                 for(uint32_t i = 0; i < MaterialType::Count; ++i)
                 {
                     auto drawInfo = meshRegistry.GetIndirectDrawInfo(static_cast<MaterialType>(i));
-                    _drawModules[i]->Execute(cmdBuffer, _bindingManager.GlobalLayout(), _cullingModule->VisibleIndirectBuffer(), drawInfo.offset, drawInfo.count, _wireframe);
+                    _drawModules[i]->Execute(cmdBuffer, _bindingManager.GlobalLayout(), _cullingModule->VisibleIndirectBuffer(), drawInfo.offset, drawInfo.count);
                 }
+
                 _skyboxModule->Execute(cmdBuffer, _bindingManager.GlobalLayout());
             }
             cmdBuffer.EndRendering();
@@ -375,7 +358,7 @@ void Pipeline::Execute(const CommandBuffer& cmdBuffer, const SwapChain& swapChai
             {
                 for(const auto & module : _modules)
                 {
-                    module->RenderUI(cmdBuffer, _drawDebug, _bindingManager.GlobalLayout());
+                    module->RenderUI(cmdBuffer, _drawTextureDebug, _bindingManager.GlobalLayout());
                 }
                 ui.Draw(cmdBuffer.GetInternal());
             }
@@ -423,6 +406,7 @@ void Pipeline::DoKeyboardInput(const Window& window, float deltaTime)
     float speed = _camera.speed * deltaTime;
 
     if(window.IsKeyPressed(GLFW_KEY_LEFT_SHIFT)) speed *= 10.0;
+    if(window.IsKeyPressed(GLFW_KEY_LEFT_CONTROL)) speed /= 10.0;
 
     if(window.IsKeyPressed(GLFW_KEY_W)) _camera.position += speed * _camera.Front();
     if(window.IsKeyPressed(GLFW_KEY_S)) _camera.position -= speed * _camera.Front();

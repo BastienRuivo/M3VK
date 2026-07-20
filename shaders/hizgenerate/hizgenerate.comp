@@ -18,8 +18,8 @@ struct HizGenerateConstants
 
 layout(push_constant) uniform PushConstants
 {
-    CommonIndexes Indexes;
-    HizGenerateConstants Constants;
+    GlobalConstants gConstants;
+    layout(offset=COMMON_INDEXES_OFFSET)HizGenerateConstants Constants;
 } push;
 
 layout(set = GLOBAL_SET, binding = BINDING_TEXTURES) uniform sampler2D uTextures[];
@@ -28,41 +28,64 @@ layout(set = GLOBAL_SET, binding = BINDING_HIZ_TEXTURE, r32f) uniform image2D hi
 layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
 void main()
 {
-    if (gl_GlobalInvocationID.x >= push.Constants.dstSize.x || gl_GlobalInvocationID.y >= push.Constants.dstSize.y ) return;
-
+    HizGenerateConstants Constants = push.Constants;
     ivec2 threadID = ivec2(gl_GlobalInvocationID.xy);
-    uint srcIndex = nonuniformEXT(push.Constants.srcIndex);
-    uint dstIndex = nonuniformEXT(push.Constants.dstIndex);
+    uint dstWidth = Constants.dstSize.x;
+    uint dstHeight = Constants.dstSize.y;
+
+    if (gl_GlobalInvocationID.x >= dstWidth || gl_GlobalInvocationID.y >= dstHeight) return;
+
+    uint srcIndex = Constants.srcIndex;
 
     ivec2 baseCoords = threadID.xy * 2;
     float v0, v1, v2, v3;
 
     vec3 extra = vec3(0.0f);
 
-    bool oddX = (push.Constants.srcSize.x & 1u) != 0u;
-    bool oddY = (push.Constants.srcSize.y & 1u) != 0u;
-    ivec2 maxCoords = ivec2(push.Constants.srcSize) - ivec2(1);
+    bool oddX = (Constants.srcSize.x & 1u) != 0u;
+    bool oddY = (Constants.srcSize.y & 1u) != 0u;
+    ivec2 maxCoords = ivec2(Constants.srcSize) - ivec2(1);
 
     if(USE_ORIGINAL_DEPTH)
     {
-        vec2 uv = (vec2(baseCoords)+ vec2(1.0)) * push.Constants.srcPixelSize;
-        vec4 v = textureGather(uTextures[srcIndex], uv);
-        v0 = v.r;
-        v1 = v.g;
-        v2 = v.b;
-        v3 = v.a;
+        //vec2 uv = (vec2(baseCoords) + vec2(1.0)) * Constants.srcPixelSize;
+        //vec4 v = textureGather(uTextures[srcIndex], uv);
+        v0 = texelFetch(uTextures[srcIndex], min(baseCoords + ivec2(0, 0), maxCoords), 0).r;
+        v1 = texelFetch(uTextures[srcIndex], min(baseCoords + ivec2(0, 1), maxCoords), 0).r;
+        v2 = texelFetch(uTextures[srcIndex], min(baseCoords + ivec2(1, 1), maxCoords), 0).r;
+        v3 = texelFetch(uTextures[srcIndex], min(baseCoords + ivec2(1, 0), maxCoords), 0).r;
 
-        if (oddX && baseCoords.x == int(push.Constants.srcSize.x) - 3)
+        if (oddX && baseCoords.x == int(Constants.srcSize.x) - 3)
         {
             extra.x = texelFetch(uTextures[srcIndex], min(baseCoords + ivec2(2, 0), maxCoords), 0).r;
             extra.y = texelFetch(uTextures[srcIndex], min(baseCoords + ivec2(2, 1), maxCoords), 0).r;
 
-            if (oddY && baseCoords.y == int(push.Constants.srcSize.y) - 3)
+            if (oddY && baseCoords.y == int(Constants.srcSize.y) - 3)
             {
                 extra.z = texelFetch(uTextures[srcIndex], min(baseCoords + ivec2(2, 2), maxCoords), 0).r;
             }
+
+            if(gl_GlobalInvocationID.x == 5 && gl_GlobalInvocationID.y == 0)
+            {
+                float m = max(max(max(v0, v1), max(v2, v3)), max(extra.x, extra.y));
+                ivec2 tcv0 = min(baseCoords + ivec2(0, 0), maxCoords);
+                ivec2 tcv1 = min(baseCoords + ivec2(0, 1), maxCoords);
+                ivec2 tcv2 = min(baseCoords + ivec2(1, 1), maxCoords);
+                ivec2 tcv3 = min(baseCoords + ivec2(1, 0), maxCoords);
+                ivec2 tcex = min(baseCoords + ivec2(2, 0), maxCoords);
+                ivec2 tcey = min(baseCoords + ivec2(2, 1), maxCoords);
+                debugPrintfEXT("FOR DEPTH %u\n",srcIndex);
+                debugPrintfEXT("coords V0 = %u %u\n", tcv0.x, tcv0.y);
+                debugPrintfEXT("coords V1 = %u %u\n", tcv1.x, tcv1.y);
+                debugPrintfEXT("coords V2 = %u %u\n", tcv2.x, tcv2.y);
+                debugPrintfEXT("coords V3 = %u %u\n", tcv3.x, tcv3.y);
+                debugPrintfEXT("coords EX = %u %u\n", tcex.x, tcex.y);
+                debugPrintfEXT("coords EY = %u %u\n", tcey.x, tcey.y);
+                debugPrintfEXT("TEST MAX %f ---- v0 %f v1 %f v2 %f v3 %f ex %f ey %f \n", m, v0, v1, v2, v3, extra.x, extra.y);
+                debugPrintfEXT("\n");
+            }
         }
-        else if (oddY && baseCoords.y == int(push.Constants.srcSize.y) - 3)
+        else if (oddY && baseCoords.y == int(Constants.srcSize.y) - 3)
         {
             extra.x = texelFetch(uTextures[srcIndex], min(baseCoords + ivec2(0, 2), maxCoords), 0).r;
             extra.y = texelFetch(uTextures[srcIndex], min(baseCoords + ivec2(1, 2), maxCoords), 0).r;
@@ -75,16 +98,16 @@ void main()
         v2 = imageLoad(hizTexture[srcIndex], min(baseCoords + ivec2(1, 1), maxCoords)).r;
         v3 = imageLoad(hizTexture[srcIndex], min(baseCoords + ivec2(0, 1), maxCoords)).r;
 
-        if (oddX && int(baseCoords.x) == push.Constants.srcSize.x-3)
+        if (oddX && int(baseCoords.x) == Constants.srcSize.x-3)
         {
             extra.x =  imageLoad(hizTexture[srcIndex], min(baseCoords + ivec2(2, 0), maxCoords)).r;
             extra.y =  imageLoad(hizTexture[srcIndex], min(baseCoords + ivec2(2, 1), maxCoords)).r;
-            if (oddY && int(baseCoords.y) == push.Constants.srcSize.y-3)
+            if (oddY && int(baseCoords.y) == Constants.srcSize.y-3)
             {
                 extra.z = imageLoad(hizTexture[srcIndex], min(baseCoords + ivec2(2, 2), maxCoords)).r;
             }
         }
-        else if (oddY && int(baseCoords.y) == push.Constants.srcSize.y-3)
+        else if (oddY && int(baseCoords.y) == Constants.srcSize.y-3)
         {
             extra.x = imageLoad(hizTexture[srcIndex], min(baseCoords + ivec2(0, 2), maxCoords)).r;
             extra.y = imageLoad(hizTexture[srcIndex], min(baseCoords + ivec2(1, 2), maxCoords)).r;
@@ -92,5 +115,8 @@ void main()
     }
 
     float maxDepth = max(max(max(v0, v1), max(v2, v3)), max(extra.x, max(extra.y, extra.z)));
+    uint dstIndex = Constants.dstIndex;
+
+
     imageStore(hizTexture[dstIndex], threadID.xy, vec4(maxDepth, 0.0, 0.0, 0.0));
 }

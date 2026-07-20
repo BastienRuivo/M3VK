@@ -60,7 +60,7 @@ void FullscreenDrawDebug::Draw(const CommandBuffer& cmdBuffer, DrawOption option
             .MipLevel = mipLevel
         };
 
-        cmdBuffer.PushConstants(layout, sizeof(CommonIndexes), sizeof(TextureConstant), &constant);
+        cmdBuffer.PushConstants(layout, COMMON_INDEXES_OFFSET, sizeof(TextureConstant), &constant);
 
         cmdBuffer.Draw(3, 1, 0, 0);
     }

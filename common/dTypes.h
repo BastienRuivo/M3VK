@@ -10,6 +10,7 @@
     #define dVec4 vec4
     #define dVec3 vec3
     #define dVec2 vec2
+    #define dUvec2 uvec2
 #else
     #include <cstdint>
     #include <glm/glm.hpp>
@@ -22,6 +23,7 @@
     typedef glm::vec4 dVec4;
     typedef glm::vec3 dVec3;
     typedef glm::vec2 dVec2;
+    typedef glm::uvec2 dUvec2;
 #endif
 
 #endif

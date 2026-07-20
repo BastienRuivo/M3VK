@@ -4,7 +4,7 @@
 
 layout(push_constant) uniform PushConstants
 {
-    CommonIndexes indexes;
+    GlobalConstants gConstants;
 } push;
 
 // don't forget alignement the day you will have vec2 or nested
@@ -18,7 +18,7 @@ layout (location=0) out vec3 vViewDir;
 
 void main()
 {
-    uint cameraBufferIndex = push.indexes.Cameras;
+    uint cameraBufferIndex = push.gConstants.Cameras;
     CameraData camera = _Cameras[cameraBufferIndex].data;
 
     // Generate clip space coordinates:

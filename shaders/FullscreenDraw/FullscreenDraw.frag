@@ -12,7 +12,7 @@ struct TextureConstant
 
 layout(push_constant) uniform PushConstants
 {
-    CommonIndexes indexes;
+    GlobalConstants gConstants;
     TextureConstant Constants;
 } push;
 

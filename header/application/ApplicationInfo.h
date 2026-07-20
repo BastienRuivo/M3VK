@@ -37,8 +37,6 @@ class ApplicationInfo
         static inline constexpr size_t MaterialBufferMaxSize = 2048;
         static inline constexpr VkFormat DepthFormat = VK_FORMAT_D32_SFLOAT;
         static inline constexpr uint32_t MaxBindlessTextureCount = 1024;
-        static inline constexpr uint32_t MaxOtherTextureCount = 1024;
-        static inline constexpr uint32_t MaxBufferCount = 1024;
         static inline constexpr uint32_t MaxMipCount = 16;
     };
 

@@ -4,7 +4,7 @@
 
 layout(push_constant) uniform PushConstants
 {
-    CommonIndexes indexes;
+    GlobalConstants gConstants;
 } push;
 
 // don't forget alignement the day you will have vec2 or nested
@@ -41,8 +41,8 @@ layout(location=4) out vec3 vWsPosition;
 
 void main()
 {
-    uint cameraBufferIndex = push.indexes.Cameras;
-    uint bIndirectionIndex = push.indexes.VisibleInstanceIndirections;
+    uint cameraBufferIndex = push.gConstants.Cameras;
+    uint bIndirectionIndex = push.gConstants.VisibleInstanceIndirections;
 
     uint instanceIndex = _InstancesIndirection[bIndirectionIndex].data[gl_InstanceIndex];
 

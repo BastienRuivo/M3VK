@@ -75,6 +75,7 @@ class DescriptorPool
     void Free(DescriptorSetHandle set) const;
 
     inline VkDescriptorSetLayout Layout(uint32_t index) const { return _layouts[index]; }
+    inline const std::vector<VkDescriptorSetLayout>& Layouts() const { return _layouts; }
     inline VkDescriptorPool Pool() const { return _pool; }
 
     static inline VkDescriptorImageInfo DescriptorImageInfo(const ImageReference& image, VkSampler sampler)

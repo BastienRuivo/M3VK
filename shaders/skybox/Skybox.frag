@@ -4,7 +4,7 @@
 
 layout(push_constant) uniform PushConstants
 {
-    CommonIndexes indexes;
+    GlobalConstants gConstants;
 } push;
 
 layout(location = 0) in vec3 vViewDir;

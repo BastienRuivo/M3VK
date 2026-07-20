@@ -34,11 +34,20 @@
 
 #include "dTypes.h"
 
-struct CommonIndexes
+struct GlobalConstants
 {
     dUint DebugIndex;
     dUint Cameras;
+
     dUint VisibleInstanceIndirections;
     dUint VisibleDrawIndirects;
+
+    dUint HizIndex;
+    dUint pad0;
+
+    dUvec2 ScreenSize;
+    dVec2 ScreenPixelSize;
 };
+#define COMMON_INDEXES_OFFSET 40
+
 #endif

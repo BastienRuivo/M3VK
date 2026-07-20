@@ -5,7 +5,7 @@
 
 layout(push_constant) uniform PushConstants
 {
-    CommonIndexes indexes;
+    GlobalConstants gConstants;
 } push;
 
 #define DEBUG_VERTEX_NORMAL 1
@@ -69,8 +69,8 @@ vec3 ComputeLighting(LightingInput lightInput)
 {
     if(ENABLE_DEBUG)
     {
-        if(push.indexes.DebugIndex == DEBUG_VERTEX_NORMAL) return vNormal * 0.5 + 0.5;
-        if(push.indexes.DebugIndex == DEBUG_NORMAL) return lightInput.Normal * 0.5 + 0.5;
+        if(push.gConstants.DebugIndex == DEBUG_VERTEX_NORMAL) return vNormal * 0.5 + 0.5;
+        if(push.gConstants.DebugIndex == DEBUG_NORMAL) return lightInput.Normal * 0.5 + 0.5;
     }
 
     vec3 lightDir = normalize(vec3(0, 10000, 10000) - vWsPosition);

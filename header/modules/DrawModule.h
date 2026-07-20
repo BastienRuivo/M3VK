@@ -17,7 +17,8 @@ public:
     DrawModule(const DrawModule&) = delete;
     DrawModule& operator=(const DrawModule&) = delete;
 
-    void Execute(const CommandBuffer& cmdBuffer, VkPipelineLayout layout, const GraphicsBuffer& indirectBuffer, uint32_t drawOffset, uint32_t drawCount, bool wireframe) const;
+    void Execute(const CommandBuffer& cmdBuffer, VkPipelineLayout layout, const GraphicsBuffer& indirectBuffer, uint32_t drawOffset, uint32_t drawCount) const;
+    void Execute(const CommandBuffer& cmdBuffer, VkPipelineLayout layout, const VertexState& vertexState, const FragmentState& fragmentState, const GraphicsBuffer& indirectBuffer, uint32_t drawOffset, uint32_t drawCount) const;
     ShaderLibrary::VertexBinding VertexBinding;
     ShaderLibrary::FragmentBinding FragmentBinding;
 };

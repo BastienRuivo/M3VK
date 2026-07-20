@@ -80,7 +80,7 @@ class BindingManager
     inline DescriptorSetHandle GlobalDescriptorSet() const { return _globalSet; }
     inline VkPipelineLayout GlobalLayout() const { return _globalLayout.Internal(); }
     inline const std::vector<VkPushConstantRange>& GlobalPushConstantRanges() const { return _globalPushConstantRanges; }
-    inline const std::vector<VkDescriptorSetLayout>& GlobalSetLayouts() const { return _globalSetLayouts; }
+    inline const std::vector<VkDescriptorSetLayout>& GlobalSetLayouts() const { return _bindlessPool.Layouts(); }
 
     private:
     DescriptorSetHandle AllocateBindlessInternal(std::span<uint32_t> counts, VkDescriptorSetLayout layout);
@@ -91,7 +91,6 @@ class BindingManager
     DescriptorPool _bindlessPool;
     DescriptorSetHandle _globalSet = {};
 
-    std::vector<VkDescriptorSetLayout> _globalSetLayouts;
     std::vector<VkPushConstantRange> _globalPushConstantRanges;
     VkPipelineLayoutHandler _globalLayout;
 };

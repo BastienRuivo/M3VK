@@ -77,7 +77,7 @@ void HiZGenerateModule::Execute(const CommandBuffer& cmdBuffer, const BindingMan
             constants.dstSize = glm::uvec2(currentWidth, currentHeight);
             constants.dstPixelSize = glm::vec2(1.0f / currentWidth, 1.0f / currentHeight);
 
-            cmdBuffer.PushConstants(layout, sizeof(CommonIndexes), sizeof(ComputeConstants), &constants);
+            cmdBuffer.PushConstants(layout, COMMON_INDEXES_OFFSET, sizeof(ComputeConstants), &constants);
 
             if(useOriginalDepth) _hizGenerateMip0Kernel.CeilDispatch(cmdBuffer, currentWidth, currentHeight);
             else _hizGenerateKernel.CeilDispatch(cmdBuffer, currentWidth, currentHeight);

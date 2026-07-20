@@ -41,26 +41,18 @@ CullingModule::~CullingModule()
 {
 }
 
-void CullingModule::Execute(const CommandBuffer& cmdBuffer, const GraphicsBuffer& cameraBuffer, const GeometryBuffer& indirectBuffer, const GeometryBuffer& instanceBuffer, VkPipelineLayout layout) const
+void CullingModule::Execute(const CommandBuffer& cmdBuffer, uint32_t hizIndex, const GraphicsBuffer& cameraBuffer, const GeometryBuffer& indirectBuffer, const GeometryBuffer& instanceBuffer, VkPipelineLayout layout) const
 {
     cmdBuffer.BeginMarker("Culling Module");
     {
-        CommonIndexes indexes
-        {
-            .DebugIndex = 0,
-            .Cameras = cameraBuffer.GetGPUIndex(),
-            .VisibleInstanceIndirections = _visibleIndirectionBuffer.GetGPUIndex(),
-            .VisibleDrawIndirects = _visibleIndirectBuffer.GetGPUIndex(),
-        };
-
         CullingConstants constants
         {
             .InstanceCount = instanceBuffer.GetCurrentIndex(),
-            .DrawCount = indirectBuffer.GetCurrentIndex()
+            .DrawCount = indirectBuffer.GetCurrentIndex(),
+            .HizIndex = hizIndex
         };
 
-        cmdBuffer.PushConstants(layout, 0, sizeof(CommonIndexes), &indexes);
-        cmdBuffer.PushConstants(layout, sizeof(CommonIndexes), sizeof(CullingConstants), &constants);
+        cmdBuffer.PushConstants(layout, COMMON_INDEXES_OFFSET, sizeof(CullingConstants), &constants);
 
         Barrier(cmdBuffer, constants.InstanceCount, constants.DrawCount, VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_SHADER_WRITE_BIT);
 
@@ -92,6 +84,15 @@ void CullingModule::Barrier(const CommandBuffer& cmdBuffer, uint32_t instanceCou
     };
 
     cmdBuffer.Barrier(bufferBarrier);
+}
+
+void CullingModule::DoUI(const UserInterface& ui)
+{
+    ImGui::Begin("CullingModule");
+    {
+
+    }
+    ImGui::End();
 }
 
  CullingModule::CullingModule(CullingModule&& other) noexcept
