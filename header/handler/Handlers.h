@@ -148,7 +148,7 @@ public:
 class VkSamplerHandler : public Handler<VkSampler>
 {
 public:
-    VkSamplerHandler(VkFilter oversampling = VK_FILTER_LINEAR, VkFilter undersampling = VK_FILTER_LINEAR);
+    VkSamplerHandler(VkFilter oversampling = VK_FILTER_LINEAR, VkFilter undersampling = VK_FILTER_LINEAR, VkSamplerMipmapMode mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR, bool hasAniso = true);
     ~VkSamplerHandler() override;
 
     VkSamplerHandler(VkSamplerHandler&& other) noexcept = default;

@@ -69,20 +69,21 @@ void HiZGenerateModule::Execute(const CommandBuffer& cmdBuffer, const BindingMan
             if(useOriginalDepth) _hizGenerateMip0Kernel.Bind(cmdBuffer);
             else _hizGenerateKernel.Bind(cmdBuffer);
 
-            constants.srcIndex = useOriginalDepth ? depthTarget.CurrentBindlessIndex() : _hizImageViews.CurrentIndex(i - 1);
+            constants.srcIndex = useOriginalDepth ? depthTarget.CurrentBindlessIndex() : _hizTexture.CurrentBindlessIndex();
             constants.dstIndex = _hizImageViews.CurrentIndex(i);
 
             constants.srcSize = glm::uvec2(previousWidth, previousHeight);
             constants.srcPixelSize = glm::vec2(1.0f / previousWidth, 1.0f / previousHeight);
             constants.dstSize = glm::uvec2(currentWidth, currentHeight);
             constants.dstPixelSize = glm::vec2(1.0f / currentWidth, 1.0f / currentHeight);
+            constants.srcMipLevel = useOriginalDepth ? 0 : i - 1;
 
             cmdBuffer.PushConstants(layout, COMMON_INDEXES_OFFSET, sizeof(ComputeConstants), &constants);
 
             if(useOriginalDepth) _hizGenerateMip0Kernel.CeilDispatch(cmdBuffer, currentWidth, currentHeight);
             else _hizGenerateKernel.CeilDispatch(cmdBuffer, currentWidth, currentHeight);
 
-            ImageHelper::StorageImageReadWriteCommand(cmdBuffer, hiz, false, i, 1, 0, 1);
+            ImageHelper::StorageImageGeneralToLayoutCommand(cmdBuffer, hiz, true, i, 1, 0, 1, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
             previousWidth = currentWidth;
             previousHeight = currentHeight;
 
@@ -90,7 +91,7 @@ void HiZGenerateModule::Execute(const CommandBuffer& cmdBuffer, const BindingMan
             currentHeight = std::max(currentHeight >> 1, 1u);
         }
 
-        ImageHelper::StorageImageGeneralToLayoutCommand(cmdBuffer, hiz, false, 0, hiz.MipCount, 0, 1, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+        //ImageHelper::StorageImageGeneralToLayoutCommand(cmdBuffer, hiz, false, 0, hiz.MipCount, 0, 1, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
         ImageHelper::TransitionLayoutCommand(cmdBuffer, depth, VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
     }
     cmdBuffer.EndMarker();

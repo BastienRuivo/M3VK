@@ -46,6 +46,28 @@ void TransformBBOX(mat4 transform, vec3 AabbMin, vec3 AabbMax, out vec3 outAabbM
     }
 }
 
+bool TransformBBOXPerspective(mat4 transform, vec3 AabbMin, vec3 AabbMax, out vec3 outAabbMin, out vec3 outAabbMax)
+{
+    vec3 center = (AabbMin + AabbMax) * 0.5;
+    vec3 extent = (AabbMax - AabbMin) * 0.5;
+
+    outAabbMin = vec3(1e7);
+    outAabbMax = vec3(-1e7);
+
+    float minZ = outAabbMin.z;
+    for(int i = 0; i < 8; i++)
+    {
+        vec4 point = vec4(center + Bbox[i] * extent, 1.0);
+        point = transform * point;
+        minZ = min(minZ, point.z);
+        point.xyz /= point.w;
+        outAabbMin = min(outAabbMin, point.xyz);
+        outAabbMax = max(outAabbMax, point.xyz);
+    }
+
+    return minZ <= 0.0;
+}
+
 bool FustumCulling(CameraData camera, vec3 center, vec3 extent)
 {
     for(int i = 0; i < 6; i++)
@@ -71,27 +93,30 @@ bool Culling(CameraData camera, InstanceData instance)
     if(isVisible)
     {
         vec3 ssAABBMin, ssAABBMax;
-        TransformBBOX(camera.ViewProjectionMatrix, wsAABBMin, wsAABBMax, ssAABBMin, ssAABBMax);
+        bool isBehindCamera = TransformBBOXPerspective(camera.ViewProjectionMatrix, wsAABBMin, wsAABBMax, ssAABBMin, ssAABBMax);
 
         vec2 aabbMin = clamp(ssAABBMin.xy * 0.5 + 0.5, 0.0, 1.0);
         vec2 aabbMax = clamp(ssAABBMax.xy * 0.5 + 0.5, 0.0, 1.0);
+
+        vec4 aabb = vec4(aabbMin.x, aabbMin.y, aabbMax.x, aabbMax.y);
         float minZ = ssAABBMin.z;
+        float maxZ = ssAABBMax.z;
 
-        uvec2 aabbMinSize = uvec2((aabbMax.xy - aabbMin.xy) * push.gConstants.ScreenSize);
 
-        uint LOD = uint(ceil(log2(max(aabbMinSize.x, aabbMinSize.y) * 0.5)));
+        uvec2 aabbSize = uvec2((aabbMax.xy - aabbMin.xy) * push.gConstants.HizSize);
 
-        aabbMin +=  push.gConstants.ScreenPixelSize;
-        aabbMax +=  push.gConstants.ScreenPixelSize;
+        uint LOD = uint(ceil(log2(max(aabbSize.x, aabbSize.y) * 0.5)));
 
-        float v0 = textureLod(uTextures[push.gConstants.HizIndex], vec2(aabbMin.x, aabbMin.y), LOD).r;
-        float v1 = textureLod(uTextures[push.gConstants.HizIndex], vec2(aabbMax.x, aabbMin.y), LOD).r;
-        float v2 = textureLod(uTextures[push.gConstants.HizIndex], vec2(aabbMax.x, aabbMax.y), LOD).r;
-        float v3 = textureLod(uTextures[push.gConstants.HizIndex], vec2(aabbMin.x, aabbMax.y), LOD).r;
+        vec2 lodPixelSize = vec2(1.0 / (push.gConstants.HizSize.x << LOD), 1.0 / (push.gConstants.HizSize.y << LOD));
+        aabb += lodPixelSize.xyxy;
+
+        float v0 = textureLod(uTextures[push.gConstants.HizIndex], vec2(aabb.x, aabb.w), LOD).r;
+        float v1 = textureLod(uTextures[push.gConstants.HizIndex], vec2(aabb.z, aabb.w), LOD).r;
+        float v2 = textureLod(uTextures[push.gConstants.HizIndex], vec2(aabb.z, aabb.y), LOD).r;
+        float v3 = textureLod(uTextures[push.gConstants.HizIndex], vec2(aabb.x, aabb.y), LOD).r;
 
         float v = max(v0, max(v1, max(v2, v3)));
 
-        bool isBehindCamera = minZ <= 0.1;
         bool isInFrontOfHiZ = minZ <= v;
         isVisible = isBehindCamera || isInFrontOfHiZ;
     }

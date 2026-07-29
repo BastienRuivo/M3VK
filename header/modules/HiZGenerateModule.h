@@ -26,6 +26,8 @@ public:
 
         uint32_t srcIndex;
         uint32_t dstIndex;
+
+        uint32_t srcMipLevel;
     };
 
     HiZGenerateModule(const SwapChain& swapChain, ShaderLibrary& shaderLibrary, BindingManager& bindingManager, VkCommandPool graphicsCommandPool, VkQueue graphicsComputeQueue, VkSampler samplerNearest);

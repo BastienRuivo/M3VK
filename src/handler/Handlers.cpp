@@ -368,7 +368,7 @@ VkQueueHandler& VkQueueHandler::operator=(VkQueueHandler&& other) noexcept
     return *this;
 }
 
-VkSamplerHandler::VkSamplerHandler(VkFilter oversampling, VkFilter undersampling)
+VkSamplerHandler::VkSamplerHandler(VkFilter oversampling, VkFilter undersampling, VkSamplerMipmapMode mipmapMode, bool hasAniso)
 {
     VkSamplerCreateInfo createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
@@ -383,8 +383,8 @@ VkSamplerHandler::VkSamplerHandler(VkFilter oversampling, VkFilter undersampling
     createInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
 
     // Anisotropy -> Avoiding blur caused by mipmapping by doing clever more sampling
-    createInfo.anisotropyEnable = VK_TRUE;
-    createInfo.maxAnisotropy = ApplicationInfo::Get().GetProperties().limits.maxSamplerAnisotropy;
+    createInfo.anisotropyEnable = hasAniso ? VK_TRUE : VK_FALSE;
+    createInfo.maxAnisotropy = hasAniso ? ApplicationInfo::Get().GetProperties().limits.maxSamplerAnisotropy : 0.0;
 
     createInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
     createInfo.unnormalizedCoordinates = VK_FALSE;
@@ -393,7 +393,7 @@ VkSamplerHandler::VkSamplerHandler(VkFilter oversampling, VkFilter undersampling
     createInfo.compareEnable = VK_FALSE;
     createInfo.compareOp = VK_COMPARE_OP_ALWAYS;
 
-    createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+    createInfo.mipmapMode = mipmapMode;
     createInfo.mipLodBias = 0.0f;
     createInfo.minLod = 0.0f;
     createInfo.maxLod = VK_LOD_CLAMP_NONE;

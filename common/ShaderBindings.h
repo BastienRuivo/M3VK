@@ -42,12 +42,15 @@ struct GlobalConstants
     dUint VisibleInstanceIndirections;
     dUint VisibleDrawIndirects;
 
+    dUvec2 ScreenSize;
+    dVec2 ScreenPixelSize;
+
     dUint HizIndex;
     dUint pad0;
 
-    dUvec2 ScreenSize;
-    dVec2 ScreenPixelSize;
+    dUvec2 HizSize;
+    dVec2 HizPixelSize;
 };
-#define COMMON_INDEXES_OFFSET 40
+#define COMMON_INDEXES_OFFSET 56
 
 #endif

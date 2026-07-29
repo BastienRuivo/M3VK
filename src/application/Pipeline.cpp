@@ -7,9 +7,10 @@
 #include "application/UserInterface.h"
 #include "application/Window.h"
 #include "asset/AssetImporter.h"
-#include "asset/MeshHelper.h"
 #include "allocation/MaterialRegistry.h"
 #include "allocation/MeshRegistry.h"
+#include "asset/MeshHelper.h"
+#include "glm/fwd.hpp"
 #include "rendering/CommandBuffer.h"
 #include "rendering/SwapChain.h"
 #include <cstring>
@@ -18,7 +19,7 @@
 Pipeline::Pipeline(const SwapChain& swapChain, VkCommandPool graphicsCommandPool, VkQueue graphicsComputeQueue)
 : _bindingManager(),
     _samplerLinear(),
-    _samplerNearest(VK_FILTER_NEAREST, VK_FILTER_NEAREST),
+    _samplerNearest(VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_MIPMAP_MODE_NEAREST, false),
     _registries(
         {
             std::make_unique<MeshRegistry>(_bindingManager),
@@ -56,7 +57,7 @@ Pipeline::Pipeline(const SwapChain& swapChain, VkCommandPool graphicsCommandPool
     MeshRegistry& meshRegistry = static_cast<MeshRegistry&>(*_registries[(size_t)RegistryType::Mesh]);
     MaterialRegistry& materialRegistry = static_cast<MaterialRegistry&>(*_registries[(size_t)RegistryType::Material]);
 
-    /*const float axisLength = 10.0f;
+    const float axisLength = 10.0f;
     const float axisThickness = 0.00625f;
 
     glm::vec3 aabbMin, aabbMax;
@@ -112,7 +113,7 @@ Pipeline::Pipeline(const SwapChain& swapChain, VkCommandPool graphicsCommandPool
     InstanceData instance = {
         .LocalToWorldMatrix = ApplicationHelper::TranslateRotateScale(glm::vec3(0.0f, 0.0f, 0.0f),
             glm::vec3(0.0f, 0.0f, 0.0f),
-            glm::vec3(0.1, 10, 10)),
+            glm::vec3(2, 10, 10)),
         .AabbMin = aabbMin,
         .MaterialIndex = 1,
         .AabbMax = aabbMax,
@@ -130,10 +131,48 @@ Pipeline::Pipeline(const SwapChain& swapChain, VkCommandPool graphicsCommandPool
         .AabbMax = aabbMax,
         .MeshIndex = cube
     };
-    meshRegistry.RegisterInstance(MaterialType::Opaque, instance);*/
+    //meshRegistry.RegisterInstance(MaterialType::Opaque, instance);
 
-    AssetImporter::LoadAsset(_bindingManager, "data/BistroExterior.m3vkasset", meshRegistry, materialRegistry, graphicsCommandPool, graphicsComputeQueue, _samplerLinear.Internal());
-    //ImporterHelper::Load3DModel(_descriptorAllocator, "data/BistroInterior_Wine.m3vkasset", meshRegistry, materialRegistry, _graphicsCommandPool.Internal(), _graphicsComputeQueue.Internal(), _samplerLinear.Internal());
+    for(uint32_t i = 0; i < 100; ++i)
+    {
+        float red = (rand() / (float)RAND_MAX);
+        float green = (rand() / (float)RAND_MAX);
+        float blue = (rand() / (float)RAND_MAX);
+        defaultMat.BaseColor = {red, green, blue, 1.0f};
+        uint32_t matBinding = materialRegistry.RegisterMaterial(defaultMat);
+    }
+
+    float sample = 300000;
+    float tr = 80.0f;
+
+    for(uint32_t i = 0; i < sample; ++i)
+    {
+        uint32_t matBinding = rand() % materialRegistry.MaterialsCount();
+
+        float x = (rand() / (float)RAND_MAX) * 2.0f - 1.0f;
+        float y = (rand() / (float)RAND_MAX) * 2.0f - 1.0f;
+        float z = (rand() / (float)RAND_MAX) * 2.0f - 1.0f;
+
+        float norm = sqrtf(x*x + y*y + z*z);
+
+        float radius = (rand() / (float)RAND_MAX) * tr;
+
+        x = (x / norm) * radius;
+        y = (y / norm) * radius;
+        z = (z / norm) * radius;
+
+        float scale = radius / tr * 25.0f;
+        InstanceData instance = {
+            .LocalToWorldMatrix = ApplicationHelper::TranslateRotateScale(glm::vec3(x, y, z),
+                glm::vec3(0.0f, 0.0f, 0.0f),
+                glm::vec3(axisThickness * scale, axisThickness * scale, axisThickness * scale)),
+            .AabbMin = aabbMin,
+            .MaterialIndex = matBinding,
+            .AabbMax = aabbMax,
+            .MeshIndex = cube
+        };
+        meshRegistry.RegisterInstance(MaterialType::Opaque, instance);
+    }
 
     for(auto& registry : _registries)
     {
@@ -184,6 +223,8 @@ void Pipeline::InitDrawModules(bool DebugOn)
         .Handle = _shaderLibrary.GetHandle(sVertex),
         .State = VertexState()
     };
+
+    vertexCullBack.State.CullMode = VK_CULL_MODE_NONE;
 
     ShaderLibrary::VertexBinding vertexCullOff =
     {
@@ -265,6 +306,7 @@ void Pipeline::Execute(const CommandBuffer& cmdBuffer, const SwapChain& swapChai
 {
     const auto & finalColorTarget = _finalColorTarget.Texture(_bindingManager).Internal();
     const auto & finalDepthTarget = _finalDepthTarget.Texture(_bindingManager).Internal();
+    const auto & hiz = _hizGenerateModule->_hizTexture.Texture(_bindingManager).Internal();
 
     VkRect2D renderArea = {0, 0, swapChain.GetExtent().width, swapChain.GetExtent().height};
 
@@ -304,9 +346,11 @@ void Pipeline::Execute(const CommandBuffer& cmdBuffer, const SwapChain& swapChai
             .Cameras = _cameraDataBuffer.GetGPUIndex(),
             .VisibleInstanceIndirections = _cullingModule->VisibleInstanceIndirectionBuffer().GetGPUIndex(),
             .VisibleDrawIndirects = _cullingModule->VisibleIndirectBuffer().GetGPUIndex(),
-            .HizIndex = _hizGenerateModule->HiZTexture().PreviousBindlessIndex(),
             .ScreenSize = glm::uvec2(backBuffer.Width, backBuffer.Height),
-            .ScreenPixelSize = glm::vec2(1.0f / backBuffer.Width, 1.0f/ backBuffer.Height)
+            .ScreenPixelSize = glm::vec2(1.0f / backBuffer.Width, 1.0f/ backBuffer.Height),
+            .HizIndex = _hizGenerateModule->HiZTexture().PreviousBindlessIndex(),
+            .HizSize = glm::uvec2(hiz.Width, hiz.Height),
+            .HizPixelSize = glm::vec2(1.0f / hiz.Width, 1.0f / hiz.Height)
         };
         cmdBuffer.PushConstants(_bindingManager.GlobalLayout(), 0, COMMON_INDEXES_OFFSET, &indexes);
 

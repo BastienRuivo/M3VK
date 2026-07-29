@@ -4,8 +4,6 @@ struct CullingConstants
 {
     uint InstanceCount;
     uint DrawCount;
-    uvec2 ScreenSize;
-    vec2 ScreenPixelSize;
 };
 
 layout(push_constant) uniform PushConstants
