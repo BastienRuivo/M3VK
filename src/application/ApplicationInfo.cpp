@@ -36,7 +36,6 @@ void ApplicationInfo::SetPhysicalDeviceInformation(VkPhysicalDevice physicalDevi
     _physicalDevice = physicalDevice;
     _properties = properties;
     _queueFamilyIds = queueFamilyIds;
-    _msaaSample = GetMaxUsableSampleCount(Constant::MaxMSAASample);
 }
 
 uint32_t ApplicationInfo::FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties)

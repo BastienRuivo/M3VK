@@ -10,7 +10,6 @@
 #include "allocation/Registry.h"
 #include "rendering/Camera.h"
 #include "allocation/BindingManager.h"
-#include "rendering/GraphicsImage.h"
 #include "rendering/Shaders/ShaderLibrary.h"
 #include "rendering/SwapChain.h"
 #include <vulkan/vulkan_core.h>
@@ -50,8 +49,6 @@ class Pipeline
 
     // Ressources
     // Pipeline
-    GraphicsImage _msaaColorTarget;
-    GraphicsImage _msaaDepthTarget;
     BindingManager::BindlessTexture _finalColorTarget;
     BindingManager::BindlessTexture _finalDepthTarget;
 

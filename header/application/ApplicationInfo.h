@@ -29,7 +29,6 @@ class ApplicationInfo
 
     struct Constant
     {
-        static inline constexpr VkSampleCountFlagBits MaxMSAASample = VK_SAMPLE_COUNT_8_BIT;
         static inline constexpr uint32_t MaxFrameInFlight = 2;
         static inline constexpr size_t VertexBufferMaxSize = 16777216; // 2^23
         static inline constexpr size_t IndexBufferMaxSize = 16777216;
@@ -45,7 +44,6 @@ class ApplicationInfo
     static inline uint32_t GetPresentQueueId() { return ApplicationInfo::Get()._queueFamilyIds.Present.value(); }
     static inline uint32_t GetTransferQueueId() { return ApplicationInfo::Get()._queueFamilyIds.Transfer.value(); }
     static inline const VkPhysicalDeviceProperties& GetProperties() { return ApplicationInfo::Get()._properties; }
-    static inline VkSampleCountFlagBits GetMsaaSample()    { return ApplicationInfo::Get()._msaaSample; }
 
     static uint32_t FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
     static inline uint32_t CurrentFrame() { return (ApplicationInfo::Get()._currentFrame) % Constant::MaxFrameInFlight; }
@@ -74,7 +72,6 @@ class ApplicationInfo
     VkSampleCountFlagBits GetMaxUsableSampleCount(VkSampleCountFlagBits maxSample) const;
     QueueFamilyIds _queueFamilyIds;
     VkPhysicalDeviceProperties _properties;
-    VkSampleCountFlagBits  _msaaSample = VK_SAMPLE_COUNT_1_BIT;
     VkPhysicalDevice _physicalDevice = VK_NULL_HANDLE;
     VkDevice _device = VK_NULL_HANDLE;
     VkInstance _vkInstance = VK_NULL_HANDLE;

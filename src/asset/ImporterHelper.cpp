@@ -120,7 +120,7 @@ GraphicsImage ImporterHelper::CubemapFromCPU(BindingManager& allocator, uint32_t
         front.Width(), front.Height(),
         6, VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT,
         VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-        front.GetGPUFormat(), ImageHelper::GetMipCount(front.Width(), front.Height()), VK_IMAGE_TILING_OPTIMAL, VK_SAMPLE_COUNT_1_BIT);
+        front.GetGPUFormat(), ImageHelper::GetMipCount(front.Width(), front.Height()), VK_IMAGE_TILING_OPTIMAL);
 
     const CPUImage* stage[6] = { &right, &left, &top, &bottom, &front, &back };
     VkBufferImageCopy copyRegions[6];

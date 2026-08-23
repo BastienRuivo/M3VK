@@ -9,14 +9,14 @@
 #include <utility>
 #include <vulkan/vulkan_core.h>
 
-GPUImage::GPUImage(uint32_t width, uint32_t height, VkImageUsageFlags usageFlags, VkFormat format, VkImageTiling tiling, VkSampleCountFlagBits msaaSampleCount)
-: GPUImage(width, height, 1, 0, usageFlags, format, ImageHelper::GetMipCount(width, height), tiling, msaaSampleCount)
+GPUImage::GPUImage(uint32_t width, uint32_t height, VkImageUsageFlags usageFlags, VkFormat format, VkImageTiling tiling)
+: GPUImage(width, height, 1, 0, usageFlags, format, ImageHelper::GetMipCount(width, height), tiling)
 {
 
 }
 
-GPUImage::GPUImage(uint32_t width, uint32_t height, VkImageUsageFlags usageFlags, VkFormat format, uint32_t mipCount, VkImageTiling tiling, VkSampleCountFlagBits msaaSampleCount)
-: GPUImage(width, height, 1, 0, usageFlags, format, mipCount, tiling, msaaSampleCount)
+GPUImage::GPUImage(uint32_t width, uint32_t height, VkImageUsageFlags usageFlags, VkFormat format, uint32_t mipCount, VkImageTiling tiling)
+: GPUImage(width, height, 1, 0, usageFlags, format, mipCount, tiling)
 {
 
 }
@@ -30,7 +30,7 @@ bool GPUImage::Resize(uint32_t width, uint32_t height)
         {
             _internal.MipCount = ImageHelper::GetMipCount(width, height);
         }
-        CreateImageInternal(width, height, _internal.ArrayLayerCount, _internal.CreateFlags, _internal.UsageFlags, _internal.Format, _internal.MipCount, _internal.Tiling, _internal.MsaaSampleCount);
+        CreateImageInternal(width, height, _internal.ArrayLayerCount, _internal.CreateFlags, _internal.UsageFlags, _internal.Format, _internal.MipCount, _internal.Tiling);
         _internal.Width = width;
         _internal.Height = height;
         return true;
@@ -52,7 +52,7 @@ void GPUImage::DisposeInternal()
     _memoryInternal = {};
 }
 
-void GPUImage::CreateImageInternal(uint32_t width, uint32_t height, uint32_t arrayLayers, VkImageCreateFlags createFlags, VkImageUsageFlags usageFlags, VkFormat format, uint32_t mipCount, VkImageTiling tiling, VkSampleCountFlagBits msaaSampleCount)
+void GPUImage::CreateImageInternal(uint32_t width, uint32_t height, uint32_t arrayLayers, VkImageCreateFlags createFlags, VkImageUsageFlags usageFlags, VkFormat format, uint32_t mipCount, VkImageTiling tiling)
 {
     VkMemoryPropertyFlags memoryFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
 
@@ -70,7 +70,7 @@ void GPUImage::CreateImageInternal(uint32_t width, uint32_t height, uint32_t arr
         },
         .mipLevels = mipCount,
         .arrayLayers = arrayLayers,
-        .samples = msaaSampleCount,
+        .samples = VK_SAMPLE_COUNT_1_BIT,
         .tiling = tiling, // Optimal tiling data, if need to write / acces directly to the texture need LINEAR wich is classical row column
         .usage = usageFlags,
         .sharingMode = VK_SHARING_MODE_EXCLUSIVE, // only used by the graphics queue
@@ -123,7 +123,6 @@ void GPUImage::CreateImageInternal(uint32_t width, uint32_t height, uint32_t arr
         .CreateFlags = createFlags,
         .UsageFlags = usageFlags,
         .Tiling = tiling,
-        .MsaaSampleCount = msaaSampleCount,
         .Format = format,
         .Width = static_cast<uint32_t>(width),
         .Height = static_cast<uint32_t>(height),
@@ -135,9 +134,9 @@ void GPUImage::CreateImageInternal(uint32_t width, uint32_t height, uint32_t arr
     _internal.View = ImageHelper::CreateImageView(_internal, ApplicationHelper::GetImageAspectFlags(_internal.Format), createFlags & VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT ? VK_IMAGE_VIEW_TYPE_CUBE : VK_IMAGE_VIEW_TYPE_2D);
 }
 
-GPUImage::GPUImage(uint32_t width, uint32_t height, uint32_t arrayLayers, VkImageCreateFlags createFlags, VkImageUsageFlags usageFlags, VkFormat format, uint32_t mipCount, VkImageTiling tiling, VkSampleCountFlagBits msaaSampleCount)
+GPUImage::GPUImage(uint32_t width, uint32_t height, uint32_t arrayLayers, VkImageCreateFlags createFlags, VkImageUsageFlags usageFlags, VkFormat format, uint32_t mipCount, VkImageTiling tiling)
 {
-   CreateImageInternal(width, height, arrayLayers, createFlags, usageFlags, format, mipCount, tiling, msaaSampleCount);
+   CreateImageInternal(width, height, arrayLayers, createFlags, usageFlags, format, mipCount, tiling);
 }
 
 

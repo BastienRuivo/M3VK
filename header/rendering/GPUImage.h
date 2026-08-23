@@ -12,7 +12,6 @@ struct ImageReference
     VkImageCreateFlags CreateFlags = 0;
     VkImageUsageFlags UsageFlags = 0;
     VkImageTiling Tiling = VK_IMAGE_TILING_OPTIMAL;
-    VkSampleCountFlagBits MsaaSampleCount = VK_SAMPLE_COUNT_1_BIT;
     VkImageView View = VK_NULL_HANDLE;
     VkFormat Format = VK_FORMAT_UNDEFINED;
     uint32_t Width = 0;
@@ -26,12 +25,12 @@ class GPUImage
 {
     public:
 
-    GPUImage(uint32_t width, uint32_t height, uint32_t arrayLayers, VkImageCreateFlags createFlags, VkImageUsageFlags usageFlags, VkFormat format, uint32_t mipCount, VkImageTiling tiling, VkSampleCountFlagBits msaaSampleCount);
-    GPUImage(uint32_t width, uint32_t height, VkImageUsageFlags usageFlags, VkFormat format, uint32_t mipCount, VkImageTiling tiling = VK_IMAGE_TILING_OPTIMAL, VkSampleCountFlagBits msaaSampleCount = VK_SAMPLE_COUNT_1_BIT);
-    GPUImage(uint32_t width, uint32_t height, VkImageUsageFlags usageFlags, VkFormat format, VkImageTiling tiling = VK_IMAGE_TILING_OPTIMAL, VkSampleCountFlagBits msaaSampleCount = VK_SAMPLE_COUNT_1_BIT);
+    GPUImage(uint32_t width, uint32_t height, uint32_t arrayLayers, VkImageCreateFlags createFlags, VkImageUsageFlags usageFlags, VkFormat format, uint32_t mipCount, VkImageTiling tiling);
+    GPUImage(uint32_t width, uint32_t height, VkImageUsageFlags usageFlags, VkFormat format, uint32_t mipCount, VkImageTiling tiling = VK_IMAGE_TILING_OPTIMAL);
+    GPUImage(uint32_t width, uint32_t height, VkImageUsageFlags usageFlags, VkFormat format, VkImageTiling tiling = VK_IMAGE_TILING_OPTIMAL);
     virtual ~GPUImage();
 
-    GPUImage static CubeMap(uint32_t width, uint32_t height, VkImageUsageFlags usageFlags, VkFormat format, VkImageTiling tiling = VK_IMAGE_TILING_OPTIMAL, VkSampleCountFlagBits msaaSampleCount = VK_SAMPLE_COUNT_1_BIT);
+    GPUImage static CubeMap(uint32_t width, uint32_t height, VkImageUsageFlags usageFlags, VkFormat format, VkImageTiling tiling = VK_IMAGE_TILING_OPTIMAL);
 
     GPUImage(GPUImage&& other) noexcept;
     GPUImage& operator=(GPUImage&& other) noexcept;
@@ -50,7 +49,7 @@ class GPUImage
     bool Resize(uint32_t width, uint32_t height);
 
     protected:
-    void CreateImageInternal(uint32_t width, uint32_t height, uint32_t arrayLayers, VkImageCreateFlags createFlags, VkImageUsageFlags usageFlags, VkFormat format, uint32_t mipCount, VkImageTiling tiling, VkSampleCountFlagBits msaaSampleCount);
+    void CreateImageInternal(uint32_t width, uint32_t height, uint32_t arrayLayers, VkImageCreateFlags createFlags, VkImageUsageFlags usageFlags, VkFormat format, uint32_t mipCount, VkImageTiling tiling);
     void DisposeInternal();
     DeviceMemory _memoryInternal = {};
     ImageReference _internal;
