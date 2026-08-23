@@ -95,29 +95,41 @@ bool Culling(CameraData camera, InstanceData instance)
         vec3 ssAABBMin, ssAABBMax;
         bool isBehindCamera = TransformBBOXPerspective(camera.ViewProjectionMatrix, wsAABBMin, wsAABBMax, ssAABBMin, ssAABBMax);
 
-        vec2 aabbMin = clamp(ssAABBMin.xy * 0.5 + 0.5, 0.0, 1.0);
-        vec2 aabbMax = clamp(ssAABBMax.xy * 0.5 + 0.5, 0.0, 1.0);
+        vec2 screenMin = (ssAABBMin.xy * 0.5 + 0.5) * vec2(push.gConstants.HizSize);
+        vec2 screenMax = (ssAABBMax.xy * 0.5 + 0.5) * vec2(push.gConstants.HizSize);
 
-        vec4 aabb = vec4(aabbMin.x, aabbMin.y, aabbMax.x, aabbMax.y);
+        screenMin = clamp(screenMin, vec2(0.0), vec2(push.gConstants.HizSize) - 1.0);
+        screenMax = clamp(screenMax, vec2(0.0), vec2(push.gConstants.HizSize) - 1.0);
+
+        vec2 size = screenMax - screenMin;
+        float maxDim = max(size.x, size.y);
+
+        int LOD = int(floor(log2(max(maxDim, 1.0))));
+
+        ivec2 mipResolution = ivec2(max(uvec2(1), push.gConstants.HizSize >> LOD));
+
+        ivec2 texMin = clamp(ivec2(floor(screenMin)) >> LOD, ivec2(0), mipResolution - 1);
+        ivec2 texMax = clamp(ivec2(floor(screenMax)) >> LOD, ivec2(0), mipResolution - 1);
+
+        // In ideal case when mip N goes to N+1 the footprint is 2, however when N is odd footprint is > 2 and therefore can't be represented by sampling 4 pixels, so we need to go one mip higher
+        if (texMax.x - texMin.x > 1 || texMax.y - texMin.y > 1)
+        {
+            LOD += 1;
+            mipResolution = ivec2(max(uvec2(1), push.gConstants.HizSize >> LOD));
+            texMin = clamp(ivec2(floor(screenMin)) >> LOD, ivec2(0), mipResolution - 1);
+            texMax = clamp(ivec2(floor(screenMax)) >> LOD, ivec2(0), mipResolution - 1);
+        }
+
+        float v0 = texelFetch(uTextures[push.gConstants.HizIndex], ivec2(texMin.x, texMin.y), LOD).r;
+        float v1 = texelFetch(uTextures[push.gConstants.HizIndex], ivec2(texMax.x, texMin.y), LOD).r;
+        float v2 = texelFetch(uTextures[push.gConstants.HizIndex], ivec2(texMin.x, texMax.y), LOD).r;
+        float v3 = texelFetch(uTextures[push.gConstants.HizIndex], ivec2(texMax.x, texMax.y), LOD).r;
+
+        float v = max(max(v0, v1), max(v2, v3));
+
         float minZ = ssAABBMin.z;
-        float maxZ = ssAABBMax.z;
-
-
-        uvec2 aabbSize = uvec2((aabbMax.xy - aabbMin.xy) * push.gConstants.HizSize);
-
-        uint LOD = uint(ceil(log2(max(aabbSize.x, aabbSize.y) * 0.5)));
-
-        vec2 lodPixelSize = vec2(1.0 / (push.gConstants.HizSize.x << LOD), 1.0 / (push.gConstants.HizSize.y << LOD));
-        aabb += lodPixelSize.xyxy;
-
-        float v0 = textureLod(uTextures[push.gConstants.HizIndex], vec2(aabb.x, aabb.w), LOD).r;
-        float v1 = textureLod(uTextures[push.gConstants.HizIndex], vec2(aabb.z, aabb.w), LOD).r;
-        float v2 = textureLod(uTextures[push.gConstants.HizIndex], vec2(aabb.z, aabb.y), LOD).r;
-        float v3 = textureLod(uTextures[push.gConstants.HizIndex], vec2(aabb.x, aabb.y), LOD).r;
-
-        float v = max(v0, max(v1, max(v2, v3)));
-
         bool isInFrontOfHiZ = minZ <= v;
+
         isVisible = isBehindCamera || isInFrontOfHiZ;
     }
 
