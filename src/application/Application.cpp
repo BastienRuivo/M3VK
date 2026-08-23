@@ -162,7 +162,7 @@ void Application::DrawFrame()
 
 Application::Application() :
     // Core Window & Instance
-    _window(56, 56, "Window", this, Application::ResizeCallback, Application::MouseMoveCallback, Application::WindowFocusCallback),
+    _window(1920, 1080, "Window", this, Application::ResizeCallback, Application::MouseMoveCallback, Application::WindowFocusCallback),
     _instance(),
     _vkDebugLayer(_instance.Internal()),
     _windowSurface(_instance.Internal(), _window.Internal()),

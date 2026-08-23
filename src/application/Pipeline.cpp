@@ -26,7 +26,18 @@ Pipeline::Pipeline(const SwapChain& swapChain, VkCommandPool graphicsCommandPool
             std::make_unique<MaterialRegistry>(_bindingManager, graphicsCommandPool, graphicsComputeQueue, _samplerLinear.Internal())
         }),
     _cameraDataBuffer(_bindingManager, BINDING_CAMERA_BUFFER, GraphicsBuffer::STORAGE, RessourceUsage::PerFrame, 1, sizeof(CameraData)),
-    _camera(glm::vec3(-14.209f, -5.88263f, 4.11183f), glm::vec3(10, 0, 0), 45.0f, (float)swapChain.GetExtent().width / (float)swapChain.GetExtent().height),
+    _camera(glm::vec3(-14.0f, 0.5f, 0.0f), glm::vec3(10, 0, 0), 45.0f, (float)swapChain.GetExtent().width / (float)swapChain.GetExtent().height),
+    _msaaColorTarget(RessourceUsage::Transient, graphicsCommandPool, graphicsComputeQueue,
+        VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+        swapChain.GetExtent().width, swapChain.GetExtent().height,
+        VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+        swapChain.GetImageFormat(),
+        1, VK_IMAGE_TILING_OPTIMAL, ApplicationInfo::GetMsaaSample()),
+    _msaaDepthTarget(RessourceUsage::Transient, graphicsCommandPool, graphicsComputeQueue,
+        VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
+        swapChain.GetExtent().width, swapChain.GetExtent().height,
+        VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT,
+        ApplicationInfo::Constant::DepthFormat, 1, VK_IMAGE_TILING_OPTIMAL, ApplicationInfo::GetMsaaSample()),
     _finalColorTarget(BindlessTexture::Register(_bindingManager, RessourceUsage::PerFrame, _samplerNearest.Internal(), graphicsCommandPool, graphicsComputeQueue,
         VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
         swapChain.GetExtent().width, swapChain.GetExtent().height,
@@ -112,17 +123,17 @@ Pipeline::Pipeline(const SwapChain& swapChain, VkCommandPool graphicsCommandPool
     meshRegistry.RegisterInstance(MaterialType::Opaque, instance);
 
     instance = {
-        .LocalToWorldMatrix = ApplicationHelper::TranslateRotateScale(glm::vec3(64.0f, 0.0f, 1.0f),
+        .LocalToWorldMatrix = ApplicationHelper::TranslateRotateScale(glm::vec3(4.0f, 0.0f, 1.0f),
             glm::vec3(0.0f, 0.0f, 0.0f),
-            glm::vec3(3, 3, 3)),
+            glm::vec3(1, 1, 1)),
         .AabbMin = aabbMin,
         .MaterialIndex = 2,
         .AabbMax = aabbMax,
         .MeshIndex = cube
     };
-    meshRegistry.RegisterInstance(MaterialType::Opaque, instance);
+    //meshRegistry.RegisterInstance(MaterialType::Opaque, instance);
 
-    /*for(uint32_t i = 0; i < 100; ++i)
+    for(uint32_t i = 0; i < 100; ++i)
     {
         float red = (rand() / (float)RAND_MAX);
         float green = (rand() / (float)RAND_MAX);
@@ -161,10 +172,7 @@ Pipeline::Pipeline(const SwapChain& swapChain, VkCommandPool graphicsCommandPool
             .MeshIndex = cube
         };
         meshRegistry.RegisterInstance(MaterialType::Opaque, instance);
-    }*/
-
-    //AssetImporter::LoadAsset(_bindingManager, "data/BistroExterior.m3vkasset", meshRegistry, materialRegistry, graphicsCommandPool, graphicsComputeQueue, _samplerLinear.Internal());
-    //AssetImporter::LoadAsset(_bindingManager, "data/BistroInterior_Wine.m3vkasset", meshRegistry, materialRegistry, graphicsCommandPool, graphicsComputeQueue, _samplerLinear.Internal());
+    }
 
     for(auto& registry : _registries)
     {
@@ -278,8 +286,8 @@ void Pipeline::FrameInit(const CommandBuffer& cmdBuffer, VkRect2D renderArea) co
         cmdBuffer.SetDepthBiasEnable(false);
         cmdBuffer.SetLineWidth(1.0f);
 
-        cmdBuffer.SetRasterizationSamples(VK_SAMPLE_COUNT_1_BIT);
-        cmdBuffer.SetSampleMask(VK_SAMPLE_COUNT_1_BIT, 0xFFFFFFFF);
+        cmdBuffer.SetRasterizationSamples(ApplicationInfo::Constant::MaxMSAASample);
+        cmdBuffer.SetSampleMask(ApplicationInfo::Constant::MaxMSAASample, 0xFFFFFFFF);
         cmdBuffer.SetAlphaToCoverageEnable(false);
         cmdBuffer.SetAlphaToOneEnable(false);
 
@@ -302,13 +310,17 @@ void Pipeline::Execute(const CommandBuffer& cmdBuffer, const SwapChain& swapChai
 
     VkRect2D renderArea = {0, 0, swapChain.GetExtent().width, swapChain.GetExtent().height};
 
-    VkRenderingAttachmentInfo colorAttachment = ImageHelper::AttachmentInfo(finalColorTarget.View,
+    VkRenderingAttachmentInfo colorAttachment = ImageHelper::AttachmentInfo(_msaaColorTarget.View(),
+        VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+        finalColorTarget.View,
         VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
         VK_ATTACHMENT_LOAD_OP_CLEAR,
         VK_ATTACHMENT_STORE_OP_STORE,
         {{}});
 
-    VkRenderingAttachmentInfo depthAttachment = ImageHelper::AttachmentInfo(finalDepthTarget.View,
+    VkRenderingAttachmentInfo depthAttachment = ImageHelper::AttachmentInfo(_msaaDepthTarget.View(),
+        VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
+        finalDepthTarget.View,
         VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
         VK_ATTACHMENT_LOAD_OP_CLEAR,
         VK_ATTACHMENT_STORE_OP_STORE,
@@ -368,6 +380,7 @@ void Pipeline::Execute(const CommandBuffer& cmdBuffer, const SwapChain& swapChai
                 _skyboxModule->Execute(cmdBuffer, _bindingManager.GlobalLayout());
             }
             cmdBuffer.EndRendering();
+            cmdBuffer.SetRasterizationSamples(VK_SAMPLE_COUNT_1_BIT);
         }
         cmdBuffer.EndMarker();
 
@@ -391,7 +404,7 @@ void Pipeline::Execute(const CommandBuffer& cmdBuffer, const SwapChain& swapChai
                 {
                     module->RenderUI(cmdBuffer, _drawTextureDebug, _bindingManager.GlobalLayout());
                 }
-                //ui.Draw(cmdBuffer.GetInternal());
+                ui.Draw(cmdBuffer.GetInternal());
             }
             cmdBuffer.EndRendering();
         }
@@ -410,6 +423,14 @@ void Pipeline::Refresh(const CommandBuffer& cmdBuffer, VkExtent2D newSize)
 {
     _camera._aspect = static_cast<float>(newSize.width) / static_cast<float>(newSize.height);
 
+    if(_msaaColorTarget.Resize(newSize.width, newSize.height))
+    {
+        ImageHelper::TransitionLayoutCommand(cmdBuffer, _msaaColorTarget.Internal(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+    }
+    if(_msaaDepthTarget.Resize(newSize.width, newSize.height))
+    {
+    ImageHelper::TransitionLayoutCommand(cmdBuffer, _msaaDepthTarget.Internal(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+    }
     if(_finalColorTarget.Resize(_bindingManager, newSize.width, newSize.height))
     {
         _finalColorTarget.TransistionAllLayoutCommand(_bindingManager, cmdBuffer, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
