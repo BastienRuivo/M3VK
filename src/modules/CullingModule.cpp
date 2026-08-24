@@ -54,7 +54,7 @@ void CullingModule::Execute(const CommandBuffer& cmdBuffer, uint32_t hizIndex, c
 
         cmdBuffer.PushConstants(layout, COMMON_INDEXES_OFFSET, sizeof(CullingConstants), &constants);
 
-        Barrier(cmdBuffer, constants.InstanceCount, constants.DrawCount, VK_ACCESS_SHADER_READ_BIT, VK_ACCESS_SHADER_WRITE_BIT);
+        Barrier(cmdBuffer, constants.InstanceCount, constants.DrawCount, VK_ACCESS_INDIRECT_COMMAND_READ_BIT, VK_PIPELINE_STAGE_2_DRAW_INDIRECT_BIT, VK_ACCESS_SHADER_WRITE_BIT, VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT);
 
         cmdBuffer.BeginMarker("Culling Init");
         {
@@ -63,6 +63,8 @@ void CullingModule::Execute(const CommandBuffer& cmdBuffer, uint32_t hizIndex, c
         }
         cmdBuffer.EndMarker();
 
+        Barrier(cmdBuffer, constants.InstanceCount, constants.DrawCount, VK_ACCESS_SHADER_WRITE_BIT, VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT, VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT, VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT);
+
         cmdBuffer.BeginMarker("Culling Pass");
         {
             _cullingKernel.Bind(cmdBuffer);
@@ -70,17 +72,17 @@ void CullingModule::Execute(const CommandBuffer& cmdBuffer, uint32_t hizIndex, c
         }
         cmdBuffer.EndMarker();
 
-        Barrier(cmdBuffer, constants.InstanceCount, constants.DrawCount, VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT);
+        Barrier(cmdBuffer, constants.InstanceCount, constants.DrawCount, VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT, VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT, VK_ACCESS_INDIRECT_COMMAND_READ_BIT, VK_PIPELINE_STAGE_2_DRAW_INDIRECT_BIT);
     }
     cmdBuffer.EndMarker();
 }
 
-void CullingModule::Barrier(const CommandBuffer& cmdBuffer, uint32_t instanceCount, uint32_t drawCount, VkAccessFlagBits2 src, VkAccessFlagBits2 dst) const
+void CullingModule::Barrier(const CommandBuffer& cmdBuffer, uint32_t instanceCount, uint32_t drawCount, VkAccessFlagBits2 src, VkPipelineStageFlagBits2 srcStage, VkAccessFlagBits2 dst, VkPipelineStageFlagBits2 dstStage) const
 {
     std::array<VkBufferMemoryBarrier2, 2> bufferBarrier =
     {
-        BufferHelper::BufferBarrier(_visibleIndirectBuffer, 0, drawCount, src, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, dst, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT),
-        BufferHelper::BufferBarrier(_visibleIndirectionBuffer, 0, instanceCount, src, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, dst, VK_PIPELINE_STAGE_VERTEX_SHADER_BIT)
+        BufferHelper::BufferBarrier(_visibleIndirectBuffer, 0, drawCount, src, srcStage, dst, dstStage),
+        BufferHelper::BufferBarrier(_visibleIndirectionBuffer, 0, instanceCount, src, srcStage, dst, dstStage)
     };
 
     cmdBuffer.Barrier(bufferBarrier);

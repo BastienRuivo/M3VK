@@ -33,7 +33,7 @@ class ApplicationInfo
         static inline constexpr uint32_t MaxFrameInFlight = 2;
         static inline constexpr size_t VertexBufferMaxSize = 16777216; // 2^23
         static inline constexpr size_t IndexBufferMaxSize = 16777216;
-        static inline constexpr size_t DrawIndirectBufferMaxSize = 4194304;
+        static inline constexpr size_t DrawIndirectBufferMaxSize = 16777216;
         static inline constexpr size_t MaterialBufferMaxSize = 2048;
         static inline constexpr VkFormat DepthFormat = VK_FORMAT_D32_SFLOAT;
         static inline constexpr uint32_t MaxBindlessTextureCount = 1024;

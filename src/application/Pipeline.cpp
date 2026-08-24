@@ -142,7 +142,7 @@ Pipeline::Pipeline(const SwapChain& swapChain, VkCommandPool graphicsCommandPool
         uint32_t matBinding = materialRegistry.RegisterMaterial(defaultMat);
     }
 
-    float sample = 300000;
+    float sample = 250000;
     float tr = 80.0f;
 
     for(uint32_t i = 0; i < sample; ++i)
@@ -311,20 +311,22 @@ void Pipeline::Execute(const CommandBuffer& cmdBuffer, const SwapChain& swapChai
     VkRect2D renderArea = {0, 0, swapChain.GetExtent().width, swapChain.GetExtent().height};
 
     VkRenderingAttachmentInfo colorAttachment = ImageHelper::AttachmentInfo(_msaaColorTarget.View(),
-        VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-        finalColorTarget.View,
-        VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-        VK_ATTACHMENT_LOAD_OP_CLEAR,
-        VK_ATTACHMENT_STORE_OP_STORE,
-        {{}});
+    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+    finalColorTarget.View,
+    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+    VK_ATTACHMENT_LOAD_OP_CLEAR,
+    VK_ATTACHMENT_STORE_OP_STORE,
+    VK_RESOLVE_MODE_AVERAGE_BIT,
+    {{}});
 
     VkRenderingAttachmentInfo depthAttachment = ImageHelper::AttachmentInfo(_msaaDepthTarget.View(),
-        VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
-        finalDepthTarget.View,
-        VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
-        VK_ATTACHMENT_LOAD_OP_CLEAR,
-        VK_ATTACHMENT_STORE_OP_STORE,
-        {.depthStencil = {1.0f}});
+    VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
+    finalDepthTarget.View,
+    VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
+    VK_ATTACHMENT_LOAD_OP_CLEAR,
+    VK_ATTACHMENT_STORE_OP_STORE,
+    VK_RESOLVE_MODE_MIN_BIT,
+    {.depthStencil = {1.0f}});
 
     // there is no stencil buffer
     VkRenderingAttachmentInfo stencilAttachment { .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO };
@@ -340,7 +342,7 @@ void Pipeline::Execute(const CommandBuffer& cmdBuffer, const SwapChain& swapChai
         ImageHelper::TransitionLayoutCommand(cmdBuffer, finalColorTarget, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
         ImageHelper::TransitionLayoutCommand(cmdBuffer, backBuffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
-        GlobalConstants indexes
+        GlobalConstants gConstants
         {
             .DebugIndex = _debug,
             .Cameras = _cameraDataBuffer.GetGPUIndex(),
@@ -352,7 +354,7 @@ void Pipeline::Execute(const CommandBuffer& cmdBuffer, const SwapChain& swapChai
             .HizSize = glm::uvec2(hiz.Width, hiz.Height),
             .HizPixelSize = glm::vec2(1.0f / hiz.Width, 1.0f / hiz.Height)
         };
-        cmdBuffer.PushConstants(_bindingManager.GlobalLayout(), 0, COMMON_INDEXES_OFFSET, &indexes);
+        cmdBuffer.PushConstants(_bindingManager.GlobalLayout(), 0, COMMON_INDEXES_OFFSET, &gConstants);
 
         cmdBuffer.BeginMarker("Culling Compute Pass");
         {

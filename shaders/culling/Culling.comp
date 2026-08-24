@@ -89,7 +89,6 @@ bool Culling(CameraData camera, InstanceData instance)
     TransformBBOX(instance.LocalToWorldMatrix, instance.AabbMin, instance.AabbMax, wsAABBMin, wsAABBMax);
 
     bool isVisible = FustumCulling(camera, (wsAABBMin + wsAABBMax) * 0.5, (wsAABBMax - wsAABBMin) * 0.5);
-
     if(isVisible)
     {
         vec3 ssAABBMin, ssAABBMax;

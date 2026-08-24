@@ -46,8 +46,15 @@ namespace ImageHelper
         };
     }
 
-    inline VkRenderingAttachmentInfo AttachmentInfo(VkImageView imageView, VkImageLayout imageLayout, VkImageView resolveView, VkImageLayout resolveLayout, VkAttachmentLoadOp loadOp, VkAttachmentStoreOp storeOp, VkClearValue clear = {}, VkResolveModeFlagBits resolveMode = VK_RESOLVE_MODE_AVERAGE_BIT)
+    inline VkRenderingAttachmentInfo AttachmentInfo(VkImageView imageView, VkImageLayout imageLayout, VkImageView resolveView, VkImageLayout resolveLayout, VkAttachmentLoadOp loadOp, VkAttachmentStoreOp storeOp, VkResolveModeFlagBits resolveMode, VkClearValue clear = {})
     {
+
+        // If there's no MSAA directly render on the resolved image
+        if(ApplicationInfo::GetMsaaSample() == VK_SAMPLE_COUNT_1_BIT)
+        {
+            return AttachmentInfo(resolveView, resolveLayout, loadOp, storeOp, clear);
+        }
+
         VkRenderingAttachmentInfo info = AttachmentInfo(imageView, imageLayout, loadOp, storeOp, clear);
         info.resolveImageView = resolveView;
         info.resolveImageLayout = resolveLayout;
