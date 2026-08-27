@@ -9,11 +9,11 @@
 #include "rendering/GraphicsImage.h"
 #include "rendering/SwapChain.h"
 
-class UserInterfaceImageSet: public MultiFrameRessource<VkDescriptorSet>
+class UserInterfaceImageSet: public MultiFrameRessource<vk::DescriptorSet>
 {
     public:
-    UserInterfaceImageSet(const GraphicsImage& image, VkImageLayout layout, VkSampler sampler);
-    UserInterfaceImageSet(const BindingManager& manager, BindlessTexture texture, VkImageLayout layout, VkSampler sampler);
+    UserInterfaceImageSet(const GraphicsImage& image, vk::ImageLayout layout, vk::Sampler sampler);
+    UserInterfaceImageSet(const BindingManager& manager, BindlessTexture texture, vk::ImageLayout layout, vk::Sampler sampler);
     ~UserInterfaceImageSet();
 
     UserInterfaceImageSet(const UserInterfaceImageSet&) = delete;
@@ -22,13 +22,13 @@ class UserInterfaceImageSet: public MultiFrameRessource<VkDescriptorSet>
     UserInterfaceImageSet(UserInterfaceImageSet&& other) noexcept;
     UserInterfaceImageSet& operator=(UserInterfaceImageSet&& other) noexcept;
 
-    inline VkDescriptorSet Current() const { return MultiFrameRessource::Current(); }
+    inline vk::DescriptorSet Current() const { return MultiFrameRessource::Current(); }
 };
 
 class UserInterface
 {
     public:
-    UserInterface(GLFWwindow* pWindow, const SwapChain& swapChain, VkQueue graphicsQueue, VkCommandPool cmdPool);
+    UserInterface(GLFWwindow* pWindow, const SwapChain& swapChain, vk::Queue graphicsQueue, vk::CommandPool cmdPool);
     ~UserInterface();
 
     // Workflow function
@@ -37,5 +37,5 @@ class UserInterface
     inline void Draw(VkCommandBuffer cmdBuffer) const { ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmdBuffer); }
 
     private:
-    VkDescriptorPool _imGuiPool = VK_NULL_HANDLE;
+    vk::DescriptorPool _imGuiPool;
 };

@@ -9,11 +9,11 @@ class MaterialRegistry : public Registry
 {
 public:
 
-    MaterialRegistry(BindingManager& pool, VkCommandPool uploadPool, VkQueue uploadQueue, VkSampler sampler);
+    MaterialRegistry(BindingManager& pool, vk::CommandPool uploadPool, vk::Queue uploadQueue, vk::Sampler sampler);
     ~MaterialRegistry();
 
-    void UploadAndRelease(VkQueue queue, VkCommandPool cmdPool) override;
-    void Bind(const CommandBuffer& cmdBuffer, VkPipelineLayout layout) const override;
+    void UploadAndRelease(vk::Queue queue, vk::CommandPool cmdPool) override;
+    void Bind(const CommandBuffer& cmdBuffer, vk::PipelineLayout layout) const override;
 
     uint32_t RegisterMaterial(MaterialProperties material);
 

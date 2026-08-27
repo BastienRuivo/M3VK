@@ -5,12 +5,12 @@
 #include "rendering/GraphicsBuffer.h"
 #include <cstdint>
 #include <stdexcept>
-#include <vulkan/vulkan_core.h>
+#include <vulkan/vulkan.hpp>
 
 #include "ShaderBindings.h"
 
 
-void MaterialRegistry::UploadAndRelease(VkQueue queue, VkCommandPool cmdPool)
+void MaterialRegistry::UploadAndRelease(vk::Queue queue, vk::CommandPool cmdPool)
 {
     if(_materials.size() >= ApplicationInfo::Constant::MaterialBufferMaxSize)
     {
@@ -28,7 +28,7 @@ void MaterialRegistry::UploadAndRelease(VkQueue queue, VkCommandPool cmdPool)
     _materials.clear();
 }
 
-void MaterialRegistry::Bind(const CommandBuffer& cmdBuffer, VkPipelineLayout layout) const
+void MaterialRegistry::Bind(const CommandBuffer& cmdBuffer, vk::PipelineLayout layout) const
 {
 }
 
@@ -42,7 +42,7 @@ uint32_t MaterialRegistry::RegisterMaterial(MaterialProperties material)
     return _materials.size() - 1;
 }
 
-MaterialRegistry::MaterialRegistry(BindingManager& allocator, VkCommandPool uploadPool, VkQueue uploadQueue, VkSampler sampler)
+MaterialRegistry::MaterialRegistry(BindingManager& allocator, vk::CommandPool uploadPool, vk::Queue uploadQueue, vk::Sampler sampler)
     :   _materialBuffer(allocator, BINDING_MATERIAL_BUFFER, GraphicsBuffer::BufferType::STORAGE, RessourceUsage::Static, ApplicationInfo::Constant::MaterialBufferMaxSize, sizeof(MaterialProperties))
 {
     _defaultMaterialIndex = MaterialImporter::LoadDefaultMaterial(allocator, *this, uploadPool, uploadQueue, sampler);

@@ -4,7 +4,7 @@
 #include <cstdint>
 #include <filesystem>
 #include <vector>
-#include <vulkan/vulkan_core.h>
+#include <vulkan/vulkan.hpp>
 #include <glm/gtc/quaternion.hpp>
 
 namespace ApplicationHelper
@@ -12,9 +12,9 @@ namespace ApplicationHelper
     struct SwapChainSupportDetails
     {
         public:
-        VkSurfaceCapabilitiesKHR Capabilities;
-        std::vector<VkSurfaceFormatKHR> Formats;
-        std::vector<VkPresentModeKHR> PresentsModes;
+        vk::SurfaceCapabilitiesKHR Capabilities;
+        std::vector<vk::SurfaceFormatKHR> Formats;
+        std::vector<vk::PresentModeKHR> PresentsModes;
 
         bool CheckSwapChainSupportAdequate()
         {
@@ -23,12 +23,12 @@ namespace ApplicationHelper
     };
 
     std::vector<char> ReadFile(const std::filesystem::path& filename);
-    SwapChainSupportDetails QuerySwapChainSupportDetail(VkPhysicalDevice physicalDevice, const VkSurfaceKHR& windowSurface);
-    void CopyBufferToBuffer(const VkQueue queue, const VkCommandPool& cmdPool, const VkBuffer& src, VkDeviceSize srcOffset, const VkBuffer& dst, VkDeviceSize dstOffset, VkDeviceSize size);
-    bool IsFormatSupported(VkFormat format, VkImageTiling tiling, VkFormatFeatureFlags features);
-    VkImageAspectFlags GetImageAspectFlags(VkFormat format);
-    bool HasStencilComponent(VkFormat format);
-    uint32_t GetFormatSize(VkFormat format);
+    SwapChainSupportDetails QuerySwapChainSupportDetail(vk::PhysicalDevice physicalDevice, const vk::SurfaceKHR& windowSurface);
+    void CopyBufferToBuffer(const vk::Queue queue, const vk::CommandPool& cmdPool, const vk::Buffer& src, vk::DeviceSize srcOffset, const vk::Buffer& dst, vk::DeviceSize dstOffset, vk::DeviceSize size);
+    bool IsFormatSupported(vk::Format format, vk::ImageTiling tiling, vk::FormatFeatureFlags features);
+    vk::ImageAspectFlags GetImageAspectFlags(vk::Format format);
+    bool HasStencilComponent(vk::Format format);
+    uint32_t GetFormatSize(vk::Format format);
     glm::quat EulerToQuat(glm::vec3 euler);
     glm::mat4 TranslateRotateScale(glm::vec3 position, glm::vec3 rotation, glm::vec3 scale);
 };

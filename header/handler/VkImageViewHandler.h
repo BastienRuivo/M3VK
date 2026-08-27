@@ -2,25 +2,25 @@
 
 #include "handler/Handlers.h"
 #include <cstdint>
-#include <vulkan/vulkan_core.h>
+#include <vulkan/vulkan.hpp>
 
-class VkImageViewHandler : public Handler<VkImageView>
+class VkImageViewHandler : public Handler<vk::ImageView>
 {
     public:
     VkImageViewHandler() {};
-    VkImageViewHandler(VkImage image, VkFormat format, uint32_t mipCount, VkImageAspectFlags aspectMask, VkImageViewType type);
-    VkImageViewHandler(VkImage image, VkFormat format, uint32_t mipCount, VkImageAspectFlags aspectMask);
-    VkImageViewHandler(VkImage image, VkFormat format, uint32_t mipCount);
+    VkImageViewHandler(vk::Image image, vk::Format format, uint32_t mipCount, vk::ImageAspectFlags aspectMask, vk::ImageViewType type);
+    VkImageViewHandler(vk::Image image, vk::Format format, uint32_t mipCount, vk::ImageAspectFlags aspectMask);
+    VkImageViewHandler(vk::Image image, vk::Format format, uint32_t mipCount);
     ~VkImageViewHandler();
 
     VkImageViewHandler(VkImageViewHandler&& other) noexcept;
     VkImageViewHandler& operator=(VkImageViewHandler&& other) noexcept;
 
-    inline VkFormat Format() const
+    inline vk::Format Format() const
     {
         return _format;
     }
 
     private:
-    VkFormat _format = VK_FORMAT_UNDEFINED;
+    vk::Format _format = vk::Format::eUndefined;
 };

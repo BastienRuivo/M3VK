@@ -13,29 +13,29 @@
 #include "rendering/GraphicsImage.h"
 #include "rendering/Shaders/ShaderLibrary.h"
 #include "rendering/SwapChain.h"
-#include <vulkan/vulkan_core.h>
+#include <vulkan/vulkan.hpp>
 class Pipeline
 {
     public:
-    Pipeline(const SwapChain& swapChain, VkCommandPool graphicsCommandPool, VkQueue graphicsComputeQueue);
+    Pipeline(const SwapChain& swapChain, vk::CommandPool graphicsCommandPool, vk::Queue graphicsComputeQueue);
     ~Pipeline();
 
-    void PreRender(VkExtent2D size);
-    void Refresh(const CommandBuffer& cmdBuffer, VkExtent2D size);
+    void PreRender(vk::Extent2D size);
+    void Refresh(const CommandBuffer& cmdBuffer, vk::Extent2D size);
 
     void DoUI(const UserInterface& ui);
     void DoKeyboardInput(const Window& window, float deltaTime);
 
-    void UpdateCameraData(VkExtent2D size);
+    void UpdateCameraData(vk::Extent2D size);
     void Execute(const CommandBuffer& cmdBuffer, const SwapChain& swapChain, const UserInterface& ui, uint32_t imageIndex);
     void OnMouseMove(float dx, float dy);
 
     protected:
-    void InitModules(const SwapChain& swapChain, VkCommandPool pool, VkQueue queue);
+    void InitModules(const SwapChain& swapChain, vk::CommandPool pool, vk::Queue queue);
 
     void RefreshDrawModule(MaterialType type, const ShaderLibrary::VertexBinding& vertex, const ShaderLibrary::FragmentBinding& frag) ;
     void InitDrawModules(bool DebugOn);
-    void FrameInit(const CommandBuffer& cmdBuffer, VkRect2D renderArea) const;
+    void FrameInit(const CommandBuffer& cmdBuffer, vk::Rect2D renderArea) const;
 
     BindingManager _bindingManager;
     VkSamplerHandler _samplerLinear;

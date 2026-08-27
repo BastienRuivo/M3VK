@@ -9,82 +9,79 @@
 #include <cstring>
 #include <stdexcept>
 #include <utility>
-#include <vulkan/vulkan_core.h>
+#include <vulkan/vulkan.hpp>
 
-StageBuffer::StageBuffer(VkDeviceSize size, enum Usage bufferUsage)
+StageBuffer::StageBuffer(vk::DeviceSize size, enum Usage bufferUsage)
 : _capacity(size)
 {
-    VkBufferUsageFlags usage = bufferUsage == Upload ? VK_BUFFER_USAGE_TRANSFER_SRC_BIT : VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+    vk::BufferUsageFlags usage = bufferUsage == Upload ? vk::BufferUsageFlagBits::eTransferSrc : vk::BufferUsageFlagBits::eTransferDst;
 
-    VkBufferCreateInfo info
-    {
-        .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-        .size = _capacity,
-        .usage = usage,
-        .sharingMode = VK_SHARING_MODE_EXCLUSIVE
-    };
+    vk::BufferCreateInfo info = vk::BufferCreateInfo{}
+        .setSize(_capacity)
+        .setUsage(usage)
+        .setSharingMode(vk::SharingMode::eExclusive);
 
     // If note exclusive, need to add a queue family index
 
-    if(vkCreateBuffer(ApplicationInfo::Device(), &info, nullptr, &_internal) != VK_SUCCESS)
+    if(ApplicationInfo::Device().createBuffer(&info, nullptr, &_internal) != vk::Result::eSuccess)
     {
         throw std::runtime_error("Failed to create buffer !");
     }
 
-    VkMemoryRequirements memRequirements;
-    vkGetBufferMemoryRequirements(ApplicationInfo::Device(), _internal, &memRequirements);
+    vk::MemoryRequirements memRequirements = ApplicationInfo::Device().getBufferMemoryRequirements(_internal);
 
-    VkMemoryAllocateInfo allocateInfo
-    {
-        .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-        .allocationSize = memRequirements.size,
-        // mean it's a visible and writable by CPU directecly
-        .memoryTypeIndex = ApplicationInfo::FindMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)
-    };
+    // mean it's a visible and writable by CPU directecly
+    vk::MemoryAllocateInfo allocateInfo = vk::MemoryAllocateInfo{}
+        .setAllocationSize(memRequirements.size)
+        .setMemoryTypeIndex(ApplicationInfo::FindMemoryType(memRequirements.memoryTypeBits, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent));
 
-    VkResult memoryResult = vkAllocateMemory(ApplicationInfo::Device(), &allocateInfo, nullptr, &_memoryInternal.Memory) ;
-    if(memoryResult != VK_SUCCESS)
+    vk::Result memoryResult = ApplicationInfo::Device().allocateMemory(&allocateInfo, nullptr, &_memoryInternal.Memory);
+    if(memoryResult != vk::Result::eSuccess)
     {
-        vkDestroyBuffer(ApplicationInfo::Device(), _internal, nullptr);
+        ApplicationInfo::Device().destroyBuffer(_internal);
         throw std::runtime_error("Failed to allocate Stage Buffer memory");
     }
     _memoryInternal.Size = allocateInfo.allocationSize;
     ApplicationInfo::VRAMAllocate(_memoryInternal.Size, ApplicationInfo::AllocType::Buffer);
 
-    if(vkBindBufferMemory(ApplicationInfo::Device(), _internal, _memoryInternal.Memory, 0) != VK_SUCCESS)
+    try
     {
-        vkDestroyBuffer(ApplicationInfo::Device(), _internal, nullptr);
-        vkFreeMemory(ApplicationInfo::Device(), _memoryInternal.Memory, nullptr);
+        ApplicationInfo::Device().bindBufferMemory(_internal, _memoryInternal.Memory, 0);
+    }
+    catch(const std::exception&)
+    {
+        ApplicationInfo::Device().destroyBuffer(_internal);
+        ApplicationInfo::Device().freeMemory(_memoryInternal.Memory);
         ApplicationInfo::VRAMRelease(_memoryInternal.Size, ApplicationInfo::AllocType::Buffer);
         throw std::runtime_error("Failed to bind stage buffer memory");
     }
 }
 
-void StageBuffer::MapAndCopyToBuffer(const void* srcData, VkDeviceSize offset, VkDeviceSize copySize)
+void StageBuffer::MapAndCopyToBuffer(const void* srcData, vk::DeviceSize offset, vk::DeviceSize copySize)
 {
     void* data;
-    if(vkMapMemory(ApplicationInfo::Device(), _memoryInternal.Memory, offset, copySize, 0, &data) != VK_SUCCESS)
+    if(ApplicationInfo::Device().mapMemory(_memoryInternal.Memory, offset, copySize, {}, &data) != vk::Result::eSuccess)
     {
         throw std::runtime_error("Failed to map stage buffer memory");
     }
     memcpy(data, srcData, (size_t)copySize);
-    vkUnmapMemory(ApplicationInfo::Device(), _memoryInternal.Memory);
+    ApplicationInfo::Device().unmapMemory(_memoryInternal.Memory);
 };
 
-void StageBuffer::MapAndCopyToData(void* dstData, VkDeviceSize offset, VkDeviceSize copySize)
+void StageBuffer::MapAndCopyToData(void* dstData, vk::DeviceSize offset, vk::DeviceSize copySize)
 {
     void* data;
-    if(vkMapMemory(ApplicationInfo::Device(), _memoryInternal.Memory, offset, copySize, 0, &data) != VK_SUCCESS)
+    if(ApplicationInfo::Device().mapMemory(_memoryInternal.Memory, offset, copySize, {}, &data) != vk::Result::eSuccess)
     {
         throw std::runtime_error("Failed to map stage buffer memory");
     }
     memcpy(dstData, data, (size_t)copySize);
-    vkUnmapMemory(ApplicationInfo::Device(), _memoryInternal.Memory);
+    ApplicationInfo::Device().unmapMemory(_memoryInternal.Memory);
 }
 
-void* StageBuffer::Map(VkDeviceSize offset = 0, VkDeviceSize size = VK_WHOLE_SIZE)
+void* StageBuffer::Map(vk::DeviceSize offset = 0, vk::DeviceSize size = VK_WHOLE_SIZE)
 {
-    if(vkMapMemory(ApplicationInfo::Device(), _memoryInternal.Memory, offset, size, 0, &_data) != VK_SUCCESS)
+    if(ApplicationInfo::Device().mapMemory(_memoryInternal.Memory, offset, size, {}, &_data) != vk::Result::eSuccess)
     {
         throw std::runtime_error("Failed to map stage buffer memory");
     }
@@ -94,7 +91,7 @@ void* StageBuffer::Map(VkDeviceSize offset = 0, VkDeviceSize size = VK_WHOLE_SIZ
 
 void StageBuffer::Unmap()
 {
-    vkUnmapMemory(ApplicationInfo::Device(), _memoryInternal.Memory);
+    ApplicationInfo::Device().unmapMemory(_memoryInternal.Memory);
     _data = nullptr;
 }
 
@@ -102,10 +99,10 @@ StageBuffer::~StageBuffer()
 {
     if(_data != nullptr)
     {
-        vkUnmapMemory(ApplicationInfo::Device(), _memoryInternal.Memory);
+        ApplicationInfo::Device().unmapMemory(_memoryInternal.Memory);
     }
-    vkDestroyBuffer(ApplicationInfo::Device(), _internal, nullptr);
-    vkFreeMemory(ApplicationInfo::Device(), _memoryInternal.Memory, nullptr);
+    ApplicationInfo::Device().destroyBuffer(_internal);
+    ApplicationInfo::Device().freeMemory(_memoryInternal.Memory);
     ApplicationInfo::VRAMRelease(_memoryInternal.Size, ApplicationInfo::AllocType::Buffer);
 }
 
@@ -142,7 +139,7 @@ void PoolStageBuffer::Unmap()
     StageBuffer::Unmap();
 }
 
-void PoolStageBuffer::CopyToBuffer(const void* srcData, VkDeviceSize copySize)
+void PoolStageBuffer::CopyToBuffer(const void* srcData, vk::DeviceSize copySize)
 {
     if(_data == nullptr)
     {
@@ -166,53 +163,48 @@ void PoolStageBuffer::Clear()
     _offset = 0;
 }
 
-BufferInternal GraphicsBuffer::CreateBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties)
+BufferInternal GraphicsBuffer::CreateBuffer(vk::DeviceSize size, vk::BufferUsageFlags usage, vk::MemoryPropertyFlags properties)
 {
     BufferInternal buffer;
 
-    VkBufferCreateInfo info
-    {
-        .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-        .size = size,
-        .usage = usage,
-        .sharingMode = VK_SHARING_MODE_EXCLUSIVE
-    };
+    vk::BufferCreateInfo info = vk::BufferCreateInfo{}
+        .setSize(size)
+        .setUsage(usage)
+        .setSharingMode(vk::SharingMode::eExclusive);
 
     // // If note exclusive, need to add a queue family index
 
-    if(vkCreateBuffer(ApplicationInfo::Device(), &info, nullptr, &buffer.Internal) != VK_SUCCESS)
+    if(ApplicationInfo::Device().createBuffer(&info, nullptr, &buffer.Internal) != vk::Result::eSuccess)
     {
         throw std::runtime_error("Failed to create buffer !");
     }
 
-    VkMemoryRequirements memRequirements;
-    vkGetBufferMemoryRequirements(ApplicationInfo::Device(), buffer.Internal, &memRequirements);
+    vk::MemoryRequirements memRequirements = ApplicationInfo::Device().getBufferMemoryRequirements(buffer.Internal);
 
-    VkMemoryAllocateInfo allocateInfo
-    {
-        .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-        .allocationSize = memRequirements.size,
-        .memoryTypeIndex = ApplicationInfo::FindMemoryType(memRequirements.memoryTypeBits, properties)
-    };
+    vk::MemoryAllocateInfo allocateInfo = vk::MemoryAllocateInfo{}
+        .setAllocationSize(memRequirements.size)
+        .setMemoryTypeIndex(ApplicationInfo::FindMemoryType(memRequirements.memoryTypeBits, properties));
 
-    VkResult memoryResult = vkAllocateMemory(ApplicationInfo::Device(), &allocateInfo, nullptr, &buffer.MemoryInternal.Memory) ;
-    if(memoryResult != VK_SUCCESS)
+    vk::Result memoryResult = ApplicationInfo::Device().allocateMemory(&allocateInfo, nullptr, &buffer.MemoryInternal.Memory);
+    if(memoryResult != vk::Result::eSuccess)
     {
         throw std::runtime_error("Failed to allocate buffer memory");
     }
     buffer.MemoryInternal.Size = allocateInfo.allocationSize;
     ApplicationInfo::VRAMAllocate(allocateInfo.allocationSize, ApplicationInfo::AllocType::Buffer);
 
-    VkResult memoryBind = vkBindBufferMemory(ApplicationInfo::Device(), buffer.Internal, buffer.MemoryInternal.Memory, 0);
-
-    if(memoryBind != VK_SUCCESS)
+    try
+    {
+        ApplicationInfo::Device().bindBufferMemory(buffer.Internal, buffer.MemoryInternal.Memory, 0);
+    }
+    catch(const std::exception&)
     {
         throw std::runtime_error("Can't bind buffer memory");
     }
 
     if(_usage == RessourceUsage::PerFrame)
     {
-        if(vkMapMemory(ApplicationInfo::Device(), buffer.MemoryInternal.Memory, 0, memRequirements.size, 0, &buffer.DataPtr) != VK_SUCCESS)
+        if(ApplicationInfo::Device().mapMemory(buffer.MemoryInternal.Memory, 0, memRequirements.size, {}, &buffer.DataPtr) != vk::Result::eSuccess)
         {
             throw std::runtime_error("Failed to map buffer memory");
         }
@@ -221,20 +213,20 @@ BufferInternal GraphicsBuffer::CreateBuffer(VkDeviceSize size, VkBufferUsageFlag
     return buffer;
 }
 
-GraphicsBuffer::GraphicsBuffer(BufferType type, RessourceUsage bufferUsage, VkDeviceSize count, VkDeviceSize stride, bool isSource) : _type(type), _stride(stride), _count(count)
+GraphicsBuffer::GraphicsBuffer(BufferType type, RessourceUsage bufferUsage, vk::DeviceSize count, vk::DeviceSize stride, bool isSource) : _type(type), _stride(stride), _count(count)
 {
     _usage = bufferUsage;
     // mean it's a dst buffer, already in good memory shape but cant be writable directly by cpu
-    VkBufferUsageFlags usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+    vk::BufferUsageFlags usage = vk::BufferUsageFlagBits::eTransferDst;
 
     if(isSource)
     {
-        usage |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+        usage |= vk::BufferUsageFlagBits::eTransferSrc;
     }
 
     if(_type == UNIFORM || _type == STORAGE || _type == INDIRECT_DRAW)
     {
-         VkDeviceSize alignement = stride;
+         vk::DeviceSize alignement = stride;
 
         switch(_type) {
             case UNIFORM: alignement = ApplicationInfo::GetProperties().limits.minUniformBufferOffsetAlignment; break;
@@ -253,27 +245,27 @@ GraphicsBuffer::GraphicsBuffer(BufferType type, RessourceUsage bufferUsage, VkDe
         _stride = (stride + alignement - 1) & ~(alignement - 1);
     }
 
-    VkDeviceSize size = _stride * _count;
+    vk::DeviceSize size = _stride * _count;
 
     switch (_type) {
-        case INDEX: usage |= VK_BUFFER_USAGE_INDEX_BUFFER_BIT; break;
-        case VERTEX: usage |= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT; break;
-        case UNIFORM: usage |= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT; break;
-        case INDIRECT_DRAW: usage |= VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT; break;
-        case STORAGE: usage |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT; break;
+        case INDEX: usage |= vk::BufferUsageFlagBits::eIndexBuffer; break;
+        case VERTEX: usage |= vk::BufferUsageFlagBits::eVertexBuffer; break;
+        case UNIFORM: usage |= vk::BufferUsageFlagBits::eUniformBuffer; break;
+        case INDIRECT_DRAW: usage |= vk::BufferUsageFlagBits::eIndirectBuffer | vk::BufferUsageFlagBits::eStorageBuffer; break;
+        case STORAGE: usage |= vk::BufferUsageFlagBits::eStorageBuffer; break;
         default:
         {
             throw std::runtime_error("Achievement get :: How did we get Here ? (Uknown Buffer Type)");
         }
     }
 
-    VkMemoryPropertyFlags properties;
+    vk::MemoryPropertyFlags properties;
     switch (_type) {
         case INDIRECT_DRAW:
         case UNIFORM:
         case STORAGE:
         case INDEX:
-        case VERTEX: properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT; break; // Memory optimized for GPU access
+        case VERTEX: properties = vk::MemoryPropertyFlagBits::eDeviceLocal; break; // Memory optimized for GPU access
         default:
         {
             throw std::runtime_error("Achievement get :: How did we get Here ? (Uknown Buffer Type)");
@@ -283,7 +275,7 @@ GraphicsBuffer::GraphicsBuffer(BufferType type, RessourceUsage bufferUsage, VkDe
     if(_usage == RessourceUsage::PerFrame)
     {
         if(_type != STORAGE && _type != UNIFORM && _type != INDIRECT_DRAW) throw std::runtime_error("PerFrame Buffer can only be STORAGE, UNIFORM or INDIRECT_DRAW");
-        properties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+        properties = vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
     }
 
     int frameCount = RessourceUsageCount(_usage);
@@ -295,28 +287,27 @@ GraphicsBuffer::GraphicsBuffer(BufferType type, RessourceUsage bufferUsage, VkDe
     }
 }
 
-GraphicsBuffer::GraphicsBuffer(BindingManager& allocator, uint32_t dstBinding, BufferType type, RessourceUsage bufferUsage, VkDeviceSize count, VkDeviceSize stride, bool isSource)
+GraphicsBuffer::GraphicsBuffer(BindingManager& allocator, uint32_t dstBinding, BufferType type, RessourceUsage bufferUsage, vk::DeviceSize count, vk::DeviceSize stride, bool isSource)
 : GraphicsBuffer(type, bufferUsage, count, stride, isSource)
 {
     for(int i = 0; i < _internals.size(); i++)
     {
         if(_type == UNIFORM || _type == STORAGE || _type == INDIRECT_DRAW)
         {
-            VkDescriptorBufferInfo desc = {
-                .buffer = _internals[i].Internal,
-                .offset = 0,
-                .range = _stride * _count
-            };
+            vk::DescriptorBufferInfo desc = vk::DescriptorBufferInfo{}
+                .setBuffer(_internals[i].Internal)
+                .setOffset(0)
+                .setRange(_stride * _count);
             allocator.RegisterBuffer(desc, GetDescriptorType(), dstBinding, i);
             _internals[i].GpuIndex = i;
         }
     }
 }
 
-void GraphicsBuffer::CopyToBuffer(const VkQueue& queue,
-    const VkCommandPool& pool,
+void GraphicsBuffer::CopyToBuffer(const vk::Queue& queue,
+    const vk::CommandPool& pool,
     void* srcData,
-    VkDeviceSize size,
+    vk::DeviceSize size,
     uint32_t srcOffsetInBytes,
     uint32_t dstOffsetInBytes)
 {
@@ -336,9 +327,9 @@ GraphicsBuffer::~GraphicsBuffer()
 {
     for(int i = 0; i < _internals.size(); i++)
     {
-        vkDestroyBuffer(ApplicationInfo::Device(), _internals[i].Internal, nullptr);
-        if(_internals[i].DataPtr != nullptr) vkUnmapMemory(ApplicationInfo::Device(), _internals[i].MemoryInternal.Memory);
-        vkFreeMemory(ApplicationInfo::Device(), _internals[i].MemoryInternal.Memory, nullptr);
+        ApplicationInfo::Device().destroyBuffer(_internals[i].Internal);
+        if(_internals[i].DataPtr != nullptr) ApplicationInfo::Device().unmapMemory(_internals[i].MemoryInternal.Memory);
+        ApplicationInfo::Device().freeMemory(_internals[i].MemoryInternal.Memory);
         ApplicationInfo::VRAMRelease(_internals[i].MemoryInternal.Size, ApplicationInfo::AllocType::Buffer);
     }
 }
@@ -368,10 +359,10 @@ GraphicsBuffer& GraphicsBuffer::operator=(GraphicsBuffer&& other) noexcept
     return *this;
 }
 
-void GeometryBuffer::CopyToBuffer(const VkQueue& queue,
-    const VkCommandPool& cmdPool,
+void GeometryBuffer::CopyToBuffer(const vk::Queue& queue,
+    const vk::CommandPool& cmdPool,
     void* srcData,
-    VkDeviceSize size)
+    vk::DeviceSize size)
 {
     if((_currentSize + size) > (_count * _stride))
     {

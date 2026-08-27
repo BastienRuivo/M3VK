@@ -31,125 +31,96 @@ std::vector<char> ApplicationHelper::ReadFile(const std::filesystem::path& path)
     return bytes;
 }
 
-ApplicationHelper::SwapChainSupportDetails ApplicationHelper::QuerySwapChainSupportDetail(VkPhysicalDevice physicalDevice, const VkSurfaceKHR& windowSurface)
+ApplicationHelper::SwapChainSupportDetails ApplicationHelper::QuerySwapChainSupportDetail(vk::PhysicalDevice physicalDevice, const vk::SurfaceKHR& windowSurface)
 {
     SwapChainSupportDetails details;
-
-    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, windowSurface, &details.Capabilities);
-
-    uint32_t formatCount = 0;
-    vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, windowSurface, &formatCount, nullptr);
-    details.Formats.resize(formatCount);
-    vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, windowSurface, &formatCount, details.Formats.data());
-
-    uint32_t presentModeCount = 0;
-    vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, windowSurface, &presentModeCount, nullptr);
-    if(presentModeCount > 0)
-    {
-        details.PresentsModes.resize(presentModeCount);
-        vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, windowSurface, &presentModeCount, details.PresentsModes.data());
-    }
+    details.Capabilities = physicalDevice.getSurfaceCapabilitiesKHR(windowSurface);
+    details.Formats = physicalDevice.getSurfaceFormatsKHR(windowSurface);
+    details.PresentsModes = physicalDevice.getSurfacePresentModesKHR(windowSurface);
     return details;
 }
 
-void ApplicationHelper::CopyBufferToBuffer(const VkQueue queue, const VkCommandPool& cmdPool, const VkBuffer& src, VkDeviceSize srcOffset, const VkBuffer& dst, VkDeviceSize dstOffset, VkDeviceSize size)
+void ApplicationHelper::CopyBufferToBuffer(const vk::Queue queue, const vk::CommandPool& cmdPool, const vk::Buffer& src, vk::DeviceSize srcOffset, const vk::Buffer& dst, vk::DeviceSize dstOffset, vk::DeviceSize size)
 {
-    VkDevice device = ApplicationInfo::Device();
-    VkCommandBufferAllocateInfo allocInfo
-    {
-        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-        .commandPool = cmdPool,
-        .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-        .commandBufferCount = 1
-    };
+    vk::Device device = ApplicationInfo::Device();
+    vk::CommandBufferAllocateInfo allocInfo = vk::CommandBufferAllocateInfo{}
+        .setCommandPool(cmdPool)
+        .setLevel(vk::CommandBufferLevel::ePrimary)
+        .setCommandBufferCount(1);
 
-    VkCommandBuffer cmdBuffer;
-    vkAllocateCommandBuffers(ApplicationInfo::Device(),&allocInfo, &cmdBuffer);
+    vk::CommandBuffer cmdBuffer;
+    (void)device.allocateCommandBuffers(&allocInfo, &cmdBuffer);
 
-    VkCommandBufferBeginInfo beginInfo
-    {
-        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-        .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT
-    };
+    vk::CommandBufferBeginInfo beginInfo = vk::CommandBufferBeginInfo{}
+        .setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
 
-    vkBeginCommandBuffer(cmdBuffer, &beginInfo);
+    (void)cmdBuffer.begin(&beginInfo);
 
-    VkBufferCopy copyRegion
-    {
-        .srcOffset = srcOffset,
-        .dstOffset = dstOffset,
-        .size = size
-    };
-    vkCmdCopyBuffer(cmdBuffer, src, dst, 1, &copyRegion);
+    vk::BufferCopy copyRegion = vk::BufferCopy{}
+        .setSrcOffset(srcOffset)
+        .setDstOffset(dstOffset)
+        .setSize(size);
+    cmdBuffer.copyBuffer(src, dst, copyRegion);
 
-    vkEndCommandBuffer(cmdBuffer);
+    cmdBuffer.end();
 
-    VkCommandBufferSubmitInfo cmdBufferSubmit
-    {
-        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO,
-        .commandBuffer = cmdBuffer
-    };
+    vk::CommandBufferSubmitInfo cmdBufferSubmit = vk::CommandBufferSubmitInfo{}
+        .setCommandBuffer(cmdBuffer);
 
-    VkSubmitInfo2 submitInfo
-    {
-        .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO_2,
-        .pNext = &submitInfo,
-        .commandBufferInfoCount = 1,
-        .pCommandBufferInfos = &cmdBufferSubmit
-    };
+    vk::SubmitInfo2 submitInfo = vk::SubmitInfo2{}
+        .setCommandBufferInfos(cmdBufferSubmit);
 
     // wait for the queue idle, we can use a fence to submit multiple shit later
-    vkQueueSubmit2(queue, 1, &submitInfo, VK_NULL_HANDLE);
-    vkQueueWaitIdle(queue);
+    (void)queue.submit2(1, &submitInfo, nullptr);
+    queue.waitIdle();
 
-    vkFreeCommandBuffers(device,cmdPool, 1, &cmdBuffer);
+    device.freeCommandBuffers(cmdPool, 1, &cmdBuffer);
 }
 
-bool ApplicationHelper::IsFormatSupported(VkFormat format, VkImageTiling tiling, VkFormatFeatureFlags features)
+bool ApplicationHelper::IsFormatSupported(vk::Format format, vk::ImageTiling tiling, vk::FormatFeatureFlags features)
 {
-    VkFormatProperties props;
-    vkGetPhysicalDeviceFormatProperties(ApplicationInfo::PhysicalDevice(), format, &props);
+    vk::FormatProperties props = ApplicationInfo::PhysicalDevice().getFormatProperties(format);
 
-    if(tiling == VK_IMAGE_TILING_LINEAR && (props.linearTilingFeatures & features) == features) {
+    if(tiling == vk::ImageTiling::eLinear && (props.linearTilingFeatures & features) == features) {
         return true;
-    } else if(tiling == VK_IMAGE_TILING_OPTIMAL && (props.optimalTilingFeatures & features) == features) {
+    } else if(tiling == vk::ImageTiling::eOptimal && (props.optimalTilingFeatures & features) == features) {
         return true;
     }
 
     return false;
 }
 
-VkImageAspectFlags ApplicationHelper::GetImageAspectFlags(VkFormat format)
+vk::ImageAspectFlags ApplicationHelper::GetImageAspectFlags(vk::Format format)
 {
     switch(format)
     {
-        case VK_FORMAT_D16_UNORM:
-        case VK_FORMAT_D32_SFLOAT:
-        case VK_FORMAT_D32_SFLOAT_S8_UINT:
-        case VK_FORMAT_D24_UNORM_S8_UINT:
-            return VK_IMAGE_ASPECT_DEPTH_BIT;
-        case VK_FORMAT_S8_UINT:
-            return VK_IMAGE_ASPECT_STENCIL_BIT;
+        case vk::Format::eD16Unorm:
+        case vk::Format::eD32Sfloat:
+        case vk::Format::eD32SfloatS8Uint:
+        case vk::Format::eD24UnormS8Uint:
+            return vk::ImageAspectFlagBits::eDepth;
+        case vk::Format::eS8Uint:
+            return vk::ImageAspectFlagBits::eStencil;
         default:
-            return VK_IMAGE_ASPECT_COLOR_BIT;
+            return vk::ImageAspectFlagBits::eColor;
     }
 }
 
-bool ApplicationHelper::HasStencilComponent(VkFormat format)
+bool ApplicationHelper::HasStencilComponent(vk::Format format)
 {
-    return format == VK_FORMAT_S8_UINT || format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT;
+    return format == vk::Format::eS8Uint || format == vk::Format::eD32SfloatS8Uint || format == vk::Format::eD24UnormS8Uint;
 }
 
-uint32_t ApplicationHelper::GetFormatSize(VkFormat format)
+uint32_t ApplicationHelper::GetFormatSize(vk::Format format)
 {
     switch(format)
     {
-        case VK_FORMAT_D16_UNORM:
-        case VK_FORMAT_D32_SFLOAT:
-        case VK_FORMAT_D32_SFLOAT_S8_UINT:
-        case VK_FORMAT_D24_UNORM_S8_UINT:
+        case vk::Format::eD16Unorm:
+        case vk::Format::eD32Sfloat:
+        case vk::Format::eD32SfloatS8Uint:
+        case vk::Format::eD24UnormS8Uint:
             return 4;
-        case VK_FORMAT_S8_UINT:
+        case vk::Format::eS8Uint:
             return 1;
         default: throw std::runtime_error("Unimplemented Format GetFormatSize");
     }

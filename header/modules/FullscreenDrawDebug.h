@@ -25,8 +25,8 @@ public:
     FullscreenDrawDebug(const FullscreenDrawDebug&) = delete;
     FullscreenDrawDebug& operator=(const FullscreenDrawDebug&) = delete;
 
-    void Draw(const CommandBuffer& cmdBuffer, DrawOption option, uint32_t textureIndex, VkPipelineLayout layout, uint32_t mipLevel = 0) const;
-    void Draw(const CommandBuffer& cmdBuffer, uint32_t textureIndex, VkPipelineLayout layout, uint32_t mipLevel = 0) const;
+    void Draw(const CommandBuffer& cmdBuffer, DrawOption option, uint32_t textureIndex, vk::PipelineLayout layout, uint32_t mipLevel = 0) const;
+    void Draw(const CommandBuffer& cmdBuffer, uint32_t textureIndex, vk::PipelineLayout layout, uint32_t mipLevel = 0) const;
 
     ShaderLibrary::VertexBinding VertexBinding;
     ShaderLibrary::FragmentBinding FragmentBinding;

@@ -6,7 +6,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <vector>
-#include <vulkan/vulkan_core.h>
+#include <vulkan/vulkan.hpp>
 
 struct MaterialImporter : public Importer
 {
@@ -29,8 +29,8 @@ struct MaterialImporter : public Importer
     MaterialImporter& operator=(MaterialImporter&& other) noexcept;
     ~MaterialImporter() = default;
 
-    static uint32_t LoadMaterial(BindingManager& allocator, const std::filesystem::path & modelPath, MaterialRegistry & materialRegistry, VkCommandPool uploadPool, VkQueue uploadQueue, VkSampler sampler);
-    static uint32_t LoadDefaultMaterial(BindingManager& allocator, MaterialRegistry & materialRegistry, VkCommandPool uploadPool, VkQueue uploadQueue, VkSampler sampler);
+    static uint32_t LoadMaterial(BindingManager& allocator, const std::filesystem::path & modelPath, MaterialRegistry & materialRegistry, vk::CommandPool uploadPool, vk::Queue uploadQueue, vk::Sampler sampler);
+    static uint32_t LoadDefaultMaterial(BindingManager& allocator, MaterialRegistry & materialRegistry, vk::CommandPool uploadPool, vk::Queue uploadQueue, vk::Sampler sampler);
     bool Load(const std::filesystem::path& path) override;
     void Clear() override;
 };

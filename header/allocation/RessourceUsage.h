@@ -11,8 +11,8 @@ enum RessourceUsage
 
 struct DeviceMemory
 {
-    VkDeviceMemory Memory;
-    VkDeviceSize Size;
+    vk::DeviceMemory Memory;
+    vk::DeviceSize Size;
 };
 
 inline uint32_t RessourceUsageToCurrentIndex(RessourceUsage usage)

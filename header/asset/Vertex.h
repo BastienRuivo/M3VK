@@ -7,7 +7,7 @@
 #include <glm/fwd.hpp>
 
 #include <vulkan/vk_platform.h>
-#include <vulkan/vulkan_core.h>
+#include <vulkan/vulkan.hpp>
 
 #include <glm/glm.hpp>
 
@@ -28,56 +28,35 @@ struct Vertex
             && texCoord == other.texCoord;
     }
 
-    static VkVertexInputBindingDescription2EXT GetBindingDescription()
+    static vk::VertexInputBindingDescription2EXT GetBindingDescription()
     {
-        VkVertexInputBindingDescription2EXT description
-        {
-            .sType = VK_STRUCTURE_TYPE_VERTEX_INPUT_BINDING_DESCRIPTION_2_EXT,
-            .binding = 0,
-            .stride = sizeof(Vertex),
-            .inputRate = VK_VERTEX_INPUT_RATE_VERTEX,
-            .divisor = 1
-        };
+        vk::VertexInputBindingDescription2EXT description{};
+        description.binding = 0;
+        description.stride = sizeof(Vertex);
+        description.inputRate = vk::VertexInputRate::eVertex;
+        description.divisor = 1;
         return description;
     }
 
-    static std::vector<VkVertexInputAttributeDescription2EXT> GetAttributeDescription()
+    static vk::VertexInputAttributeDescription2EXT MakeAttribute(uint32_t location, vk::Format format, uint32_t offset)
+    {
+        vk::VertexInputAttributeDescription2EXT attribute{};
+        attribute.location = location;
+        attribute.binding = 0;
+        attribute.format = format;
+        attribute.offset = offset;
+        return attribute;
+    }
+
+    static std::vector<vk::VertexInputAttributeDescription2EXT> GetAttributeDescription()
     {
         uint32_t location = 0;
-        std::vector<VkVertexInputAttributeDescription2EXT> attributeDescriptions
+        std::vector<vk::VertexInputAttributeDescription2EXT> attributeDescriptions
         {
-            VkVertexInputAttributeDescription2EXT
-            {
-                .sType = VK_STRUCTURE_TYPE_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION_2_EXT,
-                .location = location++,
-                .binding = 0,
-                .format = VK_FORMAT_R32G32B32_SFLOAT,
-                .offset = offsetof(Vertex, pos)
-            },
-            VkVertexInputAttributeDescription2EXT
-            {
-                .sType = VK_STRUCTURE_TYPE_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION_2_EXT,
-                .location = location++,
-                .binding = 0,
-                .format = VK_FORMAT_R32G32B32_SFLOAT,
-                .offset = offsetof(Vertex, normal)
-            },
-            VkVertexInputAttributeDescription2EXT
-            {
-                .sType = VK_STRUCTURE_TYPE_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION_2_EXT,
-                .location = location++,
-                .binding = 0,
-                .format = VK_FORMAT_R32G32B32A32_SFLOAT,
-                .offset = offsetof(Vertex, tangent)
-            },
-            VkVertexInputAttributeDescription2EXT
-            {
-                .sType = VK_STRUCTURE_TYPE_VERTEX_INPUT_ATTRIBUTE_DESCRIPTION_2_EXT,
-                .location = location++,
-                .binding = 0,
-                .format = VK_FORMAT_R32G32_SFLOAT,
-                .offset = offsetof(Vertex, texCoord)
-            }
+            MakeAttribute(location++, vk::Format::eR32G32B32Sfloat, offsetof(Vertex, pos)),
+            MakeAttribute(location++, vk::Format::eR32G32B32Sfloat, offsetof(Vertex, normal)),
+            MakeAttribute(location++, vk::Format::eR32G32B32A32Sfloat, offsetof(Vertex, tangent)),
+            MakeAttribute(location++, vk::Format::eR32G32Sfloat, offsetof(Vertex, texCoord))
         };
 
         return attributeDescriptions;

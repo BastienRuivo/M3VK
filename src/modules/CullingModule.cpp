@@ -3,7 +3,7 @@
 #include "rendering/GraphicsBuffer.h"
 #include "rendering/Shaders/ShaderLibrary.h"
 #include <cstdint>
-#include <vulkan/vulkan_core.h>
+#include <vulkan/vulkan.hpp>
 
 #include "ShaderBindings.h"
 #include "Instancing.h"
@@ -41,7 +41,7 @@ CullingModule::~CullingModule()
 {
 }
 
-void CullingModule::Execute(const CommandBuffer& cmdBuffer, uint32_t hizIndex, const GraphicsBuffer& cameraBuffer, const GeometryBuffer& indirectBuffer, const GeometryBuffer& instanceBuffer, VkPipelineLayout layout) const
+void CullingModule::Execute(const CommandBuffer& cmdBuffer, uint32_t hizIndex, const GraphicsBuffer& cameraBuffer, const GeometryBuffer& indirectBuffer, const GeometryBuffer& instanceBuffer, vk::PipelineLayout layout) const
 {
     cmdBuffer.BeginMarker("Culling Module");
     {
@@ -54,7 +54,7 @@ void CullingModule::Execute(const CommandBuffer& cmdBuffer, uint32_t hizIndex, c
 
         cmdBuffer.PushConstants(layout, COMMON_INDEXES_OFFSET, sizeof(CullingConstants), &constants);
 
-        Barrier(cmdBuffer, constants.InstanceCount, constants.DrawCount, VK_ACCESS_INDIRECT_COMMAND_READ_BIT, VK_PIPELINE_STAGE_2_DRAW_INDIRECT_BIT, VK_ACCESS_SHADER_WRITE_BIT, VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT);
+        Barrier(cmdBuffer, constants.InstanceCount, constants.DrawCount, vk::AccessFlagBits2::eIndirectCommandRead, vk::PipelineStageFlagBits2::eDrawIndirect, vk::AccessFlagBits2::eShaderWrite, vk::PipelineStageFlagBits2::eComputeShader);
 
         cmdBuffer.BeginMarker("Culling Init");
         {
@@ -63,7 +63,7 @@ void CullingModule::Execute(const CommandBuffer& cmdBuffer, uint32_t hizIndex, c
         }
         cmdBuffer.EndMarker();
 
-        Barrier(cmdBuffer, constants.InstanceCount, constants.DrawCount, VK_ACCESS_SHADER_WRITE_BIT, VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT, VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT, VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT);
+        Barrier(cmdBuffer, constants.InstanceCount, constants.DrawCount, vk::AccessFlagBits2::eShaderWrite, vk::PipelineStageFlagBits2::eComputeShader, vk::AccessFlagBits2::eShaderRead | vk::AccessFlagBits2::eShaderWrite, vk::PipelineStageFlagBits2::eComputeShader);
 
         cmdBuffer.BeginMarker("Culling Pass");
         {
@@ -72,14 +72,14 @@ void CullingModule::Execute(const CommandBuffer& cmdBuffer, uint32_t hizIndex, c
         }
         cmdBuffer.EndMarker();
 
-        Barrier(cmdBuffer, constants.InstanceCount, constants.DrawCount, VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT, VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT, VK_ACCESS_INDIRECT_COMMAND_READ_BIT, VK_PIPELINE_STAGE_2_DRAW_INDIRECT_BIT);
+        Barrier(cmdBuffer, constants.InstanceCount, constants.DrawCount, vk::AccessFlagBits2::eShaderRead | vk::AccessFlagBits2::eShaderWrite, vk::PipelineStageFlagBits2::eComputeShader, vk::AccessFlagBits2::eIndirectCommandRead, vk::PipelineStageFlagBits2::eDrawIndirect);
     }
     cmdBuffer.EndMarker();
 }
 
-void CullingModule::Barrier(const CommandBuffer& cmdBuffer, uint32_t instanceCount, uint32_t drawCount, VkAccessFlagBits2 src, VkPipelineStageFlagBits2 srcStage, VkAccessFlagBits2 dst, VkPipelineStageFlagBits2 dstStage) const
+void CullingModule::Barrier(const CommandBuffer& cmdBuffer, uint32_t instanceCount, uint32_t drawCount, vk::AccessFlags2 src, vk::PipelineStageFlags2 srcStage, vk::AccessFlags2 dst, vk::PipelineStageFlags2 dstStage) const
 {
-    std::array<VkBufferMemoryBarrier2, 2> bufferBarrier =
+    std::array<vk::BufferMemoryBarrier2, 2> bufferBarrier =
     {
         BufferHelper::BufferBarrier(_visibleIndirectBuffer, 0, drawCount, src, srcStage, dst, dstStage),
         BufferHelper::BufferBarrier(_visibleIndirectionBuffer, 0, instanceCount, src, srcStage, dst, dstStage)

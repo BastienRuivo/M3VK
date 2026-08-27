@@ -3,7 +3,7 @@
 #include "rendering/GPUImage.h"
 #include <cstdint>
 #include <stdexcept>
-#include <vulkan/vulkan_core.h>
+#include <vulkan/vulkan.hpp>
 
 BindlessTexturePool::BindlessTexturePool()
     :   _lastFreeTextureIndex(0)

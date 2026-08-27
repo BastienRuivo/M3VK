@@ -4,7 +4,7 @@
 #pragma once
 
 #include <stb_image.h>
-#include <vulkan/vulkan_core.h>
+#include <vulkan/vulkan.hpp>
 class CPUImage
 {
     public:
@@ -17,9 +17,9 @@ class CPUImage
     CPUImage(const CPUImage&) = delete;
     CPUImage& operator=(const CPUImage&) = delete;
 
-    VkFormat GetGPUFormat() const;
+    vk::Format GetGPUFormat() const;
 
-    inline VkDeviceSize Size() const { return _width * _height* _channels; }
+    inline vk::DeviceSize Size() const { return _width * _height* _channels; }
     inline int Width() const { return _width; };
     inline int Height() const { return _height; };
     inline int Channels() const { return _channels; };

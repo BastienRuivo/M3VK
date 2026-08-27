@@ -3,73 +3,66 @@
 #include "rendering/CommandBuffer.h"
 #include "rendering/GPUImage.h"
 #include <cstdint>
-#include <vulkan/vulkan_core.h>
+#include <vulkan/vulkan.hpp>
 
 namespace ImageHelper
 {
     struct ImageBinding
     {
         ImageReference Image;
-        VkDescriptorImageInfo Descriptor;
-        VkSampler Sampler = VK_NULL_HANDLE;
+        vk::DescriptorImageInfo Descriptor;
+        vk::Sampler Sampler;
 
-        ImageBinding(const ImageReference& image, VkSampler sampler, VkImageLayout layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) : Image(image), Sampler(sampler)
+        ImageBinding(const ImageReference& image, vk::Sampler sampler, vk::ImageLayout layout = vk::ImageLayout::eShaderReadOnlyOptimal) : Image(image), Sampler(sampler)
         {
-            Descriptor =
-            {
-                .sampler = sampler,
-                .imageView = image.View,
-                .imageLayout = layout
-            };
+            Descriptor = vk::DescriptorImageInfo{}
+                .setSampler(sampler)
+                .setImageView(image.View)
+                .setImageLayout(layout);
         }
         ImageBinding() = default;
     };
 
     void GenerateMipmapsCommand(const CommandBuffer& cmdBuffer, const ImageReference& image);
-    void TransitionLayoutCommand(const CommandBuffer& cmdBuffer, const ImageReference& image, VkImageLayout oldLayout, VkImageLayout newLayout);
-    void TransitionLayoutCommand(const CommandBuffer& cmdBuffer, const ImageReference& image, uint32_t mipLevel, uint32_t mipCount, uint32_t arrayLayer, uint32_t arrayLayerCount, VkImageLayout oldLayout, VkImageLayout newLayout);
-    void StorageImageReadWriteCommand(const CommandBuffer& cmdBuffer, const ImageReference& image, bool isWrite, uint32_t mipLevel, uint32_t mipCount, uint32_t arrayLayer, uint32_t arrayLayerCount, VkImageLayout oldLayout = VK_IMAGE_LAYOUT_GENERAL);
-    void StorageImageGeneralToLayoutCommand(const CommandBuffer& cmdBuffer, const ImageReference& image, bool isWrite, uint32_t mipLevel, uint32_t mipCount, uint32_t arrayLayer, uint32_t arrayLayerCount, VkImageLayout newLayout);
+    void TransitionLayoutCommand(const CommandBuffer& cmdBuffer, const ImageReference& image, vk::ImageLayout oldLayout, vk::ImageLayout newLayout);
+    void TransitionLayoutCommand(const CommandBuffer& cmdBuffer, const ImageReference& image, uint32_t mipLevel, uint32_t mipCount, uint32_t arrayLayer, uint32_t arrayLayerCount, vk::ImageLayout oldLayout, vk::ImageLayout newLayout);
+    void StorageImageReadWriteCommand(const CommandBuffer& cmdBuffer, const ImageReference& image, bool isWrite, uint32_t mipLevel, uint32_t mipCount, uint32_t arrayLayer, uint32_t arrayLayerCount, vk::ImageLayout oldLayout = vk::ImageLayout::eGeneral);
+    void StorageImageGeneralToLayoutCommand(const CommandBuffer& cmdBuffer, const ImageReference& image, bool isWrite, uint32_t mipLevel, uint32_t mipCount, uint32_t arrayLayer, uint32_t arrayLayerCount, vk::ImageLayout newLayout);
 
-    void CopyToImageCommand(const CommandBuffer& cmdBuffer, const ImageReference& image, uint32_t mipLevel, VkBuffer srcData);
+    void CopyToImageCommand(const CommandBuffer& cmdBuffer, const ImageReference& image, uint32_t mipLevel, vk::Buffer srcData);
 
-    inline VkRenderingAttachmentInfo AttachmentInfo(VkImageView imageView, VkImageLayout imageLayout, VkAttachmentLoadOp loadOp, VkAttachmentStoreOp storeOp, VkClearValue clear = {})
+    inline vk::RenderingAttachmentInfo AttachmentInfo(vk::ImageView imageView, vk::ImageLayout imageLayout, vk::AttachmentLoadOp loadOp, vk::AttachmentStoreOp storeOp, vk::ClearValue clear = {})
     {
-        return VkRenderingAttachmentInfo
-        {
-            .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
-            .imageView = imageView,
-            .imageLayout = imageLayout,
-            .loadOp = loadOp,
-            .storeOp = storeOp,
-            .clearValue = clear
-        };
+        return vk::RenderingAttachmentInfo{}
+            .setImageView(imageView)
+            .setImageLayout(imageLayout)
+            .setLoadOp(loadOp)
+            .setStoreOp(storeOp)
+            .setClearValue(clear);
     }
 
-    inline VkRenderingAttachmentInfo AttachmentInfo(VkImageView imageView, VkImageLayout imageLayout, VkImageView resolveView, VkImageLayout resolveLayout, VkAttachmentLoadOp loadOp, VkAttachmentStoreOp storeOp, VkResolveModeFlagBits resolveMode, VkClearValue clear = {})
+    inline vk::RenderingAttachmentInfo AttachmentInfo(vk::ImageView imageView, vk::ImageLayout imageLayout, vk::ImageView resolveView, vk::ImageLayout resolveLayout, vk::AttachmentLoadOp loadOp, vk::AttachmentStoreOp storeOp, vk::ResolveModeFlagBits resolveMode, vk::ClearValue clear = {})
     {
 
         // If there's no MSAA directly render on the resolved image
-        if(ApplicationInfo::GetMsaaSample() == VK_SAMPLE_COUNT_1_BIT)
+        if(ApplicationInfo::GetMsaaSample() == vk::SampleCountFlagBits::e1)
         {
             return AttachmentInfo(resolveView, resolveLayout, loadOp, storeOp, clear);
         }
 
-        VkRenderingAttachmentInfo info = AttachmentInfo(imageView, imageLayout, loadOp, storeOp, clear);
-        info.resolveImageView = resolveView;
-        info.resolveImageLayout = resolveLayout;
-        info.resolveMode = resolveMode;
-        return info;
+        return AttachmentInfo(imageView, imageLayout, loadOp, storeOp, clear)
+            .setResolveMode(resolveMode)
+            .setResolveImageView(resolveView)
+            .setResolveImageLayout(resolveLayout);
     }
 
-    VkImageMemoryBarrier2 TransitionLayoutBarrier(const ImageReference& image, uint32_t mipLevel, uint32_t mipCount, uint32_t arrayLayer, uint32_t arrayLayerCount, VkImageLayout oldLayout, VkImageLayout newLayout);
-    VkImageMemoryBarrier2 TransitionLayoutBarrier(const VkImageView& image, uint32_t mipLevel, uint32_t mipCount, uint32_t arrayLayer, uint32_t arrayLayerCount, VkImageLayout oldLayout, VkImageLayout newLayout);
-    VkImageMemoryBarrier2 StorageImageReadWriteBarrier(const ImageReference &image, bool isWrite, uint32_t mipLevel, uint32_t mipCount, uint32_t arrayLayer, uint32_t arrayLayerCount, VkImageLayout oldLayout = VK_IMAGE_LAYOUT_GENERAL);
-    VkImageMemoryBarrier2 StorageImageGeneralToLayoutBarrier(const ImageReference &image, bool isWrite, uint32_t mipLevel, uint32_t mipCount, uint32_t arrayLayer, uint32_t arrayLayerCount, VkImageLayout newLayout);
-    VkImageAspectFlags GetAspect(VkFormat format);
+    vk::ImageMemoryBarrier2 TransitionLayoutBarrier(const ImageReference& image, uint32_t mipLevel, uint32_t mipCount, uint32_t arrayLayer, uint32_t arrayLayerCount, vk::ImageLayout oldLayout, vk::ImageLayout newLayout);
+    vk::ImageMemoryBarrier2 StorageImageReadWriteBarrier(const ImageReference &image, bool isWrite, uint32_t mipLevel, uint32_t mipCount, uint32_t arrayLayer, uint32_t arrayLayerCount, vk::ImageLayout oldLayout = vk::ImageLayout::eGeneral);
+    vk::ImageMemoryBarrier2 StorageImageGeneralToLayoutBarrier(const ImageReference &image, bool isWrite, uint32_t mipLevel, uint32_t mipCount, uint32_t arrayLayer, uint32_t arrayLayerCount, vk::ImageLayout newLayout);
+    vk::ImageAspectFlags GetAspect(vk::Format format);
     uint32_t GetMipCount(uint32_t width, uint32_t height);
-    uint32_t GetBytePerPixel(VkFormat format);
+    uint32_t GetBytePerPixel(vk::Format format);
 
-    VkImageView CreateImageView(ImageReference& image, VkImageAspectFlags aspectMask, VkImageViewType type, uint32_t mipLevel, uint32_t mipCount, uint32_t arrayLayer, uint32_t arrayLayerCount);
-    VkImageView CreateImageView(ImageReference& image, VkImageAspectFlags aspectMask, VkImageViewType type);
+    vk::ImageView CreateImageView(ImageReference& image, vk::ImageAspectFlags aspectMask, vk::ImageViewType type, uint32_t mipLevel, uint32_t mipCount, uint32_t arrayLayer, uint32_t arrayLayerCount);
+    vk::ImageView CreateImageView(ImageReference& image, vk::ImageAspectFlags aspectMask, vk::ImageViewType type);
 }

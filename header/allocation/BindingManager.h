@@ -7,7 +7,7 @@
 #include "rendering/GPUImage.h"
 #include <cassert>
 #include <cstdint>
-#include <vulkan/vulkan_core.h>
+#include <vulkan/vulkan.hpp>
 
 class BindingManager
 {
@@ -16,7 +16,7 @@ class BindingManager
     {
         RessourceUsage Usage;
         std::array<uint32_t, ApplicationInfo::Constant::MaxFrameInFlight> Index;
-        VkSampler Sampler;
+        vk::Sampler Sampler;
         uint32_t StaticIndex() const { assert(Usage == RessourceUsage::Static); return Index[0]; }
         uint32_t CurrentBindlessIndex () const { return Index[RessourceUsageToCurrentIndex(Usage)]; }
         uint32_t PreviousBindlessIndex () const { return Index[RessourceUsageToPreviousIndex(Usage)]; }
@@ -24,7 +24,7 @@ class BindingManager
         uint32_t PreviousIndex() const { return RessourceUsageToPreviousIndex(Usage); }
 
         template<typename... Args>
-        static BindlessTexture Register(BindingManager& allocator, RessourceUsage usage, VkSampler sampler, Args&&... args)
+        static BindlessTexture Register(BindingManager& allocator, RessourceUsage usage, vk::Sampler sampler, Args&&... args)
         {
             BindlessTexture handle
             {
@@ -42,7 +42,7 @@ class BindingManager
         }
 
         template<typename... Args>
-        static BindlessTexture Register(BindingManager& allocator, RessourceUsage usage, VkSampler sampler, VkCommandPool pool, VkQueue queue, VkImageLayout layout, Args&&... args)
+        static BindlessTexture Register(BindingManager& allocator, RessourceUsage usage, vk::Sampler sampler, vk::CommandPool pool, vk::Queue queue, vk::ImageLayout layout, Args&&... args)
         {
             BindlessTexture handle = BindlessTexture::Register(allocator, usage, sampler, std::forward<Args>(args)...);
 
@@ -58,14 +58,14 @@ class BindingManager
         }
 
         bool Resize(BindingManager& allocator, uint32_t width, uint32_t height);
-        void TransistionAllLayoutCommand(const BindingManager& allocator, const CommandBuffer& cmdBuffer, VkImageLayout layout);
+        void TransistionAllLayoutCommand(const BindingManager& allocator, const CommandBuffer& cmdBuffer, vk::ImageLayout layout);
         inline GPUImage& Texture(BindingManager& allocator) { return allocator._texturePool.Texture(Index[RessourceUsageToCurrentIndex(Usage)]); }
         inline GPUImage& PreviousTexture(BindingManager& allocator) { return allocator._texturePool.Texture(Index[RessourceUsageToPreviousIndex(Usage)]); }
         inline const GPUImage& Texture(const BindingManager& allocator) const { return allocator._texturePool.Texture(Index[RessourceUsageToCurrentIndex(Usage)]); }
         inline const GPUImage& Texture(const BindingManager& allocator, uint32_t texIndex) const { return allocator._texturePool.Texture(Index[texIndex]); }
         inline const GPUImage& PreviousTexture(const BindingManager& allocator) const { return allocator._texturePool.Texture(Index[RessourceUsageToPreviousIndex(Usage)]); }
         void Dispose(BindingManager& allocator);
-        void Bind(const BindingManager& allocator, bool hasImage, uint32_t binding, VkSampler sampler) const;
+        void Bind(const BindingManager& allocator, bool hasImage, uint32_t binding, vk::Sampler sampler) const;
     };
 
     BindingManager();
@@ -73,25 +73,25 @@ class BindingManager
 
     static constexpr uint32_t ShaderConstantsSize = 64;
 
-    void RegisterBuffer(const VkDescriptorBufferInfo& info, VkDescriptorType type, uint32_t dstBinding, uint32_t dstArrayElement);
-    void RegisterTexture(const VkDescriptorImageInfo& info, uint32_t dstBinding, uint32_t dstArrayElement) const;
-    void RegisterImage(const VkDescriptorImageInfo& info, uint32_t dstBinding, uint32_t dstArrayElement) const;
+    void RegisterBuffer(const vk::DescriptorBufferInfo& info, vk::DescriptorType type, uint32_t dstBinding, uint32_t dstArrayElement);
+    void RegisterTexture(const vk::DescriptorImageInfo& info, uint32_t dstBinding, uint32_t dstArrayElement) const;
+    void RegisterImage(const vk::DescriptorImageInfo& info, uint32_t dstBinding, uint32_t dstArrayElement) const;
 
     inline DescriptorSetHandle GlobalDescriptorSet() const { return _globalSet; }
-    inline VkPipelineLayout GlobalLayout() const { return _globalLayout.Internal(); }
-    inline const std::vector<VkPushConstantRange>& GlobalPushConstantRanges() const { return _globalPushConstantRanges; }
-    inline const std::vector<VkDescriptorSetLayout>& GlobalSetLayouts() const { return _bindlessPool.Layouts(); }
+    inline vk::PipelineLayout GlobalLayout() const { return _globalLayout.Internal(); }
+    inline const std::vector<vk::PushConstantRange>& GlobalPushConstantRanges() const { return _globalPushConstantRanges; }
+    inline const std::vector<vk::DescriptorSetLayout>& GlobalSetLayouts() const { return _bindlessPool.Layouts(); }
 
     private:
-    DescriptorSetHandle AllocateBindlessInternal(std::span<uint32_t> counts, VkDescriptorSetLayout layout);
-    uint32_t RegisterBindlessTextureInternal(GPUImage&& texture, VkSampler sampler);
-    void UpdateBindlessTextureInternal(uint32_t index, const ImageReference& img, VkSampler sampler);
+    DescriptorSetHandle AllocateBindlessInternal(std::span<uint32_t> counts, vk::DescriptorSetLayout layout);
+    uint32_t RegisterBindlessTextureInternal(GPUImage&& texture, vk::Sampler sampler);
+    void UpdateBindlessTextureInternal(uint32_t index, const ImageReference& img, vk::Sampler sampler);
 
     BindlessTexturePool _texturePool;
     DescriptorPool _bindlessPool;
     DescriptorSetHandle _globalSet = {};
 
-    std::vector<VkPushConstantRange> _globalPushConstantRanges;
+    std::vector<vk::PushConstantRange> _globalPushConstantRanges;
     VkPipelineLayoutHandler _globalLayout;
 };
 

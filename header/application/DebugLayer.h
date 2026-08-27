@@ -1,28 +1,12 @@
 #pragma once
 #include <string_view>
 #include <vulkan/vk_platform.h>
-#include <vulkan/vulkan_core.h>
+#include <vulkan/vulkan.hpp>
 #include <GLFW/glfw3.h>
 
 #include <vector>
 
 #define M3VK_VERBOSE_LOG 1
-
-static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(
-    VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
-    VkDebugUtilsMessageTypeFlagsEXT messageType,
-    const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
-    void* pUserData);
-
-// this is not always create so we do it this way
-VkResult M3VK_CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pDebugMessenger);
-void M3VK_DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks* pAllocator);
-static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(
-    VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
-    VkDebugUtilsMessageTypeFlagsEXT messageType,
-    const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
-    void* pUserData);
-
 
 class DebugLayer
 {
@@ -50,17 +34,16 @@ class DebugLayer
     static inline const char* TextColorYellow = "\033[33m";
     static inline const char* TextColorRed = "\033[31m";
 
-    DebugLayer(VkInstance instance);
+    DebugLayer(vk::Instance instance);
     ~DebugLayer();
 
-    static void PopulateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
-    static void SetupCreateInfo(VkInstanceCreateInfo& instanceCreateInfo, VkDebugUtilsMessengerCreateInfoEXT& debugInfoCreate);
-    static void Log(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, std::string_view message);
+    static void PopulateDebugMessengerCreateInfo(vk::DebugUtilsMessengerCreateInfoEXT& createInfo);
+    static void SetupCreateInfo(vk::InstanceCreateInfo& instanceCreateInfo, vk::DebugUtilsMessengerCreateInfoEXT& debugInfoCreate);
     static void Log(LogType LogType, std::string_view message);
     static bool CheckValidationLayerSupport();
 
     private:
-    VkDebugUtilsMessengerEXT _debugMessenger;
-    VkInstance _instance;
+    vk::DebugUtilsMessengerEXT _debugMessenger;
+    vk::Instance _instance;
 
 };

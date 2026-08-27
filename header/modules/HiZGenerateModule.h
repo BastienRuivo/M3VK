@@ -11,7 +11,7 @@
 #include "rendering/Shaders/ShaderLibrary.h"
 #include "rendering/SwapChain.h"
 #include <cstdint>
-#include <vulkan/vulkan_core.h>
+#include <vulkan/vulkan.hpp>
 
 class HiZGenerateModule : public Module
 {
@@ -30,7 +30,7 @@ public:
         uint32_t srcMipLevel;
     };
 
-    HiZGenerateModule(const SwapChain& swapChain, ShaderLibrary& shaderLibrary, BindingManager& bindingManager, VkCommandPool graphicsCommandPool, VkQueue graphicsComputeQueue, VkSampler samplerNearest);
+    HiZGenerateModule(const SwapChain& swapChain, ShaderLibrary& shaderLibrary, BindingManager& bindingManager, vk::CommandPool graphicsCommandPool, vk::Queue graphicsComputeQueue, vk::Sampler samplerNearest);
     ~HiZGenerateModule() override;
 
     HiZGenerateModule(HiZGenerateModule&& other) noexcept;
@@ -39,10 +39,10 @@ public:
     HiZGenerateModule(const HiZGenerateModule&) = delete;
     HiZGenerateModule& operator=(const HiZGenerateModule&) = delete;
 
-    void Execute(const CommandBuffer& cmdBuffer, const BindingManager& bindingManager, const BindlessTexture& depthTarget, VkPipelineLayout layout) const;
+    void Execute(const CommandBuffer& cmdBuffer, const BindingManager& bindingManager, const BindlessTexture& depthTarget, vk::PipelineLayout layout) const;
     void Resize(const CommandBuffer& cmdBuffer, BindingManager& bindingManager, uint32_t width, uint32_t height) override;
     void DoUI(const UserInterface& ui) override;
-    void RenderUI(const CommandBuffer& cmdBuffer, const FullscreenDrawDebug& debugDrawModule, VkPipelineLayout layout) const override;
+    void RenderUI(const CommandBuffer& cmdBuffer, const FullscreenDrawDebug& debugDrawModule, vk::PipelineLayout layout) const override;
     inline const BindlessTexture& HiZTexture() const { return _hizTexture; }
 
 public:

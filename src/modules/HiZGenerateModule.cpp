@@ -8,14 +8,14 @@
 #include "rendering/ImageHelper.h"
 #include "rendering/SwapChain.h"
 #include <cstdint>
-#include <vulkan/vulkan_core.h>
+#include <vulkan/vulkan.hpp>
 
-HiZGenerateModule::HiZGenerateModule(const SwapChain& swapChain, ShaderLibrary& shaderLibrary, BindingManager& bindingManager, VkCommandPool graphicsCommandPool, VkQueue graphicsComputeQueue, VkSampler samplerNearest)
+HiZGenerateModule::HiZGenerateModule(const SwapChain& swapChain, ShaderLibrary& shaderLibrary, BindingManager& bindingManager, vk::CommandPool graphicsCommandPool, vk::Queue graphicsComputeQueue, vk::Sampler samplerNearest)
 : _hizTexture(BindlessTexture::Register(bindingManager,RessourceUsage::PerFrame, samplerNearest, graphicsCommandPool, graphicsComputeQueue,
-    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+    vk::ImageLayout::eShaderReadOnlyOptimal,
     swapChain.GetExtent().width >> 1, swapChain.GetExtent().height >> 1,
-    VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
-    VK_FORMAT_R32_SFLOAT)),
+    vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eTransferSrc,
+    vk::Format::eR32Sfloat)),
     _hizImageViews(_hizTexture, bindingManager)
 {
     Shader::SpecializationConstant constants[] = {Shader::SpecializationConstant{"USE_ORIGINAL_DEPTH", false}};
@@ -45,7 +45,7 @@ HiZGenerateModule::HiZGenerateModule(const SwapChain& swapChain, ShaderLibrary& 
     _hizImageViews.Bind(bindingManager, BINDING_HIZ_TEXTURE);
 }
 
-void HiZGenerateModule::Execute(const CommandBuffer& cmdBuffer, const BindingManager& manager, const BindlessTexture& depthTarget,VkPipelineLayout layout) const
+void HiZGenerateModule::Execute(const CommandBuffer& cmdBuffer, const BindingManager& manager, const BindlessTexture& depthTarget,vk::PipelineLayout layout) const
 {
     const auto & hiz = _hizTexture.Texture(manager).Internal();
     const auto & depth = depthTarget.Texture(manager).Internal();
@@ -59,11 +59,11 @@ void HiZGenerateModule::Execute(const CommandBuffer& cmdBuffer, const BindingMan
 
     cmdBuffer.BeginMarker("HiZGenerateModule");
     {
-        ImageHelper::TransitionLayoutCommand(cmdBuffer, depth, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL);
+        ImageHelper::TransitionLayoutCommand(cmdBuffer, depth, vk::ImageLayout::eDepthAttachmentOptimal, vk::ImageLayout::eDepthReadOnlyOptimal);
 
         for(int i = 0; i < hiz.MipCount; i++)
         {
-            ImageHelper::StorageImageReadWriteCommand(cmdBuffer, hiz, true, i, 1, 0, 1, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+            ImageHelper::StorageImageReadWriteCommand(cmdBuffer, hiz, true, i, 1, 0, 1, vk::ImageLayout::eShaderReadOnlyOptimal);
             bool useOriginalDepth = i == 0;
 
             if(useOriginalDepth) _hizGenerateMip0Kernel.Bind(cmdBuffer);
@@ -83,7 +83,7 @@ void HiZGenerateModule::Execute(const CommandBuffer& cmdBuffer, const BindingMan
             if(useOriginalDepth) _hizGenerateMip0Kernel.CeilDispatch(cmdBuffer, currentWidth, currentHeight);
             else _hizGenerateKernel.CeilDispatch(cmdBuffer, currentWidth, currentHeight);
 
-            ImageHelper::StorageImageGeneralToLayoutCommand(cmdBuffer, hiz, true, i, 1, 0, 1, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+            ImageHelper::StorageImageGeneralToLayoutCommand(cmdBuffer, hiz, true, i, 1, 0, 1, vk::ImageLayout::eShaderReadOnlyOptimal);
             previousWidth = currentWidth;
             previousHeight = currentHeight;
 
@@ -92,7 +92,7 @@ void HiZGenerateModule::Execute(const CommandBuffer& cmdBuffer, const BindingMan
         }
 
         //ImageHelper::StorageImageGeneralToLayoutCommand(cmdBuffer, hiz, false, 0, hiz.MipCount, 0, 1, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-        ImageHelper::TransitionLayoutCommand(cmdBuffer, depth, VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
+        ImageHelper::TransitionLayoutCommand(cmdBuffer, depth, vk::ImageLayout::eDepthReadOnlyOptimal, vk::ImageLayout::eDepthAttachmentOptimal);
     }
     cmdBuffer.EndMarker();
 }
@@ -103,7 +103,7 @@ void HiZGenerateModule::Resize(const CommandBuffer& cmdBuffer, BindingManager& b
     {
         _hizImageViews = MultiFramePerMipImageView(_hizTexture, bindingManager);
         _hizImageViews.Bind(bindingManager, BINDING_HIZ_TEXTURE);
-        _hizTexture.TransistionAllLayoutCommand(bindingManager, cmdBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+        _hizTexture.TransistionAllLayoutCommand(bindingManager, cmdBuffer, vk::ImageLayout::eShaderReadOnlyOptimal);
     }
 }
 
@@ -116,7 +116,7 @@ void HiZGenerateModule::DoUI(const UserInterface& ui)
     ImGui::End();
 }
 
-void HiZGenerateModule::RenderUI(const CommandBuffer& cmdBuffer, const FullscreenDrawDebug& debugDrawModule, VkPipelineLayout layout) const
+void HiZGenerateModule::RenderUI(const CommandBuffer& cmdBuffer, const FullscreenDrawDebug& debugDrawModule, vk::PipelineLayout layout) const
 {
     if(_drawHiZMip >= 0)
     {

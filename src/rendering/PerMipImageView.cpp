@@ -3,7 +3,7 @@
 #include "application/ApplicationHelper.h"
 #include "application/ApplicationInfo.h"
 #include <cstdint>
-#include <vulkan/vulkan_core.h>
+#include <vulkan/vulkan.hpp>
 
 
 PerMipImageView::PerMipImageView(const ImageReference& image)
@@ -13,7 +13,7 @@ PerMipImageView::PerMipImageView(const ImageReference& image)
     {
         Views[i] = ImageHelper::CreateImageView(Image,
             ApplicationHelper::GetImageAspectFlags(Image.Format),
-            Image.CreateFlags & VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT ? VK_IMAGE_VIEW_TYPE_CUBE : VK_IMAGE_VIEW_TYPE_2D,
+            (Image.CreateFlags & vk::ImageCreateFlagBits::eCubeCompatible) ? vk::ImageViewType::eCube : vk::ImageViewType::e2D,
             i, 1, 0, image.ArrayLayerCount);
     }
 }
@@ -22,7 +22,7 @@ PerMipImageView::~PerMipImageView()
 {
     for(uint32_t i = 0; i < Image.MipCount; ++i)
     {
-        vkDestroyImageView(ApplicationInfo::Device(), Views[i], nullptr);
+        ApplicationInfo::Device().destroyImageView(Views[i]);
     }
 }
 
@@ -46,11 +46,10 @@ void PerMipImageView::Bind(const BindingManager& manager, uint32_t binding, uint
 {
     for(uint32_t i = 0; i < Image.MipCount; ++i)
     {
-        VkDescriptorImageInfo info = VkDescriptorImageInfo{
-            .sampler = VK_NULL_HANDLE,
-            .imageView = Views[i],
-            .imageLayout = VK_IMAGE_LAYOUT_GENERAL
-        };
+        vk::DescriptorImageInfo info = vk::DescriptorImageInfo{}
+            .setSampler(nullptr)
+            .setImageView(Views[i])
+            .setImageLayout(vk::ImageLayout::eGeneral);
         manager.RegisterImage(info, binding, i + offset);
     }
 }

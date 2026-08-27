@@ -5,22 +5,21 @@
 #include <span>
 #include <utility>
 #include <vector>
-#include <vulkan/vulkan_core.h>
+#include <vulkan/vulkan.hpp>
 #include <concepts>
 
 template<typename T>
-    requires std::same_as<T, VkCommandPool>
-    || std::same_as<T, VkDevice>
-    || std::same_as<T, VkPhysicalDevice>
-    || std::same_as<T, VkFence>
-    || std::same_as<T, VkSemaphore>
-    || std::same_as<T, VkImageView>
-    || std::same_as<T, VkInstance>
-    || std::same_as<T, VkPipeline>
-    || std::same_as<T, VkPipelineLayout>
-    || std::same_as<T, VkQueue>
-    || std::same_as<T, VkSampler>
-    || std::same_as<T, VkSurfaceKHR>
+    requires std::same_as<T, vk::CommandPool>
+    || std::same_as<T, vk::Device>
+    || std::same_as<T, vk::PhysicalDevice>
+    || std::same_as<T, vk::Fence>
+    || std::same_as<T, vk::Semaphore>
+    || std::same_as<T, vk::ImageView>
+    || std::same_as<T, vk::Instance>
+    || std::same_as<T, vk::PipelineLayout>
+    || std::same_as<T, vk::Queue>
+    || std::same_as<T, vk::Sampler>
+    || std::same_as<T, vk::SurfaceKHR>
 class Handler
 {
 public:
@@ -28,13 +27,13 @@ public:
     virtual ~Handler() {};
     Handler(Handler&& other) noexcept
     {
-        _internal = std::exchange(other._internal, VK_NULL_HANDLE);
+        _internal = std::exchange(other._internal, T{});
     }
     Handler& operator=(Handler&& other) noexcept
     {
         if(this != &other)
         {
-            _internal = std::exchange(other._internal, VK_NULL_HANDLE);
+            _internal = std::exchange(other._internal, T{});
         }
         return *this;
     }
@@ -45,12 +44,12 @@ public:
     inline T Internal() const { return _internal; }
 
 protected:
-    T _internal = VK_NULL_HANDLE;
+    T _internal{};
 };
 
 // -- HANDLER DEFINITION
 
-class VkCommandPoolHandler : public Handler<VkCommandPool>
+class VkCommandPoolHandler : public Handler<vk::CommandPool>
 {
 public:
     VkCommandPoolHandler(uint32_t queueFamilyIndex);
@@ -65,17 +64,17 @@ public:
     uint32_t _queueFamilyIndex;
 };
 
-class VkDeviceHandler : public Handler<VkDevice>
+class VkDeviceHandler : public Handler<vk::Device>
 {
 public:
-    VkDeviceHandler(VkInstance instance, VkSurfaceKHR windowSurface, const std::vector<const char*>& deviceExtensions);
+    VkDeviceHandler(vk::Instance instance, vk::SurfaceKHR windowSurface, const std::vector<const char*>& deviceExtensions);
     ~VkDeviceHandler() override;
 
     VkDeviceHandler(VkDeviceHandler&& other) noexcept = default;
     VkDeviceHandler& operator=(VkDeviceHandler&& other) noexcept = default;
 };
 
-class VkFenceHandler : public Handler<VkFence>
+class VkFenceHandler : public Handler<vk::Fence>
 {
 public:
     VkFenceHandler();
@@ -88,7 +87,7 @@ public:
     void Reset() const;
 };
 
-class VkSemaphoreHandler : public Handler<VkSemaphore>
+class VkSemaphoreHandler : public Handler<vk::Semaphore>
 {
 public:
     VkSemaphoreHandler();
@@ -97,18 +96,15 @@ public:
     VkSemaphoreHandler(VkSemaphoreHandler&& other) noexcept = default;
     VkSemaphoreHandler& operator=(VkSemaphoreHandler&& other) noexcept = default;
 
-    inline VkSemaphoreSubmitInfo GetSubmitInfo(VkPipelineStageFlags2 stage = VK_PIPELINE_STAGE_2_NONE) const
+    inline vk::SemaphoreSubmitInfo GetSubmitInfo(vk::PipelineStageFlags2 stage = vk::PipelineStageFlagBits2::eNone) const
     {
-        return VkSemaphoreSubmitInfo
-        {
-            .sType = VK_STRUCTURE_TYPE_SEMAPHORE_SUBMIT_INFO,
-            .semaphore = _internal,
-            .stageMask = stage
-        };
+        return vk::SemaphoreSubmitInfo{}
+            .setSemaphore(_internal)
+            .setStageMask(stage);
     }
 };
 
-class VkInstanceHandler : public Handler<VkInstance>
+class VkInstanceHandler : public Handler<vk::Instance>
 {
 public:
     VkInstanceHandler();
@@ -120,7 +116,7 @@ private:
     std::vector<const char*> GetRequiredExtensions() const;
 };
 
-class VkQueueHandler : public Handler<VkQueue>
+class VkQueueHandler : public Handler<vk::Queue>
 {
 public:
 
@@ -136,7 +132,7 @@ public:
     VkQueueHandler(VkQueueHandler&& other) noexcept;
     VkQueueHandler& operator=(VkQueueHandler&& other) noexcept;
 
-    inline void WaitForIdle() const { vkQueueWaitIdle(_internal); }
+    inline void WaitForIdle() const { _internal.waitIdle(); }
     inline uint32_t QueueFamilyId() const { return _queueFamilyIndex; }
     inline QueueTypeEnum QueueType() const { return _type; }
 
@@ -145,32 +141,32 @@ public:
     enum QueueTypeEnum _type;
 };
 
-class VkSamplerHandler : public Handler<VkSampler>
+class VkSamplerHandler : public Handler<vk::Sampler>
 {
 public:
-    VkSamplerHandler(VkFilter oversampling = VK_FILTER_LINEAR, VkFilter undersampling = VK_FILTER_LINEAR, VkSamplerMipmapMode mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR, bool hasAniso = true);
+    VkSamplerHandler(vk::Filter oversampling = vk::Filter::eLinear, vk::Filter undersampling = vk::Filter::eLinear, vk::SamplerMipmapMode mipmapMode = vk::SamplerMipmapMode::eLinear, bool hasAniso = true);
     ~VkSamplerHandler() override;
 
     VkSamplerHandler(VkSamplerHandler&& other) noexcept = default;
     VkSamplerHandler& operator=(VkSamplerHandler&& other) noexcept = default;
 };
 
-class VkSurfaceHandler : public Handler<VkSurfaceKHR>
+class VkSurfaceHandler : public Handler<vk::SurfaceKHR>
 {
 public:
-    VkSurfaceHandler(VkInstance instance, GLFWwindow* pWindow);
+    VkSurfaceHandler(vk::Instance instance, GLFWwindow* pWindow);
     ~VkSurfaceHandler() override;
 
     VkSurfaceHandler(VkSurfaceHandler&& other) noexcept = default;
     VkSurfaceHandler& operator=(VkSurfaceHandler&& other) noexcept = default;
     private:
-    VkInstance _instance;
+    vk::Instance _instance;
 };
 
-class VkPipelineLayoutHandler : public Handler<VkPipelineLayout>
+class VkPipelineLayoutHandler : public Handler<vk::PipelineLayout>
 {
 public:
-    VkPipelineLayoutHandler(std::span<const VkDescriptorSetLayout> descriptorLayouts, std::span<const VkPushConstantRange> pushConstantRanges);
+    VkPipelineLayoutHandler(std::span<const vk::DescriptorSetLayout> descriptorLayouts, std::span<const vk::PushConstantRange> pushConstantRanges);
     ~VkPipelineLayoutHandler() override;
 
     VkPipelineLayoutHandler(VkPipelineLayoutHandler&& other) noexcept = default;

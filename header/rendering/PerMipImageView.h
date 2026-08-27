@@ -8,7 +8,7 @@
 struct PerMipImageView
 {
     ImageReference Image;
-    std::array<VkImageView, 16> Views;
+    std::array<vk::ImageView, 16> Views;
 
     void Bind(const BindingManager& manager, uint32_t binding, uint32_t offset) const;
     PerMipImageView() = default;

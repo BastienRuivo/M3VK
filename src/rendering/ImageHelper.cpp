@@ -4,69 +4,50 @@
 #include "rendering/GPUImage.h"
 #include <cmath>
 #include <cstdint>
-#include <vulkan/vulkan_core.h>
+#include <vulkan/vulkan.hpp>
 
-void ImageHelper::TransitionLayoutCommand(const CommandBuffer& cmdBuffer, const ImageReference& image, VkImageLayout oldLayout, VkImageLayout newLayout)
+void ImageHelper::TransitionLayoutCommand(const CommandBuffer& cmdBuffer, const ImageReference& image, vk::ImageLayout oldLayout, vk::ImageLayout newLayout)
 {
     TransitionLayoutCommand(cmdBuffer, image, 0, image.MipCount, 0, image.ArrayLayerCount, oldLayout, newLayout);
 }
 
-void ImageHelper::TransitionLayoutCommand(const CommandBuffer& cmdBuffer, const ImageReference& image, uint32_t mipLevel, uint32_t mipCount, uint32_t arrayLayer, uint32_t arrayLayerCount, VkImageLayout oldLayout, VkImageLayout newLayout)
+void ImageHelper::TransitionLayoutCommand(const CommandBuffer& cmdBuffer, const ImageReference& image, uint32_t mipLevel, uint32_t mipCount, uint32_t arrayLayer, uint32_t arrayLayerCount, vk::ImageLayout oldLayout, vk::ImageLayout newLayout)
 {
-    VkImageMemoryBarrier2 barrier = TransitionLayoutBarrier(image, mipLevel, mipCount, arrayLayer, arrayLayerCount, oldLayout, newLayout);
+    vk::ImageMemoryBarrier2 barrier = TransitionLayoutBarrier(image, mipLevel, mipCount, arrayLayer, arrayLayerCount, oldLayout, newLayout);
     cmdBuffer.Barrier({&barrier, 1});
 }
 
-void ImageHelper::StorageImageReadWriteCommand(const CommandBuffer &cmdBuffer, const ImageReference &image, bool isWrite, uint32_t mipLevel, uint32_t mipCount, uint32_t arrayLayer, uint32_t arrayLayerCount, VkImageLayout oldLayout)
+void ImageHelper::StorageImageReadWriteCommand(const CommandBuffer &cmdBuffer, const ImageReference &image, bool isWrite, uint32_t mipLevel, uint32_t mipCount, uint32_t arrayLayer, uint32_t arrayLayerCount, vk::ImageLayout oldLayout)
 {
-    VkImageMemoryBarrier2 barrier = StorageImageReadWriteBarrier(image, isWrite, mipLevel, mipCount, arrayLayer, arrayLayerCount, oldLayout);
+    vk::ImageMemoryBarrier2 barrier = StorageImageReadWriteBarrier(image, isWrite, mipLevel, mipCount, arrayLayer, arrayLayerCount, oldLayout);
     cmdBuffer.Barrier({&barrier, 1});
 }
 
-void ImageHelper::StorageImageGeneralToLayoutCommand(const CommandBuffer &cmdBuffer, const ImageReference &image, bool isWrite, uint32_t mipLevel, uint32_t mipCount, uint32_t arrayLayer, uint32_t arrayLayerCount, VkImageLayout newLayout)
+void ImageHelper::StorageImageGeneralToLayoutCommand(const CommandBuffer &cmdBuffer, const ImageReference &image, bool isWrite, uint32_t mipLevel, uint32_t mipCount, uint32_t arrayLayer, uint32_t arrayLayerCount, vk::ImageLayout newLayout)
 {
-    VkImageMemoryBarrier2 barrier = StorageImageGeneralToLayoutBarrier(image, isWrite, mipLevel, mipCount, arrayLayer, arrayLayerCount, newLayout);
+    vk::ImageMemoryBarrier2 barrier = StorageImageGeneralToLayoutBarrier(image, isWrite, mipLevel, mipCount, arrayLayer, arrayLayerCount, newLayout);
     cmdBuffer.Barrier({&barrier, 1});
 }
 
-void ImageHelper::CopyToImageCommand(const CommandBuffer &cmdBuffer, const ImageReference &image, uint32_t mipLevel, VkBuffer srcData)
+void ImageHelper::CopyToImageCommand(const CommandBuffer &cmdBuffer, const ImageReference &image, uint32_t mipLevel, vk::Buffer srcData)
 {
-    ImageHelper::TransitionLayoutCommand(cmdBuffer, image, mipLevel, 1, 0, 1, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+    ImageHelper::TransitionLayoutCommand(cmdBuffer, image, mipLevel, 1, 0, 1, vk::ImageLayout::eUndefined, vk::ImageLayout::eTransferDstOptimal);
 
-    VkBufferImageCopy region
-    {
-        .bufferOffset = 0,
-        .bufferRowLength = 0,
-        .bufferImageHeight = 0,
-        .imageSubresource
-        {
-            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-            .mipLevel = mipLevel,
-            .baseArrayLayer = 0,
-            .layerCount = 1
-        },
-        .imageOffset
-        {
-            .x = 0,
-            .y = 0,
-            .z = 0
-        },
-        .imageExtent
-        {
-            .width = static_cast<uint32_t>(image.Width),
-            .height = static_cast<uint32_t>(image.Height),
-            .depth = 1
-        },
-    };
-    cmdBuffer.CopyBufferToImage(srcData, image.Image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,  {&region, 1});
+    vk::BufferImageCopy region = vk::BufferImageCopy{}
+        .setBufferOffset(0)
+        .setBufferRowLength(0)
+        .setBufferImageHeight(0)
+        .setImageSubresource(vk::ImageSubresourceLayers{vk::ImageAspectFlagBits::eColor, mipLevel, 0, 1})
+        .setImageOffset(vk::Offset3D{0, 0, 0})
+        .setImageExtent(vk::Extent3D{static_cast<uint32_t>(image.Width), static_cast<uint32_t>(image.Height), 1});
+    cmdBuffer.CopyBufferToImage(srcData, image.Image, vk::ImageLayout::eTransferDstOptimal, {&region, 1});
 }
 
 void ImageHelper::GenerateMipmapsCommand(const CommandBuffer& cmdBuffer, const ImageReference& image)
 {
     // Check if image format supports linear blitting
-    VkFormatProperties formatProperties;
-    vkGetPhysicalDeviceFormatProperties(ApplicationInfo::PhysicalDevice(), image.Format, &formatProperties);
-    if(!(formatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT))
+    vk::FormatProperties formatProperties = ApplicationInfo::PhysicalDevice().getFormatProperties(image.Format);
+    if(!(formatProperties.optimalTilingFeatures & vk::FormatFeatureFlagBits::eSampledImageFilterLinear))
     {
         // TODO Someday : software mipmapping and storing the mipmaps
         throw std::runtime_error("texture image format does not support linear blitting!");
@@ -78,47 +59,24 @@ void ImageHelper::GenerateMipmapsCommand(const CommandBuffer& cmdBuffer, const I
     size_t mipCount = image.MipCount;
     for(uint32_t i = 1; i < mipCount; ++i)
     {
-        ImageHelper::TransitionLayoutCommand(cmdBuffer, image, i - 1, 1, 0, image.ArrayLayerCount, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
-        ImageHelper::TransitionLayoutCommand(cmdBuffer, image, i, 1, 0, image.ArrayLayerCount, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+        ImageHelper::TransitionLayoutCommand(cmdBuffer, image, i - 1, 1, 0, image.ArrayLayerCount, vk::ImageLayout::eTransferDstOptimal, vk::ImageLayout::eTransferSrcOptimal);
+        ImageHelper::TransitionLayoutCommand(cmdBuffer, image, i, 1, 0, image.ArrayLayerCount, vk::ImageLayout::eUndefined, vk::ImageLayout::eTransferDstOptimal);
 
-        VkImageBlit blit
-        {
-            .srcSubresource
-            {
-                .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-                .mipLevel = i - 1,
-                .baseArrayLayer = 0,
-                .layerCount = image.ArrayLayerCount
-            },
-            .srcOffsets =
-            {
-                {0, 0, 0},
-                {mipWidth, mipHeight, 1}
-            },
-            .dstSubresource
-            {
-                .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-                .mipLevel = i,
-                .baseArrayLayer = 0,
-                .layerCount = image.ArrayLayerCount
-            },
-            .dstOffsets =
-            {
-                {0, 0, 0},
-                {mipWidth > 1 ? mipWidth / 2 : 1, mipHeight > 1 ? mipHeight / 2 : 1, 1}
-            },
+        vk::ImageBlit blit = vk::ImageBlit{}
+            .setSrcSubresource(vk::ImageSubresourceLayers{vk::ImageAspectFlagBits::eColor, i - 1, 0, image.ArrayLayerCount})
+            .setSrcOffsets({vk::Offset3D{0, 0, 0}, vk::Offset3D{mipWidth, mipHeight, 1}})
+            .setDstSubresource(vk::ImageSubresourceLayers{vk::ImageAspectFlagBits::eColor, i, 0, image.ArrayLayerCount})
+            .setDstOffsets({vk::Offset3D{0, 0, 0}, vk::Offset3D{mipWidth > 1 ? mipWidth / 2 : 1, mipHeight > 1 ? mipHeight / 2 : 1, 1}});
 
-        };
+        cmdBuffer.Blit(image.Image, vk::ImageLayout::eTransferSrcOptimal, image.Image, vk::ImageLayout::eTransferDstOptimal, {&blit, 1}, vk::Filter::eLinear);
 
-        cmdBuffer.Blit(image.Image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, image.Image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, {&blit, 1}, VK_FILTER_LINEAR);
-
-        ImageHelper::TransitionLayoutCommand(cmdBuffer, image, i - 1, 1, 0, image.ArrayLayerCount, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+        ImageHelper::TransitionLayoutCommand(cmdBuffer, image, i - 1, 1, 0, image.ArrayLayerCount, vk::ImageLayout::eTransferSrcOptimal, vk::ImageLayout::eShaderReadOnlyOptimal);
 
         if(mipWidth > 1) mipWidth /= 2;
         if(mipHeight > 1) mipHeight /= 2;
     }
 
-    ImageHelper::TransitionLayoutCommand(cmdBuffer, image, mipCount - 1, 1, 0, image.ArrayLayerCount, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    ImageHelper::TransitionLayoutCommand(cmdBuffer, image, mipCount - 1, 1, 0, image.ArrayLayerCount, vk::ImageLayout::eTransferDstOptimal, vk::ImageLayout::eShaderReadOnlyOptimal);
 }
 
 uint32_t ImageHelper::GetMipCount(uint32_t width, uint32_t height)
@@ -126,66 +84,66 @@ uint32_t ImageHelper::GetMipCount(uint32_t width, uint32_t height)
     return static_cast<uint32_t>(std::floor(std::log2(std::max(width, height)))) + 1;
 }
 
-uint32_t ImageHelper::GetBytePerPixel(VkFormat format)
+uint32_t ImageHelper::GetBytePerPixel(vk::Format format)
 {
     switch (format)
     {
-        case VK_FORMAT_R8G8B8A8_SRGB: return 4;
-        case VK_FORMAT_R8G8B8A8_UNORM: return 4;
+        case vk::Format::eR8G8B8A8Srgb: return 4;
+        case vk::Format::eR8G8B8A8Unorm: return 4;
         default: return 0;
     }
 }
 
-void FillSrcLayout(VkImageMemoryBarrier2& barrier, VkImageLayout srcLayout)
+void FillSrcLayout(vk::ImageMemoryBarrier2& barrier, vk::ImageLayout srcLayout)
 {
     switch(srcLayout)
     {
-        case VK_IMAGE_LAYOUT_UNDEFINED:
+        case vk::ImageLayout::eUndefined:
         {
-            barrier.srcAccessMask = VK_ACCESS_2_NONE;
-            barrier.srcStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
+            barrier.srcAccessMask = vk::AccessFlagBits2::eNone;
+            barrier.srcStageMask = vk::PipelineStageFlagBits2::eColorAttachmentOutput;
             break;
         }
-        case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
+        case vk::ImageLayout::eTransferDstOptimal:
         {
-            barrier.srcAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT;
-            barrier.srcStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+            barrier.srcAccessMask = vk::AccessFlagBits2::eTransferWrite;
+            barrier.srcStageMask = vk::PipelineStageFlagBits2::eTransfer;
             break;
         }
-        case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
+        case vk::ImageLayout::eShaderReadOnlyOptimal:
         {
-            barrier.srcAccessMask = VK_ACCESS_2_SHADER_READ_BIT;
-            barrier.srcStageMask = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT;
+            barrier.srcAccessMask = vk::AccessFlagBits2::eShaderRead;
+            barrier.srcStageMask = vk::PipelineStageFlagBits2::eFragmentShader;
             break;
         }
-        case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
+        case vk::ImageLayout::eColorAttachmentOptimal:
         {
-            barrier.srcAccessMask = VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT;
-            barrier.srcStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
+            barrier.srcAccessMask = vk::AccessFlagBits2::eColorAttachmentWrite;
+            barrier.srcStageMask = vk::PipelineStageFlagBits2::eColorAttachmentOutput;
             break;
         }
-        case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
+        case vk::ImageLayout::eTransferSrcOptimal:
         {
-            barrier.srcAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT;
-            barrier.srcStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+            barrier.srcAccessMask = vk::AccessFlagBits2::eTransferRead;
+            barrier.srcStageMask = vk::PipelineStageFlagBits2::eTransfer;
             break;
         }
-        case VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL:  // after rendering, i want to read from the depth buffer to create a HiZ buffer
+        case vk::ImageLayout::eDepthAttachmentOptimal:  // after rendering, i want to read from the depth buffer to create a HiZ buffer
         {
-            barrier.srcAccessMask = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT | VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT;
-            barrier.srcStageMask = VK_PIPELINE_STAGE_2_LATE_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
+            barrier.srcAccessMask = vk::AccessFlagBits2::eDepthStencilAttachmentWrite | vk::AccessFlagBits2::eColorAttachmentWrite;
+            barrier.srcStageMask = vk::PipelineStageFlagBits2::eLateFragmentTests | vk::PipelineStageFlagBits2::eColorAttachmentOutput;
             break;
         }
-        case VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL:
+        case vk::ImageLayout::eDepthReadOnlyOptimal:
         {
-            barrier.srcAccessMask = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
-            barrier.srcStageMask = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT | VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
+            barrier.srcAccessMask = vk::AccessFlagBits2::eDepthStencilAttachmentRead;
+            barrier.srcStageMask = vk::PipelineStageFlagBits2::eFragmentShader | vk::PipelineStageFlagBits2::eComputeShader;
             break;
         }
-        case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:
+        case vk::ImageLayout::ePresentSrcKHR:
         {
-            barrier.srcAccessMask = VK_ACCESS_2_MEMORY_READ_BIT;
-            barrier.srcStageMask = VK_PIPELINE_STAGE_2_ALL_COMMANDS_BIT;
+            barrier.srcAccessMask = vk::AccessFlagBits2::eMemoryRead;
+            barrier.srcStageMask = vk::PipelineStageFlagBits2::eAllCommands;
             break;
         }
         default:
@@ -195,53 +153,53 @@ void FillSrcLayout(VkImageMemoryBarrier2& barrier, VkImageLayout srcLayout)
     }
 }
 
-void FillDstLayout(VkImageMemoryBarrier2& barrier, VkImageLayout dstlayout)
+void FillDstLayout(vk::ImageMemoryBarrier2& barrier, vk::ImageLayout dstlayout)
 {
     switch (dstlayout)
     {
-        case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
+        case vk::ImageLayout::eTransferDstOptimal:
         {
-            barrier.dstAccessMask = VK_ACCESS_2_TRANSFER_WRITE_BIT;
-            barrier.dstStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+            barrier.dstAccessMask = vk::AccessFlagBits2::eTransferWrite;
+            barrier.dstStageMask = vk::PipelineStageFlagBits2::eTransfer;
             break;
         }
-        case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
+        case vk::ImageLayout::eShaderReadOnlyOptimal:
         {
-            barrier.dstAccessMask = VK_ACCESS_2_SHADER_READ_BIT;
-            barrier.dstStageMask = VK_PIPELINE_STAGE_2_FRAGMENT_SHADER_BIT;
+            barrier.dstAccessMask = vk::AccessFlagBits2::eShaderRead;
+            barrier.dstStageMask = vk::PipelineStageFlagBits2::eFragmentShader;
             break;
         }
-        case VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL:
-        case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
+        case vk::ImageLayout::eDepthAttachmentOptimal:
+        case vk::ImageLayout::eDepthStencilAttachmentOptimal:
         {
-            barrier.dstAccessMask = VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_2_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-            barrier.dstStageMask = VK_PIPELINE_STAGE_2_EARLY_FRAGMENT_TESTS_BIT;
+            barrier.dstAccessMask = vk::AccessFlagBits2::eDepthStencilAttachmentRead | vk::AccessFlagBits2::eDepthStencilAttachmentWrite;
+            barrier.dstStageMask = vk::PipelineStageFlagBits2::eEarlyFragmentTests;
             break;
         }
-        case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
+        case vk::ImageLayout::eColorAttachmentOptimal:
         {
-            barrier.dstAccessMask = VK_ACCESS_2_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_2_COLOR_ATTACHMENT_WRITE_BIT;
-            barrier.dstStageMask = VK_PIPELINE_STAGE_2_COLOR_ATTACHMENT_OUTPUT_BIT;
+            barrier.dstAccessMask = vk::AccessFlagBits2::eColorAttachmentRead | vk::AccessFlagBits2::eColorAttachmentWrite;
+            barrier.dstStageMask = vk::PipelineStageFlagBits2::eColorAttachmentOutput;
             break;
         }
-        case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:
+        case vk::ImageLayout::ePresentSrcKHR:
         {
-            barrier.dstAccessMask = VK_ACCESS_2_MEMORY_READ_BIT;
-            barrier.dstStageMask = VK_PIPELINE_STAGE_2_BOTTOM_OF_PIPE_BIT;
+            barrier.dstAccessMask = vk::AccessFlagBits2::eMemoryRead;
+            barrier.dstStageMask = vk::PipelineStageFlagBits2::eBottomOfPipe;
             break;
         }
-        case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
+        case vk::ImageLayout::eTransferSrcOptimal:
         {
-            barrier.dstAccessMask = VK_ACCESS_2_TRANSFER_READ_BIT;
-            barrier.dstStageMask = VK_PIPELINE_STAGE_2_TRANSFER_BIT;
+            barrier.dstAccessMask = vk::AccessFlagBits2::eTransferRead;
+            barrier.dstStageMask = vk::PipelineStageFlagBits2::eTransfer;
             break;
         }
-        case VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL:
-        case VK_IMAGE_LAYOUT_STENCIL_READ_ONLY_OPTIMAL:
-        case VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL:
+        case vk::ImageLayout::eDepthReadOnlyOptimal:
+        case vk::ImageLayout::eStencilReadOnlyOptimal:
+        case vk::ImageLayout::eDepthStencilReadOnlyOptimal:
         {
-            barrier.dstAccessMask = VK_ACCESS_2_SHADER_READ_BIT;
-            barrier.dstStageMask = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
+            barrier.dstAccessMask = vk::AccessFlagBits2::eShaderRead;
+            barrier.dstStageMask = vk::PipelineStageFlagBits2::eComputeShader;
             break;
         }
 
@@ -252,48 +210,45 @@ void FillDstLayout(VkImageMemoryBarrier2& barrier, VkImageLayout dstlayout)
     }
 }
 
-VkImageAspectFlags ImageHelper::GetAspect(VkFormat format)
+vk::ImageAspectFlags ImageHelper::GetAspect(vk::Format format)
 {
-    VkImageAspectFlags aspect = VK_IMAGE_ASPECT_COLOR_BIT;
-    if(format == VK_FORMAT_D32_SFLOAT || format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT)
+    vk::ImageAspectFlags aspect = vk::ImageAspectFlagBits::eColor;
+    if(format == vk::Format::eD32Sfloat || format == vk::Format::eD32SfloatS8Uint || format == vk::Format::eD24UnormS8Uint)
     {
-        aspect = VK_IMAGE_ASPECT_DEPTH_BIT;
+        aspect = vk::ImageAspectFlagBits::eDepth;
         if(ApplicationHelper::HasStencilComponent(format))
         {
-            aspect |= VK_IMAGE_ASPECT_STENCIL_BIT;
+            aspect |= vk::ImageAspectFlagBits::eStencil;
         }
     }
     return aspect;
 }
 
-VkImageMemoryBarrier2 ImageHelper::StorageImageReadWriteBarrier(const ImageReference &image, bool isWrite, uint32_t mipLevel, uint32_t mipCount, uint32_t arrayLayer, uint32_t arrayLayerCount, VkImageLayout oldLayout)
+vk::ImageMemoryBarrier2 ImageHelper::StorageImageReadWriteBarrier(const ImageReference &image, bool isWrite, uint32_t mipLevel, uint32_t mipCount, uint32_t arrayLayer, uint32_t arrayLayerCount, vk::ImageLayout oldLayout)
 {
-    VkImageMemoryBarrier2 barrier
-    {
-        .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
-        .srcStageMask = VK_PIPELINE_STAGE_2_NONE,
-        .srcAccessMask = VK_ACCESS_2_NONE,
-        .dstStageMask = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
-        .dstAccessMask = isWrite ? VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT : VK_ACCESS_2_SHADER_STORAGE_READ_BIT,
-        .oldLayout = oldLayout,
-        .newLayout = VK_IMAGE_LAYOUT_GENERAL,
-        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED, // used to transfer queue ownership if someday I do a copy queue
-        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-        .image = image.Image,
-        .subresourceRange
-        {
-            .aspectMask = GetAspect(image.Format),
-            .baseMipLevel = mipLevel,
-            .levelCount = mipCount,
-            .baseArrayLayer = arrayLayer,
-            .layerCount = arrayLayerCount
-        },
-    };
+    vk::ImageSubresourceRange subresourceRange = vk::ImageSubresourceRange{}
+        .setAspectMask(GetAspect(image.Format))
+        .setBaseMipLevel(mipLevel)
+        .setLevelCount(mipCount)
+        .setBaseArrayLayer(arrayLayer)
+        .setLayerCount(arrayLayerCount);
 
-    if(oldLayout == VK_IMAGE_LAYOUT_GENERAL)
+    vk::ImageMemoryBarrier2 barrier = vk::ImageMemoryBarrier2{}
+        .setSrcStageMask(vk::PipelineStageFlagBits2::eNone)
+        .setSrcAccessMask(vk::AccessFlagBits2::eNone)
+        .setDstStageMask(vk::PipelineStageFlagBits2::eComputeShader)
+        .setDstAccessMask(isWrite ? vk::AccessFlagBits2::eShaderStorageWrite : vk::AccessFlagBits2::eShaderStorageRead)
+        .setOldLayout(oldLayout)
+        .setNewLayout(vk::ImageLayout::eGeneral)
+        .setSrcQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED) // used to transfer queue ownership if someday I do a copy queue
+        .setDstQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
+        .setImage(image.Image)
+        .setSubresourceRange(subresourceRange);
+
+    if(oldLayout == vk::ImageLayout::eGeneral)
     {
-        barrier.srcStageMask = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT;
-        barrier.srcAccessMask = isWrite ? VK_ACCESS_2_SHADER_STORAGE_READ_BIT : VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT;
+        barrier.srcStageMask = vk::PipelineStageFlagBits2::eComputeShader;
+        barrier.srcAccessMask = isWrite ? vk::AccessFlagBits2::eShaderStorageRead : vk::AccessFlagBits2::eShaderStorageWrite;
     }
     else
     {
@@ -303,54 +258,48 @@ VkImageMemoryBarrier2 ImageHelper::StorageImageReadWriteBarrier(const ImageRefer
     return barrier;
 }
 
-VkImageMemoryBarrier2 ImageHelper::StorageImageGeneralToLayoutBarrier(const ImageReference &image, bool isWrite, uint32_t mipLevel, uint32_t mipCount, uint32_t arrayLayer, uint32_t arrayLayerCount, VkImageLayout newLayout)
+vk::ImageMemoryBarrier2 ImageHelper::StorageImageGeneralToLayoutBarrier(const ImageReference &image, bool isWrite, uint32_t mipLevel, uint32_t mipCount, uint32_t arrayLayer, uint32_t arrayLayerCount, vk::ImageLayout newLayout)
 {
-    VkImageMemoryBarrier2 barrier
-    {
-        .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
-        .srcStageMask = VK_PIPELINE_STAGE_2_COMPUTE_SHADER_BIT,
-        .srcAccessMask = isWrite ? VK_ACCESS_2_SHADER_STORAGE_WRITE_BIT : VK_ACCESS_2_SHADER_STORAGE_READ_BIT,
-        .oldLayout = VK_IMAGE_LAYOUT_GENERAL,
-        .newLayout = newLayout,
-        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED, // used to transfer queue ownership if someday I do a copy queue
-        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-        .image = image.Image,
-        .subresourceRange
-        {
-            .aspectMask = GetAspect(image.Format),
-            .baseMipLevel = mipLevel,
-            .levelCount = mipCount,
-            .baseArrayLayer = arrayLayer,
-            .layerCount = arrayLayerCount
-        },
-    };
+    vk::ImageSubresourceRange subresourceRange = vk::ImageSubresourceRange{}
+        .setAspectMask(GetAspect(image.Format))
+        .setBaseMipLevel(mipLevel)
+        .setLevelCount(mipCount)
+        .setBaseArrayLayer(arrayLayer)
+        .setLayerCount(arrayLayerCount);
+
+    vk::ImageMemoryBarrier2 barrier = vk::ImageMemoryBarrier2{}
+        .setSrcStageMask(vk::PipelineStageFlagBits2::eComputeShader)
+        .setSrcAccessMask(isWrite ? vk::AccessFlagBits2::eShaderStorageWrite : vk::AccessFlagBits2::eShaderStorageRead)
+        .setOldLayout(vk::ImageLayout::eGeneral)
+        .setNewLayout(newLayout)
+        .setSrcQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED) // used to transfer queue ownership if someday I do a copy queue
+        .setDstQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
+        .setImage(image.Image)
+        .setSubresourceRange(subresourceRange);
 
     FillDstLayout(barrier, newLayout);
 
     return barrier;
 }
 
-VkImageMemoryBarrier2 ImageHelper::TransitionLayoutBarrier(const ImageReference &image, uint32_t mipLevel, uint32_t mipCount, uint32_t arrayLayer, uint32_t arrayLayerCount, VkImageLayout oldLayout, VkImageLayout newLayout)
+vk::ImageMemoryBarrier2 ImageHelper::TransitionLayoutBarrier(const ImageReference &image, uint32_t mipLevel, uint32_t mipCount, uint32_t arrayLayer, uint32_t arrayLayerCount, vk::ImageLayout oldLayout, vk::ImageLayout newLayout)
 {
-    VkImageMemoryBarrier2 barrier
-    {
-        .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
-        .srcAccessMask = VK_ACCESS_2_NONE,
-        .dstAccessMask = VK_ACCESS_2_NONE,
-        .oldLayout = oldLayout,
-        .newLayout = newLayout,
-        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED, // used to transfer queue ownership if someday I do a copy queue
-        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-        .image = image.Image,
-        .subresourceRange
-        {
-            .aspectMask = GetAspect(image.Format),
-            .baseMipLevel = mipLevel,
-            .levelCount = mipCount,
-            .baseArrayLayer = arrayLayer,
-            .layerCount = arrayLayerCount
-        },
-    };
+    vk::ImageSubresourceRange subresourceRange = vk::ImageSubresourceRange{}
+        .setAspectMask(GetAspect(image.Format))
+        .setBaseMipLevel(mipLevel)
+        .setLevelCount(mipCount)
+        .setBaseArrayLayer(arrayLayer)
+        .setLayerCount(arrayLayerCount);
+
+    vk::ImageMemoryBarrier2 barrier = vk::ImageMemoryBarrier2{}
+        .setSrcAccessMask(vk::AccessFlagBits2::eNone)
+        .setDstAccessMask(vk::AccessFlagBits2::eNone)
+        .setOldLayout(oldLayout)
+        .setNewLayout(newLayout)
+        .setSrcQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED) // used to transfer queue ownership if someday I do a copy queue
+        .setDstQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
+        .setImage(image.Image)
+        .setSubresourceRange(subresourceRange);
 
     FillSrcLayout(barrier, oldLayout);
     FillDstLayout(barrier, newLayout);
@@ -358,31 +307,28 @@ VkImageMemoryBarrier2 ImageHelper::TransitionLayoutBarrier(const ImageReference 
     return barrier;
 }
 
-VkImageView ImageHelper::CreateImageView(ImageReference& image, VkImageAspectFlags aspectMask, VkImageViewType type)
+vk::ImageView ImageHelper::CreateImageView(ImageReference& image, vk::ImageAspectFlags aspectMask, vk::ImageViewType type)
 {
-    return CreateImageView(image, aspectMask, type, 0, image.MipCount, 0, type == VK_IMAGE_VIEW_TYPE_CUBE ? 6u : 1u);
+    return CreateImageView(image, aspectMask, type, 0, image.MipCount, 0, type == vk::ImageViewType::eCube ? 6u : 1u);
 }
 
-VkImageView ImageHelper::CreateImageView(ImageReference& image, VkImageAspectFlags aspectMask, VkImageViewType type, uint32_t mipLevel, uint32_t mipCount, uint32_t arrayLayer, uint32_t arrayLayerCount)
+vk::ImageView ImageHelper::CreateImageView(ImageReference& image, vk::ImageAspectFlags aspectMask, vk::ImageViewType type, uint32_t mipLevel, uint32_t mipCount, uint32_t arrayLayer, uint32_t arrayLayerCount)
 {
-    VkImageViewCreateInfo createInfo
-    {
-        .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-        .image = image.Image,
-        .viewType = type,
-        .format = image.Format,
-        .subresourceRange =
-        {
-            .aspectMask = aspectMask,
-            .baseMipLevel = mipLevel,
-            .levelCount = mipCount,
-            .baseArrayLayer = arrayLayer,
-            .layerCount = arrayLayerCount
-        }
-    };
+    vk::ImageSubresourceRange subresourceRange = vk::ImageSubresourceRange{}
+        .setAspectMask(aspectMask)
+        .setBaseMipLevel(mipLevel)
+        .setLevelCount(mipCount)
+        .setBaseArrayLayer(arrayLayer)
+        .setLayerCount(arrayLayerCount);
 
-    VkImageView view;
-    if(vkCreateImageView(ApplicationInfo::Device(), &createInfo, nullptr, &view) != VK_SUCCESS)
+    vk::ImageViewCreateInfo createInfo = vk::ImageViewCreateInfo{}
+        .setImage(image.Image)
+        .setViewType(type)
+        .setFormat(image.Format)
+        .setSubresourceRange(subresourceRange);
+
+    vk::ImageView view;
+    if(ApplicationInfo::Device().createImageView(&createInfo, nullptr, &view) != vk::Result::eSuccess)
     {
         throw std::runtime_error("Failed to create swap chain images !");
     }

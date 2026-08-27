@@ -7,21 +7,21 @@
 #include "allocation/MultiFrameRessource.h"
 #include "allocation/RessourceUsage.h"
 #include <cstdint>
-#include <vulkan/vulkan_core.h>
+#include <vulkan/vulkan.hpp>
 
 class GraphicsImage : public MultiFrameRessource<GPUImage>
 {
     public:
 
     template <typename... Args>
-    GraphicsImage(BindingManager& allocator, uint32_t dstBinding, VkSampler sampler, RessourceUsage usage, VkCommandPool pool, VkQueue queue, VkImageLayout layout, Args&&... args)
+    GraphicsImage(BindingManager& allocator, uint32_t dstBinding, vk::Sampler sampler, RessourceUsage usage, vk::CommandPool pool, vk::Queue queue, vk::ImageLayout layout, Args&&... args)
     : GraphicsImage(allocator, dstBinding, sampler, usage, std::forward<Args>(args)...)
     {
         TransitionLayout(pool, queue, layout);
     }
 
     template <typename... Args>
-    GraphicsImage(BindingManager& allocator, uint32_t dstBinding, VkSampler sampler, RessourceUsage usage, Args&&... args)
+    GraphicsImage(BindingManager& allocator, uint32_t dstBinding, vk::Sampler sampler, RessourceUsage usage, Args&&... args)
     : GraphicsImage(usage, std::forward<Args>(args)...)
     {
         for (uint32_t i = 0; i < _internals.size(); i++)
@@ -32,7 +32,7 @@ class GraphicsImage : public MultiFrameRessource<GPUImage>
     }
 
     template <typename... Args>
-    GraphicsImage(RessourceUsage usage, VkCommandPool pool, VkQueue queue, VkImageLayout layout, Args&&... args)
+    GraphicsImage(RessourceUsage usage, vk::CommandPool pool, vk::Queue queue, vk::ImageLayout layout, Args&&... args)
     : GraphicsImage(usage, std::forward<Args>(args)...)
     {
         TransitionLayout(pool, queue, layout);
@@ -60,13 +60,13 @@ class GraphicsImage : public MultiFrameRessource<GPUImage>
     GraphicsImage& operator=(GraphicsImage&& other) noexcept;
 
     inline ImageReference Internal() const { return Current().Internal(); }
-    inline VkImageView View() const { return Current().Internal().View; }
+    inline vk::ImageView View() const { return Current().Internal().View; }
     inline uint32_t Width() const { return Current().Internal().Width; }
     inline uint32_t Height() const { return Current().Internal().Height; }
     inline uint32_t MipCount() const { return Current().Internal().MipCount; }
 
     inline ImageReference PreviousInternal() const { return Previous().Internal(); }
-    inline VkImageView PreviousView() const { return Previous().Internal().View; }
+    inline vk::ImageView PreviousView() const { return Previous().Internal().View; }
     inline uint32_t PreviousWidth() const { return Previous().Internal().Width; }
     inline uint32_t PreviousHeight() const { return Previous().Internal().Height; }
     inline uint32_t PreviousMipCount() const { return Previous().Internal().MipCount; }
@@ -74,7 +74,7 @@ class GraphicsImage : public MultiFrameRessource<GPUImage>
     ~GraphicsImage() {}
 
     protected:
-    VkSampler _sampler;
+    vk::Sampler _sampler;
 
-    void TransitionLayout(VkCommandPool pool, VkQueue queue, VkImageLayout newLayout) const;
+    void TransitionLayout(vk::CommandPool pool, vk::Queue queue, vk::ImageLayout newLayout) const;
 };

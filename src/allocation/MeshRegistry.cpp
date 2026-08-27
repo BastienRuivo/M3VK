@@ -3,7 +3,7 @@
 #include "application/ApplicationInfo.h"
 #include <cassert>
 #include <cstdint>
-#include <vulkan/vulkan_core.h>
+#include <vulkan/vulkan.hpp>
 
 #include "ShaderBindings.h"
 
@@ -45,7 +45,7 @@ uint32_t MeshRegistry::RegisterInstance(MaterialType type, InstanceData instance
     return static_cast<uint32_t>(_uploadInstances[type].size() - 1);
 }
 
-void MeshRegistry::UploadAndRelease(VkQueue queue, VkCommandPool cmdPool)
+void MeshRegistry::UploadAndRelease(vk::Queue queue, vk::CommandPool cmdPool)
 {
     assert(_uploadVertices.size() <= ApplicationInfo::Constant::VertexBufferMaxSize);
     assert(_uploadIndices.size() <= ApplicationInfo::Constant::IndexBufferMaxSize);
@@ -116,7 +116,7 @@ void MeshRegistry::UploadAndRelease(VkQueue queue, VkCommandPool cmdPool)
     }
 }
 
-void MeshRegistry::Bind(const CommandBuffer& cmdBuffer, VkPipelineLayout layout) const
+void MeshRegistry::Bind(const CommandBuffer& cmdBuffer, vk::PipelineLayout layout) const
 {
     cmdBuffer.BindBuffer(_vertexBuffer);
     cmdBuffer.BindBuffer(_indexBuffer);

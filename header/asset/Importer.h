@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <filesystem>
 #include <glm/glm.hpp>
-#include <vulkan/vulkan_core.h>
+#include <vulkan/vulkan.hpp>
 
 enum TextureType
 {
@@ -19,7 +19,7 @@ struct TextureImport
     uint32_t Size;
     uint32_t Width;
     uint32_t Height;
-    VkFormat Format;
+    vk::Format Format;
     uint32_t MipCount;
 };
 

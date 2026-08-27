@@ -11,31 +11,29 @@ void UserInterface::StartFrame() const
     ImGui::NewFrame();
 };
 
-UserInterface::UserInterface(GLFWwindow* pWindow, const SwapChain& swapChain, VkQueue graphicsQueue, VkCommandPool cmdPool)
+UserInterface::UserInterface(GLFWwindow* pWindow, const SwapChain& swapChain, vk::Queue graphicsQueue, vk::CommandPool cmdPool)
 {
     const uint32_t size = 200;
-    VkDescriptorPoolSize poolSizes[] = {
-        { VK_DESCRIPTOR_TYPE_SAMPLER, size },
-        { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, size },
-        { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, size },
-        { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, size },
-        { VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, size },
-        { VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, size },
-        { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, size },
-        { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, size },
-        { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, size },
-        { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, size },
-        { VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, size }
+    vk::DescriptorPoolSize poolSizes[] = {
+        { vk::DescriptorType::eSampler, size },
+        { vk::DescriptorType::eCombinedImageSampler, size },
+        { vk::DescriptorType::eSampledImage, size },
+        { vk::DescriptorType::eStorageImage, size },
+        { vk::DescriptorType::eUniformTexelBuffer, size },
+        { vk::DescriptorType::eStorageTexelBuffer, size },
+        { vk::DescriptorType::eUniformBuffer, size },
+        { vk::DescriptorType::eStorageBuffer, size },
+        { vk::DescriptorType::eUniformBufferDynamic, size },
+        { vk::DescriptorType::eStorageBufferDynamic, size },
+        { vk::DescriptorType::eInputAttachment, size }
     };
 
-    VkDescriptorPoolCreateInfo poolInfo = {};
-    poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-    poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
-    poolInfo.maxSets = size * IM_ARRAYSIZE(poolSizes);
-    poolInfo.poolSizeCount = (uint32_t)IM_ARRAYSIZE(poolSizes);
-    poolInfo.pPoolSizes = poolSizes;
+    vk::DescriptorPoolCreateInfo poolInfo = vk::DescriptorPoolCreateInfo{}
+        .setFlags(vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet)
+        .setMaxSets(size * IM_ARRAYSIZE(poolSizes))
+        .setPoolSizes(poolSizes);
 
-    if (vkCreateDescriptorPool(ApplicationInfo::Device(), &poolInfo, nullptr, &_imGuiPool) != VK_SUCCESS) {
+    if (ApplicationInfo::Device().createDescriptorPool(&poolInfo, nullptr, &_imGuiPool) != vk::Result::eSuccess) {
         throw std::runtime_error("Failed to create ImGui descriptor pool.");
     }
 
@@ -66,7 +64,7 @@ UserInterface::UserInterface(GLFWwindow* pWindow, const SwapChain& swapChain, Vk
         fprintf(stderr, "[ImGui Vulkan Error] VkResult = %d\n", err);
     };
 
-    VkFormat imageFormat = swapChain.GetImageFormat();
+    VkFormat imageFormat = static_cast<VkFormat>(swapChain.GetImageFormat());
 
     VkPipelineRenderingCreateInfo pipelineRenderingInfo = {};
     pipelineRenderingInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO;
@@ -84,16 +82,16 @@ UserInterface::UserInterface(GLFWwindow* pWindow, const SwapChain& swapChain, Vk
 
 UserInterface::~UserInterface()
 {
-    vkDeviceWaitIdle(ApplicationInfo::Device());
+    ApplicationInfo::Device().waitIdle();
 
     ImGui_ImplVulkan_Shutdown();
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
 
-    vkDestroyDescriptorPool(ApplicationInfo::Device(), _imGuiPool, nullptr);
+    ApplicationInfo::Device().destroyDescriptorPool(_imGuiPool);
 }
 
-UserInterfaceImageSet::UserInterfaceImageSet(const GraphicsImage& image, VkImageLayout layout, VkSampler sampler)
+UserInterfaceImageSet::UserInterfaceImageSet(const GraphicsImage& image, vk::ImageLayout layout, vk::Sampler sampler)
 {
     RessourceUsage usage = image.Usage();
     _usage = usage;
@@ -105,11 +103,11 @@ UserInterfaceImageSet::UserInterfaceImageSet(const GraphicsImage& image, VkImage
     for (uint32_t i = 0; i < RessourceUsageCount(usage); i++)
     {
         const auto& texture = image[i];
-        _internals[i] = ImGui_ImplVulkan_AddTexture(sampler, texture.View(), layout);
+        _internals[i] = ImGui_ImplVulkan_AddTexture(sampler, texture.View(), static_cast<VkImageLayout>(layout));
     }
 }
 
-UserInterfaceImageSet::UserInterfaceImageSet(const BindingManager& manager, BindlessTexture handle, VkImageLayout layout, VkSampler sampler)
+UserInterfaceImageSet::UserInterfaceImageSet(const BindingManager& manager, BindlessTexture handle, vk::ImageLayout layout, vk::Sampler sampler)
 {
     RessourceUsage usage = handle.Usage;
     _usage = usage;
@@ -121,7 +119,7 @@ UserInterfaceImageSet::UserInterfaceImageSet(const BindingManager& manager, Bind
     for (uint32_t i = 0; i < count; i++)
     {
         const auto& bindlessTexture = handle.Texture(manager);
-        _internals[i] = ImGui_ImplVulkan_AddTexture(sampler, bindlessTexture.View(), layout);
+        _internals[i] = ImGui_ImplVulkan_AddTexture(sampler, bindlessTexture.View(), static_cast<VkImageLayout>(layout));
     }
 }
 

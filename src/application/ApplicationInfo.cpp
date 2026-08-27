@@ -2,19 +2,19 @@
 #include "application/DebugLayer.h"
 #include "rendering/QueueFamilyIds.h"
 #include <cstdint>
-#include <vulkan/vulkan_core.h>
+#include <vulkan/vulkan.hpp>
 
-VkSampleCountFlagBits ApplicationInfo::GetMaxUsableSampleCount(VkSampleCountFlagBits maxSample) const
+vk::SampleCountFlagBits ApplicationInfo::GetMaxUsableSampleCount(vk::SampleCountFlagBits maxSample) const
 {
-    VkSampleCountFlags counts = _properties.limits.framebufferColorSampleCounts & _properties.limits.framebufferDepthSampleCounts;
+    vk::SampleCountFlags counts = _properties.limits.framebufferColorSampleCounts & _properties.limits.framebufferDepthSampleCounts;
 
-    if((counts & VK_SAMPLE_COUNT_64_BIT) && (maxSample >= VK_SAMPLE_COUNT_64_BIT)) return VK_SAMPLE_COUNT_64_BIT;
-    else if((counts & VK_SAMPLE_COUNT_32_BIT) && (maxSample >= VK_SAMPLE_COUNT_32_BIT)) return VK_SAMPLE_COUNT_32_BIT;
-    else if((counts & VK_SAMPLE_COUNT_16_BIT) && (maxSample >= VK_SAMPLE_COUNT_16_BIT)) return VK_SAMPLE_COUNT_16_BIT;
-    else if((counts & VK_SAMPLE_COUNT_8_BIT) && (maxSample >= VK_SAMPLE_COUNT_8_BIT)) return VK_SAMPLE_COUNT_8_BIT;
-    else if((counts & VK_SAMPLE_COUNT_4_BIT) && (maxSample >= VK_SAMPLE_COUNT_4_BIT)) return VK_SAMPLE_COUNT_4_BIT;
-    else if((counts & VK_SAMPLE_COUNT_2_BIT) && (maxSample >= VK_SAMPLE_COUNT_2_BIT)) return VK_SAMPLE_COUNT_2_BIT;
-    else return VK_SAMPLE_COUNT_1_BIT;
+    if((counts & vk::SampleCountFlagBits::e64) && (maxSample >= vk::SampleCountFlagBits::e64)) return vk::SampleCountFlagBits::e64;
+    else if((counts & vk::SampleCountFlagBits::e32) && (maxSample >= vk::SampleCountFlagBits::e32)) return vk::SampleCountFlagBits::e32;
+    else if((counts & vk::SampleCountFlagBits::e16) && (maxSample >= vk::SampleCountFlagBits::e16)) return vk::SampleCountFlagBits::e16;
+    else if((counts & vk::SampleCountFlagBits::e8) && (maxSample >= vk::SampleCountFlagBits::e8)) return vk::SampleCountFlagBits::e8;
+    else if((counts & vk::SampleCountFlagBits::e4) && (maxSample >= vk::SampleCountFlagBits::e4)) return vk::SampleCountFlagBits::e4;
+    else if((counts & vk::SampleCountFlagBits::e2) && (maxSample >= vk::SampleCountFlagBits::e2)) return vk::SampleCountFlagBits::e2;
+    else return vk::SampleCountFlagBits::e1;
 }
 
 
@@ -31,7 +31,7 @@ void ApplicationInfo::VRAMRelease(size_t size, AllocType aType)
     ApplicationInfo::Get()._currentVRAM = ApplicationInfo::Get()._currentVRAM - size;
 }
 
-void ApplicationInfo::SetPhysicalDeviceInformation(VkPhysicalDevice physicalDevice, VkPhysicalDeviceProperties properties, const QueueFamilyIds& queueFamilyIds)
+void ApplicationInfo::SetPhysicalDeviceInformation(vk::PhysicalDevice physicalDevice, vk::PhysicalDeviceProperties properties, const QueueFamilyIds& queueFamilyIds)
 {
     _physicalDevice = physicalDevice;
     _properties = properties;
@@ -39,10 +39,9 @@ void ApplicationInfo::SetPhysicalDeviceInformation(VkPhysicalDevice physicalDevi
     _msaaSample = GetMaxUsableSampleCount(Constant::MaxMSAASample);
 }
 
-uint32_t ApplicationInfo::FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties)
+uint32_t ApplicationInfo::FindMemoryType(uint32_t typeFilter, vk::MemoryPropertyFlags properties)
 {
-    VkPhysicalDeviceMemoryProperties memoryProperties;
-    vkGetPhysicalDeviceMemoryProperties(Get()._physicalDevice, &memoryProperties);
+    vk::PhysicalDeviceMemoryProperties memoryProperties = Get()._physicalDevice.getMemoryProperties();
 
     for (uint32_t memoryType = 0; memoryType < memoryProperties.memoryTypeCount; ++memoryType)
     {
@@ -53,6 +52,6 @@ uint32_t ApplicationInfo::FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFl
         }
     }
 
-    DebugLayer::Log(DebugLayer::LogType::WARNING, "Can't find suitable memory type for flags {" + std::to_string(properties) +"}");
+    DebugLayer::Log(DebugLayer::LogType::WARNING, "Can't find suitable memory type for flags {" + vk::to_string(properties) +"}");
     return UINT32_MAX;
 }

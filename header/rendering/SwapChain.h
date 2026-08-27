@@ -5,7 +5,7 @@
 #include "handler/VkImageViewHandler.h"
 #include <vector>
 #include <vulkan/vk_platform.h>
-#include <vulkan/vulkan_core.h>
+#include <vulkan/vulkan.hpp>
 #include <GLFW/glfw3.h>
 
 #include "application/Window.h"
@@ -15,24 +15,24 @@ class SwapChain
     public:
 
     MultiFrameObject<ImageReference> Images;
-    SwapChain(const Window & window, VkSurfaceKHR windowSurface);
+    SwapChain(const Window & window, vk::SurfaceKHR windowSurface);
     ~SwapChain();
 
-    VkSurfaceFormatKHR SelectSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats) const;
-    VkPresentModeKHR SelectSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes) const;
-    VkExtent2D SelectSwapExtents(const Window& window, const VkSurfaceCapabilitiesKHR& Capabilities) const;
+    vk::SurfaceFormatKHR SelectSwapSurfaceFormat(const std::vector<vk::SurfaceFormatKHR>& availableFormats) const;
+    vk::PresentModeKHR SelectSwapPresentMode(const std::vector<vk::PresentModeKHR>& availablePresentModes) const;
+    vk::Extent2D SelectSwapExtents(const Window& window, const vk::SurfaceCapabilitiesKHR& Capabilities) const;
 
-    inline VkFormat GetImageFormat() const { return _imageFormat; }
-    inline VkExtent2D GetExtent() const { return _extent; }
-    inline VkSwapchainKHR Internal() const { return _internal; }
-    inline VkImageView View(uint32_t index) const { return Images.Get(index).View; }
+    inline vk::Format GetImageFormat() const { return _imageFormat; }
+    inline vk::Extent2D GetExtent() const { return _extent; }
+    inline vk::SwapchainKHR Internal() const { return _internal; }
+    inline vk::ImageView View(uint32_t index) const { return Images.Get(index).View; }
     inline uint32_t MinImageCount() const { return _minImageCount; }
 
     private:
     MultiFrameHandler<VkImageViewHandler> _viewHandlers;
 
-    VkFormat _imageFormat = VK_FORMAT_UNDEFINED;
-    VkExtent2D _extent;
-    VkSwapchainKHR _internal = VK_NULL_HANDLE;
+    vk::Format _imageFormat = vk::Format::eUndefined;
+    vk::Extent2D _extent;
+    vk::SwapchainKHR _internal;
     uint32_t _minImageCount = 1;
 };

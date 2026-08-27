@@ -20,7 +20,7 @@
 #include <vector>
 
 #include <vulkan/vk_platform.h>
-#include <vulkan/vulkan_core.h>
+#include <vulkan/vulkan.hpp>
 
 #include <glm/glm.hpp>
 
@@ -93,8 +93,6 @@ class Application
         VK_EXT_EXTENDED_DYNAMIC_STATE_2_EXTENSION_NAME,
         VK_EXT_EXTENDED_DYNAMIC_STATE_3_EXTENSION_NAME
     };
-
-    uint32_t FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) const;
 
     //Actual logic
     void MainLoop();

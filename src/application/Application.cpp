@@ -18,7 +18,7 @@
 #include <stdexcept>
 #include "asset/CPUImage.h"
 
-#include <vulkan/vulkan_core.h>
+#include <vulkan/vulkan.hpp>
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -80,7 +80,7 @@ void Application::RefreshSwapChain()
         glfwPollEvents();
     }
 
-    vkDeviceWaitIdle(ApplicationInfo::Device());
+    ApplicationInfo::Device().waitIdle();
 
     // TODO : Swap chain is currently resetted the first frame beacause it is out of date
     _swapChain.reset();
@@ -103,13 +103,13 @@ void Application::DrawFrame()
 
     // Acquire image to draw on
     uint32_t imageIndex;
-    VkResult result = vkAcquireNextImageKHR(ApplicationInfo::Device(), _swapChain->Internal(), UINT64_MAX, _availableImageSemaphore.Internal(currentFrame), VK_NULL_HANDLE, &imageIndex);
-    if(result == VK_ERROR_OUT_OF_DATE_KHR)
+    vk::Result result = ApplicationInfo::Device().acquireNextImageKHR(_swapChain->Internal(), UINT64_MAX, _availableImageSemaphore.Internal(currentFrame), VK_NULL_HANDLE, &imageIndex);
+    if(result == vk::Result::eErrorOutOfDateKHR)
     {
         RefreshSwapChain();
         return;
     }
-    else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
+    else if (result != vk::Result::eSuccess && result != vk::Result::eSuboptimalKHR)
     {
         throw std::runtime_error("failed to acquire swap chain image!");
     }
@@ -129,30 +129,27 @@ void Application::DrawFrame()
     commandBuffer.Reset();
     _pipeline.Execute(commandBuffer, *_swapChain, _userInterface, imageIndex);
 
-    VkSemaphoreSubmitInfo waitSemaphore = _availableImageSemaphore.Get(currentFrame).GetSubmitInfo(VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
-    VkSemaphoreSubmitInfo signalSemaphore = _renderFinishedSemaphores.Get(imageIndex).GetSubmitInfo(VK_PIPELINE_STAGE_2_ALL_GRAPHICS_BIT);
+    vk::SemaphoreSubmitInfo waitSemaphore = _availableImageSemaphore.Get(currentFrame).GetSubmitInfo(vk::PipelineStageFlagBits2::eColorAttachmentOutput);
+    vk::SemaphoreSubmitInfo signalSemaphore = _renderFinishedSemaphores.Get(imageIndex).GetSubmitInfo(vk::PipelineStageFlagBits2::eAllGraphics);
 
     commandBuffer.Submit({&waitSemaphore, 1}, {&signalSemaphore, 1}, _waitFence.Internal(currentFrame));
 
     // actually present the frame
-    VkSwapchainKHR swapChain = _swapChain->Internal();
-    VkPresentInfoKHR presentInfo
-    {
-        .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
-        .waitSemaphoreCount = 1,
-        .pWaitSemaphores = &signalSemaphore.semaphore,
-        .swapchainCount = 1,
-        .pSwapchains = &swapChain,
-        .pImageIndices = &imageIndex
-    };
+    vk::SwapchainKHR swapChain = _swapChain->Internal();
+    vk::PresentInfoKHR presentInfo = vk::PresentInfoKHR{}
+        .setWaitSemaphoreCount(1)
+        .setPWaitSemaphores(&signalSemaphore.semaphore)
+        .setSwapchainCount(1)
+        .setPSwapchains(&swapChain)
+        .setPImageIndices(&imageIndex);
 
-    result = vkQueuePresentKHR(_graphicsComputeQueue.Internal(), &presentInfo);
+    auto presentRes = _graphicsComputeQueue.Internal().presentKHR(&presentInfo);
 
-    if(result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)
+    if(presentRes == vk::Result::eErrorOutOfDateKHR || presentRes == vk::Result::eSuboptimalKHR)
     {
         RefreshSwapChain();
     }
-    else if(result != VK_SUCCESS)
+    else if(presentRes != vk::Result::eSuccess)
     {
         throw std::runtime_error("failed to present swap chain image!");
     }
@@ -222,7 +219,7 @@ void Application::MainLoop()
         DrawFrame();
     }
 
-    vkDeviceWaitIdle(ApplicationInfo::Device());
+    ApplicationInfo::Device().waitIdle();
 }
 
 Application::~Application()

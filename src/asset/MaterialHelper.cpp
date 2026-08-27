@@ -12,7 +12,7 @@
 #include <string>
 #include <sys/stat.h>
 #include <vector>
-#include <vulkan/vulkan_core.h>
+#include <vulkan/vulkan.hpp>
 
 MaterialImporter::MaterialImporter(MaterialImporter&& other) noexcept
 {
@@ -80,7 +80,7 @@ void MaterialImporter::Clear()
     TextureDatas.clear();
 }
 
-uint32_t LoadMaterialInternal(BindingManager& allocator, MaterialImporter& importer, const MaterialProperties& defaultMaterial, MaterialRegistry & materialRegistry, VkCommandPool uploadPool, VkQueue uploadQueue, VkSampler sampler)
+uint32_t LoadMaterialInternal(BindingManager& allocator, MaterialImporter& importer, const MaterialProperties& defaultMaterial, MaterialRegistry & materialRegistry, vk::CommandPool uploadPool, vk::Queue uploadQueue, vk::Sampler sampler)
 {
     uint32_t materialOffset = materialRegistry.MaterialsCount();
     PoolStageBuffer uploadBuffer(4096 * 4096 * 4, StageBuffer::Usage::Upload);
@@ -112,7 +112,7 @@ uint32_t LoadMaterialInternal(BindingManager& allocator, MaterialImporter& impor
     return materialId;
 }
 
-uint32_t MaterialImporter::LoadMaterial(BindingManager& allocator, const std::filesystem::path & modelPath, MaterialRegistry & materialRegistry, VkCommandPool uploadPool, VkQueue uploadQueue, VkSampler sampler)
+uint32_t MaterialImporter::LoadMaterial(BindingManager& allocator, const std::filesystem::path & modelPath, MaterialRegistry & materialRegistry, vk::CommandPool uploadPool, vk::Queue uploadQueue, vk::Sampler sampler)
 {
     MaterialImporter importer;
 
@@ -134,7 +134,7 @@ uint32_t MaterialImporter::LoadMaterial(BindingManager& allocator, const std::fi
     return materialId;
 }
 
-uint32_t MaterialImporter::LoadDefaultMaterial(BindingManager& allocator, MaterialRegistry & materialRegistry, VkCommandPool uploadPool, VkQueue uploadQueue, VkSampler sampler)
+uint32_t MaterialImporter::LoadDefaultMaterial(BindingManager& allocator, MaterialRegistry & materialRegistry, vk::CommandPool uploadPool, vk::Queue uploadQueue, vk::Sampler sampler)
 {
     MaterialImporter importer;
 

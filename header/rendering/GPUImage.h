@@ -4,17 +4,17 @@
 #include <cstddef>
 #include <cstdint>
 #include <stb_image.h>
-#include <vulkan/vulkan_core.h>
+#include <vulkan/vulkan.hpp>
 
 struct ImageReference
 {
-    VkImage Image = VK_NULL_HANDLE;
-    VkImageCreateFlags CreateFlags = 0;
-    VkImageUsageFlags UsageFlags = 0;
-    VkImageTiling Tiling = VK_IMAGE_TILING_OPTIMAL;
-    VkSampleCountFlagBits MsaaSampleCount = VK_SAMPLE_COUNT_1_BIT;
-    VkImageView View = VK_NULL_HANDLE;
-    VkFormat Format = VK_FORMAT_UNDEFINED;
+    vk::Image Image;
+    vk::ImageCreateFlags CreateFlags{};
+    vk::ImageUsageFlags UsageFlags{};
+    vk::ImageTiling Tiling = vk::ImageTiling::eOptimal;
+    vk::SampleCountFlagBits MsaaSampleCount = vk::SampleCountFlagBits::e1;
+    vk::ImageView View;
+    vk::Format Format = vk::Format::eUndefined;
     uint32_t Width = 0;
     uint32_t Height = 0;
     uint32_t MipCount = 0;
@@ -26,12 +26,12 @@ class GPUImage
 {
     public:
 
-    GPUImage(uint32_t width, uint32_t height, uint32_t arrayLayers, VkImageCreateFlags createFlags, VkImageUsageFlags usageFlags, VkFormat format, uint32_t mipCount, VkImageTiling tiling, VkSampleCountFlagBits msaaSampleCount);
-    GPUImage(uint32_t width, uint32_t height, VkImageUsageFlags usageFlags, VkFormat format, uint32_t mipCount, VkImageTiling tiling = VK_IMAGE_TILING_OPTIMAL, VkSampleCountFlagBits msaaSampleCount = VK_SAMPLE_COUNT_1_BIT);
-    GPUImage(uint32_t width, uint32_t height, VkImageUsageFlags usageFlags, VkFormat format, VkImageTiling tiling = VK_IMAGE_TILING_OPTIMAL, VkSampleCountFlagBits msaaSampleCount = VK_SAMPLE_COUNT_1_BIT);
+    GPUImage(uint32_t width, uint32_t height, uint32_t arrayLayers, vk::ImageCreateFlags createFlags, vk::ImageUsageFlags usageFlags, vk::Format format, uint32_t mipCount, vk::ImageTiling tiling, vk::SampleCountFlagBits msaaSampleCount);
+    GPUImage(uint32_t width, uint32_t height, vk::ImageUsageFlags usageFlags, vk::Format format, uint32_t mipCount, vk::ImageTiling tiling = vk::ImageTiling::eOptimal, vk::SampleCountFlagBits msaaSampleCount = vk::SampleCountFlagBits::e1);
+    GPUImage(uint32_t width, uint32_t height, vk::ImageUsageFlags usageFlags, vk::Format format, vk::ImageTiling tiling = vk::ImageTiling::eOptimal, vk::SampleCountFlagBits msaaSampleCount = vk::SampleCountFlagBits::e1);
     virtual ~GPUImage();
 
-    GPUImage static CubeMap(uint32_t width, uint32_t height, VkImageUsageFlags usageFlags, VkFormat format, VkImageTiling tiling = VK_IMAGE_TILING_OPTIMAL, VkSampleCountFlagBits msaaSampleCount = VK_SAMPLE_COUNT_1_BIT);
+    GPUImage static CubeMap(uint32_t width, uint32_t height, vk::ImageUsageFlags usageFlags, vk::Format format, vk::ImageTiling tiling = vk::ImageTiling::eOptimal, vk::SampleCountFlagBits msaaSampleCount = vk::SampleCountFlagBits::e1);
 
     GPUImage(GPUImage&& other) noexcept;
     GPUImage& operator=(GPUImage&& other) noexcept;
@@ -39,18 +39,18 @@ class GPUImage
     GPUImage(const GPUImage&) = delete;
     GPUImage& operator=(const GPUImage&) = delete;
 
-    void UploadAndGenerateMip(void* data, uint32_t width, uint32_t height, uint32_t pixelStride, VkCommandPool pool, VkQueue queue);
-    void TransitionLayout(VkCommandPool pool, VkQueue queue, VkImageLayout oldLayout, VkImageLayout newLayout) const;
+    void UploadAndGenerateMip(void* data, uint32_t width, uint32_t height, uint32_t pixelStride, vk::CommandPool pool, vk::Queue queue);
+    void TransitionLayout(vk::CommandPool pool, vk::Queue queue, vk::ImageLayout oldLayout, vk::ImageLayout newLayout) const;
 
     inline ImageReference Internal() const { return _internal; }
-    inline VkImageView View() const { return _internal.View; }
+    inline vk::ImageView View() const { return _internal.View; }
     inline uint32_t Width() const { return _internal.Width; }
     inline uint32_t Height() const { return _internal.Height; }
     inline uint32_t MipCount() const { return _internal.MipCount; }
     bool Resize(uint32_t width, uint32_t height);
 
     protected:
-    void CreateImageInternal(uint32_t width, uint32_t height, uint32_t arrayLayers, VkImageCreateFlags createFlags, VkImageUsageFlags usageFlags, VkFormat format, uint32_t mipCount, VkImageTiling tiling, VkSampleCountFlagBits msaaSampleCount);
+    void CreateImageInternal(uint32_t width, uint32_t height, uint32_t arrayLayers, vk::ImageCreateFlags createFlags, vk::ImageUsageFlags usageFlags, vk::Format format, uint32_t mipCount, vk::ImageTiling tiling, vk::SampleCountFlagBits msaaSampleCount);
     void DisposeInternal();
     DeviceMemory _memoryInternal = {};
     ImageReference _internal;

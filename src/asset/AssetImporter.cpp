@@ -11,7 +11,7 @@
 #include <string>
 #include <sys/stat.h>
 #include <vector>
-#include <vulkan/vulkan_core.h>
+#include <vulkan/vulkan.hpp>
 
 AssetImporter::AssetImporter(AssetImporter&& other) noexcept
 {
@@ -104,7 +104,7 @@ void AssetImporter::Clear()
     TextureDatas.clear();
 }
 
-void AssetImporter::LoadAsset(BindingManager& allocator, const std::filesystem::path & modelPath, MeshRegistry & meshRegistry, MaterialRegistry & materialRegistry, VkCommandPool uploadPool, VkQueue uploadQueue, VkSampler sampler)
+void AssetImporter::LoadAsset(BindingManager& allocator, const std::filesystem::path & modelPath, MeshRegistry & meshRegistry, MaterialRegistry & materialRegistry, vk::CommandPool uploadPool, vk::Queue uploadQueue, vk::Sampler sampler)
 {
     AssetImporter importer;
 

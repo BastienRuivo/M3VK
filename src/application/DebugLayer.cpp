@@ -1,40 +1,11 @@
+#include <vulkan/vulkan.hpp>
+
 #include "application/DebugLayer.h"
 #include <ostream>
 #include <string_view>
-#include <vulkan/vulkan_core.h>
 #include <iostream>
 #include <cstring>
 
-VkResult M3VK_CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pDebugMessenger)
-{
-    auto func = (PFN_vkCreateDebugUtilsMessengerEXT) vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
-    if (func != nullptr) {
-        return func(instance, pCreateInfo, pAllocator, pDebugMessenger);
-    } else {
-        return VK_ERROR_EXTENSION_NOT_PRESENT;
-    }
-}
-
-void M3VK_DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks* pAllocator) {
-    auto func = (PFN_vkDestroyDebugUtilsMessengerEXT) vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT");
-    if (func != nullptr) {
-        func(instance, debugMessenger, pAllocator);
-    }
-}
-
-void DebugLayer::Log(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, std::string_view message)
-{
-    DebugLayer::LogType logType;
-    switch (messageSeverity)
-    {
-        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT: logType = DebugLayer::VERBOSE; break;
-        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT: logType = DebugLayer::INFO; break;
-        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT: logType = DebugLayer::WARNING; break;
-        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT: logType = DebugLayer::ERROR; break;
-        default: logType = DebugLayer::VERBOSE; break;
-    }
-    Log(logType, message);
-}
 
 void DebugLayer::Log(DebugLayer::LogType LogType, std::string_view message)
 {
@@ -76,70 +47,66 @@ void DebugLayer::Log(DebugLayer::LogType LogType, std::string_view message)
     *stream << color << "[Validation Layer Message] - [M3VK] : [" << title << "] " << message << std::endl;
 }
 
-static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(
-    VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
-    VkDebugUtilsMessageTypeFlagsEXT messageType,
-    const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
+static VKAPI_ATTR vk::Bool32 VKAPI_CALL DebugCallback(
+    vk::DebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
+    vk::DebugUtilsMessageTypeFlagsEXT messageType,
+    const vk::DebugUtilsMessengerCallbackDataEXT* pCallbackData,
     void* pUserData)
 {
 
     #ifndef M3VK_VERBOSE_LOG
-        if(messageSeverity == VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT) return true;
+        if(messageSeverity == vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose) return true;
     #endif
 
     std::cerr << "[Validation Layer Message] - [Vulkan] : ";
     switch (messageSeverity)
     {
-        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
+        case vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose:
             std::cerr << "\033[0m" << "[Verbose]";
             break;
 
-        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
+        case vk::DebugUtilsMessageSeverityFlagBitsEXT::eInfo:
             std::cerr << "\033[0m" << "[Info]";
             break;
 
-        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
+        case vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning:
             std::cerr << "\033[33m" << "[Warning]";
             break;
-        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
+        case vk::DebugUtilsMessageSeverityFlagBitsEXT::eError:
             std::cerr << "\033[31m" << "[Error]";
             break;
         default:
             break;
     }
 
-    switch (messageType)
+    if (messageType & vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral)
     {
-        case VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT:
-            std::cerr<<"[General]";
-            break;
-        case VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT:
-            std::cerr<<"[Validation]";
-            break;
-        case VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT:
-            std::cerr<<"[Performance]";
-            break;
+        std::cerr<<"[General]";
+    }
+    if (messageType & vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation)
+    {
+        std::cerr<<"[Validation]";
+    }
+    if (messageType & vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance)
+    {
+        std::cerr<<"[Performance]";
     }
 
     std::cerr << pCallbackData->pMessage << std::endl;
 
-    return messageSeverity != VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+    return messageSeverity != vk::DebugUtilsMessageSeverityFlagBitsEXT::eError;
 }
 
 bool DebugLayer::CheckValidationLayerSupport()
 {
-    uint32_t layerCount = 0;
-    vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
-
-    std::vector<VkLayerProperties> availableLayers(layerCount);
-    vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
+    std::vector<vk::LayerProperties> availableLayers = vk::enumerateInstanceLayerProperties();
 
     for(const char* layerName : ValidationLayer)
     {
         bool find = false;
-        for(const VkLayerProperties& property : availableLayers)
+        for(const vk::LayerProperties& property : availableLayers)
         {
-            if(strcmp(layerName, property.layerName) == 0)
+            if(strcmp(layerName, property.layerName.data()) == 0)
             {
                 find = true;
                 break;
@@ -156,7 +123,7 @@ bool DebugLayer::CheckValidationLayerSupport()
     return true;
 }
 
-void DebugLayer::SetupCreateInfo(VkInstanceCreateInfo& instanceCreateInfo, VkDebugUtilsMessengerCreateInfoEXT& debugCreateInfo)
+void DebugLayer::SetupCreateInfo(vk::InstanceCreateInfo& instanceCreateInfo, vk::DebugUtilsMessengerCreateInfoEXT& debugCreateInfo)
 {
     if(Enabled)
     {
@@ -172,26 +139,24 @@ void DebugLayer::SetupCreateInfo(VkInstanceCreateInfo& instanceCreateInfo, VkDeb
     }
 }
 
-void DebugLayer::PopulateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& debugMessengerCreateInfo)
+void DebugLayer::PopulateDebugMessengerCreateInfo(vk::DebugUtilsMessengerCreateInfoEXT& debugMessengerCreateInfo)
 {
-    debugMessengerCreateInfo =
-    {
-        .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT,
-        .messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT,
-        .messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT,
-        .pfnUserCallback = DebugCallback
-    };
+    debugMessengerCreateInfo = vk::DebugUtilsMessengerCreateInfoEXT{}
+        .setMessageSeverity(vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose | vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning | vk::DebugUtilsMessageSeverityFlagBitsEXT::eError)
+        .setMessageType(vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral | vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation | vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance)
+        .setPfnUserCallback(static_cast<vk::PFN_DebugUtilsMessengerCallbackEXT>(DebugCallback));
 }
 
-DebugLayer::DebugLayer(VkInstance instance)
+DebugLayer::DebugLayer(vk::Instance instance)
 {
     if(!Enabled) return;
     _instance = instance;
 
-    VkDebugUtilsMessengerCreateInfoEXT createInfo{};
+    vk::DebugUtilsMessengerCreateInfoEXT createInfo{};
     PopulateDebugMessengerCreateInfo(createInfo);
 
-    if (M3VK_CreateDebugUtilsMessengerEXT(instance, &createInfo, nullptr, &_debugMessenger) != VK_SUCCESS)
+    vk::Result result = _instance.createDebugUtilsMessengerEXT(&createInfo, nullptr, &_debugMessenger);
+    if (result != vk::Result::eSuccess)
     {
         throw std::runtime_error("failed to set up debug messenger!");
     }
@@ -200,5 +165,5 @@ DebugLayer::DebugLayer(VkInstance instance)
 DebugLayer::~DebugLayer()
 {
     if (!Enabled) return;
-    M3VK_DestroyDebugUtilsMessengerEXT(_instance, _debugMessenger, nullptr);
+    _instance.destroyDebugUtilsMessengerEXT(_debugMessenger);
 }

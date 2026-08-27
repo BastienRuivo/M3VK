@@ -4,7 +4,7 @@
 #include "rendering/GPUImage.h"
 #include "rendering/GraphicsBuffer.h"
 #include <cstdint>
-#include <vulkan/vulkan_core.h>
+#include <vulkan/vulkan.hpp>
 class CommandBuffer
 {
     public:
@@ -14,7 +14,7 @@ class CommandBuffer
         MultipleTime
     };
 
-    CommandBuffer(VkCommandPool pool, VkQueue queue);
+    CommandBuffer(vk::CommandPool pool, vk::Queue queue);
     ~CommandBuffer();
 
     CommandBuffer(CommandBuffer&& other) noexcept;
@@ -23,17 +23,16 @@ class CommandBuffer
     CommandBuffer(const CommandBuffer&) = delete;
     CommandBuffer& operator=(const CommandBuffer&) = delete;
 
-    void Begin(VkCommandBufferUsageFlags flags = 0) const;
+    void Begin(vk::CommandBufferUsageFlags flags = {}) const;
 
     void End() const;
 
-    void Submit(std::span<const VkSemaphoreSubmitInfo> waitSemaphores,
-    std::span<const VkSemaphoreSubmitInfo> signalSemaphores,
-    VkFence fence = VK_NULL_HANDLE) const;
+    void Submit(std::span<const vk::SemaphoreSubmitInfo> waitSemaphores,
+    std::span<const vk::SemaphoreSubmitInfo> signalSemaphores, vk::Fence fence = nullptr) const;
 
     inline void BeginSingleTime() const
     {
-        Begin(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+        Begin(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
     }
 
     void WaitCompletion() const;
@@ -41,335 +40,295 @@ class CommandBuffer
     // Todo: how to handle this properly (both need different params)
     void BindBuffer(const GraphicsBuffer& buffer) const;
     void SetScissor(int32_t x, int32_t y, uint32_t width, uint32_t height) const;
-    void SetScissor(const VkRect2D& scissors) const;
+    void SetScissor(const vk::Rect2D& scissors) const;
     void SetViewport(float x, float y, float width, float height) const;
-    void TransitionImageLayout(VkImage img, VkFormat format, uint32_t mipLevel, uint32_t mipCount, VkImageLayout oldLayout, VkImageLayout newLayout) const;
 
-    inline void BindDescriptorSets(const VkPipelineLayout& pipelineLayout, const DescriptorSetHandle& setHandle, VkPipelineBindPoint bindPoint, uint32_t location) const
+    inline void BindDescriptorSets(const vk::PipelineLayout& pipelineLayout, const DescriptorSetHandle& setHandle, vk::PipelineBindPoint bindPoint, uint32_t location) const
     {
-        vkCmdBindDescriptorSets(_internal, bindPoint, pipelineLayout, location, 1, &setHandle.Set, 0, nullptr);
+        _internal.bindDescriptorSets(bindPoint, pipelineLayout, location, 1, &setHandle.Set, 0, nullptr);
     }
 
     inline void Draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance) const
     {
-        vkCmdDraw(_internal, vertexCount, instanceCount, firstVertex, firstInstance);
+        _internal.draw(vertexCount, instanceCount, firstVertex, firstInstance);
     }
 
     inline void DrawIndexed(uint32_t firstIndex, uint32_t indexCount, uint32_t vertexOffset) const
     {
-        vkCmdDrawIndexed(_internal, indexCount, 1, firstIndex, vertexOffset, 0);
+        _internal.drawIndexed(indexCount, 1, firstIndex, vertexOffset, 0);
     }
 
-    inline void DrawIndexedIndirect(VkBuffer indirectBuffer, VkDeviceSize offsetInBytes, uint32_t drawCount, uint32_t stride) const
+    inline void DrawIndexedIndirect(vk::Buffer indirectBuffer, vk::DeviceSize offsetInBytes, uint32_t drawCount, uint32_t stride) const
     {
-        vkCmdDrawIndexedIndirect(_internal, indirectBuffer, offsetInBytes, drawCount, stride);
+        _internal.drawIndexedIndirect(indirectBuffer, offsetInBytes, drawCount, stride);
     }
 
-    inline void BindPipeline(VkPipeline pipeline, VkPipelineBindPoint bindPoint) const
+    inline void BindPipeline(vk::Pipeline pipeline, vk::PipelineBindPoint bindPoint) const
     {
-        vkCmdBindPipeline(_internal, bindPoint, pipeline);
+        _internal.bindPipeline(bindPoint, pipeline);
     }
 
-    void Reset(VkCommandBufferResetFlags flags = 0) const
+    void Reset(vk::CommandBufferResetFlags flags = {}) const
     {
-        vkResetCommandBuffer(_internal, flags);
+        _internal.reset(flags);
     }
 
-    inline void PushConstants(VkPipelineLayout layout, uint32_t offset, uint32_t size, const void* pValues) const
+    inline void PushConstants(vk::PipelineLayout layout, uint32_t offset, uint32_t size, const void* pValues) const
     {
-        vkCmdPushConstants(_internal, layout, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT, offset, size, pValues);
+        _internal.pushConstants(layout, vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment | vk::ShaderStageFlagBits::eCompute, offset, size, pValues);
     }
 
-    inline void Barrier(std::span<const VkMemoryBarrier2> memoryBarriers) const
+    inline void Barrier(std::span<const vk::MemoryBarrier2> memoryBarriers) const
     {
-        VkDependencyInfo dependencyInfo
-        {
-            .sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
-            .dependencyFlags = 0,
-            .memoryBarrierCount = static_cast<uint32_t>(memoryBarriers.size()),
-            .pMemoryBarriers = memoryBarriers.data()
-        };
-        vkCmdPipelineBarrier2(_internal, &dependencyInfo);
+        vk::DependencyInfo dependencyInfo = vk::DependencyInfo{}
+            .setMemoryBarriers(memoryBarriers);
+        _internal.pipelineBarrier2(dependencyInfo);
     }
 
-    inline void Barrier(std::span<const VkBufferMemoryBarrier2> bufferBarriers) const
+    inline void Barrier(std::span<const vk::BufferMemoryBarrier2> bufferBarriers) const
     {
-        VkDependencyInfo dependencyInfo
-        {
-            .sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
-            .dependencyFlags = 0,
-            .bufferMemoryBarrierCount = static_cast<uint32_t>(bufferBarriers.size()),
-            .pBufferMemoryBarriers = bufferBarriers.data()
-        };
-        vkCmdPipelineBarrier2(_internal, &dependencyInfo);
+        vk::DependencyInfo dependencyInfo = vk::DependencyInfo{}
+            .setBufferMemoryBarriers(bufferBarriers);
+        _internal.pipelineBarrier2(dependencyInfo);
     }
 
-    inline void Barrier(std::span<const VkImageMemoryBarrier2> imgBarriers) const
+    inline void Barrier(std::span<const vk::ImageMemoryBarrier2> imgBarriers) const
     {
-        VkDependencyInfo dependencyInfo
-        {
-            .sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
-            .dependencyFlags = 0,
-            .imageMemoryBarrierCount = static_cast<uint32_t>(imgBarriers.size()),
-            .pImageMemoryBarriers = imgBarriers.data()
-        };
-        vkCmdPipelineBarrier2(_internal, &dependencyInfo);
+        vk::DependencyInfo dependencyInfo = vk::DependencyInfo{}
+            .setImageMemoryBarriers(imgBarriers);
+        _internal.pipelineBarrier2(dependencyInfo);
     }
 
-    inline void Barrier(std::span<const VkMemoryBarrier2> memoryBarriers, std::span<const VkBufferMemoryBarrier2> bufferBarriers, std::span<const VkImageMemoryBarrier2> imgBarriers) const
+    inline void Barrier(std::span<const vk::MemoryBarrier2> memoryBarriers, std::span<const vk::BufferMemoryBarrier2> bufferBarriers, std::span<const vk::ImageMemoryBarrier2> imgBarriers) const
     {
-        VkDependencyInfo dependencyInfo
-        {
-            .sType = VK_STRUCTURE_TYPE_DEPENDENCY_INFO,
-            .dependencyFlags = 0,
-            .memoryBarrierCount = static_cast<uint32_t>(memoryBarriers.size()),
-            .pMemoryBarriers = memoryBarriers.data(),
-            .bufferMemoryBarrierCount = static_cast<uint32_t>(bufferBarriers.size()),
-            .pBufferMemoryBarriers = bufferBarriers.data(),
-            .imageMemoryBarrierCount = static_cast<uint32_t>(imgBarriers.size()),
-            .pImageMemoryBarriers = imgBarriers.data()
-        };
-        vkCmdPipelineBarrier2(_internal, &dependencyInfo);
+        vk::DependencyInfo dependencyInfo = vk::DependencyInfo{}
+            .setMemoryBarriers(memoryBarriers)
+            .setBufferMemoryBarriers(bufferBarriers)
+            .setImageMemoryBarriers(imgBarriers);
+        _internal.pipelineBarrier2(dependencyInfo);
     }
 
-    inline void Blit(VkImage src, VkImageLayout srcLayout, VkImage dst, VkImageLayout dstLayout, std::span<const VkImageBlit> regions, VkFilter filter) const
+    inline void Blit(vk::Image src, vk::ImageLayout srcLayout, vk::Image dst, vk::ImageLayout dstLayout, std::span<const vk::ImageBlit> regions, vk::Filter filter) const
     {
-        vkCmdBlitImage(_internal, src, srcLayout, dst, dstLayout, regions.size(), regions.data(), filter);
+        _internal.blitImage(src, srcLayout, dst, dstLayout, regions, filter);
     }
 
-    inline void Blit(ImageReference src, VkImageLayout srcLayout, ImageReference dst, VkImageLayout dstLayout, VkFilter filter = VK_FILTER_NEAREST) const
+    inline void Blit(ImageReference src, vk::ImageLayout srcLayout, ImageReference dst, vk::ImageLayout dstLayout, vk::Filter filter = vk::Filter::eNearest) const
     {
-        VkImageAspectFlags aspect = VK_IMAGE_ASPECT_COLOR_BIT;
-        if(src.UsageFlags & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT) aspect = VK_IMAGE_ASPECT_DEPTH_BIT;
-        VkImageBlit region
-        {
-            .srcSubresource = { aspect, 0, 0, src.ArrayLayerCount },
-            .srcOffsets = { { 0, 0, 0 }, { static_cast<int32_t>(src.Width), static_cast<int32_t>(src.Height), 1 } },
-            .dstSubresource = { aspect, 0, 0, dst.ArrayLayerCount },
-            .dstOffsets = { { 0, 0, 0 }, { static_cast<int32_t>(dst.Width), static_cast<int32_t>(dst.Height), 1 } }
-        };
-        vkCmdBlitImage(_internal, src.Image, srcLayout, dst.Image, dstLayout, 1, &region, filter);
+        vk::ImageAspectFlags aspect = vk::ImageAspectFlagBits::eColor;
+        if(src.UsageFlags & vk::ImageUsageFlagBits::eDepthStencilAttachment) aspect = vk::ImageAspectFlagBits::eDepth;
+        vk::ImageBlit region = vk::ImageBlit{}
+            .setSrcSubresource(vk::ImageSubresourceLayers{aspect, 0, 0, src.ArrayLayerCount})
+            .setSrcOffsets({vk::Offset3D{0, 0, 0}, vk::Offset3D{static_cast<int32_t>(src.Width), static_cast<int32_t>(src.Height), 1}})
+            .setDstSubresource(vk::ImageSubresourceLayers{aspect, 0, 0, dst.ArrayLayerCount})
+            .setDstOffsets({vk::Offset3D{0, 0, 0}, vk::Offset3D{static_cast<int32_t>(dst.Width), static_cast<int32_t>(dst.Height), 1}});
+        _internal.blitImage(src.Image, srcLayout, dst.Image, dstLayout, region, filter);
     }
 
-    inline void CopyImage(ImageReference src, VkImageLayout srcLayout, ImageReference dst, VkImageLayout dstLayout) const
+    inline void CopyImage(ImageReference src, vk::ImageLayout srcLayout, ImageReference dst, vk::ImageLayout dstLayout) const
     {
-        VkImageAspectFlags aspect = VK_IMAGE_ASPECT_COLOR_BIT;
-        if(src.UsageFlags & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT) aspect = VK_IMAGE_ASPECT_DEPTH_BIT;
+        vk::ImageAspectFlags aspect = vk::ImageAspectFlagBits::eColor;
+        if(src.UsageFlags & vk::ImageUsageFlagBits::eDepthStencilAttachment) aspect = vk::ImageAspectFlagBits::eDepth;
 
-        VkImageCopy2 region
-        {
-            .sType = VK_STRUCTURE_TYPE_IMAGE_COPY_2,
-            .srcSubresource = { aspect, 0, 0, src.ArrayLayerCount },
-            .srcOffset = { 0, 0, 0 },
-            .dstSubresource = { aspect, 0, 0, dst.ArrayLayerCount },
-            .dstOffset = { 0, 0, 0 },
-            .extent = { static_cast<uint32_t>(src.Width), static_cast<uint32_t>(src.Height), 1 }
-        };
-        VkCopyImageInfo2 copyInfo
-        {
-            .sType = VK_STRUCTURE_TYPE_COPY_IMAGE_INFO_2,
-            .srcImage = src.Image,
-            .srcImageLayout = srcLayout,
-            .dstImage = dst.Image,
-            .dstImageLayout = dstLayout,
-            .regionCount = 1,
-            .pRegions = &region
-        };
-        vkCmdCopyImage2(_internal, &copyInfo);
+        vk::ImageCopy2 region = vk::ImageCopy2{}
+            .setSrcSubresource(vk::ImageSubresourceLayers{aspect, 0, 0, src.ArrayLayerCount})
+            .setSrcOffset(vk::Offset3D{0, 0, 0})
+            .setDstSubresource(vk::ImageSubresourceLayers{aspect, 0, 0, dst.ArrayLayerCount})
+            .setDstOffset(vk::Offset3D{0, 0, 0})
+            .setExtent(vk::Extent3D{static_cast<uint32_t>(src.Width), static_cast<uint32_t>(src.Height), 1});
+
+        vk::CopyImageInfo2 copyInfo = vk::CopyImageInfo2{}
+            .setSrcImage(src.Image)
+            .setSrcImageLayout(srcLayout)
+            .setDstImage(dst.Image)
+            .setDstImageLayout(dstLayout)
+            .setRegions(region);
+
+        _internal.copyImage2(copyInfo);
     }
 
-    inline void CopyBufferToImage(VkBuffer buffer, VkImage image, VkImageLayout layout, std::span<const VkBufferImageCopy> regions) const
+    inline void CopyBufferToImage(vk::Buffer buffer, vk::Image image, vk::ImageLayout layout, std::span<const vk::BufferImageCopy> regions) const
     {
-        vkCmdCopyBufferToImage(_internal, buffer, image, layout, static_cast<uint32_t>(regions.size()), regions.data());
+        _internal.copyBufferToImage(buffer, image, layout, regions);
     }
 
-    inline void CopyImageToBuffer(VkImage image, VkImageLayout layout, VkBuffer buffer, std::span<const VkBufferImageCopy> regions) const
+    inline void CopyImageToBuffer(vk::Image image, vk::ImageLayout layout, vk::Buffer buffer, std::span<const vk::BufferImageCopy> regions) const
     {
-        vkCmdCopyImageToBuffer(_internal, image, layout, buffer, static_cast<uint32_t>(regions.size()), regions.data());
+        _internal.copyImageToBuffer(image, layout, buffer, regions);
     }
 
-    inline void CopyBuffer(VkBuffer src, VkBuffer dst, VkDeviceSize size, std::span<const VkBufferCopy> pRegions) const
+    inline void CopyBuffer(vk::Buffer src, vk::Buffer dst, vk::DeviceSize size, std::span<const vk::BufferCopy> pRegions) const
     {
-        vkCmdCopyBuffer(_internal, src, dst, static_cast<uint32_t>(pRegions.size()), pRegions.data());
+        _internal.copyBuffer(src, dst, pRegions);
     }
 
-    inline void CopyBuffer(VkBuffer src, VkBuffer dst, VkDeviceSize size, uint32_t srcIndexInBytes = 0, uint32_t dstIndexInBytes = 0) const
+    inline void CopyBuffer(vk::Buffer src, vk::Buffer dst, vk::DeviceSize size, uint32_t srcIndexInBytes = 0, uint32_t dstIndexInBytes = 0) const
     {
-        VkBufferCopy region
-        {
-            .srcOffset = srcIndexInBytes,
-            .dstOffset = dstIndexInBytes,
-            .size = size
-        };
+        vk::BufferCopy region = vk::BufferCopy{}
+            .setSrcOffset(srcIndexInBytes)
+            .setDstOffset(dstIndexInBytes)
+            .setSize(size);
 
-        vkCmdCopyBuffer(_internal, src, dst, 1, &region);
+        _internal.copyBuffer(src, dst, region);
     }
 
-    inline void BeginRendering(VkRect2D renderArea, std::span<const VkRenderingAttachmentInfo> colorAttachments, const VkRenderingAttachmentInfo& depthAttachment, const VkRenderingAttachmentInfo& stencilAttachment) const
+    inline void BeginRendering(vk::Rect2D renderArea, std::span<const vk::RenderingAttachmentInfo> colorAttachments, const vk::RenderingAttachmentInfo& depthAttachment, const vk::RenderingAttachmentInfo& stencilAttachment) const
     {
-        VkRenderingInfo renderingInfo
-        {
-            .sType = VK_STRUCTURE_TYPE_RENDERING_INFO,
-            .renderArea = renderArea,
-            .layerCount = 1,
-            .colorAttachmentCount = static_cast<uint32_t>(colorAttachments.size()),
-            .pColorAttachments = colorAttachments.data(),
-            .pDepthAttachment = &depthAttachment,
-            .pStencilAttachment = &stencilAttachment
-        };
-        vkCmdBeginRendering(_internal, &renderingInfo);
+        vk::RenderingInfo renderingInfo = vk::RenderingInfo{}
+            .setRenderArea(renderArea)
+            .setLayerCount(1)
+            .setColorAttachments(colorAttachments)
+            .setPDepthAttachment(&depthAttachment)
+            .setPStencilAttachment(&stencilAttachment);
+        _internal.beginRendering(renderingInfo);
     }
 
     inline void EndRendering() const
     {
-        vkCmdEndRendering(_internal);
+        _internal.endRendering();
     }
 
-    inline void SetDepthCompareOp(VkCompareOp op) const
+    inline void SetDepthCompareOp(vk::CompareOp op) const
     {
-        vkCmdSetDepthCompareOp(_internal, op);
+        _internal.setDepthCompareOp(op);
     }
 
-    inline void SetDepthTest(VkBool32 enable) const
+    inline void SetDepthTest(vk::Bool32 enable) const
     {
-        vkCmdSetDepthTestEnable(_internal, enable);
+        _internal.setDepthTestEnable(enable);
     }
 
-    inline void SetDepthWrite(VkBool32 enable) const
+    inline void SetDepthWrite(vk::Bool32 enable) const
     {
-        vkCmdSetDepthWriteEnable(_internal, enable);
+        _internal.setDepthWriteEnable(enable);
     }
 
-    inline void SetStencilTest(VkBool32 enable) const
+    inline void SetStencilTest(vk::Bool32 enable) const
     {
-        vkCmdSetStencilTestEnable(_internal, enable);
+        _internal.setStencilTestEnable(enable);
     }
 
-    inline void SetBlendEnable(VkBool32 enable) const
+    inline void SetBlendEnable(vk::Bool32 enable) const
     {
-        VkFunctions::vkCmdSetColorBlendEnableEXT(_internal, 0, 1, &enable);
+        vk::CommandBuffer(_internal).setColorBlendEnableEXT(0, enable);
     }
 
-    inline void SetBlendEquation(VkColorBlendEquationEXT equation) const
+    inline void SetBlendEquation(vk::ColorBlendEquationEXT equation) const
     {
-        VkFunctions::vkCmdSetColorBlendEquationEXT(_internal, 0, 1, &equation);
+        vk::CommandBuffer(_internal).setColorBlendEquationEXT(0, equation);
     }
 
-    inline void SetColorWriteMask(VkColorComponentFlags mask) const
+    inline void SetColorWriteMask(vk::ColorComponentFlags mask) const
     {
-        VkFunctions::vkCmdSetColorWriteMaskEXT(_internal, 0, 1, &mask);
+        vk::CommandBuffer(_internal).setColorWriteMaskEXT(0, mask);
     }
 
-    inline void SetPrimitiveTopology(VkPrimitiveTopology topology) const
+    inline void SetPrimitiveTopology(vk::PrimitiveTopology topology) const
     {
-        vkCmdSetPrimitiveTopology(_internal, topology);
+        _internal.setPrimitiveTopology(topology);
     }
 
-    inline void SetPrimitiveRestart(VkBool32 enable) const
+    inline void SetPrimitiveRestart(vk::Bool32 enable) const
     {
-        vkCmdSetPrimitiveRestartEnable(_internal, enable);
+        _internal.setPrimitiveRestartEnable(enable);
     }
 
-    inline void SetRasterizerDiscard(VkBool32 enable) const
+    inline void SetRasterizerDiscard(vk::Bool32 enable) const
     {
-        vkCmdSetRasterizerDiscardEnable(_internal, enable);
+        _internal.setRasterizerDiscardEnable(enable);
     }
 
-    inline void SetCullMode(VkCullModeFlags cullMode) const
+    inline void SetCullMode(vk::CullModeFlags cullMode) const
     {
-        vkCmdSetCullMode(_internal, cullMode);
+        vk::CommandBuffer(_internal).setCullMode(cullMode);
     }
 
-    inline void SetFrontFace(VkFrontFace frontFace) const
+    inline void SetFrontFace(vk::FrontFace frontFace) const
     {
-        vkCmdSetFrontFace(_internal, frontFace);
+        vk::CommandBuffer(_internal).setFrontFace(frontFace);
     }
 
-    inline void SetPolygonMode(VkPolygonMode polygonMode) const
+    inline void SetPolygonMode(vk::PolygonMode polygonMode) const
     {
-        VkFunctions::vkCmdSetPolygonModeEXT(_internal, polygonMode);
+        vk::CommandBuffer(_internal).setPolygonModeEXT(polygonMode);
     }
 
     inline void SetLineWidth(float lineWidth) const
     {
-        vkCmdSetLineWidth(_internal, lineWidth);
+        vk::CommandBuffer(_internal).setLineWidth(lineWidth);
     }
 
-    inline void SetDepthBiasEnable(VkBool32 enable) const
+    inline void SetDepthBiasEnable(vk::Bool32 enable) const
     {
-        vkCmdSetDepthBiasEnable(_internal, enable);
+        vk::CommandBuffer(_internal).setDepthBiasEnable(enable);
     }
 
-    inline void SetRasterizationSamples(VkSampleCountFlagBits samples) const
+    inline void SetRasterizationSamples(vk::SampleCountFlagBits samples) const
     {
-        VkFunctions::vkCmdSetRasterizationSamplesEXT(_internal, samples);
+        vk::CommandBuffer(_internal).setRasterizationSamplesEXT(samples);
     }
 
-    inline void SetSampleMask(VkSampleCountFlagBits samples, VkSampleMask sampleMask) const
+    inline void SetSampleMask(vk::SampleCountFlagBits samples, vk::SampleMask sampleMask) const
     {
-        VkFunctions::vkCmdSetSampleMaskEXT(_internal, samples, &sampleMask);
+        vk::CommandBuffer(_internal).setSampleMaskEXT(samples, &sampleMask);
     }
 
     inline void SetDepthBias(float depthBiasConstantFactor, float depthBiasClamp, float depthBiasSlopeFactor) const
     {
-        vkCmdSetDepthBias(_internal, depthBiasConstantFactor, depthBiasClamp, depthBiasSlopeFactor);
+        _internal.setDepthBias(depthBiasConstantFactor, depthBiasClamp, depthBiasSlopeFactor);
     }
 
-    inline void SetSampleMask(VkSampleCountFlagBits samples, const VkSampleMask* sampleMask)
+    inline void SetSampleMask(vk::SampleCountFlagBits samples, const vk::SampleMask* sampleMask)
     {
-        VkFunctions::vkCmdSetSampleMaskEXT(_internal, samples, sampleMask);
+        vk::CommandBuffer(_internal).setSampleMaskEXT(samples, sampleMask);
     }
 
-    inline void SetAlphaToCoverageEnable(VkBool32 enable) const
+    inline void SetAlphaToCoverageEnable(vk::Bool32 enable) const
     {
-        VkFunctions::vkCmdSetAlphaToCoverageEnableEXT(_internal, enable);
+        vk::CommandBuffer(_internal).setAlphaToCoverageEnableEXT(enable);
     }
 
-    inline void SetAlphaToOneEnable(VkBool32 enable) const
+    inline void SetAlphaToOneEnable(vk::Bool32 enable) const
     {
-        VkFunctions::vkCmdSetAlphaToOneEnableEXT(_internal, enable);
+        vk::CommandBuffer(_internal).setAlphaToOneEnableEXT(enable);
     }
 
-    inline void SetDepthClampEnable(VkBool32 enable) const
+    inline void SetDepthClampEnable(vk::Bool32 enable) const
     {
-        VkFunctions::vkCmdSetDepthClampEnableEXT(_internal, enable);
+        vk::CommandBuffer(_internal).setDepthClampEnableEXT(enable);
     }
 
-    inline void SetVertexInput(std::span<const VkVertexInputBindingDescription2EXT> vertexBindingDescriptions, std::span<const VkVertexInputAttributeDescription2EXT> vertexAttributeDescriptions) const
+    inline void SetVertexInput(std::span<const vk::VertexInputBindingDescription2EXT> vertexBindingDescriptions, std::span<const vk::VertexInputAttributeDescription2EXT> vertexAttributeDescriptions) const
     {
-        VkFunctions::vkCmdSetVertexInputEXT(_internal, static_cast<uint32_t>(vertexBindingDescriptions.size()), vertexBindingDescriptions.data(), static_cast<uint32_t>(vertexAttributeDescriptions.size()), vertexAttributeDescriptions.data());
+        vk::CommandBuffer(_internal).setVertexInputEXT(vertexBindingDescriptions, vertexAttributeDescriptions);
     }
 
-    inline void BindShaders(std::span<const VkShaderStageFlagBits> stages, const VkShaderEXT* pShaders) const
+    inline void BindShaders(std::span<const vk::ShaderStageFlagBits> stages, std::span<const vk::ShaderEXT> pShaders) const
     {
-        VkFunctions::vkCmdBindShadersEXT(_internal, static_cast<uint32_t>(stages.size()), stages.data(), pShaders);
+        vk::CommandBuffer(_internal).bindShadersEXT(stages, pShaders);
     }
 
     inline void Dispatch(uint32_t x, uint32_t y, uint32_t z) const
     {
-        vkCmdDispatch(_internal, x, y, z);
+        _internal.dispatch(x, y, z);
     }
 
     inline void BeginMarker(const char* name) const
     {
-        VkDebugUtilsLabelEXT label{};
+        vk::DebugUtilsLabelEXT label{};
         label.pLabelName = name;
-        label.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT;
-        VkFunctions::vkCmdBeginDebugUtilsLabelEXT(_internal, &label);
+        vk::CommandBuffer(_internal).beginDebugUtilsLabelEXT(label);
     }
 
     inline void EndMarker() const
     {
-        VkFunctions::vkCmdEndDebugUtilsLabelEXT(_internal);
+        vk::CommandBuffer(_internal).endDebugUtilsLabelEXT();
     }
 
-    inline VkCommandBufferSubmitInfo GetSubmitInfo() const
+    inline vk::CommandBufferSubmitInfo GetSubmitInfo() const
     {
-        return VkCommandBufferSubmitInfo
-        {
-            .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_SUBMIT_INFO,
-            .commandBuffer = _internal
-        };
+        return vk::CommandBufferSubmitInfo{}
+            .setCommandBuffer(_internal);
     }
 
     inline VkCommandBuffer GetInternal() const { return _internal; }
@@ -379,7 +338,7 @@ class CommandBuffer
     void CreateSingleTime();
     void CreateMultiUsage();
 
-    VkCommandPool _pool = VK_NULL_HANDLE;
-    VkQueue _queue = VK_NULL_HANDLE;
-    VkCommandBuffer _internal = VK_NULL_HANDLE;
+    vk::CommandPool _pool;
+    vk::Queue _queue = nullptr;
+    vk::CommandBuffer _internal = nullptr;
 };

@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <optional>
 
-#include <vulkan/vulkan_core.h>
+#include <vulkan/vulkan.hpp>
 
 #include <vector>
 
@@ -21,31 +21,25 @@ struct QueueFamilyIds
             && queueIds.Transfer.has_value();
     }
 
-    static QueueFamilyIds QueryQueueFamilies(VkPhysicalDevice physicalDevice, VkSurfaceKHR windowSurface)
+    static QueueFamilyIds QueryQueueFamilies(vk::PhysicalDevice physicalDevice, vk::SurfaceKHR windowSurface)
     {
         QueueFamilyIds queueIds;
 
-        uint32_t queueFamiliesCount = 0;
-
-        vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamiliesCount, nullptr);
-        std::vector<VkQueueFamilyProperties> families(queueFamiliesCount);
-        vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &queueFamiliesCount, families.data());
+        std::vector<vk::QueueFamilyProperties> families = physicalDevice.getQueueFamilyProperties();
 
         for(int i = 0; i < families.size(); ++i)
         {
-            if(families[i].queueFlags & VK_QUEUE_GRAPHICS_BIT && families[i].queueFlags & VK_QUEUE_COMPUTE_BIT)
+            if(families[i].queueFlags & vk::QueueFlagBits::eGraphics && families[i].queueFlags & vk::QueueFlagBits::eCompute)
             {
                 queueIds.GraphicsCompute = i;
             }
 
-            if(families[i].queueFlags & VK_QUEUE_TRANSFER_BIT)
+            if(families[i].queueFlags & vk::QueueFlagBits::eTransfer)
             {
                 queueIds.Transfer = i;
             }
-            VkBool32 isPresentSupported = false;
-            vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, i, windowSurface, &isPresentSupported);
 
-            if(isPresentSupported)
+            if(physicalDevice.getSurfaceSupportKHR(i, windowSurface))
             {
                 queueIds.Present = i;
             }

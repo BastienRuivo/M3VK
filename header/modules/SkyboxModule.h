@@ -9,8 +9,8 @@
 class SkyboxModule : public Module
 {
 public:
-    SkyboxModule(ShaderLibrary& shaderLibrary, BindingManager& allocator, VkCommandPool pool, VkQueue queue);
-    void Execute(const CommandBuffer& cmdBuffer, VkPipelineLayout layout) const;
+    SkyboxModule(ShaderLibrary& shaderLibrary, BindingManager& allocator, vk::CommandPool pool, vk::Queue queue);
+    void Execute(const CommandBuffer& cmdBuffer, vk::PipelineLayout layout) const;
     ~SkyboxModule();
 
     SkyboxModule(SkyboxModule&& other) noexcept;

@@ -33,11 +33,11 @@ class MeshRegistry : public Registry
     uint32_t RegisterMesh(MaterialType type, std::span<const Vertex> vertices, std::span<const uint32_t> indices);
     uint32_t RegisterInstance(MaterialType type, InstanceData instance);
 
-    void UploadAndRelease(VkQueue queue, VkCommandPool cmdPool) override;
-    void Bind(const CommandBuffer& cmdBuffer, VkPipelineLayout layout) const override;
+    void UploadAndRelease(vk::Queue queue, vk::CommandPool cmdPool) override;
+    void Bind(const CommandBuffer& cmdBuffer, vk::PipelineLayout layout) const override;
 
-    inline VkDescriptorBufferInfo InstanceBufferInfo() const { return _instanceDataBuffer.GetDescriptorBufferInfo(0, _instanceDataBuffer.GetCount()); }
-    inline VkDescriptorBufferInfo IndirectBufferInfo() const { return _indirectBuffer.GetDescriptorBufferInfo(0, _indirectBuffer.GetCount()); }
+    inline vk::DescriptorBufferInfo InstanceBufferInfo() const { return _instanceDataBuffer.GetDescriptorBufferInfo(0, _instanceDataBuffer.GetCount()); }
+    inline vk::DescriptorBufferInfo IndirectBufferInfo() const { return _indirectBuffer.GetDescriptorBufferInfo(0, _indirectBuffer.GetCount()); }
 
     inline const GeometryBuffer& VertexBuffer() const { return _vertexBuffer; }
     inline const GeometryBuffer& IndexBuffer() const { return _indexBuffer; }

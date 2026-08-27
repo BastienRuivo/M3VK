@@ -8,9 +8,9 @@
 #include "allocation/RessourceUsage.h"
 
 #include <stdexcept>
-#include <vulkan/vulkan_core.h>
+#include <vulkan/vulkan.hpp>
 
-DescriptorPool::DescriptorPool(std::vector<VkDescriptorSetLayout>&& layouts, VkDescriptorPool pool, uint32_t maxSets)
+DescriptorPool::DescriptorPool(std::vector<vk::DescriptorSetLayout>&& layouts, vk::DescriptorPool pool, uint32_t maxSets)
 : _maxSets(maxSets), _layouts(std::move(layouts)), _pool(pool)
 {
     _allocatedSets = 0;
@@ -18,17 +18,18 @@ DescriptorPool::DescriptorPool(std::vector<VkDescriptorSetLayout>&& layouts, VkD
 
 DescriptorPool::~DescriptorPool()
 {
+    vk::Device device = ApplicationInfo::Device();
     for(auto& layout : _layouts)
     {
-        vkDestroyDescriptorSetLayout(ApplicationInfo::Device(), layout, nullptr);
+        device.destroyDescriptorSetLayout(layout);
     }
-    vkDestroyDescriptorPool(ApplicationInfo::Device(), _pool, nullptr);
+    device.destroyDescriptorPool(_pool);
 }
 
 DescriptorPool::DescriptorPool(DescriptorPool&& other) noexcept
 {
     _layouts = std::move(other._layouts);
-    _pool = std::exchange(other._pool, VK_NULL_HANDLE);
+    _pool = std::exchange(other._pool, nullptr);
     _allocatedSets = std::exchange(other._allocatedSets, 0);
 }
 
@@ -37,7 +38,7 @@ DescriptorPool& DescriptorPool::operator=(DescriptorPool&& other) noexcept
     if(this != &other)
     {
         _layouts = std::move(other._layouts);
-        _pool = std::exchange(other._pool, VK_NULL_HANDLE);
+        _pool = std::exchange(other._pool, nullptr);
         _allocatedSets = std::exchange(other._allocatedSets, 0);
     }
     return *this;
@@ -51,17 +52,13 @@ std::vector<DescriptorSetHandle> DescriptorPool::Allocate(uint32_t layoutIndex, 
         throw std::runtime_error("Descriptor pool is full !!");
     }
 
-    std::vector<VkDescriptorSetLayout> layouts(count, _layouts[layoutIndex]);
-    VkDescriptorSetAllocateInfo allocateInfo
-    {
-        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-        .descriptorPool = _pool,
-        .descriptorSetCount = count,
-        .pSetLayouts = layouts.data()
-    };
+    std::vector<vk::DescriptorSetLayout> layouts(count, _layouts[layoutIndex]);
+    vk::DescriptorSetAllocateInfo allocateInfo = vk::DescriptorSetAllocateInfo{}
+        .setDescriptorPool(_pool)
+        .setSetLayouts(layouts);
 
-    std::vector<VkDescriptorSet> descriptorSets(count);
-    if(vkAllocateDescriptorSets(ApplicationInfo::Device(), &allocateInfo, descriptorSets.data()) != VK_SUCCESS)
+    std::vector<vk::DescriptorSet> descriptorSets(count);
+    if(ApplicationInfo::Device().allocateDescriptorSets(&allocateInfo, descriptorSets.data()) != vk::Result::eSuccess)
     {
         throw std::runtime_error("Failed to allocate descriptor sets");
     }
@@ -84,16 +81,12 @@ DescriptorSetHandle DescriptorPool::Allocate(uint32_t layoutIndex) const
         throw std::runtime_error("Descriptor pool is full !!");
     }
 
-    VkDescriptorSetAllocateInfo allocateInfo
-    {
-        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-        .descriptorPool = _pool,
-        .descriptorSetCount = 1,
-        .pSetLayouts = &_layouts[layoutIndex]
-    };
+    vk::DescriptorSetAllocateInfo allocateInfo = vk::DescriptorSetAllocateInfo{}
+        .setDescriptorPool(_pool)
+        .setSetLayouts(_layouts[layoutIndex]);
 
-    VkDescriptorSet descriptorSet;
-    if(vkAllocateDescriptorSets(ApplicationInfo::Device(), &allocateInfo, &descriptorSet) != VK_SUCCESS)
+    vk::DescriptorSet descriptorSet;
+    if(ApplicationInfo::Device().allocateDescriptorSets(&allocateInfo, &descriptorSet) != vk::Result::eSuccess)
     {
         throw std::runtime_error("Failed to allocate descriptor sets");
     }
@@ -108,53 +101,45 @@ DescriptorSetHandle DescriptorPool::Allocate(uint32_t layoutIndex) const
 
 void DescriptorPool::Free(DescriptorSetHandle set) const
 {
-    vkFreeDescriptorSets(ApplicationInfo::Device(), _pool, 1, &set.Set);
+    if(ApplicationInfo::Device().freeDescriptorSets(_pool, 1, &set.Set) != vk::Result::eSuccess)
+    {
+        DebugLayer::Log(DebugLayer::WARNING, "Failed to free descriptor set");
+    }
     _allocatedSets--;
 }
 
-DescriptorPool::LayoutBuilder& DescriptorPool::LayoutBuilder::AddBinding(uint32_t binding, VkDescriptorType type, VkShaderStageFlags stageFlags, VkDescriptorBindingFlags bindingFlags, uint32_t count)
+DescriptorPool::LayoutBuilder& DescriptorPool::LayoutBuilder::AddBinding(uint32_t binding, vk::DescriptorType type, vk::ShaderStageFlags stageFlags, vk::DescriptorBindingFlags bindingFlags, uint32_t count)
 {
-    Bindings.push_back(
-    {
-        .binding = binding,
-        .descriptorType = type,
-        .descriptorCount = count,
-        .stageFlags = stageFlags,
-        .pImmutableSamplers = nullptr
-    });
+    Bindings.push_back(vk::DescriptorSetLayoutBinding{}
+        .setBinding(binding)
+        .setDescriptorType(type)
+        .setDescriptorCount(count)
+        .setStageFlags(stageFlags));
 
     _bindingFlags.push_back(bindingFlags);
 
     return *this;
 }
 
-DescriptorPool::LayoutBuilder& DescriptorPool::LayoutBuilder::AddBinding(uint32_t binding, VkDescriptorType type, VkShaderStageFlags stageFlags, VkDescriptorBindingFlags bindingFlags, RessourceUsage usage, uint32_t perFrameCount)
+DescriptorPool::LayoutBuilder& DescriptorPool::LayoutBuilder::AddBinding(uint32_t binding, vk::DescriptorType type, vk::ShaderStageFlags stageFlags, vk::DescriptorBindingFlags bindingFlags, RessourceUsage usage, uint32_t perFrameCount)
 {
     uint32_t count = RessourceUsageCount(usage);
 
     return AddBinding(binding, type, stageFlags, bindingFlags, count * perFrameCount);
 }
 
-VkDescriptorSetLayout DescriptorPool::LayoutBuilder::Build() const
+vk::DescriptorSetLayout DescriptorPool::LayoutBuilder::Build() const
 {
-    VkDescriptorSetLayoutBindingFlagsCreateInfo flagsInfo
-    {
-        .sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO,
-        .bindingCount  = static_cast<uint32_t>(_bindingFlags.size()),
-        .pBindingFlags = _bindingFlags.data(),
-    };
+    vk::DescriptorSetLayoutBindingFlagsCreateInfo flagsInfo = vk::DescriptorSetLayoutBindingFlagsCreateInfo{}
+        .setBindingFlags(_bindingFlags);
 
-    VkDescriptorSetLayoutCreateInfo createInfo
-    {
-        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
-        .pNext = &flagsInfo,
-        .flags = _flags,
-        .bindingCount = static_cast<uint32_t>(Bindings.size()),
-        .pBindings = Bindings.data()
-    };
+    vk::DescriptorSetLayoutCreateInfo createInfo = vk::DescriptorSetLayoutCreateInfo{}
+        .setPNext(&flagsInfo)
+        .setFlags(_flags)
+        .setBindings(Bindings);
 
-    VkDescriptorSetLayout layout;
-    if(vkCreateDescriptorSetLayout(ApplicationInfo::Device(), &createInfo, nullptr, &layout) != VK_SUCCESS)
+    vk::DescriptorSetLayout layout;
+    if(ApplicationInfo::Device().createDescriptorSetLayout(&createInfo, nullptr, &layout) != vk::Result::eSuccess)
     {
         throw std::runtime_error("Failed to create descriptor set layout");
     }
@@ -165,33 +150,28 @@ VkDescriptorSetLayout DescriptorPool::LayoutBuilder::Build() const
 
 DescriptorPool DescriptorPool::Builder::Build() const
 {
-    std::vector<VkDescriptorSetLayoutBinding> bindings;
-    std::vector<VkDescriptorSetLayout> layouts;
+    std::vector<vk::DescriptorSetLayoutBinding> bindings;
+    std::vector<vk::DescriptorSetLayout> layouts;
     for(const auto& layout : _layouts)
     {
         bindings.insert(bindings.end(), layout.Bindings.begin(), layout.Bindings.end());
         layouts.push_back(layout.Build());
     }
 
-    std::vector<VkDescriptorPoolSize> poolSizes(bindings.size());
+    std::vector<vk::DescriptorPoolSize> poolSizes(bindings.size());
     for(uint32_t i = 0; i < bindings.size(); ++i)
     {
         poolSizes[i].type = bindings[i].descriptorType;
         poolSizes[i].descriptorCount = bindings[i].descriptorCount * _maxSets;
     }
 
-    VkDescriptorPoolCreateInfo poolInfo
-    {
-        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-        .pNext = nullptr,
-        .flags = _flags,
-        .maxSets = _maxSets,
-        .poolSizeCount = static_cast<uint32_t>(poolSizes.size()),
-        .pPoolSizes = poolSizes.data(),
-    };
+    vk::DescriptorPoolCreateInfo poolInfo = vk::DescriptorPoolCreateInfo{}
+        .setFlags(_flags)
+        .setMaxSets(_maxSets)
+        .setPoolSizes(poolSizes);
 
-    VkDescriptorPool pool;
-    if(vkCreateDescriptorPool(ApplicationInfo::Device(), &poolInfo, nullptr, &pool) != VK_SUCCESS)
+    vk::DescriptorPool pool;
+    if(ApplicationInfo::Device().createDescriptorPool(&poolInfo, nullptr, &pool) != vk::Result::eSuccess)
     {
         throw std::runtime_error("Failed to create descriptor pool");
     }

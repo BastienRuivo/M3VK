@@ -2,7 +2,7 @@
 #include "application/DebugLayer.h"
 #include <filesystem>
 #include <stdexcept>
-#include <vulkan/vulkan_core.h>
+#include <vulkan/vulkan.hpp>
 
 
 #define STB_IMAGE_IMPLEMENTATION
@@ -59,11 +59,11 @@ CPUImage& CPUImage::operator=(CPUImage&& other) noexcept
     return *this;
 }
 
-VkFormat CPUImage::GetGPUFormat() const
+vk::Format CPUImage::GetGPUFormat() const
 {
     switch (_channels)
     {
-        case STBI_rgb_alpha: return VK_FORMAT_R8G8B8A8_SRGB;
+        case STBI_rgb_alpha: return vk::Format::eR8G8B8A8Srgb;
         default: throw std::runtime_error("Unimplemented Color Format");
     }
 }

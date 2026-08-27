@@ -8,7 +8,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <vector>
-#include <vulkan/vulkan_core.h>
+#include <vulkan/vulkan.hpp>
 
 struct AssetImporter : public Importer
 {
@@ -38,7 +38,7 @@ struct AssetImporter : public Importer
     AssetImporter& operator=(AssetImporter&& other) noexcept;
     ~AssetImporter() = default;
 
-    static void LoadAsset(BindingManager& allocator, const std::filesystem::path & modelPath, MeshRegistry & meshRegistry, MaterialRegistry & materialRegistry, VkCommandPool uploadPool, VkQueue uploadQueue, VkSampler sampler);
+    static void LoadAsset(BindingManager& allocator, const std::filesystem::path & modelPath, MeshRegistry & meshRegistry, MaterialRegistry & materialRegistry, vk::CommandPool uploadPool, vk::Queue uploadQueue, vk::Sampler sampler);
     bool Load(const std::filesystem::path& path) override;
     void Clear() override;
 };

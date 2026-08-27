@@ -34,15 +34,15 @@ uint32_t ShaderLibrary::RegisterShader(std::filesystem::path path, ShaderType ty
     return RegisterShader(path, type, descriptorAllocator.GlobalSetLayouts(), descriptorAllocator.GlobalPushConstantRanges(), speConstants);
 }
 
-uint32_t ShaderLibrary::RegisterShader(std::filesystem::path path, ShaderType type, std::span<const VkDescriptorSetLayout> descriptorLayouts, std::span<const VkPushConstantRange> pushConstantRanges, std::span<const Shader::SpecializationConstant> speConstants)
+uint32_t ShaderLibrary::RegisterShader(std::filesystem::path path, ShaderType type, std::span<const vk::DescriptorSetLayout> descriptorLayouts, std::span<const vk::PushConstantRange> pushConstantRanges, std::span<const Shader::SpecializationConstant> speConstants)
 {
-    VkShaderStageFlagBits stage;
+    vk::ShaderStageFlagBits stage;
 
     switch (type)
     {
-        case ShaderLibrary::ShaderType::Compute: stage = VK_SHADER_STAGE_COMPUTE_BIT; break;
-        case ShaderLibrary::ShaderType::Vertex: stage = VK_SHADER_STAGE_VERTEX_BIT; break;
-        case ShaderLibrary::ShaderType::Fragment: stage = VK_SHADER_STAGE_FRAGMENT_BIT; break;
+        case ShaderLibrary::ShaderType::Compute: stage = vk::ShaderStageFlagBits::eCompute; break;
+        case ShaderLibrary::ShaderType::Vertex: stage = vk::ShaderStageFlagBits::eVertex; break;
+        case ShaderLibrary::ShaderType::Fragment: stage = vk::ShaderStageFlagBits::eFragment; break;
 
         default:
         {

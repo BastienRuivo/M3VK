@@ -2,14 +2,14 @@
 
 #include "asset/Vertex.h"
 #include "rendering/CommandBuffer.h"
-#include <vulkan/vulkan_core.h>
+#include <vulkan/vulkan.hpp>
 
 struct VertexState
 {
-    VkCullModeFlags CullMode = VK_CULL_MODE_BACK_BIT;
-    VkVertexInputBindingDescription2EXT BindingDescription = Vertex::GetBindingDescription();
-    VkPrimitiveTopology topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-    std::vector<VkVertexInputAttributeDescription2EXT> VertexAttributeDescriptions = Vertex::GetAttributeDescription();
+    vk::CullModeFlags CullMode = vk::CullModeFlagBits::eBack;
+    vk::VertexInputBindingDescription2EXT BindingDescription = Vertex::GetBindingDescription();
+    vk::PrimitiveTopology topology = vk::PrimitiveTopology::eTriangleList;
+    std::vector<vk::VertexInputAttributeDescription2EXT> VertexAttributeDescriptions = Vertex::GetAttributeDescription();
 
     void Bind(const CommandBuffer& cmdBuffer) const
     {
@@ -22,25 +22,23 @@ struct FragmentState
 {
 
     // depth related
-    VkBool32 depthTest = VK_TRUE;
+    vk::Bool32 depthTest = vk::True;
     // depth compare op
-    VkCompareOp depthCompareOp = VK_COMPARE_OP_LESS;
-    VkBool32 depthWrite = VK_TRUE;
-    VkBool32 stencilTest = VK_FALSE;
+    vk::CompareOp depthCompareOp = vk::CompareOp::eLess;
+    vk::Bool32 depthWrite = vk::True;
+    vk::Bool32 stencilTest = vk::False;
 
-    VkBool32 blending = VK_TRUE;
+    vk::Bool32 blending = vk::True;
     // default is opaque so blend one zero
-    VkColorBlendEquationEXT colorBlendEquation =
-    {
-        .srcColorBlendFactor = VK_BLEND_FACTOR_ONE,
-        .dstColorBlendFactor = VK_BLEND_FACTOR_ZERO,
-        .colorBlendOp = VK_BLEND_OP_ADD,
-        .srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE,
-        .dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO,
-        .alphaBlendOp = VK_BLEND_OP_ADD
-    };
+    vk::ColorBlendEquationEXT colorBlendEquation = vk::ColorBlendEquationEXT{}
+    .setSrcColorBlendFactor(vk::BlendFactor::eOne)
+    .setDstColorBlendFactor(vk::BlendFactor::eZero)
+    .setColorBlendOp(vk::BlendOp::eAdd)
+    .setSrcAlphaBlendFactor(vk::BlendFactor::eOne)
+    .setDstAlphaBlendFactor(vk::BlendFactor::eZero)
+    .setAlphaBlendOp(vk::BlendOp::eAdd);
 
-    VkColorComponentFlags colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+    vk::ColorComponentFlags colorWriteMask = vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG | vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eA;
 
     void Bind(const CommandBuffer& cmdBuffer) const
     {

@@ -6,23 +6,34 @@
 #include <cstdint>
 #include <cstring>
 #include <stdexcept>
-#include <vulkan/vulkan_core.h>
+#include <vulkan/vulkan.hpp>
 #include <vector>
 #include <string.h>
 
-bool VkPhysicalDeviceHandler::CheckDeviceExtensionSupport(VkPhysicalDevice device, const std::vector<const char *>& deviceExtensions) const
+bool VkPhysicalDeviceHandler::CheckDeviceExtensionSupport(vk::PhysicalDevice device, const std::vector<const char *>& deviceExtensions) const
 {
     uint32_t extensionCount = 0;
-    vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
-    std::vector<VkExtensionProperties> properties(extensionCount);
-    vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, properties.data());
+    vk::Result result = device.enumerateDeviceExtensionProperties(nullptr, &extensionCount, nullptr);
+
+    if(result != vk::Result::eSuccess)
+    {
+        DebugLayer::Log(DebugLayer::ERROR, "Fail to query device extension properties size");
+    }
+
+    std::vector<vk::ExtensionProperties> properties(extensionCount);
+    result = device.enumerateDeviceExtensionProperties(nullptr, &extensionCount, properties.data());
+
+    if(result != vk::Result::eSuccess)
+    {
+        DebugLayer::Log(DebugLayer::ERROR, "Fail to enumerate device extension properties");
+    }
 
     for(const auto& extension : deviceExtensions)
     {
         bool foundExtension = false;
-        for(const VkExtensionProperties& property : properties)
+        for(const vk::ExtensionProperties& property : properties)
         {
-            if(strcmp(extension, property.extensionName) == 0)
+            if(strcmp(extension, property.extensionName.data()) == 0)
             {
                 foundExtension = true;
                 break;
@@ -41,10 +52,10 @@ bool VkPhysicalDeviceHandler::CheckDeviceExtensionSupport(VkPhysicalDevice devic
     return true;
 }
 
-uint32_t VkPhysicalDeviceHandler::FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) const
+uint32_t VkPhysicalDeviceHandler::FindMemoryType(uint32_t typeFilter, vk::MemoryPropertyFlags properties) const
 {
-    VkPhysicalDeviceMemoryProperties memoryProperties;
-    vkGetPhysicalDeviceMemoryProperties(_internal, &memoryProperties);
+    vk::PhysicalDeviceMemoryProperties memoryProperties;
+    _internal.getMemoryProperties(&memoryProperties);
 
     for (uint32_t memoryType = 0; memoryType < memoryProperties.memoryTypeCount; ++memoryType)
     {
@@ -58,13 +69,12 @@ uint32_t VkPhysicalDeviceHandler::FindMemoryType(uint32_t typeFilter, VkMemoryPr
     throw std::runtime_error("Can't find suitable memory type for buffer");
 }
 
-int VkPhysicalDeviceHandler::ScoreDeviceSuitability(VkPhysicalDevice physicalDevice, VkSurfaceKHR windowSurface, const std::vector<const char *>& deviceExtensions, VkPhysicalDeviceProperties& deviceProperties, QueueFamilyIds& familyIds) const
+int VkPhysicalDeviceHandler::ScoreDeviceSuitability(vk::PhysicalDevice physicalDevice, vk::SurfaceKHR windowSurface, const std::vector<const char *>& deviceExtensions, vk::PhysicalDeviceProperties& deviceProperties, QueueFamilyIds& familyIds) const
 {
-    vkGetPhysicalDeviceProperties(physicalDevice, &deviceProperties);
+    physicalDevice.getProperties(&deviceProperties);
 
     // support of addtionnal feature (texture compression, 64bit double, multi viewport rendering)
-    VkPhysicalDeviceFeatures deviceFeatures;
-    vkGetPhysicalDeviceFeatures(physicalDevice, &deviceFeatures);
+    vk::PhysicalDeviceFeatures deviceFeatures = physicalDevice.getFeatures();
 
     int score = 0;
 
@@ -87,37 +97,33 @@ int VkPhysicalDeviceHandler::ScoreDeviceSuitability(VkPhysicalDevice physicalDev
     // Else we try to find the best available GPU for our criteria
     switch (deviceProperties.deviceType)
     {
-        case VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU: score += 600; break;
-        case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU: score += 800; break;
-        case VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU: score += 1000; break;
+        case vk::PhysicalDeviceType::eVirtualGpu: score += 600; break;
+        case vk::PhysicalDeviceType::eIntegratedGpu: score += 800; break;
+        case vk::PhysicalDeviceType::eDiscreteGpu: score += 1000; break;
         default: break;
     }
 
     return score;
 }
 
-VkPhysicalDeviceHandler::VkPhysicalDeviceHandler(VkInstance instance, VkSurfaceKHR windowSurface, const std::vector<const char *>& deviceExtensions)
+VkPhysicalDeviceHandler::VkPhysicalDeviceHandler(vk::Instance instance, vk::SurfaceKHR windowSurface, const std::vector<const char *>& deviceExtensions)
 {
-    _internal = VK_NULL_HANDLE;
-    uint32_t deviceCount = 0;
-    vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
+    _internal = nullptr;
+    std::vector<vk::PhysicalDevice> physicalDevices = instance.enumeratePhysicalDevices();
 
-    if(deviceCount == 0)
+    if(physicalDevices.empty())
     {
         throw std::runtime_error("Failed to find a Vulkan compatible GPU on this device");
     }
 
-    std::vector<VkPhysicalDevice> physicalDevices(deviceCount);
-    vkEnumeratePhysicalDevices(instance, &deviceCount, physicalDevices.data());
-
     QueueFamilyIds queueFamilyIds;
-    VkPhysicalDeviceProperties properties;
+    vk::PhysicalDeviceProperties properties;
 
     int bestScore = 0;
-    for(const VkPhysicalDevice& physicalDevice : physicalDevices)
+    for(const vk::PhysicalDevice& physicalDevice : physicalDevices)
     {
         QueueFamilyIds localQueueIds;
-        VkPhysicalDeviceProperties localProperties;
+        vk::PhysicalDeviceProperties localProperties;
         int score = ScoreDeviceSuitability(physicalDevice, windowSurface, deviceExtensions, localProperties, localQueueIds);
         if(score > bestScore)
         {
@@ -128,7 +134,7 @@ VkPhysicalDeviceHandler::VkPhysicalDeviceHandler(VkInstance instance, VkSurfaceK
         }
     }
 
-    if(_internal == VK_NULL_HANDLE)
+    if(!_internal)
     {
         throw std::runtime_error("Failed to find a suitable GPU on this device");
     }
@@ -138,5 +144,5 @@ VkPhysicalDeviceHandler::VkPhysicalDeviceHandler(VkInstance instance, VkSurfaceK
 
 VkPhysicalDeviceHandler::~VkPhysicalDeviceHandler()
 {
-    _internal = VK_NULL_HANDLE;
+    _internal = nullptr;
 }

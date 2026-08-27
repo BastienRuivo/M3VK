@@ -11,7 +11,7 @@ FullscreenDrawDebug::FullscreenDrawDebug(ShaderLibrary& shaderLibrary, const Bin
         .Handle = fullscreenDrawVertexInfo.Handle,
         .State = VertexState
         {
-            .CullMode = VK_CULL_MODE_NONE
+            .CullMode = vk::CullModeFlagBits::eNone
         }
     };
 
@@ -41,12 +41,12 @@ FullscreenDrawDebug::~FullscreenDrawDebug()
 
 }
 
-void FullscreenDrawDebug::Draw(const CommandBuffer& cmdBuffer, uint32_t textureIndex, VkPipelineLayout layout, uint32_t mipLevel) const
+void FullscreenDrawDebug::Draw(const CommandBuffer& cmdBuffer, uint32_t textureIndex, vk::PipelineLayout layout, uint32_t mipLevel) const
 {
     Draw(cmdBuffer, textureIndex, layout, mipLevel);
 }
 
-void FullscreenDrawDebug::Draw(const CommandBuffer& cmdBuffer, DrawOption option, uint32_t textureIndex, VkPipelineLayout layout, uint32_t mipLevel) const
+void FullscreenDrawDebug::Draw(const CommandBuffer& cmdBuffer, DrawOption option, uint32_t textureIndex, vk::PipelineLayout layout, uint32_t mipLevel) const
 {
     cmdBuffer.BeginMarker("Draw Debug");
     {

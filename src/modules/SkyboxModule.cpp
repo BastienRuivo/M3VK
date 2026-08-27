@@ -3,12 +3,12 @@
 #include "allocation/BindingManager.h"
 #include "rendering/Shaders/ShaderLibrary.h"
 #include <cstdint>
-#include <vulkan/vulkan_core.h>
+#include <vulkan/vulkan.hpp>
 #include "ShaderBindings.h"
 
-SkyboxModule::SkyboxModule(ShaderLibrary& shaderLibrary, BindingManager& allocator, VkCommandPool pool, VkQueue queue)
+SkyboxModule::SkyboxModule(ShaderLibrary& shaderLibrary, BindingManager& allocator, vk::CommandPool pool, vk::Queue queue)
 :
-    _sampler(VK_FILTER_LINEAR, VK_FILTER_LINEAR),
+    _sampler(vk::Filter::eLinear, vk::Filter::eLinear),
     _skyboxTexture(ImporterHelper::CubemapFromCPU(allocator, BINDING_SKYBOX_TEXTURE, pool, queue, _sampler.Internal(),
         CPUImage("data/skybox/front.jpg", STBI_rgb_alpha),
         CPUImage("data/skybox/back.jpg", STBI_rgb_alpha),
@@ -27,7 +27,7 @@ SkyboxModule::SkyboxModule(ShaderLibrary& shaderLibrary, BindingManager& allocat
         .Handle = vertexShaderInfo.Handle,
         .State = VertexState()
     };
-    _vertexShader.State.CullMode = VK_CULL_MODE_NONE;
+    _vertexShader.State.CullMode = vk::CullModeFlagBits::eNone;
 
     auto& fragmentShaderInfo = shaderLibrary.Get(fragmentShaderId);
     _fragmentShader =
@@ -38,7 +38,7 @@ SkyboxModule::SkyboxModule(ShaderLibrary& shaderLibrary, BindingManager& allocat
     };
     _fragmentShader.State.depthTest = true;
     _fragmentShader.State.depthWrite = false;
-    _fragmentShader.State.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
+    _fragmentShader.State.depthCompareOp = vk::CompareOp::eLessOrEqual;
 
 }
 
@@ -47,7 +47,7 @@ SkyboxModule::~SkyboxModule()
 
 }
 
-void SkyboxModule::Execute(const CommandBuffer& cmdBuffer, VkPipelineLayout layout) const
+void SkyboxModule::Execute(const CommandBuffer& cmdBuffer, vk::PipelineLayout layout) const
 {
     cmdBuffer.BeginMarker("Skybox");
     {

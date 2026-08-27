@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <filesystem>
 #include <span>
-#include <vulkan/vulkan_core.h>
+#include <vulkan/vulkan.hpp>
 
 struct Shader
 {
@@ -48,11 +48,11 @@ struct Shader
         FragmentInfo Fragment;
     };
 
-    void Init(const std::filesystem::path& path, VkShaderStageFlagBits stageFlags, std::span<const VkDescriptorSetLayout> descriptorLayouts, std::span<const VkPushConstantRange> pushConstantRanges, std::span<const SpecializationConstant> speConstants);
+    void Init(const std::filesystem::path& path, vk::ShaderStageFlagBits stageFlags, std::span<const vk::DescriptorSetLayout> descriptorLayouts, std::span<const vk::PushConstantRange> pushConstantRanges, std::span<const SpecializationConstant> speConstants);
     void Dispose();
 
-    VkShaderEXT Handle;
-    VkShaderStageFlagBits Stage;
+    vk::ShaderEXT Handle;
+    vk::ShaderStageFlagBits Stage;
     ShaderType Type;
     ShaderInfo Info;
 };

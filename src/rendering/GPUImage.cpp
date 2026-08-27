@@ -7,16 +7,16 @@
 #include <cstdint>
 #include <stdexcept>
 #include <utility>
-#include <vulkan/vulkan_core.h>
+#include <vulkan/vulkan.hpp>
 
-GPUImage::GPUImage(uint32_t width, uint32_t height, VkImageUsageFlags usageFlags, VkFormat format, VkImageTiling tiling, VkSampleCountFlagBits msaaSampleCount)
-: GPUImage(width, height, 1, 0, usageFlags, format, ImageHelper::GetMipCount(width, height), tiling, msaaSampleCount)
+GPUImage::GPUImage(uint32_t width, uint32_t height, vk::ImageUsageFlags usageFlags, vk::Format format, vk::ImageTiling tiling, vk::SampleCountFlagBits msaaSampleCount)
+: GPUImage(width, height, 1, {}, usageFlags, format, ImageHelper::GetMipCount(width, height), tiling, msaaSampleCount)
 {
 
 }
 
-GPUImage::GPUImage(uint32_t width, uint32_t height, VkImageUsageFlags usageFlags, VkFormat format, uint32_t mipCount, VkImageTiling tiling, VkSampleCountFlagBits msaaSampleCount)
-: GPUImage(width, height, 1, 0, usageFlags, format, mipCount, tiling, msaaSampleCount)
+GPUImage::GPUImage(uint32_t width, uint32_t height, vk::ImageUsageFlags usageFlags, vk::Format format, uint32_t mipCount, vk::ImageTiling tiling, vk::SampleCountFlagBits msaaSampleCount)
+: GPUImage(width, height, 1, {}, usageFlags, format, mipCount, tiling, msaaSampleCount)
 {
 
 }
@@ -41,81 +41,76 @@ bool GPUImage::Resize(uint32_t width, uint32_t height)
 
 void GPUImage::DisposeInternal()
 {
-    vkDestroyImageView(ApplicationInfo::Device(), _internal.View, nullptr);
-    vkDestroyImage(ApplicationInfo::Device(), _internal.Image, nullptr);
-    vkFreeMemory(ApplicationInfo::Device(), _memoryInternal.Memory, nullptr);
+    vk::Device device = ApplicationInfo::Device();
+    device.destroyImageView(_internal.View);
+    device.destroyImage(_internal.Image);
+    device.freeMemory(_memoryInternal.Memory);
 
     ApplicationInfo::VRAMRelease(_memoryInternal.Size, ApplicationInfo::AllocType::Image);
 
-    _internal.Image = VK_NULL_HANDLE;
-    _internal.View = VK_NULL_HANDLE;
+    _internal.Image = nullptr;
+    _internal.View = nullptr;
     _memoryInternal = {};
 }
 
-void GPUImage::CreateImageInternal(uint32_t width, uint32_t height, uint32_t arrayLayers, VkImageCreateFlags createFlags, VkImageUsageFlags usageFlags, VkFormat format, uint32_t mipCount, VkImageTiling tiling, VkSampleCountFlagBits msaaSampleCount)
+void GPUImage::CreateImageInternal(uint32_t width, uint32_t height, uint32_t arrayLayers, vk::ImageCreateFlags createFlags, vk::ImageUsageFlags usageFlags, vk::Format format, uint32_t mipCount, vk::ImageTiling tiling, vk::SampleCountFlagBits msaaSampleCount)
 {
-    VkMemoryPropertyFlags memoryFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+    vk::Device device = ApplicationInfo::Device();
+    vk::MemoryPropertyFlags memoryFlags = vk::MemoryPropertyFlagBits::eDeviceLocal;
 
-    VkImageCreateInfo createInfo
-    {
-        .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
-        .flags = createFlags,
-        .imageType = VK_IMAGE_TYPE_2D,
-        .format = format,
-        .extent
-        {
-            .width = static_cast<uint32_t>(width),
-            .height = static_cast<uint32_t>(height),
-            .depth = 1
-        },
-        .mipLevels = mipCount,
-        .arrayLayers = arrayLayers,
-        .samples = msaaSampleCount,
-        .tiling = tiling, // Optimal tiling data, if need to write / acces directly to the texture need LINEAR wich is classical row column
-        .usage = usageFlags,
-        .sharingMode = VK_SHARING_MODE_EXCLUSIVE, // only used by the graphics queue
-        .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-    };
+    vk::ImageCreateInfo createInfo{};
+    createInfo.flags = createFlags;
+    createInfo.imageType = vk::ImageType::e2D;
+    createInfo.format = format;
+    createInfo.extent = vk::Extent3D(width, height, 1);
+    createInfo.mipLevels = mipCount;
+    createInfo.arrayLayers = arrayLayers;
+    createInfo.samples = msaaSampleCount;
+    createInfo.tiling = tiling; // Optimal tiling data, if need to write / acces directly to the texture need LINEAR wich is classical row column
+    createInfo.usage = usageFlags;
+    createInfo.sharingMode = vk::SharingMode::eExclusive; // only used by the graphics queue
+    createInfo.initialLayout = vk::ImageLayout::eUndefined;
 
-    VkImage image = VK_NULL_HANDLE;
-
-    if(vkCreateImage(ApplicationInfo::Device(), &createInfo, nullptr, &image) != VK_SUCCESS)
+    vk::Image image;
+    if(device.createImage(&createInfo, nullptr, &image) != vk::Result::eSuccess)
     {
         throw std::runtime_error("Failed to create GPU image !");
     }
 
-    VkMemoryRequirements memRequirements;
-    vkGetImageMemoryRequirements(ApplicationInfo::Device(), image, &memRequirements);
+    vk::MemoryRequirements memRequirements = device.getImageMemoryRequirements(image);
 
     uint32_t memoryTypeIndex = ApplicationInfo::FindMemoryType(memRequirements.memoryTypeBits, memoryFlags);
 
     if(memoryTypeIndex == UINT32_MAX)
     {
-        throw std::runtime_error("Can't find replacement for memory type" + std::to_string(memoryFlags));
+        device.destroyImage(image);
+        throw std::runtime_error("Can't find replacement for memory type" + vk::to_string(memoryFlags));
     }
 
-    VkMemoryAllocateInfo allocInfo
-    {
-        .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-        .allocationSize = memRequirements.size,
-        .memoryTypeIndex = memoryTypeIndex
-    };
+    vk::MemoryAllocateInfo allocInfo{};
+    allocInfo.allocationSize = memRequirements.size;
+    allocInfo.memoryTypeIndex = memoryTypeIndex;
 
-    VkResult memoryResult = vkAllocateMemory(ApplicationInfo::Device(), &allocInfo, nullptr, &_memoryInternal.Memory) ;
-    if(memoryResult != VK_SUCCESS)
+    vk::Result memoryResult = device.allocateMemory(&allocInfo, nullptr, &_memoryInternal.Memory);
+    if(memoryResult != vk::Result::eSuccess)
     {
-        vkDestroyImage(ApplicationInfo::Device(), image, nullptr);
-        throw  std::runtime_error("Can't allocate image memory !");
+        device.destroyImage(image);
+        throw std::runtime_error("Can't allocate image memory !");
     }
     _memoryInternal.Size = allocInfo.allocationSize;
     ApplicationInfo::VRAMAllocate(_memoryInternal.Size, ApplicationInfo::AllocType::Image);
 
-    if(vkBindImageMemory(ApplicationInfo::Device(), image, _memoryInternal.Memory, 0) != VK_SUCCESS)
+    try
     {
-        vkDestroyImage(ApplicationInfo::Device(), image, nullptr);
-        vkFreeMemory(ApplicationInfo::Device(), _memoryInternal.Memory, nullptr);
+        // bindImageMemory has no Result-returning overload in enhanced mode; it throws on failure
+        device.bindImageMemory(image, _memoryInternal.Memory, 0);
+    }
+    catch (const vk::SystemError&)
+    {
+        device.destroyImage(image);
+        device.freeMemory(_memoryInternal.Memory);
         ApplicationInfo::VRAMRelease(_memoryInternal.Size, ApplicationInfo::AllocType::Image);
-        throw  std::runtime_error("Can't bind image memory !");
+        throw std::runtime_error("Can't bind image memory !");
     }
 
     _internal = ImageReference {
@@ -132,16 +127,16 @@ void GPUImage::CreateImageInternal(uint32_t width, uint32_t height, uint32_t arr
         .Size = memRequirements.size,
     };
 
-    _internal.View = ImageHelper::CreateImageView(_internal, ApplicationHelper::GetImageAspectFlags(_internal.Format), createFlags & VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT ? VK_IMAGE_VIEW_TYPE_CUBE : VK_IMAGE_VIEW_TYPE_2D);
+    _internal.View = ImageHelper::CreateImageView(_internal, ApplicationHelper::GetImageAspectFlags(_internal.Format), (createFlags & vk::ImageCreateFlagBits::eCubeCompatible) ? vk::ImageViewType::eCube : vk::ImageViewType::e2D);
 }
 
-GPUImage::GPUImage(uint32_t width, uint32_t height, uint32_t arrayLayers, VkImageCreateFlags createFlags, VkImageUsageFlags usageFlags, VkFormat format, uint32_t mipCount, VkImageTiling tiling, VkSampleCountFlagBits msaaSampleCount)
+GPUImage::GPUImage(uint32_t width, uint32_t height, uint32_t arrayLayers, vk::ImageCreateFlags createFlags, vk::ImageUsageFlags usageFlags, vk::Format format, uint32_t mipCount, vk::ImageTiling tiling, vk::SampleCountFlagBits msaaSampleCount)
 {
    CreateImageInternal(width, height, arrayLayers, createFlags, usageFlags, format, mipCount, tiling, msaaSampleCount);
 }
 
 
-void GPUImage::TransitionLayout(VkCommandPool pool, VkQueue queue, VkImageLayout oldLayout, VkImageLayout newLayout) const
+void GPUImage::TransitionLayout(vk::CommandPool pool, vk::Queue queue, vk::ImageLayout oldLayout, vk::ImageLayout newLayout) const
 {
     CommandBuffer cmdBuffer(pool, queue);
     cmdBuffer.BeginSingleTime();
@@ -152,9 +147,9 @@ void GPUImage::TransitionLayout(VkCommandPool pool, VkQueue queue, VkImageLayout
     cmdBuffer.WaitCompletion();
 }
 
-void GPUImage::UploadAndGenerateMip(void* data, uint32_t width, uint32_t height, uint32_t pixelStride, VkCommandPool pool, VkQueue queue)
+void GPUImage::UploadAndGenerateMip(void* data, uint32_t width, uint32_t height, uint32_t pixelStride, vk::CommandPool pool, vk::Queue queue)
 {
-    VkDeviceSize size = width * height * pixelStride;
+    vk::DeviceSize size = width * height * pixelStride;
     StageBuffer stage(size, StageBuffer::Usage::Upload);
     stage.MapAndCopyToBuffer(data, 0, size);
 

@@ -13,12 +13,12 @@
 #include "rendering/CommandBuffer.h"
 #include "rendering/SwapChain.h"
 #include <cstring>
-#include <vulkan/vulkan_core.h>
+#include <vulkan/vulkan.hpp>
 
-Pipeline::Pipeline(const SwapChain& swapChain, VkCommandPool graphicsCommandPool, VkQueue graphicsComputeQueue)
+Pipeline::Pipeline(const SwapChain& swapChain, vk::CommandPool graphicsCommandPool, vk::Queue graphicsComputeQueue)
 : _bindingManager(),
     _samplerLinear(),
-    _samplerNearest(VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_MIPMAP_MODE_NEAREST, false),
+    _samplerNearest(vk::Filter::eNearest, vk::Filter::eNearest, vk::SamplerMipmapMode::eNearest, false),
     _registries(
         {
             std::make_unique<MeshRegistry>(_bindingManager),
@@ -27,26 +27,26 @@ Pipeline::Pipeline(const SwapChain& swapChain, VkCommandPool graphicsCommandPool
     _cameraDataBuffer(_bindingManager, BINDING_CAMERA_BUFFER, GraphicsBuffer::STORAGE, RessourceUsage::PerFrame, 1, sizeof(CameraData)),
     _camera(glm::vec3(-14.0f, 0.5f, 0.0f), glm::vec3(10, 0, 0), 45.0f, (float)swapChain.GetExtent().width / (float)swapChain.GetExtent().height),
     _msaaColorTarget(RessourceUsage::Transient, graphicsCommandPool, graphicsComputeQueue,
-        VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+        vk::ImageLayout::eColorAttachmentOptimal,
         swapChain.GetExtent().width, swapChain.GetExtent().height,
-        VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+        vk::ImageUsageFlagBits::eTransientAttachment | vk::ImageUsageFlagBits::eColorAttachment,
         swapChain.GetImageFormat(),
-        1, VK_IMAGE_TILING_OPTIMAL, ApplicationInfo::GetMsaaSample()),
+        1, vk::ImageTiling::eOptimal, ApplicationInfo::GetMsaaSample()),
     _msaaDepthTarget(RessourceUsage::Transient, graphicsCommandPool, graphicsComputeQueue,
-        VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
+        vk::ImageLayout::eDepthAttachmentOptimal,
         swapChain.GetExtent().width, swapChain.GetExtent().height,
-        VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT,
-        ApplicationInfo::Constant::DepthFormat, 1, VK_IMAGE_TILING_OPTIMAL, ApplicationInfo::GetMsaaSample()),
+        vk::ImageUsageFlagBits::eDepthStencilAttachment | vk::ImageUsageFlagBits::eTransientAttachment,
+        ApplicationInfo::Constant::DepthFormat, 1, vk::ImageTiling::eOptimal, ApplicationInfo::GetMsaaSample()),
     _finalColorTarget(BindlessTexture::Register(_bindingManager, RessourceUsage::PerFrame, _samplerNearest.Internal(), graphicsCommandPool, graphicsComputeQueue,
-        VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+        vk::ImageLayout::eTransferSrcOptimal,
         swapChain.GetExtent().width, swapChain.GetExtent().height,
-        VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
+        vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferSrc,
         swapChain.GetImageFormat(),
         1)),
     _finalDepthTarget(BindlessTexture::Register(_bindingManager,RessourceUsage::PerFrame, _samplerNearest.Internal(), graphicsCommandPool, graphicsComputeQueue,
-        VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
+        vk::ImageLayout::eDepthAttachmentOptimal,
         swapChain.GetExtent().width, swapChain.GetExtent().height,
-        VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
+        vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eDepthStencilAttachment | vk::ImageUsageFlagBits::eTransferSrc,
         ApplicationInfo::Constant::DepthFormat,
         1)),
         _drawModules({}),
@@ -199,7 +199,7 @@ void Pipeline::InitDrawModules(bool DebugOn)
         .State = VertexState()
     };
 
-    vertexCullBack.State.CullMode = VK_CULL_MODE_NONE;
+    vertexCullBack.State.CullMode = vk::CullModeFlagBits::eNone;
 
     ShaderLibrary::VertexBinding vertexCullOff =
     {
@@ -207,7 +207,7 @@ void Pipeline::InitDrawModules(bool DebugOn)
         .Handle = vertexCullBack.Handle,
         .State = VertexState()
     };
-    vertexCullOff.State.CullMode = VK_CULL_MODE_NONE;
+    vertexCullOff.State.CullMode = vk::CullModeFlagBits::eNone;
 
 
     ShaderLibrary::FragmentBinding fragmentOpaque =
@@ -232,7 +232,7 @@ void Pipeline::InitDrawModules(bool DebugOn)
     RefreshDrawModule(MaterialType::Transparent, vertexCullBack, fragmentOpaque);
 }
 
-void Pipeline::InitModules(const SwapChain& swapChain, VkCommandPool pool, VkQueue queue)
+void Pipeline::InitModules(const SwapChain& swapChain, vk::CommandPool pool, vk::Queue queue)
 {
     InitDrawModules(false);
     _modules.push_back(std::make_unique<SkyboxModule>(_shaderLibrary, _bindingManager, pool, queue));
@@ -248,16 +248,16 @@ void Pipeline::OnMouseMove(float dx, float dy)
     _camera.Rotate(dx, dy);
 }
 
-void Pipeline::FrameInit(const CommandBuffer& cmdBuffer, VkRect2D renderArea) const
+void Pipeline::FrameInit(const CommandBuffer& cmdBuffer, vk::Rect2D renderArea) const
 {
     cmdBuffer.BeginMarker("Pipeline Init");
     {
-        cmdBuffer.SetPrimitiveTopology(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
+        cmdBuffer.SetPrimitiveTopology(vk::PrimitiveTopology::eTriangleList);
         cmdBuffer.SetPrimitiveRestart(false);
         cmdBuffer.SetRasterizerDiscard(false);
         cmdBuffer.SetDepthClampEnable(false);
-        cmdBuffer.SetPolygonMode(VK_POLYGON_MODE_FILL);
-        cmdBuffer.SetFrontFace(VK_FRONT_FACE_COUNTER_CLOCKWISE);
+        cmdBuffer.SetPolygonMode(vk::PolygonMode::eFill);
+        cmdBuffer.SetFrontFace(vk::FrontFace::eCounterClockwise);
         cmdBuffer.SetDepthBiasEnable(false);
         cmdBuffer.SetLineWidth(1.0f);
 
@@ -283,28 +283,30 @@ void Pipeline::Execute(const CommandBuffer& cmdBuffer, const SwapChain& swapChai
     const auto & finalDepthTarget = _finalDepthTarget.Texture(_bindingManager).Internal();
     const auto & hiz = _hizGenerateModule->_hizTexture.Texture(_bindingManager).Internal();
 
-    VkRect2D renderArea = {0, 0, swapChain.GetExtent().width, swapChain.GetExtent().height};
+    vk::Rect2D renderArea = vk::Rect2D{}
+        .setOffset({0, 0})
+        .setExtent(swapChain.GetExtent());
 
-    VkRenderingAttachmentInfo colorAttachment = ImageHelper::AttachmentInfo(_msaaColorTarget.View(),
-    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+    vk::RenderingAttachmentInfo colorAttachment = ImageHelper::AttachmentInfo(_msaaColorTarget.View(),
+    vk::ImageLayout::eColorAttachmentOptimal,
     finalColorTarget.View,
-    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-    VK_ATTACHMENT_LOAD_OP_CLEAR,
-    VK_ATTACHMENT_STORE_OP_STORE,
-    VK_RESOLVE_MODE_AVERAGE_BIT,
-    {{}});
+    vk::ImageLayout::eColorAttachmentOptimal,
+    vk::AttachmentLoadOp::eClear,
+    vk::AttachmentStoreOp::eStore,
+    vk::ResolveModeFlagBits::eAverage,
+    vk::ClearValue{});
 
-    VkRenderingAttachmentInfo depthAttachment = ImageHelper::AttachmentInfo(_msaaDepthTarget.View(),
-    VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
+    vk::RenderingAttachmentInfo depthAttachment = ImageHelper::AttachmentInfo(_msaaDepthTarget.View(),
+    vk::ImageLayout::eDepthAttachmentOptimal,
     finalDepthTarget.View,
-    VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
-    VK_ATTACHMENT_LOAD_OP_CLEAR,
-    VK_ATTACHMENT_STORE_OP_STORE,
-    VK_RESOLVE_MODE_MIN_BIT,
-    {.depthStencil = {1.0f}});
+    vk::ImageLayout::eDepthAttachmentOptimal,
+    vk::AttachmentLoadOp::eClear,
+    vk::AttachmentStoreOp::eStore,
+    vk::ResolveModeFlagBits::eMin,
+    vk::ClearValue{}.setDepthStencil(vk::ClearDepthStencilValue{1.0f}));
 
     // there is no stencil buffer
-    VkRenderingAttachmentInfo stencilAttachment { .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO };
+    vk::RenderingAttachmentInfo stencilAttachment{};
 
     const ImageReference& backBuffer = swapChain.Images.Get(imageIndex);
     const auto& meshRegistry = static_cast<MeshRegistry&>(*_registries[(size_t)RegistryType::Mesh]);
@@ -314,8 +316,8 @@ void Pipeline::Execute(const CommandBuffer& cmdBuffer, const SwapChain& swapChai
     {
         FrameInit(cmdBuffer, renderArea);
 
-        ImageHelper::TransitionLayoutCommand(cmdBuffer, finalColorTarget, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-        ImageHelper::TransitionLayoutCommand(cmdBuffer, backBuffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+        ImageHelper::TransitionLayoutCommand(cmdBuffer, finalColorTarget, vk::ImageLayout::eTransferSrcOptimal, vk::ImageLayout::eColorAttachmentOptimal);
+        ImageHelper::TransitionLayoutCommand(cmdBuffer, backBuffer, vk::ImageLayout::eUndefined, vk::ImageLayout::eTransferDstOptimal);
 
         GlobalConstants gConstants
         {
@@ -333,20 +335,20 @@ void Pipeline::Execute(const CommandBuffer& cmdBuffer, const SwapChain& swapChai
 
         cmdBuffer.BeginMarker("Culling Compute Pass");
         {
-            cmdBuffer.BindDescriptorSets(_bindingManager.GlobalLayout(), _bindingManager.GlobalDescriptorSet(), VK_PIPELINE_BIND_POINT_COMPUTE, 0);
+            cmdBuffer.BindDescriptorSets(_bindingManager.GlobalLayout(), _bindingManager.GlobalDescriptorSet(), vk::PipelineBindPoint::eCompute, 0);
             _cullingModule->Execute(cmdBuffer, _hizGenerateModule->HiZTexture().PreviousBindlessIndex(), _cameraDataBuffer, meshRegistry.IndirectBuffer(), meshRegistry.InstanceDataBuffer(), _bindingManager.GlobalLayout());
         }
         cmdBuffer.EndMarker();
 
         cmdBuffer.BeginMarker("Render Pass");
         {
-            cmdBuffer.BindDescriptorSets(_bindingManager.GlobalLayout(), _bindingManager.GlobalDescriptorSet(), VK_PIPELINE_BIND_POINT_GRAPHICS, 0);
+            cmdBuffer.BindDescriptorSets(_bindingManager.GlobalLayout(), _bindingManager.GlobalDescriptorSet(), vk::PipelineBindPoint::eGraphics, 0);
 
             cmdBuffer.BeginRendering(renderArea,  {&colorAttachment, 1}, depthAttachment, stencilAttachment);
             {
                 if(_wireframe)
                 {
-                    cmdBuffer.SetPolygonMode(VK_POLYGON_MODE_LINE);
+                    cmdBuffer.SetPolygonMode(vk::PolygonMode::eLine);
                 }
                 for(uint32_t i = 0; i < MaterialType::Count; ++i)
                 {
@@ -357,7 +359,7 @@ void Pipeline::Execute(const CommandBuffer& cmdBuffer, const SwapChain& swapChai
                 _skyboxModule->Execute(cmdBuffer, _bindingManager.GlobalLayout());
             }
             cmdBuffer.EndRendering();
-            cmdBuffer.SetRasterizationSamples(VK_SAMPLE_COUNT_1_BIT);
+            cmdBuffer.SetRasterizationSamples(vk::SampleCountFlagBits::e1);
         }
         cmdBuffer.EndMarker();
 
@@ -365,16 +367,16 @@ void Pipeline::Execute(const CommandBuffer& cmdBuffer, const SwapChain& swapChai
 
         cmdBuffer.BeginMarker("Copy To Back Buffer");
         {
-            ImageHelper::TransitionLayoutCommand(cmdBuffer, finalColorTarget, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
-            cmdBuffer.CopyImage(finalColorTarget, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, backBuffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-            ImageHelper::TransitionLayoutCommand(cmdBuffer, backBuffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+            ImageHelper::TransitionLayoutCommand(cmdBuffer, finalColorTarget, vk::ImageLayout::eColorAttachmentOptimal, vk::ImageLayout::eTransferSrcOptimal);
+            cmdBuffer.CopyImage(finalColorTarget, vk::ImageLayout::eTransferSrcOptimal, backBuffer, vk::ImageLayout::eTransferDstOptimal);
+            ImageHelper::TransitionLayoutCommand(cmdBuffer, backBuffer, vk::ImageLayout::eTransferDstOptimal, vk::ImageLayout::eColorAttachmentOptimal);
         }
         cmdBuffer.EndMarker();
 
         cmdBuffer.BeginMarker("Render UI");
         {
-            VkRenderingAttachmentInfo uiColorAttachment = ImageHelper::AttachmentInfo(backBuffer.View, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_ATTACHMENT_LOAD_OP_LOAD, VK_ATTACHMENT_STORE_OP_STORE);
-            VkRenderingAttachmentInfo uiDepthAttachment { .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO };
+            vk::RenderingAttachmentInfo uiColorAttachment = ImageHelper::AttachmentInfo(backBuffer.View, vk::ImageLayout::eColorAttachmentOptimal, vk::AttachmentLoadOp::eLoad, vk::AttachmentStoreOp::eStore);
+            vk::RenderingAttachmentInfo uiDepthAttachment{};
             cmdBuffer.BeginRendering(renderArea, {&uiColorAttachment, 1}, uiDepthAttachment, stencilAttachment);
             {
                 for(const auto & module : _modules)
@@ -386,35 +388,35 @@ void Pipeline::Execute(const CommandBuffer& cmdBuffer, const SwapChain& swapChai
             cmdBuffer.EndRendering();
         }
         cmdBuffer.EndMarker();
-        ImageHelper::TransitionLayoutCommand(cmdBuffer, backBuffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+        ImageHelper::TransitionLayoutCommand(cmdBuffer, backBuffer, vk::ImageLayout::eColorAttachmentOptimal, vk::ImageLayout::ePresentSrcKHR);
     }
     cmdBuffer.End();
 }
 
-void Pipeline::PreRender(VkExtent2D size)
+void Pipeline::PreRender(vk::Extent2D size)
 {
     UpdateCameraData(size);
 }
 
-void Pipeline::Refresh(const CommandBuffer& cmdBuffer, VkExtent2D newSize)
+void Pipeline::Refresh(const CommandBuffer& cmdBuffer, vk::Extent2D newSize)
 {
     _camera._aspect = static_cast<float>(newSize.width) / static_cast<float>(newSize.height);
 
     if(_msaaColorTarget.Resize(newSize.width, newSize.height))
     {
-        ImageHelper::TransitionLayoutCommand(cmdBuffer, _msaaColorTarget.Internal(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+        ImageHelper::TransitionLayoutCommand(cmdBuffer, _msaaColorTarget.Internal(), vk::ImageLayout::eUndefined, vk::ImageLayout::eColorAttachmentOptimal);
     }
     if(_msaaDepthTarget.Resize(newSize.width, newSize.height))
     {
-    ImageHelper::TransitionLayoutCommand(cmdBuffer, _msaaDepthTarget.Internal(), VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+    ImageHelper::TransitionLayoutCommand(cmdBuffer, _msaaDepthTarget.Internal(), vk::ImageLayout::eUndefined, vk::ImageLayout::eDepthStencilAttachmentOptimal);
     }
     if(_finalColorTarget.Resize(_bindingManager, newSize.width, newSize.height))
     {
-        _finalColorTarget.TransistionAllLayoutCommand(_bindingManager, cmdBuffer, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+        _finalColorTarget.TransistionAllLayoutCommand(_bindingManager, cmdBuffer, vk::ImageLayout::eTransferSrcOptimal);
     }
     if(_finalDepthTarget.Resize(_bindingManager, newSize.width, newSize.height))
     {
-        _finalDepthTarget.TransistionAllLayoutCommand(_bindingManager, cmdBuffer, VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
+        _finalDepthTarget.TransistionAllLayoutCommand(_bindingManager, cmdBuffer, vk::ImageLayout::eDepthAttachmentOptimal);
     }
     for(auto & module : _modules)
     {
@@ -454,7 +456,7 @@ void Pipeline::DoUI(const UserInterface& ui)
 
                 if((newVal == DebugMode::DB_None && _debug  != DebugMode::DB_None) || (newVal != DebugMode::DB_None && _debug  == DebugMode::DB_None))
                 {
-                    vkDeviceWaitIdle(ApplicationInfo::Device());
+                    ApplicationInfo::Device().waitIdle();
                     for(auto& module : _drawModules)
                     {
                         _shaderLibrary.DisposeShader(module->VertexBinding.LibraryIndex);
@@ -520,7 +522,7 @@ void ExtractFrusumPlane(CameraData& data)
     }
 }
 
-void Pipeline::UpdateCameraData(VkExtent2D extent)
+void Pipeline::UpdateCameraData(vk::Extent2D extent)
 {
     CameraData cameraData =
     {

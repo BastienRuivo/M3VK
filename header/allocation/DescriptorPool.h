@@ -5,7 +5,7 @@
 #include "allocation/RessourceUsage.h"
 #include <cstdint>
 #include <span>
-#include <vulkan/vulkan_core.h>
+#include <vulkan/vulkan.hpp>
 #include <vector>
 
 // layout binding
@@ -16,9 +16,9 @@
 
 struct DescriptorSetHandle
 {
-    VkDescriptorSet Set;
-    VkDescriptorSetLayout Layout;
-    VkDescriptorPool Pool;
+    vk::DescriptorSet Set;
+    vk::DescriptorSetLayout Layout;
+    vk::DescriptorPool Pool;
 };
 
 class DescriptorPool
@@ -30,16 +30,16 @@ class DescriptorPool
         public:
         LayoutBuilder() = default;
 
-        LayoutBuilder& AddBinding(uint32_t binding, VkDescriptorType type, VkShaderStageFlags stageFlags, VkDescriptorBindingFlags bindingFlags, uint32_t count);
-        LayoutBuilder& AddBinding(uint32_t binding, VkDescriptorType type, VkShaderStageFlags stageFlags, VkDescriptorBindingFlags bindingFlags, RessourceUsage usage, uint32_t perFrameCount = 1);
-        inline LayoutBuilder& SetFlags(VkDescriptorSetLayoutCreateFlags flags) { _flags = flags; return *this; }
-        VkDescriptorSetLayout Build() const;
+        LayoutBuilder& AddBinding(uint32_t binding, vk::DescriptorType type, vk::ShaderStageFlags stageFlags, vk::DescriptorBindingFlags bindingFlags, uint32_t count);
+        LayoutBuilder& AddBinding(uint32_t binding, vk::DescriptorType type, vk::ShaderStageFlags stageFlags, vk::DescriptorBindingFlags bindingFlags, RessourceUsage usage, uint32_t perFrameCount = 1);
+        inline LayoutBuilder& SetFlags(vk::DescriptorSetLayoutCreateFlags flags) { _flags = flags; return *this; }
+        vk::DescriptorSetLayout Build() const;
 
-        std::vector<VkDescriptorSetLayoutBinding> Bindings;
+        std::vector<vk::DescriptorSetLayoutBinding> Bindings;
 
         private:
-        std::vector<VkDescriptorBindingFlags> _bindingFlags;
-        VkDescriptorSetLayoutCreateFlags _flags = 0;
+        std::vector<vk::DescriptorBindingFlags> _bindingFlags;
+        vk::DescriptorSetLayoutCreateFlags _flags;
     };
 
     class Builder
@@ -49,17 +49,17 @@ class DescriptorPool
 
         inline Builder& AddLayout(LayoutBuilder layout) { _layouts.push_back(layout); return *this; }
         inline Builder& SetMaxSets(uint32_t maxSets) { _maxSets = maxSets; return *this; }
-        inline Builder& SetFlags(VkDescriptorPoolCreateFlags flags) { _flags = flags; return *this; }
+        inline Builder& SetFlags(vk::DescriptorPoolCreateFlags flags) { _flags = flags; return *this; }
         DescriptorPool Build() const;
 
         public:
         std::vector<LayoutBuilder> _layouts;
-        VkDescriptorPoolCreateFlags _flags = 0;
+        vk::DescriptorPoolCreateFlags _flags{};
         uint32_t _maxSets = 0;
     };
 
 
-    DescriptorPool(std::vector<VkDescriptorSetLayout>&& layouts, VkDescriptorPool pool, uint32_t maxSets);
+    DescriptorPool(std::vector<vk::DescriptorSetLayout>&& layouts, vk::DescriptorPool pool, uint32_t maxSets);
 
     DescriptorPool(const DescriptorPool&) = delete;
     DescriptorPool& operator=(const DescriptorPool&) = delete;
@@ -74,23 +74,21 @@ class DescriptorPool
     DescriptorSetHandle AllocateBindless(uint32_t layoutIndex, uint32_t count) const;
     void Free(DescriptorSetHandle set) const;
 
-    inline VkDescriptorSetLayout Layout(uint32_t index) const { return _layouts[index]; }
-    inline const std::vector<VkDescriptorSetLayout>& Layouts() const { return _layouts; }
-    inline VkDescriptorPool Pool() const { return _pool; }
+    inline vk::DescriptorSetLayout Layout(uint32_t index) const { return _layouts[index]; }
+    inline const std::vector<vk::DescriptorSetLayout>& Layouts() const { return _layouts; }
+    inline vk::DescriptorPool Pool() const { return _pool; }
 
-    static inline VkDescriptorImageInfo DescriptorImageInfo(const ImageReference& image, VkSampler sampler)
+    static inline vk::DescriptorImageInfo DescriptorImageInfo(const ImageReference& image, vk::Sampler sampler)
     {
-        return
-        {
-            .sampler = sampler,
-            .imageView = image.View,
-            .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-        };
+        return vk::DescriptorImageInfo{}
+            .setSampler(sampler)
+            .setImageView(image.View)
+            .setImageLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
     }
 
     private:
-    std::vector<VkDescriptorSetLayout> _layouts;
-    VkDescriptorPool _pool;
+    std::vector<vk::DescriptorSetLayout> _layouts;
+    vk::DescriptorPool _pool;
     mutable uint32_t _allocatedSets = 0;
     uint32_t _maxSets;
 };
@@ -98,13 +96,13 @@ class DescriptorPool
 
 namespace DescriptorHelper
 {
-    inline void UpdateDescriptorSet(std::span<const VkWriteDescriptorSet> writes, std::span<const VkCopyDescriptorSet> copies)
+    inline void UpdateDescriptorSet(std::span<const vk::WriteDescriptorSet> writes, std::span<const vk::CopyDescriptorSet> copies)
     {
-        vkUpdateDescriptorSets(ApplicationInfo::Device(), static_cast<uint32_t>(writes.size()), writes.data(), static_cast<uint32_t>(copies.size()), copies.data());
+        ApplicationInfo::Device().updateDescriptorSets(writes, copies);
     }
 
-    inline void UpdateDescriptorSet(uint32_t writeCount, const VkWriteDescriptorSet* writes, uint32_t copyCount, const VkCopyDescriptorSet* copies)
+    inline void UpdateDescriptorSet(uint32_t writeCount, const vk::WriteDescriptorSet* writes, uint32_t copyCount, const vk::CopyDescriptorSet* copies)
     {
-        vkUpdateDescriptorSets(ApplicationInfo::Device(), writeCount, writes, copyCount, copies);
+        ApplicationInfo::Device().updateDescriptorSets(writeCount, writes, copyCount, copies);
     }
 };

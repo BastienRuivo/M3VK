@@ -16,11 +16,11 @@ namespace ImporterHelper
         uint32_t StageSize;
         uint32_t MipCount;
         ImageReference Image;
-        VkBufferImageCopy CopyRegion[16];
+        vk::BufferImageCopy CopyRegion[16];
     };
 
-    void UploadTexture(std::span<const ImporterHelper::UploadCommand> commands, PoolStageBuffer& buffer, VkQueue queue, VkCommandPool pool);
-    BindingManager::BindlessTexture LoadTexture(BindingManager& allocator, const std::vector<TextureImport>& textures, const std::vector<std::byte>& texturesData, uint32_t textureIndex, MaterialRegistry& materialRegistry, PoolStageBuffer & uploadBuffer, ImporterHelper::UploadCommand* commands, uint32_t& commandCount, VkSampler sampler, VkCommandPool uploadPool, VkQueue uploadQueue);
-    GPUImage ImageFromCPU(const CPUImage& cpuImg, VkCommandPool pool, VkQueue queue);
-    GraphicsImage CubemapFromCPU(BindingManager& allocator, uint32_t dstBinding, VkCommandPool pool, VkQueue queue, VkSampler sampler, const CPUImage& front, const CPUImage& back, const CPUImage& left, const CPUImage& right, const CPUImage& top, const CPUImage& bottom);
+    void UploadTexture(std::span<const ImporterHelper::UploadCommand> commands, PoolStageBuffer& buffer, vk::Queue queue, vk::CommandPool pool);
+    BindingManager::BindlessTexture LoadTexture(BindingManager& allocator, const std::vector<TextureImport>& textures, const std::vector<std::byte>& texturesData, uint32_t textureIndex, MaterialRegistry& materialRegistry, PoolStageBuffer & uploadBuffer, ImporterHelper::UploadCommand* commands, uint32_t& commandCount, vk::Sampler sampler, vk::CommandPool uploadPool, vk::Queue uploadQueue);
+    GPUImage ImageFromCPU(const CPUImage& cpuImg, vk::CommandPool pool, vk::Queue queue);
+    GraphicsImage CubemapFromCPU(BindingManager& allocator, uint32_t dstBinding, vk::CommandPool pool, vk::Queue queue, vk::Sampler sampler, const CPUImage& front, const CPUImage& back, const CPUImage& left, const CPUImage& right, const CPUImage& top, const CPUImage& bottom);
 }

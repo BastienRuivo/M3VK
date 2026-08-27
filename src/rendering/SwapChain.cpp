@@ -11,12 +11,12 @@
 #include <limits>
 #include <stdexcept>
 #include <vector>
-#include <vulkan/vulkan_core.h>
+#include <vulkan/vulkan.hpp>
 
 #include "application/DebugLayer.h"
 
 
-VkExtent2D SwapChain::SelectSwapExtents(const Window& window, const VkSurfaceCapabilitiesKHR& Capabilities) const
+vk::Extent2D SwapChain::SelectSwapExtents(const Window& window, const vk::SurfaceCapabilitiesKHR& Capabilities) const
 {
     if(Capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max())
     {
@@ -27,11 +27,7 @@ VkExtent2D SwapChain::SelectSwapExtents(const Window& window, const VkSurfaceCap
         int width, height;
         window.GetFramebufferSize(width, height);
 
-        VkExtent2D extent =
-        {
-            static_cast<uint32_t>(width),
-            static_cast<uint32_t>(height)
-        };
+        vk::Extent2D extent(static_cast<uint32_t>(width), static_cast<uint32_t>(height));
 
         extent.width = std::clamp(extent.width, Capabilities.minImageExtent.width, Capabilities.maxImageExtent.width);
         extent.height = std::clamp(extent.height, Capabilities.minImageExtent.height, Capabilities.maxImageExtent.height);
@@ -39,7 +35,7 @@ VkExtent2D SwapChain::SelectSwapExtents(const Window& window, const VkSurfaceCap
     }
 }
 
-VkPresentModeKHR SwapChain::SelectSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes) const
+vk::PresentModeKHR SwapChain::SelectSwapPresentMode(const std::vector<vk::PresentModeKHR>& availablePresentModes) const
 {
     bool hasTripleBuffering = false;
     // basic vsync, guaranteed and more energy efficient
@@ -47,13 +43,13 @@ VkPresentModeKHR SwapChain::SelectSwapPresentMode(const std::vector<VkPresentMod
     bool hasRelaxedDoubleBuffering = false;
     bool hasImmediateMode = false;
 
-    for(const VkPresentModeKHR& mode : availablePresentModes)
+    for(const vk::PresentModeKHR& mode : availablePresentModes)
     {
         switch (mode) {
-            case VK_PRESENT_MODE_IMMEDIATE_KHR: hasImmediateMode = true; break;
-            case VK_PRESENT_MODE_MAILBOX_KHR: hasTripleBuffering = true; break;
-            case VK_PRESENT_MODE_FIFO_KHR: hasVBlank = true; break;
-            case VK_PRESENT_MODE_FIFO_RELAXED_KHR: hasRelaxedDoubleBuffering = true; break;
+            case vk::PresentModeKHR::eImmediate: hasImmediateMode = true; break;
+            case vk::PresentModeKHR::eMailbox: hasTripleBuffering = true; break;
+            case vk::PresentModeKHR::eFifo: hasVBlank = true; break;
+            case vk::PresentModeKHR::eFifoRelaxed: hasRelaxedDoubleBuffering = true; break;
             default : break;
         }
     }
@@ -63,39 +59,39 @@ VkPresentModeKHR SwapChain::SelectSwapPresentMode(const std::vector<VkPresentMod
 #ifdef M3VK_VERBOSE_LOG
         DebugLayer::Log(DebugLayer::LogType::INFO, "Swap chain mode : Triple buffering");
 #endif
-        return VK_PRESENT_MODE_MAILBOX_KHR;
+        return vk::PresentModeKHR::eMailbox;
     }
     else if(hasVBlank)
     {
 #ifdef M3VK_VERBOSE_LOG
         DebugLayer::Log(DebugLayer::LogType::INFO, "Swap chain mode : VBlank");
 #endif
-        return VK_PRESENT_MODE_FIFO_KHR;
+        return vk::PresentModeKHR::eFifo;
     }
     else if(hasRelaxedDoubleBuffering)
     {
 #ifdef M3VK_VERBOSE_LOG
         DebugLayer::Log(DebugLayer::LogType::INFO, "Swap chain mode : Relaxed VBlank");
 #endif
-        return VK_PRESENT_MODE_FIFO_RELAXED_KHR;
+        return vk::PresentModeKHR::eFifoRelaxed;
     }
     else if(hasImmediateMode)
     {
 #ifdef M3VK_VERBOSE_LOG
         DebugLayer::Log(DebugLayer::LogType::INFO, "Swap chain mode : Immediate");
 #endif
-        return VK_PRESENT_MODE_IMMEDIATE_KHR;
+        return vk::PresentModeKHR::eImmediate;
     }
 
     DebugLayer::Log(DebugLayer::LogType::WARNING, "NO SWAP CHAIN MODE FOUND ! Fallbacked to VBlank");
-    return VK_PRESENT_MODE_FIFO_KHR;
+    return vk::PresentModeKHR::eFifo;
 }
 
-VkSurfaceFormatKHR SwapChain::SelectSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats) const
+vk::SurfaceFormatKHR SwapChain::SelectSwapSurfaceFormat(const std::vector<vk::SurfaceFormatKHR>& availableFormats) const
 {
-    for(const VkSurfaceFormatKHR& format : availableFormats)
+    for(const vk::SurfaceFormatKHR& format : availableFormats)
     {
-        if(format.format == VK_FORMAT_B8G8R8A8_SRGB && format.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
+        if(format.format == vk::Format::eB8G8R8A8Srgb && format.colorSpace == vk::ColorSpaceKHR::eSrgbNonlinear)
         {
             return format;
         }
@@ -106,14 +102,15 @@ VkSurfaceFormatKHR SwapChain::SelectSwapSurfaceFormat(const std::vector<VkSurfac
     return availableFormats[0];
 }
 
-SwapChain::SwapChain(const Window& window, VkSurfaceKHR windowSurface)
+SwapChain::SwapChain(const Window& window, vk::SurfaceKHR windowSurface)
 : Images(), _viewHandlers()
 {
+    vk::Device device = ApplicationInfo::Device();
     ApplicationHelper::SwapChainSupportDetails details = ApplicationHelper::QuerySwapChainSupportDetail(ApplicationInfo::PhysicalDevice(), windowSurface);
 
-    VkSurfaceFormatKHR format = SelectSwapSurfaceFormat(details.Formats);
-    VkPresentModeKHR presentMode = SelectSwapPresentMode(details.PresentsModes);
-    VkExtent2D extents = SelectSwapExtents(window, details.Capabilities);
+    vk::SurfaceFormatKHR format = SelectSwapSurfaceFormat(details.Formats);
+    vk::PresentModeKHR presentMode = SelectSwapPresentMode(details.PresentsModes);
+    vk::Extent2D extents = SelectSwapExtents(window, details.Capabilities);
 
     // recommended to avoid wait on driver completion
     uint32_t imageCount = details.Capabilities.minImageCount + 1;
@@ -124,17 +121,14 @@ SwapChain::SwapChain(const Window& window, VkSurfaceKHR windowSurface)
         imageCount = details.Capabilities.maxImageCount;
     }
 
-    VkSwapchainCreateInfoKHR createInfo
-    {
-        .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
-        .surface = windowSurface,
-        .minImageCount = imageCount,
-        .imageFormat = format.format,
-        .imageColorSpace = format.colorSpace,
-        .imageExtent = extents,
-        .imageArrayLayers = 1,
-        .imageUsage =VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
-    };
+    vk::SwapchainCreateInfoKHR createInfo{};
+    createInfo.surface = windowSurface;
+    createInfo.minImageCount = imageCount;
+    createInfo.imageFormat = format.format;
+    createInfo.imageColorSpace = format.colorSpace;
+    createInfo.imageExtent = extents;
+    createInfo.imageArrayLayers = 1;
+    createInfo.imageUsage = vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferDst;
 
     _minImageCount = createInfo.minImageCount;
 
@@ -145,40 +139,38 @@ SwapChain::SwapChain(const Window& window, VkSurfaceKHR windowSurface)
     if(queueIds.GraphicsCompute != queueIds.Present)
     {
         // image = multiple queue mode and can be accessed anywhere, but slower
-        createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
+        createInfo.imageSharingMode = vk::SharingMode::eConcurrent;
         createInfo.queueFamilyIndexCount = 2;
         createInfo.pQueueFamilyIndices = queueFamilyIndices;
     }
     else
     {
         // image = one queue mode and should be transferred before being used in another queue, faster but ewh
-        createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+        createInfo.imageSharingMode = vk::SharingMode::eExclusive;
         createInfo.queueFamilyIndexCount = 0;
         createInfo.pQueueFamilyIndices = nullptr;
     }
     // Apply rotation etc... before screen pres
     createInfo.preTransform = details.Capabilities.currentTransform;
     // If we want to do alpha thingies with other windows, nope for now
-    createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+    createInfo.compositeAlpha = vk::CompositeAlphaFlagBitsKHR::eOpaque;
     createInfo.presentMode = presentMode;
     // Clip pixels obscured by a window in front
     createInfo.clipped = VK_TRUE;
     // When we handle resizing
-    createInfo.oldSwapchain = VK_NULL_HANDLE;
+    createInfo.oldSwapchain = nullptr;
 
-    if(vkCreateSwapchainKHR(ApplicationInfo::Device(), &createInfo, nullptr, &_internal) != VK_SUCCESS)
+    if(device.createSwapchainKHR(&createInfo, nullptr, &_internal) != vk::Result::eSuccess)
     {
         throw std::runtime_error("Failed to create swap chain !");
     }
 
-    vkGetSwapchainImagesKHR(ApplicationInfo::Device(), _internal, &imageCount, nullptr);
-
-    std::vector<VkImage> tempImages(imageCount);
-    vkGetSwapchainImagesKHR(ApplicationInfo::Device(), _internal, &imageCount, tempImages.data());
+    std::vector<vk::Image> tempImages = device.getSwapchainImagesKHR(_internal);
+    imageCount = static_cast<uint32_t>(tempImages.size());
 
     Images.Reserve(imageCount);
     _viewHandlers.Reserve(imageCount);
-    for(int i = 0; i < imageCount; i++)
+    for(uint32_t i = 0; i < imageCount; i++)
     {
         _viewHandlers.EmplaceBack(tempImages[i], format.format, 1);
         ImageReference image
@@ -200,7 +192,8 @@ SwapChain::SwapChain(const Window& window, VkSurfaceKHR windowSurface)
 
 SwapChain::~SwapChain()
 {
+    vk::Device device = ApplicationInfo::Device();
     // if the system throw an error, ensure that the current frame is finished before destroying
-    vkDeviceWaitIdle(ApplicationInfo::Device());
-    vkDestroySwapchainKHR(ApplicationInfo::Device(), _internal, nullptr);
+    device.waitIdle();
+    device.destroySwapchainKHR(_internal);
 }

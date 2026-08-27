@@ -2,15 +2,15 @@
 
 #include "rendering/GraphicsBuffer.h"
 #include <cstdint>
-#include <vulkan/vulkan_core.h>
+#include <vulkan/vulkan.hpp>
 
 namespace BufferHelper
 {
     struct BufferBinding
     {
-        VkDescriptorType DescriptorType;
-        VkBuffer Buffer;
-        VkDescriptorBufferInfo Descriptor;
+        vk::DescriptorType DescriptorType;
+        vk::Buffer Buffer;
+        vk::DescriptorBufferInfo Descriptor;
 
         BufferBinding(const GraphicsBuffer& buffer, uint32_t index, uint32_t count = 1)
         {
@@ -20,30 +20,25 @@ namespace BufferHelper
         }
     };
 
-    static inline VkDescriptorBufferInfo DescriptorBufferInfo(const GraphicsBuffer& buffer, VkDeviceSize offset)
+    static inline vk::DescriptorBufferInfo DescriptorBufferInfo(const GraphicsBuffer& buffer, vk::DeviceSize offset)
     {
-        return
-        {
-            .buffer = buffer.Internal(),
-            .offset = offset,
-            .range = buffer.GetSize()
-        };
+        return vk::DescriptorBufferInfo{}
+            .setBuffer(buffer.Internal())
+            .setOffset(offset)
+            .setRange(buffer.GetSize());
     }
 
-    static inline VkBufferMemoryBarrier2 BufferBarrier(const GraphicsBuffer& buffer, uint32_t offset,uint32_t size, VkAccessFlagBits2 srcAccessMask, VkPipelineStageFlagBits2 srcStageMask, VkAccessFlagBits2 dstAccessMask, VkPipelineStageFlagBits2 dstStageMask)
+    static inline vk::BufferMemoryBarrier2 BufferBarrier(const GraphicsBuffer& buffer, uint32_t offset, uint32_t size, vk::AccessFlags2 srcAccessMask, vk::PipelineStageFlags2 srcStageMask, vk::AccessFlags2 dstAccessMask, vk::PipelineStageFlags2 dstStageMask)
     {
-        return VkBufferMemoryBarrier2
-        {
-            .sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER_2,
-            .srcStageMask = srcStageMask,
-            .srcAccessMask = srcAccessMask,
-            .dstStageMask = dstStageMask,
-            .dstAccessMask = dstAccessMask,
-            .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-            .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-            .buffer = buffer.Internal(),
-            .offset = 0,
-            .size = size
-        };
+        return vk::BufferMemoryBarrier2{}
+            .setSrcStageMask(srcStageMask)
+            .setSrcAccessMask(srcAccessMask)
+            .setDstStageMask(dstStageMask)
+            .setDstAccessMask(dstAccessMask)
+            .setSrcQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
+            .setDstQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED)
+            .setBuffer(buffer.Internal())
+            .setOffset(0)
+            .setSize(size);
     }
 }

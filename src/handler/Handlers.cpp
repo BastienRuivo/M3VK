@@ -1,24 +1,23 @@
 #include "handler/Handlers.h"
+#include "application/VkExtManager.h"
 #include "application/ApplicationInfo.h"
 #include <cstdint>
 #include <cstring>
 #include <set>
 #include <stdexcept>
 #include <vector>
-#include <vulkan/vulkan_core.h>
+#include <vulkan/vulkan.hpp>
 #include "application/DebugLayer.h"
 
 VkCommandPoolHandler::VkCommandPoolHandler(uint32_t queueFamilyIndex)
-: Handler<VkCommandPool>(), _queueFamilyIndex(queueFamilyIndex)
+: Handler<vk::CommandPool>(), _queueFamilyIndex(queueFamilyIndex)
 {
-    VkCommandPoolCreateInfo poolInfo
-    {
-        .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
-        .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
-        .queueFamilyIndex = _queueFamilyIndex
-    };
+    vk::CommandPoolCreateInfo poolInfo = vk::CommandPoolCreateInfo{}
+        .setFlags(vk::CommandPoolCreateFlagBits::eResetCommandBuffer)
+        .setQueueFamilyIndex(_queueFamilyIndex);
 
-    if(vkCreateCommandPool(ApplicationInfo::Device(), &poolInfo, nullptr, &_internal) != VK_SUCCESS)
+    vk::Result result = ApplicationInfo::Device().createCommandPool(&poolInfo, nullptr, &_internal);
+    if(result != vk::Result::eSuccess)
     {
         throw std::runtime_error("Failed to create command pool !");
     }
@@ -26,14 +25,14 @@ VkCommandPoolHandler::VkCommandPoolHandler(uint32_t queueFamilyIndex)
 
 VkCommandPoolHandler::~VkCommandPoolHandler()
 {
-    if(_internal == VK_NULL_HANDLE) return;
+    if(!_internal) return;
 
-    vkDestroyCommandPool(ApplicationInfo::Device(), _internal, nullptr);
+    ApplicationInfo::Device().destroyCommandPool(_internal);
 }
 
-VkDeviceHandler::VkDeviceHandler(VkInstance instance, VkSurfaceKHR windowSurface, const std::vector<const char*>& deviceExtensions)
+VkDeviceHandler::VkDeviceHandler(vk::Instance instance, vk::SurfaceKHR windowSurface, const std::vector<const char*>& deviceExtensions)
 {
-    std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
+    std::vector<vk::DeviceQueueCreateInfo> queueCreateInfos;
     std::set<uint32_t> uniqueQueueIds =
     {
         ApplicationInfo::Get().GetGraphicsQueueId(),
@@ -44,14 +43,10 @@ VkDeviceHandler::VkDeviceHandler(VkInstance instance, VkSurfaceKHR windowSurface
     float queuePriority = 1.0f;
     for(uint32_t queueId : uniqueQueueIds)
     {
-        VkDeviceQueueCreateInfo queueCreateInfo
-        {
-            .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
-            .queueFamilyIndex = queueId,
-            .queueCount = 1,
-            .pQueuePriorities = &queuePriority
-        };
-        queueCreateInfos.push_back(queueCreateInfo);
+        queueCreateInfos.push_back(vk::DeviceQueueCreateInfo{}
+            .setQueueFamilyIndex(queueId)
+            .setQueueCount(1)
+            .setPQueuePriorities(&queuePriority));
     }
 
     VkPhysicalDeviceSynchronization2Features sync2Features
@@ -126,85 +121,75 @@ VkDeviceHandler::VkDeviceHandler(VkInstance instance, VkSurfaceKHR windowSurface
         .dynamicRendering = VK_TRUE,
     };
 
-    VkPhysicalDeviceFeatures deviceFeatures
-    {
-        .sampleRateShading = VK_TRUE,
-        .multiDrawIndirect = VK_TRUE,
-        .drawIndirectFirstInstance = VK_TRUE,
-        .fillModeNonSolid = VK_TRUE,
-        .samplerAnisotropy = VK_TRUE,
-    };
+    vk::PhysicalDeviceFeatures deviceFeatures = vk::PhysicalDeviceFeatures{}
+        .setSampleRateShading(VK_TRUE)
+        .setMultiDrawIndirect(VK_TRUE)
+        .setDrawIndirectFirstInstance(VK_TRUE)
+        .setFillModeNonSolid(VK_TRUE)
+        .setSamplerAnisotropy(VK_TRUE);
 
-    VkDeviceCreateInfo deviceCreateInfo
-    {
-        .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
-        .pNext = &dynamicRenderingFeatures,
-        .queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size()),
-        .pQueueCreateInfos = queueCreateInfos.data(),
+    // enabledLayerCount/ppEnabledLayerNames are deprecated (device-level layers no longer exist) and
+    // default to 0/nullptr, matching what this used to set explicitly
+    vk::DeviceCreateInfo deviceCreateInfo = vk::DeviceCreateInfo{}
+        .setPNext(&dynamicRenderingFeatures)
+        .setQueueCreateInfos(queueCreateInfos)
+        .setPEnabledExtensionNames(deviceExtensions)
+        .setPEnabledFeatures(&deviceFeatures);
 
-        .enabledLayerCount = 0,
-        .ppEnabledLayerNames = nullptr,
-
-        .enabledExtensionCount = static_cast<uint32_t>(deviceExtensions.size()),
-        .ppEnabledExtensionNames = deviceExtensions.data(),
-        .pEnabledFeatures = &deviceFeatures
-    };
-
-    VkResult deviceCreation = vkCreateDevice(ApplicationInfo::PhysicalDevice(), &deviceCreateInfo, nullptr, &_internal);
-    if(deviceCreation != VK_SUCCESS)
+    vk::Result deviceCreation = vk::PhysicalDevice(ApplicationInfo::PhysicalDevice()).createDevice(
+        &deviceCreateInfo, nullptr, &_internal);
+    if(deviceCreation != vk::Result::eSuccess)
     {
         throw std::runtime_error("Failed to create VK Logical Device !");
     }
 
+    VkExtManager::InitDevice(_internal);
     ApplicationInfo::Get()._device = _internal;
-    VkFunctions::Instance(); // force loading of vk ext functions
 }
 
 VkDeviceHandler::~VkDeviceHandler()
 {
-    if(_internal == VK_NULL_HANDLE) return;
+    if(!_internal) return;
 
-    vkDestroyDevice(_internal, nullptr);
+    _internal.destroy();
 }
 
 VkFenceHandler::VkFenceHandler()
 {
-    VkFenceCreateInfo fenceCreateInfo
-    {
-        .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
-        .flags = VK_FENCE_CREATE_SIGNALED_BIT // Create the queue in the "Signaled" state to ensure the first frame won't wait eternally for a fence that is not signaled, thus preventing an infinit loop
-    };
+    // Create the queue in the "Signaled" state to ensure the first frame won't wait eternally for a fence that is not signaled, thus preventing an infinit loop
+    vk::FenceCreateInfo fenceCreateInfo = vk::FenceCreateInfo{}
+        .setFlags(vk::FenceCreateFlagBits::eSignaled);
 
-    if(vkCreateFence(ApplicationInfo::Device(), &fenceCreateInfo, nullptr, &_internal) != VK_SUCCESS)
+    vk::Result result = ApplicationInfo::Device().createFence(&fenceCreateInfo, nullptr, &_internal);
+    if(result != vk::Result::eSuccess)
     {
         throw std::runtime_error("Can't create fence");
     }
-
 }
 
 VkFenceHandler::~VkFenceHandler()
 {
-    if(_internal == VK_NULL_HANDLE) return;
+    if(!_internal) return;
 
-    vkDestroyFence(ApplicationInfo::Device(), _internal, nullptr);
+    ApplicationInfo::Device().destroyFence(_internal);
 }
 
 void VkFenceHandler::Wait(uint64_t timeout) const
 {
-    vkWaitForFences(ApplicationInfo::Device(), 1, &_internal, VK_TRUE, timeout);
+    (void)ApplicationInfo::Device().waitForFences(1, &_internal, VK_TRUE, timeout);
 }
 
 void VkFenceHandler::Reset() const
 {
-    vkResetFences(ApplicationInfo::Device(), 1, &_internal);
+    (void)ApplicationInfo::Device().resetFences(1, &_internal);
 }
 
 VkSemaphoreHandler::VkSemaphoreHandler()
 {
-    VkSemaphoreCreateInfo semaphoreCreateInfo{};
-    semaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+    vk::SemaphoreCreateInfo semaphoreCreateInfo{};
 
-    if(vkCreateSemaphore(ApplicationInfo::Device(), &semaphoreCreateInfo, nullptr, &_internal) != VK_SUCCESS)
+    vk::Result result = ApplicationInfo::Device().createSemaphore(&semaphoreCreateInfo, nullptr, &_internal);
+    if(result != vk::Result::eSuccess)
     {
         throw std::runtime_error("Can't create image available semaphore");
     }
@@ -212,36 +197,32 @@ VkSemaphoreHandler::VkSemaphoreHandler()
 
 VkSemaphoreHandler::~VkSemaphoreHandler()
 {
-    if(_internal == VK_NULL_HANDLE) return;
+    if(!_internal) return;
 
-    vkDestroySemaphore(ApplicationInfo::Device(), _internal, nullptr);
+    ApplicationInfo::Device().destroySemaphore(_internal);
 }
 
 VkInstanceHandler::VkInstanceHandler()
 {
-    VkApplicationInfo appInfo
-    {
-        .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
-        .pApplicationName = "M3VK",
-        .applicationVersion = VK_MAKE_VERSION(1, 0, 0),
-        .engineVersion = VK_MAKE_VERSION(1, 0, 0),
-        .apiVersion = VK_API_VERSION_1_4
-    };
+    VkExtManager::InitLoader();
 
-    uint32_t extensionCount = 0;
-    vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);
-    std::vector<VkExtensionProperties> supportedExtensions(extensionCount);
-    vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, supportedExtensions.data());
+    vk::ApplicationInfo appInfo = vk::ApplicationInfo{}
+        .setPApplicationName("M3VK")
+        .setApplicationVersion(VK_MAKE_VERSION(1, 0, 0))
+        .setEngineVersion(VK_MAKE_VERSION(1, 0, 0))
+        .setApiVersion(VK_API_VERSION_1_4);
+
+    std::vector<vk::ExtensionProperties> supportedExtensions = vk::enumerateInstanceExtensionProperties();
 
     if(DebugLayer::Enabled)
     {
 #ifdef M3VK_VERBOSE_LOG
         DebugLayer::Log(DebugLayer::LogType::INFO, "List of actives VK Extensions");
 #endif
-        for(const VkExtensionProperties& extension : supportedExtensions)
+        for(const vk::ExtensionProperties& extension : supportedExtensions)
         {
 #ifdef M3VK_VERBOSE_LOG
-            DebugLayer::Log(DebugLayer::LogType::INFO, std::string("\t - ") + extension.extensionName);
+            DebugLayer::Log(DebugLayer::LogType::INFO, std::string("\t - ") + extension.extensionName.data());
 #endif
         }
     }
@@ -251,9 +232,9 @@ VkInstanceHandler::VkInstanceHandler()
     for(int i = 0; i < requiredExtensions.size(); ++i)
     {
         bool isPresent = false;
-        for(const VkExtensionProperties& extension : supportedExtensions)
+        for(const vk::ExtensionProperties& extension : supportedExtensions)
         {
-            if(strcmp(requiredExtensions[i], extension.extensionName) == 0)
+            if(strcmp(requiredExtensions[i], extension.extensionName.data()) == 0)
             {
                 isPresent = true;
                 break;
@@ -280,22 +261,19 @@ VkInstanceHandler::VkInstanceHandler()
         throw std::runtime_error("Validation layer requested but not available !");
     }
 
-    VkInstanceCreateInfo createInfo
-    {
-        .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
-        .pApplicationInfo = &appInfo,
-        .enabledExtensionCount = static_cast<uint32_t>(requiredExtensions.size()),
-        .ppEnabledExtensionNames = requiredExtensions.data(),
-    };
+    vk::InstanceCreateInfo createInfo = vk::InstanceCreateInfo{}
+        .setPApplicationInfo(&appInfo)
+        .setEnabledExtensionCount(static_cast<uint32_t>(requiredExtensions.size()))
+        .setPpEnabledExtensionNames(requiredExtensions.data());
 
     // ensure it is not destroyed before vkCreateInstance
-    VkDebugUtilsMessengerCreateInfoEXT debugInfoCreate;
+    vk::DebugUtilsMessengerCreateInfoEXT debugInfoCreate;
     DebugLayer::SetupCreateInfo(createInfo, debugInfoCreate);
 
-    VkResult result = vkCreateInstance(&createInfo, nullptr, &_internal);
-    if(result != VK_SUCCESS)
+    vk::Result result = vk::createInstance(&createInfo, nullptr, &_internal);
+    if(result != vk::Result::eSuccess)
     {
-        if(result == VK_ERROR_LAYER_NOT_PRESENT)
+        if(result == vk::Result::eErrorLayerNotPresent)
         {
             throw std::runtime_error("Error : A VK Layer is not present on computer");
         }
@@ -305,6 +283,7 @@ VkInstanceHandler::VkInstanceHandler()
         }
     }
 
+    VkExtManager::InitInstance(_internal);
     ApplicationInfo::Get()._vkInstance = _internal;
 }
 
@@ -324,9 +303,9 @@ std::vector<const char *> VkInstanceHandler::GetRequiredExtensions() const
 }
 VkInstanceHandler::~VkInstanceHandler()
 {
-    if(_internal == VK_NULL_HANDLE) return;
+    if(!_internal) return;
 
-    vkDestroyInstance(_internal, nullptr);
+    _internal.destroy();
 }
 
 VkQueueHandler::VkQueueHandler(VkQueueHandler::QueueTypeEnum queueType)
@@ -341,7 +320,7 @@ VkQueueHandler::VkQueueHandler(VkQueueHandler::QueueTypeEnum queueType)
         default: throw std::runtime_error("Unimplemented graphics queue type");
     }
 
-    vkGetDeviceQueue(ApplicationInfo::Device(),family, 0, &_internal);
+    _internal = vk::Device(ApplicationInfo::Device()).getQueue(family, 0);
     _queueFamilyIndex = family;
     _type = queueType;
 }
@@ -352,7 +331,7 @@ VkQueueHandler::~VkQueueHandler()
 
 VkQueueHandler::VkQueueHandler(VkQueueHandler && other) noexcept
 {
-    _internal = std::exchange(other._internal, VK_NULL_HANDLE);
+    _internal = std::exchange(other._internal, nullptr);
     _queueFamilyIndex = std::exchange(other._queueFamilyIndex, 0);
     _type = std::exchange(other._type, QueueTypeEnum::Graphics);
 }
@@ -361,89 +340,80 @@ VkQueueHandler& VkQueueHandler::operator=(VkQueueHandler&& other) noexcept
 {
     if(this != &other)
     {
-        _internal = std::exchange(other._internal, VK_NULL_HANDLE);
+        _internal = std::exchange(other._internal, nullptr);
         _queueFamilyIndex = std::exchange(other._queueFamilyIndex, 0);
         _type = std::exchange(other._type, QueueTypeEnum::Graphics);
     }
     return *this;
 }
 
-VkSamplerHandler::VkSamplerHandler(VkFilter oversampling, VkFilter undersampling, VkSamplerMipmapMode mipmapMode, bool hasAniso)
+VkSamplerHandler::VkSamplerHandler(vk::Filter oversampling, vk::Filter undersampling, vk::SamplerMipmapMode mipmapMode, bool hasAniso)
 {
-    VkSamplerCreateInfo createInfo{};
-    createInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-
     // Mag -> Oversampling, Min -> Undersampling
-    createInfo.magFilter = oversampling;
-    createInfo.minFilter = undersampling;
-
     // what to do when reading OOB (repeat, clamp, mirror...)
-    createInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-    createInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-    createInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-
     // Anisotropy -> Avoiding blur caused by mipmapping by doing clever more sampling
-    createInfo.anisotropyEnable = hasAniso ? VK_TRUE : VK_FALSE;
-    createInfo.maxAnisotropy = hasAniso ? ApplicationInfo::Get().GetProperties().limits.maxSamplerAnisotropy : 0.0;
-
-    createInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
-    createInfo.unnormalizedCoordinates = VK_FALSE;
-
     // Comparaison operation for shadow mapping apparently
-    createInfo.compareEnable = VK_FALSE;
-    createInfo.compareOp = VK_COMPARE_OP_ALWAYS;
+    vk::SamplerCreateInfo createInfo = vk::SamplerCreateInfo{}
+        .setMagFilter(static_cast<vk::Filter>(oversampling))
+        .setMinFilter(static_cast<vk::Filter>(undersampling))
+        .setAddressModeU(vk::SamplerAddressMode::eRepeat)
+        .setAddressModeV(vk::SamplerAddressMode::eRepeat)
+        .setAddressModeW(vk::SamplerAddressMode::eRepeat)
+        .setAnisotropyEnable(hasAniso ? VK_TRUE : VK_FALSE)
+        .setMaxAnisotropy(hasAniso ? ApplicationInfo::Get().GetProperties().limits.maxSamplerAnisotropy : 0.0f)
+        .setBorderColor(vk::BorderColor::eIntOpaqueBlack)
+        .setUnnormalizedCoordinates(VK_FALSE)
+        .setCompareEnable(VK_FALSE)
+        .setCompareOp(vk::CompareOp::eAlways)
+        .setMipmapMode(static_cast<vk::SamplerMipmapMode>(mipmapMode))
+        .setMipLodBias(0.0f)
+        .setMinLod(0.0f)
+        .setMaxLod(VK_LOD_CLAMP_NONE);
 
-    createInfo.mipmapMode = mipmapMode;
-    createInfo.mipLodBias = 0.0f;
-    createInfo.minLod = 0.0f;
-    createInfo.maxLod = VK_LOD_CLAMP_NONE;
-
-    if(vkCreateSampler(ApplicationInfo::Device(), &createInfo, nullptr, &_internal) != VK_SUCCESS)
+    vk::Result result = ApplicationInfo::Device().createSampler(&createInfo, nullptr, &_internal);
+    if(result != vk::Result::eSuccess)
     {
         throw std::runtime_error("Can't create sampler");
     }
 }
 VkSamplerHandler::~VkSamplerHandler()
 {
-    if(_internal == VK_NULL_HANDLE) return;
+    if(!_internal) return;
 
-    vkDestroySampler(ApplicationInfo::Device(), _internal, nullptr);
+    ApplicationInfo::Device().destroySampler(_internal);
 }
 
-VkSurfaceHandler::VkSurfaceHandler(VkInstance instance, GLFWwindow* pWindow)
+VkSurfaceHandler::VkSurfaceHandler(vk::Instance instance, GLFWwindow* pWindow)
 {
     _instance = instance;
-    if(glfwCreateWindowSurface(_instance, pWindow, nullptr, &_internal) != VK_SUCCESS)
+    VkSurfaceKHR rawSurface;
+    if(glfwCreateWindowSurface(_instance, pWindow, nullptr, &rawSurface) != VK_SUCCESS)
     {
         throw std::runtime_error("Failed to create windows surface !");
     }
+    _internal = rawSurface;
 }
 
 VkSurfaceHandler::~VkSurfaceHandler()
 {
-    if(_internal == VK_NULL_HANDLE) return;
+    if(!_internal) return;
 
-    vkDestroySurfaceKHR(_instance, _internal, nullptr);
+    _instance.destroySurfaceKHR(_internal);
 }
 
-VkPipelineLayoutHandler::VkPipelineLayoutHandler( std::span<const VkDescriptorSetLayout> descriptorLayouts, std::span<const VkPushConstantRange> pushConstantRanges)
+VkPipelineLayoutHandler::VkPipelineLayoutHandler( std::span<const vk::DescriptorSetLayout> descriptorLayouts, std::span<const vk::PushConstantRange> pushConstantRanges)
 {
-    VkPipelineLayoutCreateInfo layoutCreateInfo
-    {
-        .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-        .setLayoutCount = static_cast<uint32_t>(descriptorLayouts.size()),
-        .pSetLayouts = descriptorLayouts.data(),
-        .pushConstantRangeCount = static_cast<uint32_t>(pushConstantRanges.size()),
-        .pPushConstantRanges = pushConstantRanges.data()
-    };
+    vk::PipelineLayoutCreateInfo layoutCreateInfo = vk::PipelineLayoutCreateInfo{}
+        .setSetLayouts(descriptorLayouts)
+        .setPushConstantRanges(pushConstantRanges);
 
-    if(vkCreatePipelineLayout(ApplicationInfo::Device(), &layoutCreateInfo, nullptr, &_internal) != VK_SUCCESS)
+    if(ApplicationInfo::Device().createPipelineLayout(&layoutCreateInfo, nullptr, &_internal) != vk::Result::eSuccess)
     {
         throw std::runtime_error("Failed to create VK Layout !");
     }
 }
 VkPipelineLayoutHandler::~VkPipelineLayoutHandler()
 {
-    if(_internal == VK_NULL_HANDLE) return;
-    vkDestroyPipelineLayout(ApplicationInfo::Device(), _internal, nullptr);
+    if(!_internal) return;
+    ApplicationInfo::Device().destroyPipelineLayout(_internal);
 }
