@@ -6,7 +6,6 @@
 #include "application/ApplicationInfo.h"
 #include "application/UserInterface.h"
 #include "application/Window.h"
-#include "asset/AssetImporter.h"
 #include "allocation/MaterialRegistry.h"
 #include "allocation/MeshRegistry.h"
 #include "asset/MeshHelper.h"
@@ -76,7 +75,7 @@ Pipeline::Pipeline(const SwapChain& swapChain, VkCommandPool graphicsCommandPool
             .AabbMax = aabbMax,
             .MeshIndex = cube
         };
-        //meshRegistry.RegisterInstance(MaterialType::Opaque, instance);
+        meshRegistry.RegisterInstance(MaterialType::Opaque, instance);
     }
 
     {
@@ -91,7 +90,7 @@ Pipeline::Pipeline(const SwapChain& swapChain, VkCommandPool graphicsCommandPool
             .AabbMax = aabbMax,
             .MeshIndex = cube
         };
-        //meshRegistry.RegisterInstance(MaterialType::Opaque, instance);
+        meshRegistry.RegisterInstance(MaterialType::Opaque, instance);
     }
 
     {
@@ -106,32 +105,8 @@ Pipeline::Pipeline(const SwapChain& swapChain, VkCommandPool graphicsCommandPool
             .AabbMax = aabbMax,
             .MeshIndex = cube
         };
-        //meshRegistry.RegisterInstance(MaterialType::Opaque, instance);
+        meshRegistry.RegisterInstance(MaterialType::Opaque, instance);
     }
-
-
-    InstanceData instance = {
-        .LocalToWorldMatrix = ApplicationHelper::TranslateRotateScale(glm::vec3(0.0f, 0.0f, 0.0f),
-            glm::vec3(0.0f, 0.0f, 0.0f),
-            glm::vec3(2, 10, 10)),
-        .AabbMin = aabbMin,
-        .MaterialIndex = 1,
-        .AabbMax = aabbMax,
-        .MeshIndex = cube
-    };
-
-    meshRegistry.RegisterInstance(MaterialType::Opaque, instance);
-
-    instance = {
-        .LocalToWorldMatrix = ApplicationHelper::TranslateRotateScale(glm::vec3(4.0f, 0.0f, 1.0f),
-            glm::vec3(0.0f, 0.0f, 0.0f),
-            glm::vec3(1, 1, 1)),
-        .AabbMin = aabbMin,
-        .MaterialIndex = 2,
-        .AabbMax = aabbMax,
-        .MeshIndex = cube
-    };
-    //meshRegistry.RegisterInstance(MaterialType::Opaque, instance);
 
     for(uint32_t i = 0; i < 100; ++i)
     {
