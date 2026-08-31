@@ -84,7 +84,7 @@ void Application::RefreshSwapChain()
 
     // TODO : Swap chain is currently resetted the first frame beacause it is out of date
     _swapChain.reset();
-    _swapChain = std::make_unique<SwapChain>(_window, _windowSurface.Internal());
+    _swapChain = std::make_unique<SwapChain>(_window, _windowSurface);
 
     auto extents = _swapChain->GetExtent();
     CommandBuffer cmdBuffer(_graphicsCommandPool.Internal(), _graphicsComputeQueue.Internal());
@@ -163,14 +163,14 @@ Application::Application() :
     _context(vkGetInstanceProcAddr),
     _instance(M3VKConstruct::MakeInstance(_context, "M3VK", vk::makeVersion(0, 1, 0), vk::makeVersion(0, 1, 0), vk::ApiVersion14)),
     _vkDebugLayer(),
-    _windowSurface(_window.Internal()),
-    _physicalDevice(_windowSurface.Internal(), _deviceExtensions),
-    _device(_windowSurface.Internal(), _deviceExtensions),
+    _windowSurface(M3VKConstruct::MakeSurface(_window.Internal())),
+    _physicalDevice(_windowSurface, _deviceExtensions),
+    _device(_windowSurface, _deviceExtensions),
 
     // Queues & Swapchain
     _graphicsComputeQueue(VkQueueHandler::Graphics),
     _presentQueue(VkQueueHandler::Present),
-    _swapChain(std::make_unique<SwapChain>(_window, _windowSurface.Internal())),
+    _swapChain(std::make_unique<SwapChain>(_window, _windowSurface)),
 
     // Command pool
     _graphicsCommandPool(ApplicationInfo::GetGraphicsQueueId()),

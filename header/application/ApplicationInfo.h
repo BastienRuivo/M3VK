@@ -22,7 +22,8 @@ class ApplicationInfo
         return instance;
     }
 
-    static inline vk::Instance Instance() { return ApplicationInfo::Get()._vkInstance; }
+    static inline const vk::Instance Instance() { return *ApplicationInfo::Get()._vkInstance; }
+    static inline const vk::raii::Instance& RaiiInstance() { return *ApplicationInfo::Get()._vkInstance; }
     static inline vk::Device Device() { ApplicationInfo::Get(); return ApplicationInfo::Get()._device; }
     static inline vk::PhysicalDevice PhysicalDevice() { return ApplicationInfo::Get()._physicalDevice; }
 
@@ -71,7 +72,7 @@ class ApplicationInfo
     vk::SampleCountFlagBits GetMaxUsableSampleCount(vk::SampleCountFlagBits maxSample) const;
     ApplicationInfo() {}
 
-    vk::Instance _vkInstance;
+    const vk::raii::Instance* _vkInstance = nullptr;
     vk::PhysicalDevice _physicalDevice;
     vk::Device _device;
 

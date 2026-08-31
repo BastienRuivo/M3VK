@@ -19,7 +19,6 @@ template<typename T>
     || std::same_as<T, vk::PipelineLayout>
     || std::same_as<T, vk::Queue>
     || std::same_as<T, vk::Sampler>
-    || std::same_as<T, vk::SurfaceKHR>
 class Handler
 {
 public:
@@ -139,16 +138,6 @@ public:
     VkSamplerHandler& operator=(VkSamplerHandler&& other) noexcept = default;
 };
 
-class VkSurfaceHandler : public Handler<vk::SurfaceKHR>
-{
-public:
-    VkSurfaceHandler(GLFWwindow* pWindow);
-    ~VkSurfaceHandler() override;
-
-    VkSurfaceHandler(VkSurfaceHandler&& other) noexcept = default;
-    VkSurfaceHandler& operator=(VkSurfaceHandler&& other) noexcept = default;
-};
-
 class VkPipelineLayoutHandler : public Handler<vk::PipelineLayout>
 {
 public:
@@ -171,4 +160,6 @@ namespace M3VKConstruct
         const uint32_t appVersion,
         const uint32_t engineVersion,
         const uint32_t apiVersion);
+
+    vk::raii::SurfaceKHR MakeSurface(GLFWwindow* pWindow);
 };

@@ -43,7 +43,7 @@ class Application
     vk::raii::Context _context;
     vk::raii::Instance _instance;
     DebugLayer _vkDebugLayer;
-    VkSurfaceHandler _windowSurface;
+    vk::raii::SurfaceKHR _windowSurface;
     // Implicitly linked to instance, see wtd later
     VkPhysicalDeviceHandler _physicalDevice;
     VkDeviceHandler _device;

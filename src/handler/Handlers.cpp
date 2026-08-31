@@ -277,7 +277,7 @@ vk::raii::Instance M3VKConstruct::MakeInstance(const vk::raii::Context& context,
     vk::raii::Instance instance(context, createInfo);
 
     VkExtManager::InitInstance(instance);
-    ApplicationInfo::Get()._vkInstance = instance;
+    ApplicationInfo::Get()._vkInstance = &instance;
 
     return instance;
 }
@@ -372,20 +372,15 @@ VkSamplerHandler::~VkSamplerHandler()
     ApplicationInfo::Device().destroySampler(_internal);
 }
 
-VkSurfaceHandler::VkSurfaceHandler(GLFWwindow* pWindow)
+vk::raii::SurfaceKHR M3VKConstruct::MakeSurface(GLFWwindow *pWindow)
 {
     VkSurfaceKHR rawSurface;
     if(glfwCreateWindowSurface(ApplicationInfo::Instance(), pWindow, nullptr, &rawSurface) != VK_SUCCESS)
     {
         throw std::runtime_error("Failed to create windows surface !");
     }
-    _internal = rawSurface;
-}
 
-VkSurfaceHandler::~VkSurfaceHandler()
-{
-    if(!_internal) return;
-    ApplicationInfo::Instance().destroySurfaceKHR(_internal);
+    return vk::raii::SurfaceKHR(ApplicationInfo::RaiiInstance(), rawSurface);
 }
 
 VkPipelineLayoutHandler::VkPipelineLayoutHandler( std::span<const vk::DescriptorSetLayout> descriptorLayouts, std::span<const vk::PushConstantRange> pushConstantRanges)
