@@ -101,15 +101,25 @@ void Application::DrawFrame()
     uint32_t currentFrame = ApplicationInfo::CurrentFrame();
     _waitFence.Get(currentFrame).Wait(UINT64_MAX);
 
-    // Acquire image to draw on
+    vk::AcquireNextImageInfoKHR acquireInfo = vk::AcquireNextImageInfoKHR{}
+        .setSwapchain(_swapChain->Internal())
+        .setTimeout(UINT32_MAX) // 4sec = timeout, just a test for now but seems rationnal ?
+        .setSemaphore(_availableImageSemaphore.Internal(currentFrame))
+        .setFence(nullptr)
+        .setDeviceMask(1u);
+
+    // Use the raw-pointer, non-throwing overload: the enhanced ResultValue-returning acquireNextImage2KHR
+    // throws vk::OutOfDateKHRError instead of returning eErrorOutOfDateKHR as a value (unless
+    // VULKAN_HPP_HANDLE_ERROR_OUT_OF_DATE_AS_SUCCESS is defined), which would skip the manual check below.
     uint32_t imageIndex;
-    vk::Result result = ApplicationInfo::Device().acquireNextImageKHR(_swapChain->Internal(), UINT64_MAX, _availableImageSemaphore.Internal(currentFrame), VK_NULL_HANDLE, &imageIndex);
-    if(result == vk::Result::eErrorOutOfDateKHR)
+    vk::Result acquireResult = ApplicationInfo::Device().acquireNextImage2KHR(&acquireInfo, &imageIndex);
+
+    if(acquireResult == vk::Result::eErrorOutOfDateKHR)
     {
         RefreshSwapChain();
         return;
     }
-    else if (result != vk::Result::eSuccess && result != vk::Result::eSuboptimalKHR)
+    else if (acquireResult != vk::Result::eSuccess && acquireResult != vk::Result::eSuboptimalKHR)
     {
         throw std::runtime_error("failed to acquire swap chain image!");
     }
@@ -162,10 +172,12 @@ Application::Application() :
     _window(1920, 1080, "Window", this, Application::ResizeCallback, Application::MouseMoveCallback, Application::WindowFocusCallback),
     _context(vkGetInstanceProcAddr),
     _instance(M3VKConstruct::MakeInstance(_context, "M3VK", vk::makeVersion(0, 1, 0), vk::makeVersion(0, 1, 0), vk::ApiVersion14)),
-    _vkDebugLayer(),
-    _windowSurface(M3VKConstruct::MakeSurface(_window.Internal())),
-    _physicalDevice(M3VKConstruct::MakePhysicalDevice(_windowSurface, _deviceExtensions)),
-    _device(_windowSurface, _deviceExtensions),
+    _vkDebugLayer(_instance),
+    _windowSurface(M3VKConstruct::MakeSurface(_instance, _window.Internal())),
+    _physicalDevice(M3VKConstruct::MakePhysicalDevice(_instance, _windowSurface, _deviceExtensions)),
+    _device(M3VKConstruct::MakeDevice(_physicalDevice, _windowSurface, _deviceExtensions)),
+
+    _appInfoInitializer(_instance, _windowSurface, _physicalDevice, _device),
 
     // Queues & Swapchain
     _graphicsComputeQueue(VkQueueHandler::Graphics),

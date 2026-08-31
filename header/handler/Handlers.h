@@ -12,8 +12,6 @@
 
 template<typename T>
     requires std::same_as<T, vk::CommandPool>
-    || std::same_as<T, vk::Device>
-    || std::same_as<T, vk::PhysicalDevice>
     || std::same_as<T, vk::Fence>
     || std::same_as<T, vk::Semaphore>
     || std::same_as<T, vk::ImageView>
@@ -62,16 +60,6 @@ public:
 
     private:
     uint32_t _queueFamilyIndex;
-};
-
-class VkDeviceHandler : public Handler<vk::Device>
-{
-public:
-    VkDeviceHandler(vk::SurfaceKHR windowSurface, const std::vector<const char*>& deviceExtensions);
-    ~VkDeviceHandler() override;
-
-    VkDeviceHandler(VkDeviceHandler&& other) noexcept = default;
-    VkDeviceHandler& operator=(VkDeviceHandler&& other) noexcept = default;
 };
 
 class VkFenceHandler : public Handler<vk::Fence>
@@ -175,6 +163,7 @@ namespace M3VKConstruct
         const uint32_t engineVersion,
         const uint32_t apiVersion);
 
-    vk::raii::SurfaceKHR MakeSurface(GLFWwindow* pWindow);
-    vk::raii::PhysicalDevice MakePhysicalDevice(vk::SurfaceKHR windowSurface, const std::vector<const char *>& deviceExtensions);
+    vk::raii::SurfaceKHR MakeSurface(const vk::raii::Instance& instance, GLFWwindow* pWindow);
+    vk::raii::PhysicalDevice MakePhysicalDevice(const vk::raii::Instance& instance, vk::SurfaceKHR windowSurface, const std::vector<const char *>& deviceExtensions);
+    vk::raii::Device MakeDevice(const vk::raii::PhysicalDevice& physicalDevice, vk::SurfaceKHR windowSurface, const std::vector<const char*>& deviceExtensions);
 };

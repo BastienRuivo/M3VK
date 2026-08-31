@@ -31,130 +31,6 @@ VkCommandPoolHandler::~VkCommandPoolHandler()
     ApplicationInfo::Device().destroyCommandPool(_internal);
 }
 
-VkDeviceHandler::VkDeviceHandler(vk::SurfaceKHR windowSurface, const std::vector<const char*>& deviceExtensions)
-{
-    std::vector<vk::DeviceQueueCreateInfo> queueCreateInfos;
-    std::set<uint32_t> uniqueQueueIds =
-    {
-        ApplicationInfo::Get().GetGraphicsQueueId(),
-        ApplicationInfo::Get().GetPresentQueueId(),
-        ApplicationInfo::Get().GetTransferQueueId()
-    };
-
-    float queuePriority = 1.0f;
-    for(uint32_t queueId : uniqueQueueIds)
-    {
-        queueCreateInfos.push_back(vk::DeviceQueueCreateInfo{}
-            .setQueueFamilyIndex(queueId)
-            .setQueueCount(1)
-            .setPQueuePriorities(&queuePriority));
-    }
-
-    VkPhysicalDeviceSynchronization2Features sync2Features
-    {
-        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES,
-        .pNext = nullptr,
-        .synchronization2 = VK_TRUE
-    };
-
-    VkPhysicalDeviceExtendedDynamicState3FeaturesEXT extendedDynamicState3Features{};
-    extendedDynamicState3Features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTENDED_DYNAMIC_STATE_3_FEATURES_EXT;
-    extendedDynamicState3Features.pNext = &sync2Features;
-    extendedDynamicState3Features.extendedDynamicState3RasterizationSamples = VK_TRUE;
-    extendedDynamicState3Features.extendedDynamicState3ColorBlendEnable = VK_TRUE;
-    extendedDynamicState3Features.extendedDynamicState3ColorBlendEquation = VK_TRUE;
-    extendedDynamicState3Features.extendedDynamicState3ColorWriteMask = VK_TRUE;
-    extendedDynamicState3Features.extendedDynamicState3PolygonMode = VK_TRUE;
-    extendedDynamicState3Features.extendedDynamicState3AlphaToCoverageEnable = VK_TRUE;
-    extendedDynamicState3Features.extendedDynamicState3DepthClampEnable = VK_TRUE;
-    extendedDynamicState3Features.extendedDynamicState3LogicOpEnable = VK_TRUE;
-    extendedDynamicState3Features.extendedDynamicState3AlphaToOneEnable = VK_TRUE;
-
-    VkPhysicalDeviceExtendedDynamicState2FeaturesEXT extendedDynamicState2Features
-    {
-        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTENDED_DYNAMIC_STATE_2_FEATURES_EXT,
-        .pNext = &extendedDynamicState3Features,
-        .extendedDynamicState2 = VK_TRUE
-    };
-
-    VkPhysicalDeviceExtendedDynamicStateFeaturesEXT extendedDynamicStateFeatures
-    {
-        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTENDED_DYNAMIC_STATE_FEATURES_EXT,
-        .pNext = &extendedDynamicState2Features,
-        .extendedDynamicState = VK_TRUE
-    };
-
-    VkPhysicalDeviceShaderObjectFeaturesEXT shaderObjectFeatures
-    {
-        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_OBJECT_FEATURES_EXT,
-        .pNext = &extendedDynamicStateFeatures,
-        .shaderObject = VK_TRUE,
-    };
-
-    VkPhysicalDeviceVulkan11Features vulkan11Features
-    {
-        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES,
-        .pNext = &shaderObjectFeatures,
-        .shaderDrawParameters = VK_TRUE
-    };
-
-    // enable bindless support
-    VkPhysicalDeviceDescriptorIndexingFeatures descriptorIndexingFeatures
-    {
-        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES,
-        .pNext = &vulkan11Features
-    };
-
-    descriptorIndexingFeatures.shaderSampledImageArrayNonUniformIndexing = VK_TRUE; // different instance in the same wave can access different textures
-    descriptorIndexingFeatures.shaderStorageImageArrayNonUniformIndexing = VK_TRUE;
-    descriptorIndexingFeatures.shaderStorageBufferArrayNonUniformIndexing = VK_TRUE;
-    descriptorIndexingFeatures.descriptorBindingSampledImageUpdateAfterBind = VK_TRUE; // descriptor can be updated while bound
-    descriptorIndexingFeatures.descriptorBindingStorageBufferUpdateAfterBind = VK_TRUE;
-    descriptorIndexingFeatures.descriptorBindingStorageImageUpdateAfterBind = VK_TRUE;
-    descriptorIndexingFeatures.descriptorBindingPartiallyBound = VK_TRUE; // slot can be empty
-    descriptorIndexingFeatures.descriptorBindingVariableDescriptorCount = VK_TRUE; // actual count set at all location
-    descriptorIndexingFeatures.runtimeDescriptorArray = VK_TRUE; // unsized array in shaders
-
-    VkPhysicalDeviceDynamicRenderingFeatures dynamicRenderingFeatures
-    {
-        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES,
-        .pNext = &descriptorIndexingFeatures,
-        .dynamicRendering = VK_TRUE,
-    };
-
-    vk::PhysicalDeviceFeatures deviceFeatures = vk::PhysicalDeviceFeatures{}
-        .setSampleRateShading(VK_TRUE)
-        .setMultiDrawIndirect(VK_TRUE)
-        .setDrawIndirectFirstInstance(VK_TRUE)
-        .setFillModeNonSolid(VK_TRUE)
-        .setSamplerAnisotropy(VK_TRUE);
-
-    // enabledLayerCount/ppEnabledLayerNames are deprecated (device-level layers no longer exist) and
-    // default to 0/nullptr, matching what this used to set explicitly
-    vk::DeviceCreateInfo deviceCreateInfo = vk::DeviceCreateInfo{}
-        .setPNext(&dynamicRenderingFeatures)
-        .setQueueCreateInfos(queueCreateInfos)
-        .setPEnabledExtensionNames(deviceExtensions)
-        .setPEnabledFeatures(&deviceFeatures);
-
-    vk::Result deviceCreation = vk::PhysicalDevice(ApplicationInfo::PhysicalDevice()).createDevice(
-        &deviceCreateInfo, nullptr, &_internal);
-    if(deviceCreation != vk::Result::eSuccess)
-    {
-        throw std::runtime_error("Failed to create VK Logical Device !");
-    }
-
-    VkExtManager::InitDevice(_internal);
-    ApplicationInfo::Get()._device = _internal;
-}
-
-VkDeviceHandler::~VkDeviceHandler()
-{
-    if(!_internal) return;
-
-    _internal.destroy();
-}
-
 VkFenceHandler::VkFenceHandler()
 {
     // Create the queue in the "Signaled" state to ensure the first frame won't wait eternally for a fence that is not signaled, thus preventing an infinit loop
@@ -278,7 +154,9 @@ vk::raii::Instance M3VKConstruct::MakeInstance(const vk::raii::Context& context,
     vk::raii::Instance instance(context, createInfo);
 
     VkExtManager::InitInstance(instance);
-    ApplicationInfo::Get()._vkInstance = &instance;
+    // Note: ApplicationInfo::Instance() isn't bound here - `instance` is a local about to be moved
+    // into Application::_instance, so its address isn't stable yet. DebugLayer, the next thing built
+    // from it, does the actual binding once it receives the real, permanently-addressed object.
 
     return instance;
 }
@@ -310,7 +188,7 @@ VkQueueHandler::VkQueueHandler(VkQueueHandler::QueueTypeEnum queueType)
         default: throw std::runtime_error("Unimplemented graphics queue type");
     }
 
-    _internal = vk::Device(ApplicationInfo::Device()).getQueue(family, 0);
+    _internal = ApplicationInfo::RaiiDevice().getQueue(family, 0);
     _queueFamilyIndex = family;
     _type = queueType;
 }
@@ -373,15 +251,15 @@ VkSamplerHandler::~VkSamplerHandler()
     ApplicationInfo::Device().destroySampler(_internal);
 }
 
-vk::raii::SurfaceKHR M3VKConstruct::MakeSurface(GLFWwindow *pWindow)
+vk::raii::SurfaceKHR M3VKConstruct::MakeSurface(const vk::raii::Instance& instance, GLFWwindow *pWindow)
 {
     VkSurfaceKHR rawSurface;
-    if(glfwCreateWindowSurface(ApplicationInfo::Instance(), pWindow, nullptr, &rawSurface) != VK_SUCCESS)
+    if(glfwCreateWindowSurface(*instance, pWindow, nullptr, &rawSurface) != VK_SUCCESS)
     {
         throw std::runtime_error("Failed to create windows surface !");
     }
 
-    return vk::raii::SurfaceKHR(ApplicationInfo::RaiiInstance(), rawSurface);
+    return vk::raii::SurfaceKHR(instance, rawSurface);
 }
 
 VkPipelineLayoutHandler::VkPipelineLayoutHandler( std::span<const vk::DescriptorSetLayout> descriptorLayouts, std::span<const vk::PushConstantRange> pushConstantRanges)
@@ -497,9 +375,9 @@ int M3VKConstruct::Helper::ScorePhysicalDeviceSuitability(vk::PhysicalDevice dev
     return score;
 }
 
-vk::raii::PhysicalDevice M3VKConstruct::MakePhysicalDevice(vk::SurfaceKHR windowSurface, const std::vector<const char *>& deviceExtensions)
+vk::raii::PhysicalDevice M3VKConstruct::MakePhysicalDevice(const vk::raii::Instance& instance, vk::SurfaceKHR windowSurface, const std::vector<const char *>& deviceExtensions)
 {
-    std::vector<vk::PhysicalDevice> physicalDevices = ApplicationInfo::Instance().enumeratePhysicalDevices();
+    std::vector<vk::raii::PhysicalDevice> physicalDevices = instance.enumeratePhysicalDevices();
 
     if(physicalDevices.empty())
     {
@@ -512,15 +390,15 @@ vk::raii::PhysicalDevice M3VKConstruct::MakePhysicalDevice(vk::SurfaceKHR window
     vk::PhysicalDevice selected = nullptr;
 
     int bestScore = 0;
-    for(const vk::PhysicalDevice& physicalDevice : physicalDevices)
+    for(const vk::raii::PhysicalDevice& physicalDevice : physicalDevices)
     {
         QueueFamilyIds localQueueIds;
         vk::PhysicalDeviceProperties localProperties;
-        int score = Helper::ScorePhysicalDeviceSuitability(physicalDevice, windowSurface, deviceExtensions, localProperties, localQueueIds);
+        int score = Helper::ScorePhysicalDeviceSuitability(*physicalDevice, windowSurface, deviceExtensions, localProperties, localQueueIds);
         if(score > bestScore)
         {
             bestScore = score;
-            selected = physicalDevice;
+            selected = *physicalDevice;
             queueFamilyIds = localQueueIds;
             properties = localProperties;
         }
@@ -531,9 +409,118 @@ vk::raii::PhysicalDevice M3VKConstruct::MakePhysicalDevice(vk::SurfaceKHR window
         throw std::runtime_error("Failed to find a suitable GPU on this device");
     }
 
+    return vk::raii::PhysicalDevice(instance, selected);
+}
 
+vk::raii::Device M3VKConstruct::MakeDevice(const vk::raii::PhysicalDevice& physicalDevice, vk::SurfaceKHR windowSurface, const std::vector<const char*>& deviceExtensions)
+{
+    // Computed locally rather than read from ApplicationInfo: at this point in construction nothing
+    // has populated ApplicationInfo's queue family ids yet, so Surface is taken as a parameter instead.
+    QueueFamilyIds queueFamilyIds = QueueFamilyIds::QueryQueueFamilies(physicalDevice, windowSurface);
 
-    vk::raii::PhysicalDevice device = vk::raii::PhysicalDevice(ApplicationInfo::RaiiInstance(), selected);
-    ApplicationInfo::Get().SetPhysicalDeviceInformation(device, properties, queueFamilyIds);
+    std::vector<vk::DeviceQueueCreateInfo> queueCreateInfos;
+    std::set<uint32_t> uniqueQueueIds =
+    {
+        queueFamilyIds.GraphicsCompute.value(),
+        queueFamilyIds.Present.value(),
+        queueFamilyIds.Transfer.value()
+    };
+
+    float queuePriority = 1.0f;
+    for(uint32_t queueId : uniqueQueueIds)
+    {
+        queueCreateInfos.push_back(vk::DeviceQueueCreateInfo{}
+            .setQueueFamilyIndex(queueId)
+            .setQueueCount(1)
+            .setPQueuePriorities(&queuePriority));
+    }
+
+    VkPhysicalDeviceSynchronization2Features sync2Features
+    {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES,
+        .pNext = nullptr,
+        .synchronization2 = VK_TRUE
+    };
+
+    VkPhysicalDeviceExtendedDynamicState3FeaturesEXT extendedDynamicState3Features{};
+    extendedDynamicState3Features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTENDED_DYNAMIC_STATE_3_FEATURES_EXT;
+    extendedDynamicState3Features.pNext = &sync2Features;
+    extendedDynamicState3Features.extendedDynamicState3RasterizationSamples = VK_TRUE;
+    extendedDynamicState3Features.extendedDynamicState3ColorBlendEnable = VK_TRUE;
+    extendedDynamicState3Features.extendedDynamicState3ColorBlendEquation = VK_TRUE;
+    extendedDynamicState3Features.extendedDynamicState3ColorWriteMask = VK_TRUE;
+    extendedDynamicState3Features.extendedDynamicState3PolygonMode = VK_TRUE;
+    extendedDynamicState3Features.extendedDynamicState3AlphaToCoverageEnable = VK_TRUE;
+    extendedDynamicState3Features.extendedDynamicState3DepthClampEnable = VK_TRUE;
+    extendedDynamicState3Features.extendedDynamicState3LogicOpEnable = VK_TRUE;
+    extendedDynamicState3Features.extendedDynamicState3AlphaToOneEnable = VK_TRUE;
+
+    VkPhysicalDeviceExtendedDynamicState2FeaturesEXT extendedDynamicState2Features
+    {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTENDED_DYNAMIC_STATE_2_FEATURES_EXT,
+        .pNext = &extendedDynamicState3Features,
+        .extendedDynamicState2 = VK_TRUE
+    };
+
+    VkPhysicalDeviceExtendedDynamicStateFeaturesEXT extendedDynamicStateFeatures
+    {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTENDED_DYNAMIC_STATE_FEATURES_EXT,
+        .pNext = &extendedDynamicState2Features,
+        .extendedDynamicState = VK_TRUE
+    };
+
+    VkPhysicalDeviceShaderObjectFeaturesEXT shaderObjectFeatures
+    {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_OBJECT_FEATURES_EXT,
+        .pNext = &extendedDynamicStateFeatures,
+        .shaderObject = VK_TRUE,
+    };
+
+    VkPhysicalDeviceVulkan11Features vulkan11Features
+    {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES,
+        .pNext = &shaderObjectFeatures,
+        .shaderDrawParameters = VK_TRUE
+    };
+
+    // enable bindless support
+    VkPhysicalDeviceDescriptorIndexingFeatures descriptorIndexingFeatures
+    {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES,
+        .pNext = &vulkan11Features
+    };
+
+    descriptorIndexingFeatures.shaderSampledImageArrayNonUniformIndexing = VK_TRUE; // different instance in the same wave can access different textures
+    descriptorIndexingFeatures.shaderStorageImageArrayNonUniformIndexing = VK_TRUE;
+    descriptorIndexingFeatures.shaderStorageBufferArrayNonUniformIndexing = VK_TRUE;
+    descriptorIndexingFeatures.descriptorBindingSampledImageUpdateAfterBind = VK_TRUE; // descriptor can be updated while bound
+    descriptorIndexingFeatures.descriptorBindingStorageBufferUpdateAfterBind = VK_TRUE;
+    descriptorIndexingFeatures.descriptorBindingStorageImageUpdateAfterBind = VK_TRUE;
+    descriptorIndexingFeatures.descriptorBindingPartiallyBound = VK_TRUE; // slot can be empty
+    descriptorIndexingFeatures.descriptorBindingVariableDescriptorCount = VK_TRUE; // actual count set at all location
+    descriptorIndexingFeatures.runtimeDescriptorArray = VK_TRUE; // unsized array in shaders
+
+    VkPhysicalDeviceDynamicRenderingFeatures dynamicRenderingFeatures
+    {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES,
+        .pNext = &descriptorIndexingFeatures,
+        .dynamicRendering = VK_TRUE,
+    };
+
+    vk::PhysicalDeviceFeatures deviceFeatures = vk::PhysicalDeviceFeatures{}
+        .setSampleRateShading(VK_TRUE)
+        .setMultiDrawIndirect(VK_TRUE)
+        .setDrawIndirectFirstInstance(VK_TRUE)
+        .setFillModeNonSolid(VK_TRUE)
+        .setSamplerAnisotropy(VK_TRUE);
+
+    vk::DeviceCreateInfo deviceCreateInfo = vk::DeviceCreateInfo{}
+        .setPNext(&dynamicRenderingFeatures)
+        .setQueueCreateInfos(queueCreateInfos)
+        .setPEnabledExtensionNames(deviceExtensions)
+        .setPEnabledFeatures(&deviceFeatures);
+
+    vk::raii::Device device(physicalDevice, deviceCreateInfo);
+    VkExtManager::InitDevice(device);
     return device;
 }

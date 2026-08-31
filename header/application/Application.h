@@ -44,7 +44,10 @@ class Application
     DebugLayer _vkDebugLayer;
     vk::raii::SurfaceKHR _windowSurface;
     vk::raii::PhysicalDevice _physicalDevice;
-    VkDeviceHandler _device;
+    vk::raii::Device _device;
+
+    ApplicationInfo::Initializer _appInfoInitializer;
+
     VkQueueHandler _graphicsComputeQueue;
     VkQueueHandler _presentQueue;
 

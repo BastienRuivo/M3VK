@@ -12,6 +12,16 @@ class ApplicationInfo
 {
     public:
 
+    class Initializer
+    {
+        public:
+        Initializer() = delete;
+        Initializer(const vk::raii::Instance& instance,
+            const vk::raii::SurfaceKHR& surface,
+            const vk::raii::PhysicalDevice& physicalDevice,
+            const vk::raii::Device& device);
+    };
+
     ApplicationInfo(const ApplicationInfo&) = delete;
     void operator=(const ApplicationInfo&) = delete;
 
@@ -21,10 +31,15 @@ class ApplicationInfo
         return instance;
     }
 
-    static inline const vk::Instance Instance() { return *ApplicationInfo::Get()._vkInstance; }
+    static inline vk::Instance Instance() { return *ApplicationInfo::Get()._vkInstance; }
+    static inline vk::SurfaceKHR Surface() { return *ApplicationInfo::Get()._surface; }
+    static inline vk::PhysicalDevice PhysicalDevice() { return *ApplicationInfo::Get()._physicalDevice; }
+    static inline vk::Device Device() { return *ApplicationInfo::Get()._device; }
+
     static inline const vk::raii::Instance& RaiiInstance() { return *ApplicationInfo::Get()._vkInstance; }
-    static inline vk::Device Device() { ApplicationInfo::Get(); return ApplicationInfo::Get()._device; }
-    static inline vk::PhysicalDevice PhysicalDevice() { return ApplicationInfo::Get()._physicalDevice; }
+    static inline const vk::raii::SurfaceKHR& RaiiSurface() { return *ApplicationInfo::Get()._surface; }
+    static inline const vk::raii::PhysicalDevice& RaiiPhysicalDevice() { return *ApplicationInfo::Get()._physicalDevice; }
+    static inline const vk::raii::Device& RaiiDevice() { return *ApplicationInfo::Get()._device; }
 
     struct Constant
     {
@@ -67,13 +82,13 @@ class ApplicationInfo
     static void VRAMRelease(size_t size, AllocType aType);
 
     private:
-    void SetPhysicalDeviceInformation(const vk::raii::PhysicalDevice& physicalDevice, vk::PhysicalDeviceProperties properties, const QueueFamilyIds& queueFamilyIds);
     vk::SampleCountFlagBits GetMaxUsableSampleCount(vk::SampleCountFlagBits maxSample) const;
     ApplicationInfo() {}
 
     const vk::raii::Instance* _vkInstance = nullptr;
-    vk::PhysicalDevice _physicalDevice;
-    vk::Device _device;
+    const vk::raii::SurfaceKHR* _surface = nullptr;
+    const vk::raii::PhysicalDevice* _physicalDevice = nullptr;
+    const vk::raii::Device* _device = nullptr;
 
     QueueFamilyIds _queueFamilyIds;
     vk::PhysicalDeviceProperties _properties;
@@ -81,8 +96,5 @@ class ApplicationInfo
     uint32_t _currentFrame = 0;
     uint32_t _currentVRAM = 0;
 
-    friend class VkDeviceHandler;
-
-    friend vk::raii::Instance M3VKConstruct::MakeInstance(const vk::raii::Context &context, const std::string_view name, const uint32_t appVersion, const uint32_t engineVersion, const uint32_t apiVersion);
-    friend vk::raii::PhysicalDevice M3VKConstruct::MakePhysicalDevice(vk::SurfaceKHR windowSurface, const std::vector<const char *>& deviceExtensions);
+    friend class VkQueueHandler;
 };

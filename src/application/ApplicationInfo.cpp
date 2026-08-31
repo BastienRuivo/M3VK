@@ -31,17 +31,9 @@ void ApplicationInfo::VRAMRelease(size_t size, AllocType aType)
     ApplicationInfo::Get()._currentVRAM = ApplicationInfo::Get()._currentVRAM - size;
 }
 
-void ApplicationInfo::SetPhysicalDeviceInformation(const vk::raii::PhysicalDevice& physicalDevice, vk::PhysicalDeviceProperties properties, const QueueFamilyIds& queueFamilyIds)
-{
-    _physicalDevice = physicalDevice;
-    _properties = properties;
-    _queueFamilyIds = queueFamilyIds;
-    _msaaSample = GetMaxUsableSampleCount(Constant::MaxMSAASample);
-}
-
 uint32_t ApplicationInfo::FindMemoryType(uint32_t typeFilter, vk::MemoryPropertyFlags properties)
 {
-    vk::PhysicalDeviceMemoryProperties memoryProperties = Get()._physicalDevice.getMemoryProperties();
+    vk::PhysicalDeviceMemoryProperties memoryProperties = Get()._physicalDevice->getMemoryProperties();
 
     for (uint32_t memoryType = 0; memoryType < memoryProperties.memoryTypeCount; ++memoryType)
     {
@@ -54,4 +46,18 @@ uint32_t ApplicationInfo::FindMemoryType(uint32_t typeFilter, vk::MemoryProperty
 
     DebugLayer::Log(DebugLayer::LogType::WARNING, "Can't find suitable memory type for flags {" + vk::to_string(properties) +"}");
     return UINT32_MAX;
+}
+
+ApplicationInfo::Initializer::Initializer(const vk::raii::Instance& instance,
+    const vk::raii::SurfaceKHR& surface,
+    const vk::raii::PhysicalDevice& physicalDevice,
+    const vk::raii::Device& device)
+{
+    ApplicationInfo::Get()._vkInstance = &instance;
+    ApplicationInfo::Get()._surface = &surface;
+    ApplicationInfo::Get()._physicalDevice = &physicalDevice;
+    ApplicationInfo::Get()._device = &device;
+    ApplicationInfo::Get()._properties = physicalDevice.getProperties();
+    ApplicationInfo::Get()._queueFamilyIds = QueueFamilyIds::QueryQueueFamilies(physicalDevice, surface);
+    ApplicationInfo::Get()._msaaSample = ApplicationInfo::Get().GetMaxUsableSampleCount(Constant::MaxMSAASample);
 }

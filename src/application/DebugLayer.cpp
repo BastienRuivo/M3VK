@@ -148,14 +148,14 @@ void DebugLayer::PopulateDebugMessengerCreateInfo(vk::DebugUtilsMessengerCreateI
         .setPfnUserCallback(static_cast<vk::PFN_DebugUtilsMessengerCallbackEXT>(DebugCallback));
 }
 
-DebugLayer::DebugLayer()
+DebugLayer::DebugLayer(const vk::raii::Instance& instance)
 {
     if(!Enabled) return;
 
     vk::DebugUtilsMessengerCreateInfoEXT createInfo{};
     PopulateDebugMessengerCreateInfo(createInfo);
 
-    vk::Result result = ApplicationInfo::Instance().createDebugUtilsMessengerEXT(&createInfo, nullptr, &_debugMessenger);
+    vk::Result result = vk::Instance(instance).createDebugUtilsMessengerEXT(&createInfo, nullptr, &_debugMessenger);
     if (result != vk::Result::eSuccess)
     {
         throw std::runtime_error("failed to set up debug messenger!");
