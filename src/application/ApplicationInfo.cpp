@@ -31,7 +31,7 @@ void ApplicationInfo::VRAMRelease(size_t size, AllocType aType)
     ApplicationInfo::Get()._currentVRAM = ApplicationInfo::Get()._currentVRAM - size;
 }
 
-void ApplicationInfo::SetPhysicalDeviceInformation(vk::PhysicalDevice physicalDevice, vk::PhysicalDeviceProperties properties, const QueueFamilyIds& queueFamilyIds)
+void ApplicationInfo::SetPhysicalDeviceInformation(const vk::raii::PhysicalDevice& physicalDevice, vk::PhysicalDeviceProperties properties, const QueueFamilyIds& queueFamilyIds)
 {
     _physicalDevice = physicalDevice;
     _properties = properties;

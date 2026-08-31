@@ -1,4 +1,5 @@
 #include "handler/Handlers.h"
+#include "application/ApplicationHelper.h"
 #include "application/VkExtManager.h"
 #include "application/ApplicationInfo.h"
 #include <cstdint>
@@ -398,4 +399,141 @@ VkPipelineLayoutHandler::~VkPipelineLayoutHandler()
 {
     if(!_internal) return;
     ApplicationInfo::Device().destroyPipelineLayout(_internal);
+}
+
+bool M3VKConstruct::Helper::CheckPhysicalDeviceExtensionSupport(vk::PhysicalDevice device, const std::vector<const char *>& deviceExtensions)
+{
+    uint32_t extensionCount = 0;
+    vk::Result result = device.enumerateDeviceExtensionProperties(nullptr, &extensionCount, nullptr);
+
+    if(result != vk::Result::eSuccess)
+    {
+        DebugLayer::Log(DebugLayer::ERROR, "Fail to query device extension properties size");
+    }
+
+    std::vector<vk::ExtensionProperties> properties(extensionCount);
+    result = device.enumerateDeviceExtensionProperties(nullptr, &extensionCount, properties.data());
+
+    if(result != vk::Result::eSuccess)
+    {
+        DebugLayer::Log(DebugLayer::ERROR, "Fail to enumerate device extension properties");
+    }
+
+    for(const auto& extension : deviceExtensions)
+    {
+        bool foundExtension = false;
+        for(const vk::ExtensionProperties& property : properties)
+        {
+            if(strcmp(extension, property.extensionName.data()) == 0)
+            {
+                foundExtension = true;
+                break;
+            }
+        }
+        if(!foundExtension)
+        {
+            if(DebugLayer::Enabled)
+            {
+                DebugLayer::Log(DebugLayer::LogType::ERROR, (std::string("Extension not supported : ") + std::string(extension)).c_str());
+            }
+            return false;
+        }
+    }
+
+    return true;
+}
+
+uint32_t M3VKConstruct::Helper::FindMemoryType(vk::PhysicalDevice device, uint32_t typeFilter, vk::MemoryPropertyFlags properties)
+{
+    vk::PhysicalDeviceMemoryProperties memoryProperties;
+    device.getMemoryProperties(&memoryProperties);
+
+    for (uint32_t memoryType = 0; memoryType < memoryProperties.memoryTypeCount; ++memoryType)
+    {
+        // is suitable for buffer & writable by CPU
+        if((typeFilter & (1 << memoryType)) && ((memoryProperties.memoryTypes[memoryType].propertyFlags & properties) == properties))
+        {
+            return memoryType;
+        }
+    }
+
+    throw std::runtime_error("Can't find suitable memory type for buffer");
+}
+
+int M3VKConstruct::Helper::ScorePhysicalDeviceSuitability(vk::PhysicalDevice device, vk::SurfaceKHR windowSurface, const std::vector<const char *>& deviceExtensions, vk::PhysicalDeviceProperties& deviceProperties, QueueFamilyIds& familyIds)
+{
+    device.getProperties(&deviceProperties);
+
+    // support of addtionnal feature (texture compression, 64bit double, multi viewport rendering)
+    vk::PhysicalDeviceFeatures deviceFeatures = device.getFeatures();
+
+    int score = 0;
+
+
+    familyIds = QueueFamilyIds::QueryQueueFamilies(device, windowSurface);
+
+    bool areAllRequiredExtensionsSupported = M3VKConstruct::Helper::CheckPhysicalDeviceExtensionSupport(device, deviceExtensions);
+
+    ApplicationHelper::SwapChainSupportDetails swapChainDetails = ApplicationHelper::QuerySwapChainSupportDetail(device, windowSurface);
+
+    // Mandatory feature, if any return 0 and this will be the only way to have 0 score meaning there's no suitable GPU
+    if(!QueueFamilyIds::AreAllQueueAvailable(familyIds)
+        || !areAllRequiredExtensionsSupported
+        || !swapChainDetails.CheckSwapChainSupportAdequate()
+        || !deviceFeatures.samplerAnisotropy)
+    {
+        return 0;
+    }
+
+    // Else we try to find the best available GPU for our criteria
+    switch (deviceProperties.deviceType)
+    {
+        case vk::PhysicalDeviceType::eVirtualGpu: score += 600; break;
+        case vk::PhysicalDeviceType::eIntegratedGpu: score += 800; break;
+        case vk::PhysicalDeviceType::eDiscreteGpu: score += 1000; break;
+        default: break;
+    }
+
+    return score;
+}
+
+vk::raii::PhysicalDevice M3VKConstruct::MakePhysicalDevice(vk::SurfaceKHR windowSurface, const std::vector<const char *>& deviceExtensions)
+{
+    std::vector<vk::PhysicalDevice> physicalDevices = ApplicationInfo::Instance().enumeratePhysicalDevices();
+
+    if(physicalDevices.empty())
+    {
+        throw std::runtime_error("Failed to find a Vulkan compatible GPU on this device");
+    }
+
+    QueueFamilyIds queueFamilyIds;
+    vk::PhysicalDeviceProperties properties;
+
+    vk::PhysicalDevice selected = nullptr;
+
+    int bestScore = 0;
+    for(const vk::PhysicalDevice& physicalDevice : physicalDevices)
+    {
+        QueueFamilyIds localQueueIds;
+        vk::PhysicalDeviceProperties localProperties;
+        int score = Helper::ScorePhysicalDeviceSuitability(physicalDevice, windowSurface, deviceExtensions, localProperties, localQueueIds);
+        if(score > bestScore)
+        {
+            bestScore = score;
+            selected = physicalDevice;
+            queueFamilyIds = localQueueIds;
+            properties = localProperties;
+        }
+    }
+
+    if(!selected)
+    {
+        throw std::runtime_error("Failed to find a suitable GPU on this device");
+    }
+
+
+
+    vk::raii::PhysicalDevice device = vk::raii::PhysicalDevice(ApplicationInfo::RaiiInstance(), selected);
+    ApplicationInfo::Get().SetPhysicalDeviceInformation(device, properties, queueFamilyIds);
+    return device;
 }

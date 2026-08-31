@@ -164,7 +164,7 @@ Application::Application() :
     _instance(M3VKConstruct::MakeInstance(_context, "M3VK", vk::makeVersion(0, 1, 0), vk::makeVersion(0, 1, 0), vk::ApiVersion14)),
     _vkDebugLayer(),
     _windowSurface(M3VKConstruct::MakeSurface(_window.Internal())),
-    _physicalDevice(_windowSurface, _deviceExtensions),
+    _physicalDevice(M3VKConstruct::MakePhysicalDevice(_windowSurface, _deviceExtensions)),
     _device(_windowSurface, _deviceExtensions),
 
     // Queues & Swapchain

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "GLFW/glfw3.h"
+#include "rendering/QueueFamilyIds.h"
 #include <cstdint>
 #include <span>
 #include <utility>
@@ -131,7 +132,9 @@ public:
 class VkSamplerHandler : public Handler<vk::Sampler>
 {
 public:
-    VkSamplerHandler(vk::Filter oversampling = vk::Filter::eLinear, vk::Filter undersampling = vk::Filter::eLinear, vk::SamplerMipmapMode mipmapMode = vk::SamplerMipmapMode::eLinear, bool hasAniso = true);
+    VkSamplerHandler(vk::Filter oversampling = vk::Filter::eLinear, vk::Filter undersampling = vk::Filter::eLinear,
+        vk::SamplerMipmapMode mipmapMode = vk::SamplerMipmapMode::eLinear,
+        bool hasAniso = true);
     ~VkSamplerHandler() override;
 
     VkSamplerHandler(VkSamplerHandler&& other) noexcept = default;
@@ -153,6 +156,17 @@ namespace M3VKConstruct
     namespace Helper
     {
         std::vector<const char*> GetRequiredExtensions();
+
+        int ScorePhysicalDeviceSuitability(vk::PhysicalDevice device, vk::SurfaceKHR windowSurface,
+            const std::vector<const char *>& deviceExtensions,
+            vk::PhysicalDeviceProperties& deviceProperties,
+            QueueFamilyIds& familyIds);
+
+            bool CheckPhysicalDeviceExtensionSupport(vk::PhysicalDevice physicalDevice,
+            const std::vector<const char *>& deviceExtensions);
+
+        uint32_t FindMemoryType(vk::PhysicalDevice device, uint32_t typeFilter,
+            vk::MemoryPropertyFlags properties);
     };
 
     vk::raii::Instance MakeInstance(const vk::raii::Context& context,
@@ -162,4 +176,5 @@ namespace M3VKConstruct
         const uint32_t apiVersion);
 
     vk::raii::SurfaceKHR MakeSurface(GLFWwindow* pWindow);
+    vk::raii::PhysicalDevice MakePhysicalDevice(vk::SurfaceKHR windowSurface, const std::vector<const char *>& deviceExtensions);
 };

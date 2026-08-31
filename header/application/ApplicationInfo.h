@@ -7,7 +7,6 @@
 #include <vulkan/vulkan.hpp>
 #include "rendering/QueueFamilyIds.h"
 #include "handler/Handlers.h"
-#include "handler/VkPhysicalDeviceHandler.h"
 
 class ApplicationInfo
 {
@@ -68,7 +67,7 @@ class ApplicationInfo
     static void VRAMRelease(size_t size, AllocType aType);
 
     private:
-    void SetPhysicalDeviceInformation(vk::PhysicalDevice physicalDevice, vk::PhysicalDeviceProperties properties, const QueueFamilyIds& queueFamilyIds);
+    void SetPhysicalDeviceInformation(const vk::raii::PhysicalDevice& physicalDevice, vk::PhysicalDeviceProperties properties, const QueueFamilyIds& queueFamilyIds);
     vk::SampleCountFlagBits GetMaxUsableSampleCount(vk::SampleCountFlagBits maxSample) const;
     ApplicationInfo() {}
 
@@ -82,8 +81,8 @@ class ApplicationInfo
     uint32_t _currentFrame = 0;
     uint32_t _currentVRAM = 0;
 
-    friend class VkPhysicalDeviceHandler;
     friend class VkDeviceHandler;
-    // turn M3VKConstruct::MakeInstace into a friend function
+
     friend vk::raii::Instance M3VKConstruct::MakeInstance(const vk::raii::Context &context, const std::string_view name, const uint32_t appVersion, const uint32_t engineVersion, const uint32_t apiVersion);
+    friend vk::raii::PhysicalDevice M3VKConstruct::MakePhysicalDevice(vk::SurfaceKHR windowSurface, const std::vector<const char *>& deviceExtensions);
 };

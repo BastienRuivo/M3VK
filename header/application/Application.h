@@ -7,7 +7,6 @@
 #include "rendering/CommandBuffer.h"
 #include "rendering/MultiFrame.h"
 #include "handler/Handlers.h"
-#include "handler/VkPhysicalDeviceHandler.h"
 #include "application/Window.h"
 #include "rendering/SwapChain.h"
 #include <array>
@@ -44,10 +43,8 @@ class Application
     vk::raii::Instance _instance;
     DebugLayer _vkDebugLayer;
     vk::raii::SurfaceKHR _windowSurface;
-    // Implicitly linked to instance, see wtd later
-    VkPhysicalDeviceHandler _physicalDevice;
+    vk::raii::PhysicalDevice _physicalDevice;
     VkDeviceHandler _device;
-    //Implicitly linked to device, see wtd later
     VkQueueHandler _graphicsComputeQueue;
     VkQueueHandler _presentQueue;
 
