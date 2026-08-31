@@ -160,11 +160,12 @@ void Application::DrawFrame()
 Application::Application() :
     // Core Window & Instance
     _window(1920, 1080, "Window", this, Application::ResizeCallback, Application::MouseMoveCallback, Application::WindowFocusCallback),
-    _instance(),
-    _vkDebugLayer(_instance.Internal()),
-    _windowSurface(_instance.Internal(), _window.Internal()),
-    _physicalDevice(_instance.Internal(), _windowSurface.Internal(), _deviceExtensions),
-    _device(_instance.Internal(), _windowSurface.Internal(), _deviceExtensions),
+    _context(vkGetInstanceProcAddr),
+    _instance(M3VKConstruct::MakeInstance(_context, "M3VK", vk::makeVersion(0, 1, 0), vk::makeVersion(0, 1, 0), vk::ApiVersion14)),
+    _vkDebugLayer(),
+    _windowSurface(_window.Internal()),
+    _physicalDevice(_windowSurface.Internal(), _deviceExtensions),
+    _device(_windowSurface.Internal(), _deviceExtensions),
 
     // Queues & Swapchain
     _graphicsComputeQueue(VkQueueHandler::Graphics),

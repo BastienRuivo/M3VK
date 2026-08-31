@@ -106,10 +106,10 @@ int VkPhysicalDeviceHandler::ScoreDeviceSuitability(vk::PhysicalDevice physicalD
     return score;
 }
 
-VkPhysicalDeviceHandler::VkPhysicalDeviceHandler(vk::Instance instance, vk::SurfaceKHR windowSurface, const std::vector<const char *>& deviceExtensions)
+VkPhysicalDeviceHandler::VkPhysicalDeviceHandler(vk::SurfaceKHR windowSurface, const std::vector<const char *>& deviceExtensions)
 {
     _internal = nullptr;
-    std::vector<vk::PhysicalDevice> physicalDevices = instance.enumeratePhysicalDevices();
+    std::vector<vk::PhysicalDevice> physicalDevices = ApplicationInfo::Instance().enumeratePhysicalDevices();
 
     if(physicalDevices.empty())
     {

@@ -10,7 +10,7 @@ class VkPhysicalDeviceHandler : public Handler<vk::PhysicalDevice>
 {
     public:
 
-    VkPhysicalDeviceHandler(vk::Instance instance, vk::SurfaceKHR windowSurface, const std::vector<const char *>& deviceExtensions);
+    VkPhysicalDeviceHandler(vk::SurfaceKHR windowSurface, const std::vector<const char *>& deviceExtensions);
     ~VkPhysicalDeviceHandler() override;
 
     VkPhysicalDeviceHandler(VkPhysicalDeviceHandler&& other) noexcept = default;

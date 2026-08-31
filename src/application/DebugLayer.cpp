@@ -1,6 +1,7 @@
 #include <vulkan/vulkan.hpp>
 
 #include "application/DebugLayer.h"
+#include "application/ApplicationInfo.h"
 #include <ostream>
 #include <string_view>
 #include <iostream>
@@ -147,15 +148,14 @@ void DebugLayer::PopulateDebugMessengerCreateInfo(vk::DebugUtilsMessengerCreateI
         .setPfnUserCallback(static_cast<vk::PFN_DebugUtilsMessengerCallbackEXT>(DebugCallback));
 }
 
-DebugLayer::DebugLayer(vk::Instance instance)
+DebugLayer::DebugLayer()
 {
     if(!Enabled) return;
-    _instance = instance;
 
     vk::DebugUtilsMessengerCreateInfoEXT createInfo{};
     PopulateDebugMessengerCreateInfo(createInfo);
 
-    vk::Result result = _instance.createDebugUtilsMessengerEXT(&createInfo, nullptr, &_debugMessenger);
+    vk::Result result = ApplicationInfo::Instance().createDebugUtilsMessengerEXT(&createInfo, nullptr, &_debugMessenger);
     if (result != vk::Result::eSuccess)
     {
         throw std::runtime_error("failed to set up debug messenger!");
@@ -165,5 +165,5 @@ DebugLayer::DebugLayer(vk::Instance instance)
 DebugLayer::~DebugLayer()
 {
     if (!Enabled) return;
-    _instance.destroyDebugUtilsMessengerEXT(_debugMessenger);
+    ApplicationInfo::Instance().destroyDebugUtilsMessengerEXT(_debugMessenger);
 }

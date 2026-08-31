@@ -30,7 +30,7 @@ VkCommandPoolHandler::~VkCommandPoolHandler()
     ApplicationInfo::Device().destroyCommandPool(_internal);
 }
 
-VkDeviceHandler::VkDeviceHandler(vk::Instance instance, vk::SurfaceKHR windowSurface, const std::vector<const char*>& deviceExtensions)
+VkDeviceHandler::VkDeviceHandler(vk::SurfaceKHR windowSurface, const std::vector<const char*>& deviceExtensions)
 {
     std::vector<vk::DeviceQueueCreateInfo> queueCreateInfos;
     std::set<uint32_t> uniqueQueueIds =
@@ -202,15 +202,19 @@ VkSemaphoreHandler::~VkSemaphoreHandler()
     ApplicationInfo::Device().destroySemaphore(_internal);
 }
 
-VkInstanceHandler::VkInstanceHandler()
+vk::raii::Instance M3VKConstruct::MakeInstance(const vk::raii::Context& context,
+        const std::string_view name,
+        const uint32_t appVersion,
+        const uint32_t engineVersion,
+        const uint32_t apiVersion)
 {
     VkExtManager::InitLoader();
 
     vk::ApplicationInfo appInfo = vk::ApplicationInfo{}
-        .setPApplicationName("M3VK")
-        .setApplicationVersion(VK_MAKE_VERSION(1, 0, 0))
-        .setEngineVersion(VK_MAKE_VERSION(1, 0, 0))
-        .setApiVersion(VK_API_VERSION_1_4);
+        .setPApplicationName(name.data())
+        .setApplicationVersion(appVersion)
+        .setEngineVersion(engineVersion)
+        .setApiVersion(apiVersion);
 
     std::vector<vk::ExtensionProperties> supportedExtensions = vk::enumerateInstanceExtensionProperties();
 
@@ -227,8 +231,8 @@ VkInstanceHandler::VkInstanceHandler()
         }
     }
 
-    std::vector<const char *> requiredExtensions = GetRequiredExtensions();
-    std::vector<const char*> missingExtensions;
+    std::vector<const char *> requiredExtensions = M3VKConstruct::Helper::GetRequiredExtensions();
+    std::vector<const char *> missingExtensions;
     for(int i = 0; i < requiredExtensions.size(); ++i)
     {
         bool isPresent = false;
@@ -270,24 +274,15 @@ VkInstanceHandler::VkInstanceHandler()
     vk::DebugUtilsMessengerCreateInfoEXT debugInfoCreate;
     DebugLayer::SetupCreateInfo(createInfo, debugInfoCreate);
 
-    vk::Result result = vk::createInstance(&createInfo, nullptr, &_internal);
-    if(result != vk::Result::eSuccess)
-    {
-        if(result == vk::Result::eErrorLayerNotPresent)
-        {
-            throw std::runtime_error("Error : A VK Layer is not present on computer");
-        }
-        else
-        {
-            throw std::runtime_error("Failed to create VK_Instance");
-        }
-    }
+    vk::raii::Instance instance(context, createInfo);
 
-    VkExtManager::InitInstance(_internal);
-    ApplicationInfo::Get()._vkInstance = _internal;
+    VkExtManager::InitInstance(instance);
+    ApplicationInfo::Get()._vkInstance = instance;
+
+    return instance;
 }
 
-std::vector<const char *> VkInstanceHandler::GetRequiredExtensions() const
+std::vector<const char *> M3VKConstruct::Helper::GetRequiredExtensions()
 {
     uint32_t glfwExtensionCount = 0;
     const char** glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
@@ -300,12 +295,6 @@ std::vector<const char *> VkInstanceHandler::GetRequiredExtensions() const
     }
 
     return extensions;
-}
-VkInstanceHandler::~VkInstanceHandler()
-{
-    if(!_internal) return;
-
-    _internal.destroy();
 }
 
 VkQueueHandler::VkQueueHandler(VkQueueHandler::QueueTypeEnum queueType)
@@ -383,11 +372,10 @@ VkSamplerHandler::~VkSamplerHandler()
     ApplicationInfo::Device().destroySampler(_internal);
 }
 
-VkSurfaceHandler::VkSurfaceHandler(vk::Instance instance, GLFWwindow* pWindow)
+VkSurfaceHandler::VkSurfaceHandler(GLFWwindow* pWindow)
 {
-    _instance = instance;
     VkSurfaceKHR rawSurface;
-    if(glfwCreateWindowSurface(_instance, pWindow, nullptr, &rawSurface) != VK_SUCCESS)
+    if(glfwCreateWindowSurface(ApplicationInfo::Instance(), pWindow, nullptr, &rawSurface) != VK_SUCCESS)
     {
         throw std::runtime_error("Failed to create windows surface !");
     }
@@ -397,8 +385,7 @@ VkSurfaceHandler::VkSurfaceHandler(vk::Instance instance, GLFWwindow* pWindow)
 VkSurfaceHandler::~VkSurfaceHandler()
 {
     if(!_internal) return;
-
-    _instance.destroySurfaceKHR(_internal);
+    ApplicationInfo::Instance().destroySurfaceKHR(_internal);
 }
 
 VkPipelineLayoutHandler::VkPipelineLayoutHandler( std::span<const vk::DescriptorSetLayout> descriptorLayouts, std::span<const vk::PushConstantRange> pushConstantRanges)

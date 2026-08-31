@@ -68,19 +68,21 @@ class ApplicationInfo
 
     private:
     void SetPhysicalDeviceInformation(vk::PhysicalDevice physicalDevice, vk::PhysicalDeviceProperties properties, const QueueFamilyIds& queueFamilyIds);
-
-    ApplicationInfo() {}
     vk::SampleCountFlagBits GetMaxUsableSampleCount(vk::SampleCountFlagBits maxSample) const;
+    ApplicationInfo() {}
+
+    vk::Instance _vkInstance;
+    vk::PhysicalDevice _physicalDevice;
+    vk::Device _device;
+
     QueueFamilyIds _queueFamilyIds;
     vk::PhysicalDeviceProperties _properties;
     vk::SampleCountFlagBits  _msaaSample = vk::SampleCountFlagBits::e1;
-    vk::PhysicalDevice _physicalDevice;
-    vk::Device _device;
-    vk::Instance _vkInstance;
     uint32_t _currentFrame = 0;
     uint32_t _currentVRAM = 0;
 
     friend class VkPhysicalDeviceHandler;
     friend class VkDeviceHandler;
-    friend class VkInstanceHandler;
+    // turn M3VKConstruct::MakeInstace into a friend function
+    friend vk::raii::Instance M3VKConstruct::MakeInstance(const vk::raii::Context &context, const std::string_view name, const uint32_t appVersion, const uint32_t engineVersion, const uint32_t apiVersion);
 };

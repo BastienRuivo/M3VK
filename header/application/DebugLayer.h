@@ -34,7 +34,7 @@ class DebugLayer
     static inline const char* TextColorYellow = "\033[33m";
     static inline const char* TextColorRed = "\033[31m";
 
-    DebugLayer(vk::Instance instance);
+    DebugLayer();
     ~DebugLayer();
 
     static void PopulateDebugMessengerCreateInfo(vk::DebugUtilsMessengerCreateInfoEXT& createInfo);
@@ -44,6 +44,5 @@ class DebugLayer
 
     private:
     vk::DebugUtilsMessengerEXT _debugMessenger;
-    vk::Instance _instance;
 
 };

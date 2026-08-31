@@ -40,7 +40,8 @@ class Application
 
     // RAII is first in last out order
     Window _window;
-    VkInstanceHandler _instance;
+    vk::raii::Context _context;
+    vk::raii::Instance _instance;
     DebugLayer _vkDebugLayer;
     VkSurfaceHandler _windowSurface;
     // Implicitly linked to instance, see wtd later

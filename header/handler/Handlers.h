@@ -6,6 +6,7 @@
 #include <utility>
 #include <vector>
 #include <vulkan/vulkan.hpp>
+#include <vulkan/vulkan_raii.hpp>
 #include <concepts>
 
 template<typename T>
@@ -15,7 +16,6 @@ template<typename T>
     || std::same_as<T, vk::Fence>
     || std::same_as<T, vk::Semaphore>
     || std::same_as<T, vk::ImageView>
-    || std::same_as<T, vk::Instance>
     || std::same_as<T, vk::PipelineLayout>
     || std::same_as<T, vk::Queue>
     || std::same_as<T, vk::Sampler>
@@ -67,7 +67,7 @@ public:
 class VkDeviceHandler : public Handler<vk::Device>
 {
 public:
-    VkDeviceHandler(vk::Instance instance, vk::SurfaceKHR windowSurface, const std::vector<const char*>& deviceExtensions);
+    VkDeviceHandler(vk::SurfaceKHR windowSurface, const std::vector<const char*>& deviceExtensions);
     ~VkDeviceHandler() override;
 
     VkDeviceHandler(VkDeviceHandler&& other) noexcept = default;
@@ -102,18 +102,6 @@ public:
             .setSemaphore(_internal)
             .setStageMask(stage);
     }
-};
-
-class VkInstanceHandler : public Handler<vk::Instance>
-{
-public:
-    VkInstanceHandler();
-    ~VkInstanceHandler() override;
-
-    VkInstanceHandler(VkInstanceHandler&& other) noexcept = default;
-    VkInstanceHandler& operator=(VkInstanceHandler&& other) noexcept = default;
-private:
-    std::vector<const char*> GetRequiredExtensions() const;
 };
 
 class VkQueueHandler : public Handler<vk::Queue>
@@ -154,13 +142,11 @@ public:
 class VkSurfaceHandler : public Handler<vk::SurfaceKHR>
 {
 public:
-    VkSurfaceHandler(vk::Instance instance, GLFWwindow* pWindow);
+    VkSurfaceHandler(GLFWwindow* pWindow);
     ~VkSurfaceHandler() override;
 
     VkSurfaceHandler(VkSurfaceHandler&& other) noexcept = default;
     VkSurfaceHandler& operator=(VkSurfaceHandler&& other) noexcept = default;
-    private:
-    vk::Instance _instance;
 };
 
 class VkPipelineLayoutHandler : public Handler<vk::PipelineLayout>
@@ -171,4 +157,18 @@ public:
 
     VkPipelineLayoutHandler(VkPipelineLayoutHandler&& other) noexcept = default;
     VkPipelineLayoutHandler& operator=(VkPipelineLayoutHandler&& other) noexcept = default;
+};
+
+namespace M3VKConstruct
+{
+    namespace Helper
+    {
+        std::vector<const char*> GetRequiredExtensions();
+    };
+
+    vk::raii::Instance MakeInstance(const vk::raii::Context& context,
+        const std::string_view name,
+        const uint32_t appVersion,
+        const uint32_t engineVersion,
+        const uint32_t apiVersion);
 };
