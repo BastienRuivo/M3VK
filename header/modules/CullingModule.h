@@ -21,8 +21,8 @@ public:
     CullingModule(ShaderLibrary& shaderLibrary, BindingManager& descriptorAllocator);
     ~CullingModule();
 
-    CullingModule(CullingModule&& other) noexcept;
-    CullingModule& operator=(CullingModule&& other) noexcept;
+    CullingModule(CullingModule&& other) noexcept = default;
+    CullingModule& operator=(CullingModule&& other) noexcept = default;
 
     CullingModule(const CullingModule&) = delete;
     CullingModule& operator=(const CullingModule&) = delete;

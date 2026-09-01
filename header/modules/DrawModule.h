@@ -11,8 +11,8 @@ public:
     DrawModule(ShaderLibrary::VertexBinding vertexBinding, ShaderLibrary::FragmentBinding fragmentBinding);
     ~DrawModule();
 
-    DrawModule(DrawModule&& other) noexcept;
-    DrawModule& operator=(DrawModule&& other) noexcept;
+    DrawModule(DrawModule&& other) noexcept = default;
+    DrawModule& operator=(DrawModule&& other) noexcept = default;
 
     DrawModule(const DrawModule&) = delete;
     DrawModule& operator=(const DrawModule&) = delete;

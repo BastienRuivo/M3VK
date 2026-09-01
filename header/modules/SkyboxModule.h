@@ -12,8 +12,8 @@ public:
     void Execute(const CommandBuffer& cmdBuffer, vk::PipelineLayout layout) const;
     ~SkyboxModule();
 
-    SkyboxModule(SkyboxModule&& other) noexcept;
-    SkyboxModule& operator=(SkyboxModule&& other) noexcept;
+    SkyboxModule(SkyboxModule&& other) noexcept = default;
+    SkyboxModule& operator=(SkyboxModule&& other) noexcept = default;
 
     SkyboxModule(const SkyboxModule&) = delete;
     SkyboxModule& operator=(const SkyboxModule&) = delete;

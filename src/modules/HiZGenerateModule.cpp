@@ -128,25 +128,3 @@ HiZGenerateModule::~HiZGenerateModule()
 {
 
 }
-
- HiZGenerateModule::HiZGenerateModule(HiZGenerateModule&& other) noexcept
- :  _hizTexture(std::move(other._hizTexture)),
-    _hizImageViews(std::move(other._hizImageViews)),
-    _hizGenerateMip0Kernel(std::move(other._hizGenerateMip0Kernel)),
-    _hizGenerateKernel(std::move(other._hizGenerateKernel))
- {
-
- }
-
-HiZGenerateModule& HiZGenerateModule::operator=(HiZGenerateModule&& other) noexcept
-{
-    if(this != &other)
-    {
-        _hizTexture = std::move(other._hizTexture);
-        _hizImageViews = std::move(other._hizImageViews);
-        _hizGenerateMip0Kernel = std::move(other._hizGenerateMip0Kernel);
-        _hizGenerateKernel = std::move(other._hizGenerateKernel);
-    }
-
-    return *this;
-}

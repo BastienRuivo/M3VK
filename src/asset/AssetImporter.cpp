@@ -13,32 +13,6 @@
 #include <vector>
 #include <vulkan/vulkan.hpp>
 
-AssetImporter::AssetImporter(AssetImporter&& other) noexcept
-{
-    Header = std::move(other.Header);
-    Materials = std::move(other.Materials);
-    Textures = std::move(other.Textures);
-    SubMeshes = std::move(other.SubMeshes);
-    TextureDatas = std::move(other.TextureDatas);
-    VertexDatas = std::move(other.VertexDatas);
-    IndexDatas = std::move(other.IndexDatas);
-}
-
-AssetImporter& AssetImporter::operator=(AssetImporter&& other) noexcept
-{
-    if(this != &other)
-    {
-        Header = std::move(other.Header);
-        Materials = std::move(other.Materials);
-        Textures = std::move(other.Textures);
-        SubMeshes = std::move(other.SubMeshes);
-        TextureDatas = std::move(other.TextureDatas);
-        VertexDatas = std::move(other.VertexDatas);
-        IndexDatas = std::move(other.IndexDatas);
-    }
-    return *this;
-}
-
 bool AssetImporter::Load(const std::filesystem::path& path)
 {
     if(path.empty() || !std::filesystem::exists(path))

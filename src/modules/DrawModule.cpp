@@ -28,20 +28,3 @@ void DrawModule::Execute(const CommandBuffer& cmdBuffer, vk::PipelineLayout layo
 
     cmdBuffer.DrawIndexedIndirect(indirectBuffer.Internal(), drawOffset, drawCount, indirectBuffer.GetStride());
 }
-
- DrawModule::DrawModule(DrawModule&& other) noexcept
- {
-    VertexBinding = std::move(other.VertexBinding);
-    FragmentBinding = std::move(other.FragmentBinding);
- }
-
-DrawModule& DrawModule::operator=(DrawModule&& other) noexcept
-{
-    if(this != &other)
-    {
-        VertexBinding = std::move(other.VertexBinding);
-        FragmentBinding = std::move(other.FragmentBinding);
-    }
-
-    return *this;
-}

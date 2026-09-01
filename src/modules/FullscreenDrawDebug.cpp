@@ -43,7 +43,7 @@ FullscreenDrawDebug::~FullscreenDrawDebug()
 
 void FullscreenDrawDebug::Draw(const CommandBuffer& cmdBuffer, uint32_t textureIndex, vk::PipelineLayout layout, uint32_t mipLevel) const
 {
-    Draw(cmdBuffer, textureIndex, layout, mipLevel);
+    Draw(cmdBuffer, DrawOption_None, textureIndex, layout, mipLevel);
 }
 
 void FullscreenDrawDebug::Draw(const CommandBuffer& cmdBuffer, DrawOption option, uint32_t textureIndex, vk::PipelineLayout layout, uint32_t mipLevel) const
@@ -65,24 +65,4 @@ void FullscreenDrawDebug::Draw(const CommandBuffer& cmdBuffer, DrawOption option
         cmdBuffer.Draw(3, 1, 0, 0);
     }
     cmdBuffer.EndMarker();
-}
-
- FullscreenDrawDebug::FullscreenDrawDebug(FullscreenDrawDebug&& other) noexcept
- :  VertexBinding(std::move(other.VertexBinding)),
-    FragmentBinding(std::move(other.FragmentBinding)),
-    FragmentDepthBinding(std::move(other.FragmentDepthBinding))
- {
-
- }
-
-FullscreenDrawDebug& FullscreenDrawDebug::operator=(FullscreenDrawDebug&& other) noexcept
-{
-    if(this != &other)
-    {
-        VertexBinding = std::move(other.VertexBinding);
-        FragmentBinding = std::move(other.FragmentBinding);
-        FragmentDepthBinding = std::move(other.FragmentDepthBinding);
-    }
-
-    return *this;
 }

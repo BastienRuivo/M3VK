@@ -25,8 +25,8 @@ struct MaterialImporter : public Importer
     std::vector<std::byte> TextureDatas;
 
     MaterialImporter() = default;
-    MaterialImporter(MaterialImporter&& other) noexcept;
-    MaterialImporter& operator=(MaterialImporter&& other) noexcept;
+    MaterialImporter(MaterialImporter&& other) noexcept = default;
+    MaterialImporter& operator=(MaterialImporter&& other) noexcept = default;
     ~MaterialImporter() = default;
 
     static uint32_t LoadMaterial(BindingManager& allocator, const std::filesystem::path & modelPath, MaterialRegistry & materialRegistry, vk::CommandPool uploadPool, vk::Queue uploadQueue, vk::Sampler sampler);

@@ -34,8 +34,8 @@ struct AssetImporter : public Importer
     std::vector<uint32_t> IndexDatas;
 
     AssetImporter() = default;
-    AssetImporter(AssetImporter&& other) noexcept;
-    AssetImporter& operator=(AssetImporter&& other) noexcept;
+    AssetImporter(AssetImporter&& other) noexcept = default;
+    AssetImporter& operator=(AssetImporter&& other) noexcept = default;
     ~AssetImporter() = default;
 
     static void LoadAsset(BindingManager& allocator, const std::filesystem::path & modelPath, MeshRegistry & meshRegistry, MaterialRegistry & materialRegistry, vk::CommandPool uploadPool, vk::Queue uploadQueue, vk::Sampler sampler);

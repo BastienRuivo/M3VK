@@ -33,8 +33,8 @@ public:
     HiZGenerateModule(const SwapChain& swapChain, ShaderLibrary& shaderLibrary, BindingManager& bindingManager, vk::CommandPool graphicsCommandPool, vk::Queue graphicsComputeQueue, vk::Sampler samplerNearest);
     ~HiZGenerateModule() override;
 
-    HiZGenerateModule(HiZGenerateModule&& other) noexcept;
-    HiZGenerateModule& operator=(HiZGenerateModule&& other) noexcept;
+    HiZGenerateModule(HiZGenerateModule&& other) noexcept = default;
+    HiZGenerateModule& operator=(HiZGenerateModule&& other) noexcept = default;
 
     HiZGenerateModule(const HiZGenerateModule&) = delete;
     HiZGenerateModule& operator=(const HiZGenerateModule&) = delete;

@@ -60,25 +60,3 @@ void SkyboxModule::Execute(const CommandBuffer& cmdBuffer, vk::PipelineLayout la
     }
     cmdBuffer.EndMarker();
 }
-
- SkyboxModule::SkyboxModule(SkyboxModule&& other) noexcept
- :  _sampler(std::move(other._sampler)),
-    _skyboxTexture(std::move(other._skyboxTexture)),
-    _vertexShader(std::move(other._vertexShader)),
-    _fragmentShader(std::move(other._fragmentShader))
- {
-
- }
-
-SkyboxModule& SkyboxModule::operator=(SkyboxModule&& other) noexcept
-{
-    if(this != &other)
-    {
-        _sampler = std::move(other._sampler);
-        _skyboxTexture = std::move(other._skyboxTexture);
-        _vertexShader = std::move(other._vertexShader);
-        _fragmentShader = std::move(other._fragmentShader);
-    }
-
-    return *this;
-}

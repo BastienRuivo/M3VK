@@ -19,8 +19,8 @@ public:
     FullscreenDrawDebug(ShaderLibrary& shaderLibrary, const BindingManager& manager);
     ~FullscreenDrawDebug();
 
-    FullscreenDrawDebug(FullscreenDrawDebug&& other) noexcept;
-    FullscreenDrawDebug& operator=(FullscreenDrawDebug&& other) noexcept;
+    FullscreenDrawDebug(FullscreenDrawDebug&& other) noexcept = default;
+    FullscreenDrawDebug& operator=(FullscreenDrawDebug&& other) noexcept = default;
 
     FullscreenDrawDebug(const FullscreenDrawDebug&) = delete;
     FullscreenDrawDebug& operator=(const FullscreenDrawDebug&) = delete;

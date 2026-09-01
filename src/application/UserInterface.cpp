@@ -130,14 +130,3 @@ UserInterfaceImageSet::~UserInterfaceImageSet()
         ImGui_ImplVulkan_RemoveTexture(_internals[i]);
     }
 }
-
-UserInterfaceImageSet::UserInterfaceImageSet(UserInterfaceImageSet&& other) noexcept
-{
-    _internals = std::move(other._internals);
-}
-
-UserInterfaceImageSet& UserInterfaceImageSet::operator=(UserInterfaceImageSet&& other) noexcept
-{
-    _internals = std::move(other._internals);
-    return *this;
-}

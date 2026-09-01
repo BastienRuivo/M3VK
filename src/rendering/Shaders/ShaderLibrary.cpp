@@ -14,21 +14,6 @@ ShaderLibrary::~ShaderLibrary()
     }
 }
 
-ShaderLibrary::ShaderLibrary(ShaderLibrary&& other) noexcept
-{
-    _shaders = std::move(other._shaders);
-}
-
-ShaderLibrary& ShaderLibrary::operator=(ShaderLibrary&& other) noexcept
-{
-    if(this != &other)
-    {
-        _shaders = std::move(other._shaders);
-    }
-
-    return *this;
-}
-
 uint32_t ShaderLibrary::RegisterShader(std::filesystem::path path, ShaderType type, const BindingManager& descriptorAllocator, std::span<const Shader::SpecializationConstant> speConstants)
 {
     return RegisterShader(path, type, descriptorAllocator.GlobalSetLayouts(), descriptorAllocator.GlobalPushConstantRanges(), speConstants);

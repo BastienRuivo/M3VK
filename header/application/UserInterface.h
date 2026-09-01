@@ -19,8 +19,8 @@ class UserInterfaceImageSet: public MultiFrameRessource<vk::DescriptorSet>
     UserInterfaceImageSet(const UserInterfaceImageSet&) = delete;
     UserInterfaceImageSet& operator=(const UserInterfaceImageSet&) = delete;
 
-    UserInterfaceImageSet(UserInterfaceImageSet&& other) noexcept;
-    UserInterfaceImageSet& operator=(UserInterfaceImageSet&& other) noexcept;
+    UserInterfaceImageSet(UserInterfaceImageSet&& other) noexcept = default;
+    UserInterfaceImageSet& operator=(UserInterfaceImageSet&& other) noexcept = default;
 
     inline vk::DescriptorSet Current() const { return MultiFrameRessource::Current(); }
 };

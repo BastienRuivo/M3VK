@@ -77,8 +77,8 @@ class ShaderLibrary
     ShaderLibrary(const ShaderLibrary&) = delete;
     ShaderLibrary& operator=(const ShaderLibrary&) = delete;
 
-    ShaderLibrary(ShaderLibrary&& other) noexcept;
-    ShaderLibrary& operator=(ShaderLibrary&& other) noexcept;
+    ShaderLibrary(ShaderLibrary&& other) noexcept = default;
+    ShaderLibrary& operator=(ShaderLibrary&& other) noexcept = default;
 
     uint32_t RegisterShader(std::filesystem::path, ShaderType type, std::span<const vk::DescriptorSetLayout> descriptorLayouts, std::span<const vk::PushConstantRange> pushConstantRanges, std::span<const Shader::SpecializationConstant> speConstants = {});
     uint32_t RegisterShader(std::filesystem::path, ShaderType type, const BindingManager& descriptorAllocator, std::span<const Shader::SpecializationConstant> speConstants = {});

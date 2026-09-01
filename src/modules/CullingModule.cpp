@@ -96,25 +96,3 @@ void CullingModule::DoUI(const UserInterface& ui)
     }
     ImGui::End();
 }
-
- CullingModule::CullingModule(CullingModule&& other) noexcept
- :  _visibleIndirectBuffer(std::move(other._visibleIndirectBuffer)),
-    _visibleIndirectionBuffer(std::move(other._visibleIndirectionBuffer)),
-    _cullingKernel(std::move(other._cullingKernel)),
-    _cullingInitKernel(std::move(other._cullingInitKernel))
- {
-
- }
-
-CullingModule& CullingModule::operator=(CullingModule&& other) noexcept
-{
-    if(this != &other)
-    {
-        _visibleIndirectBuffer = std::move(other._visibleIndirectBuffer);
-        _visibleIndirectionBuffer = std::move(other._visibleIndirectionBuffer);
-        _cullingKernel = std::move(other._cullingKernel);
-        _cullingInitKernel = std::move(other._cullingInitKernel);
-    }
-
-    return *this;
-}

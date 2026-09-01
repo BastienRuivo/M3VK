@@ -14,24 +14,6 @@
 #include <vector>
 #include <vulkan/vulkan.hpp>
 
-MaterialImporter::MaterialImporter(MaterialImporter&& other) noexcept
-{
-    Header = std::move(other.Header);
-    Textures = std::move(other.Textures);
-    TextureDatas = std::move(other.TextureDatas);
-}
-
-MaterialImporter& MaterialImporter::operator=(MaterialImporter&& other) noexcept
-{
-    if(this != &other)
-    {
-        Header = std::move(other.Header);
-        Textures = std::move(other.Textures);
-        TextureDatas = std::move(other.TextureDatas);
-    }
-    return *this;
-}
-
 bool MaterialImporter::Load(const std::filesystem::path& path)
 {
     if(path.empty() || !std::filesystem::exists(path))
