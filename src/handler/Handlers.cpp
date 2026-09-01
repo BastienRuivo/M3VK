@@ -8,6 +8,7 @@
 #include <stdexcept>
 #include <vector>
 #include <vulkan/vulkan.hpp>
+#include <vulkan/vulkan_raii.hpp>
 #include "application/DebugLayer.h"
 
 vk::raii::Instance M3VKConstruct::MakeInstance(const vk::raii::Context& context,
@@ -105,42 +106,6 @@ std::vector<const char *> M3VKConstruct::Helper::GetRequiredExtensions()
     }
 
     return extensions;
-}
-
-VkSamplerHandler::VkSamplerHandler(vk::Filter oversampling, vk::Filter undersampling, vk::SamplerMipmapMode mipmapMode, bool hasAniso)
-{
-    // Mag -> Oversampling, Min -> Undersampling
-    // what to do when reading OOB (repeat, clamp, mirror...)
-    // Anisotropy -> Avoiding blur caused by mipmapping by doing clever more sampling
-    // Comparaison operation for shadow mapping apparently
-    vk::SamplerCreateInfo createInfo = vk::SamplerCreateInfo{}
-        .setMagFilter(static_cast<vk::Filter>(oversampling))
-        .setMinFilter(static_cast<vk::Filter>(undersampling))
-        .setAddressModeU(vk::SamplerAddressMode::eRepeat)
-        .setAddressModeV(vk::SamplerAddressMode::eRepeat)
-        .setAddressModeW(vk::SamplerAddressMode::eRepeat)
-        .setAnisotropyEnable(hasAniso ? VK_TRUE : VK_FALSE)
-        .setMaxAnisotropy(hasAniso ? ApplicationInfo::Get().GetProperties().limits.maxSamplerAnisotropy : 0.0f)
-        .setBorderColor(vk::BorderColor::eIntOpaqueBlack)
-        .setUnnormalizedCoordinates(VK_FALSE)
-        .setCompareEnable(VK_FALSE)
-        .setCompareOp(vk::CompareOp::eAlways)
-        .setMipmapMode(static_cast<vk::SamplerMipmapMode>(mipmapMode))
-        .setMipLodBias(0.0f)
-        .setMinLod(0.0f)
-        .setMaxLod(VK_LOD_CLAMP_NONE);
-
-    vk::Result result = ApplicationInfo::Device().createSampler(&createInfo, nullptr, &_internal);
-    if(result != vk::Result::eSuccess)
-    {
-        throw std::runtime_error("Can't create sampler");
-    }
-}
-VkSamplerHandler::~VkSamplerHandler()
-{
-    if(!_internal) return;
-
-    ApplicationInfo::Device().destroySampler(_internal);
 }
 
 vk::raii::SurfaceKHR M3VKConstruct::MakeSurface(const vk::raii::Instance& instance, GLFWwindow *pWindow)
@@ -391,4 +356,30 @@ vk::raii::Device M3VKConstruct::MakeDevice(const vk::raii::PhysicalDevice& physi
     vk::raii::Device device(physicalDevice, deviceCreateInfo);
     VkExtManager::InitDevice(device);
     return device;
+}
+
+vk::raii::Sampler M3VKConstruct::MakeSampler(vk::Filter oversampling, vk::Filter undersampling, vk::SamplerMipmapMode mipmapMode, bool hasAniso)
+{
+    // Mag -> Oversampling, Min -> Undersampling
+    // what to do when reading OOB (repeat, clamp, mirror...)
+    // Anisotropy -> Avoiding blur caused by mipmapping by doing clever more sampling
+    // Comparaison operation for shadow mapping apparently
+    vk::SamplerCreateInfo createInfo = vk::SamplerCreateInfo{}
+        .setMagFilter(static_cast<vk::Filter>(oversampling))
+        .setMinFilter(static_cast<vk::Filter>(undersampling))
+        .setAddressModeU(vk::SamplerAddressMode::eRepeat)
+        .setAddressModeV(vk::SamplerAddressMode::eRepeat)
+        .setAddressModeW(vk::SamplerAddressMode::eRepeat)
+        .setAnisotropyEnable(hasAniso ? VK_TRUE : VK_FALSE)
+        .setMaxAnisotropy(hasAniso ? ApplicationInfo::Get().GetProperties().limits.maxSamplerAnisotropy : 0.0f)
+        .setBorderColor(vk::BorderColor::eIntOpaqueBlack)
+        .setUnnormalizedCoordinates(VK_FALSE)
+        .setCompareEnable(VK_FALSE)
+        .setCompareOp(vk::CompareOp::eAlways)
+        .setMipmapMode(static_cast<vk::SamplerMipmapMode>(mipmapMode))
+        .setMipLodBias(0.0f)
+        .setMinLod(0.0f)
+        .setMaxLod(VK_LOD_CLAMP_NONE);
+
+    return vk::raii::Sampler(ApplicationInfo::RaiiDevice(), createInfo);
 }

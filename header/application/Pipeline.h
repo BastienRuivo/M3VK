@@ -38,8 +38,8 @@ class Pipeline
     void FrameInit(const CommandBuffer& cmdBuffer, vk::Rect2D renderArea) const;
 
     BindingManager _bindingManager;
-    VkSamplerHandler _samplerLinear;
-    VkSamplerHandler _samplerNearest;
+    vk::raii::Sampler _samplerLinear;
+    vk::raii::Sampler _samplerNearest;
     ShaderLibrary _shaderLibrary;
     std::array<std::unique_ptr<Registry>, 2> _registries;
     enum class RegistryType

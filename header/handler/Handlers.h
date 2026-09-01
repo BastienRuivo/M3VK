@@ -2,6 +2,7 @@
 
 #include "GLFW/glfw3.h"
 #include "rendering/QueueFamilyIds.h"
+#include "vulkan/vulkan.hpp"
 #include <cstdint>
 #include <span>
 #include <utility>
@@ -13,7 +14,6 @@
 template<typename T>
     requires std::same_as<T, vk::ImageView>
     || std::same_as<T, vk::PipelineLayout>
-    || std::same_as<T, vk::Sampler>
 class Handler
 {
 public:
@@ -39,18 +39,6 @@ public:
 
 protected:
     T _internal{};
-};
-
-class VkSamplerHandler : public Handler<vk::Sampler>
-{
-public:
-    VkSamplerHandler(vk::Filter oversampling = vk::Filter::eLinear, vk::Filter undersampling = vk::Filter::eLinear,
-        vk::SamplerMipmapMode mipmapMode = vk::SamplerMipmapMode::eLinear,
-        bool hasAniso = true);
-    ~VkSamplerHandler() override;
-
-    VkSamplerHandler(VkSamplerHandler&& other) noexcept = default;
-    VkSamplerHandler& operator=(VkSamplerHandler&& other) noexcept = default;
 };
 
 class VkPipelineLayoutHandler : public Handler<vk::PipelineLayout>
@@ -90,4 +78,7 @@ namespace M3VKConstruct
     vk::raii::SurfaceKHR MakeSurface(const vk::raii::Instance& instance, GLFWwindow* pWindow);
     vk::raii::PhysicalDevice MakePhysicalDevice(const vk::raii::Instance& instance, vk::SurfaceKHR windowSurface, const std::vector<const char *>& deviceExtensions);
     vk::raii::Device MakeDevice(const vk::raii::PhysicalDevice& physicalDevice, vk::SurfaceKHR windowSurface, const std::vector<const char*>& deviceExtensions);
+    vk::raii::Sampler MakeSampler(vk::Filter oversampling = vk::Filter::eLinear, vk::Filter undersampling = vk::Filter::eLinear,
+        vk::SamplerMipmapMode mipmapMode = vk::SamplerMipmapMode::eLinear,
+        bool hasAniso = true);
 };

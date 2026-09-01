@@ -5,8 +5,8 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <vulkan/vulkan.hpp>
+#include <vulkan/vulkan_raii.hpp>
 #include "rendering/QueueFamilyIds.h"
-#include "handler/Handlers.h"
 
 class ApplicationInfo
 {
