@@ -309,7 +309,7 @@ void Pipeline::Execute(const CommandBuffer& cmdBuffer, const SwapChain& swapChai
     // there is no stencil buffer
     vk::RenderingAttachmentInfo stencilAttachment{};
 
-    const ImageReference& backBuffer = swapChain.Images.Get(imageIndex);
+    const ImageReference& backBuffer = swapChain.Images[imageIndex];
     const auto& meshRegistry = static_cast<MeshRegistry&>(*_registries[(size_t)RegistryType::Mesh]);
     const auto& materialRegistry = static_cast<MaterialRegistry&>(*_registries[(size_t)RegistryType::Material]);
 

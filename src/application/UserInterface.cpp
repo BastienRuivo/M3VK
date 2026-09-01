@@ -57,7 +57,7 @@ UserInterface::UserInterface(GLFWwindow* pWindow, const SwapChain& swapChain, vk
     initInfo.DescriptorPool = _imGuiPool;
     initInfo.Subpass = 0;
     initInfo.MinImageCount = swapChain.MinImageCount();
-    initInfo.ImageCount = swapChain.Images.Size();
+    initInfo.ImageCount = static_cast<uint32_t>(swapChain.Images.size());
     initInfo.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
     initInfo.CheckVkResultFn = [](VkResult err) {
         if (err == 0) return;

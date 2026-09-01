@@ -65,7 +65,7 @@ class Application
 
     // GPU Sync
     MultiFrameObject<vk::raii::Semaphore> _availableImageSemaphore;
-    MultiFrameObject<vk::raii::Semaphore> _renderFinishedSemaphores;
+    std::vector<vk::raii::Semaphore> _renderFinishedSemaphores; // one per swapchain image, signalled at present time - not per frame in flight
     MultiFrameObject<vk::raii::Fence>  _waitFence;
 
     bool _mouseLocked = true;
@@ -84,6 +84,7 @@ class Application
     void RefreshSwapChain();
     void DrawFrame();
     std::array<DrawModule, MaterialType::Count> InitDrawModule(bool DebugOn);
+    static std::vector<vk::raii::Semaphore> MakeRenderFinishedSemaphores(uint32_t count);
 
     // Utils
     static inline const std::vector<const char*> _deviceExtensions = {
