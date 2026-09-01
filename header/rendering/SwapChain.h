@@ -23,16 +23,17 @@ class SwapChain
     vk::Extent2D SelectSwapExtents(const Window& window, const vk::SurfaceCapabilitiesKHR& Capabilities) const;
 
     inline vk::Format GetImageFormat() const { return _imageFormat; }
-    inline vk::Extent2D GetExtent() const { return _extent; }
+    inline vk::Extent2D GetExtent() const { return _extents; }
     inline vk::SwapchainKHR Internal() const { return _internal; }
     inline vk::ImageView View(uint32_t index) const { return Images.Get(index).View; }
     inline uint32_t MinImageCount() const { return _minImageCount; }
 
     private:
     MultiFrameHandler<VkImageViewHandler> _viewHandlers;
+    vk::raii::SwapchainKHR MakeSwapChainInternal(const Window& window, vk::SurfaceKHR windowSurface);
 
     vk::Format _imageFormat = vk::Format::eUndefined;
-    vk::Extent2D _extent;
-    vk::SwapchainKHR _internal;
+    vk::Extent2D _extents;
     uint32_t _minImageCount = 1;
+    vk::raii::SwapchainKHR _internal;
 };
