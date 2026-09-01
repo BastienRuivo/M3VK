@@ -1,6 +1,5 @@
 #pragma once
 
-#include "handler/Handlers.h"
 #include "modules/Module.h"
 #include "rendering/CommandBuffer.h"
 #include "rendering/GPUImage.h"
@@ -22,7 +21,7 @@ public:
     inline const ImageReference SkyboxTexture() const { return _skyboxTexture.Internal(); }
 
 protected:
-    VkSamplerHandler _sampler;
+    vk::raii::Sampler _sampler;
     GraphicsImage _skyboxTexture;
     ShaderLibrary::VertexBinding _vertexShader;
     ShaderLibrary::FragmentBinding _fragmentShader;

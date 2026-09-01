@@ -7,6 +7,7 @@
 #include "ShaderBindings.h"
 #include "rendering/CommandBuffer.h"
 #include "rendering/ImageHelper.h"
+#include "vulkan/vulkan.hpp"
 const vk::DescriptorBindingFlags bindlessFlags =
     vk::DescriptorBindingFlagBits::eUpdateAfterBind |
     vk::DescriptorBindingFlagBits::ePartiallyBound;
@@ -34,7 +35,10 @@ _globalPushConstantRanges({
         .setOffset(0)
         .setSize(COMMON_INDEXES_OFFSET + ShaderConstantsSize)
 }),
-_globalLayout(GlobalSetLayouts(), _globalPushConstantRanges)
+_globalLayout(ApplicationInfo::RaiiDevice(),
+    vk::PipelineLayoutCreateInfo{}
+        .setSetLayouts(GlobalSetLayouts())
+        .setPushConstantRanges(_globalPushConstantRanges))
 {
     uint32_t staticCounts[] =
     {

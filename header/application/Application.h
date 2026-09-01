@@ -6,8 +6,7 @@
 #include "modules/DrawModule.h"
 #include "rendering/CommandBuffer.h"
 #include "rendering/MultiFrame.h"
-#include "handler/Handlers.h"
-#include "handler/VkPhysicalDeviceHandler.h"
+#include "allocation/RaiiHelper.h"
 #include "application/Window.h"
 #include "rendering/SwapChain.h"
 #include <array>
@@ -40,18 +39,20 @@ class Application
 
     // RAII is first in last out order
     Window _window;
-    VkInstanceHandler _instance;
+    vk::raii::Context _context;
+    vk::raii::Instance _instance;
     DebugLayer _vkDebugLayer;
-    VkSurfaceHandler _windowSurface;
-    // Implicitly linked to instance, see wtd later
-    VkPhysicalDeviceHandler _physicalDevice;
-    VkDeviceHandler _device;
-    //Implicitly linked to device, see wtd later
-    VkQueueHandler _graphicsComputeQueue;
-    VkQueueHandler _presentQueue;
+    vk::raii::SurfaceKHR _windowSurface;
+    vk::raii::PhysicalDevice _physicalDevice;
+    vk::raii::Device _device;
+
+    ApplicationInfo::Initializer _appInfoInitializer;
+
+    vk::raii::Queue _graphicsComputeQueue;
+    vk::raii::Queue _presentQueue;
 
     // Dynamic lifetime
-    VkCommandPoolHandler _graphicsCommandPool;
+    vk::raii::CommandPool _graphicsCommandPool;
     std::unique_ptr<SwapChain> _swapChain;
 
     // used for object sharing data between cpu and gpu -> due to race condition we need one copy for each frame
@@ -63,9 +64,9 @@ class Application
     MultiFrameObject<CommandBuffer> _commandBuffer;
 
     // GPU Sync
-    MultiFrameHandler<VkSemaphoreHandler> _availableImageSemaphore;
-    MultiFrameHandler<VkSemaphoreHandler> _renderFinishedSemaphores;
-    MultiFrameHandler<VkFenceHandler>  _waitFence;
+    MultiFrameObject<vk::raii::Semaphore> _availableImageSemaphore;
+    MultiFrameObject<vk::raii::Semaphore> _renderFinishedSemaphores;
+    MultiFrameObject<vk::raii::Fence>  _waitFence;
 
     bool _mouseLocked = true;
     float _inputPrevent = 0;

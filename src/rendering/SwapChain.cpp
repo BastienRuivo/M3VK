@@ -2,6 +2,7 @@
 #include "application/ApplicationHelper.h"
 #include "application/ApplicationInfo.h"
 #include "application/DebugLayer.h"
+#include "allocation/RaiiHelper.h"
 #include "rendering/GPUImage.h"
 #include "rendering/MultiFrame.h"
 #include "rendering/QueueFamilyIds.h"
@@ -9,7 +10,6 @@
 #include <algorithm>
 #include <cstdint>
 #include <limits>
-#include <stdexcept>
 #include <vector>
 #include <vulkan/vulkan.hpp>
 
@@ -102,15 +102,15 @@ vk::SurfaceFormatKHR SwapChain::SelectSwapSurfaceFormat(const std::vector<vk::Su
     return availableFormats[0];
 }
 
-SwapChain::SwapChain(const Window& window, vk::SurfaceKHR windowSurface)
-: Images(), _viewHandlers()
+vk::raii::SwapchainKHR SwapChain::MakeSwapChainInternal(const Window& window, vk::SurfaceKHR windowSurface)
 {
     vk::Device device = ApplicationInfo::Device();
     ApplicationHelper::SwapChainSupportDetails details = ApplicationHelper::QuerySwapChainSupportDetail(ApplicationInfo::PhysicalDevice(), windowSurface);
 
     vk::SurfaceFormatKHR format = SelectSwapSurfaceFormat(details.Formats);
     vk::PresentModeKHR presentMode = SelectSwapPresentMode(details.PresentsModes);
-    vk::Extent2D extents = SelectSwapExtents(window, details.Capabilities);
+    _extents = SelectSwapExtents(window, details.Capabilities);
+    _imageFormat = format.format;
 
     // recommended to avoid wait on driver completion
     uint32_t imageCount = details.Capabilities.minImageCount + 1;
@@ -120,17 +120,21 @@ SwapChain::SwapChain(const Window& window, vk::SurfaceKHR windowSurface)
     {
         imageCount = details.Capabilities.maxImageCount;
     }
+    _minImageCount = imageCount;
 
-    vk::SwapchainCreateInfoKHR createInfo{};
-    createInfo.surface = windowSurface;
-    createInfo.minImageCount = imageCount;
-    createInfo.imageFormat = format.format;
-    createInfo.imageColorSpace = format.colorSpace;
-    createInfo.imageExtent = extents;
-    createInfo.imageArrayLayers = 1;
-    createInfo.imageUsage = vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferDst;
+    vk::SwapchainCreateInfoKHR createInfo = vk::SwapchainCreateInfoKHR{}
+        .setSurface(windowSurface)
+        .setMinImageCount(imageCount)
+        .setImageFormat(format.format)
+        .setImageColorSpace(format.colorSpace)
+        .setImageExtent(_extents)
+        .setImageArrayLayers(1u)
+        .setImageUsage(vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferDst)
+        .setPreTransform(details.Capabilities.currentTransform)
+        .setCompositeAlpha(vk::CompositeAlphaFlagBitsKHR::eOpaque)
+        .setPresentMode(presentMode)
+        .setClipped(vk::True); // Clip pixels obscured by a window in front
 
-    _minImageCount = createInfo.minImageCount;
 
     QueueFamilyIds queueIds = QueueFamilyIds::QueryQueueFamilies(ApplicationInfo::PhysicalDevice(), windowSurface);
 
@@ -139,55 +143,48 @@ SwapChain::SwapChain(const Window& window, vk::SurfaceKHR windowSurface)
     if(queueIds.GraphicsCompute != queueIds.Present)
     {
         // image = multiple queue mode and can be accessed anywhere, but slower
-        createInfo.imageSharingMode = vk::SharingMode::eConcurrent;
-        createInfo.queueFamilyIndexCount = 2;
-        createInfo.pQueueFamilyIndices = queueFamilyIndices;
+        createInfo.setImageSharingMode(vk::SharingMode::eConcurrent);
+        createInfo.setQueueFamilyIndexCount(2);
+        createInfo.setPQueueFamilyIndices(queueFamilyIndices);
     }
     else
     {
         // image = one queue mode and should be transferred before being used in another queue, faster but ewh
-        createInfo.imageSharingMode = vk::SharingMode::eExclusive;
-        createInfo.queueFamilyIndexCount = 0;
-        createInfo.pQueueFamilyIndices = nullptr;
-    }
-    // Apply rotation etc... before screen pres
-    createInfo.preTransform = details.Capabilities.currentTransform;
-    // If we want to do alpha thingies with other windows, nope for now
-    createInfo.compositeAlpha = vk::CompositeAlphaFlagBitsKHR::eOpaque;
-    createInfo.presentMode = presentMode;
-    // Clip pixels obscured by a window in front
-    createInfo.clipped = VK_TRUE;
-    // When we handle resizing
-    createInfo.oldSwapchain = nullptr;
-
-    if(device.createSwapchainKHR(&createInfo, nullptr, &_internal) != vk::Result::eSuccess)
-    {
-        throw std::runtime_error("Failed to create swap chain !");
+        createInfo.setImageSharingMode(vk::SharingMode::eExclusive);
+        createInfo.setQueueFamilyIndexCount(0);
+        createInfo.setPQueueFamilyIndices(nullptr);
     }
 
-    std::vector<vk::Image> tempImages = device.getSwapchainImagesKHR(_internal);
-    imageCount = static_cast<uint32_t>(tempImages.size());
+    return vk::raii::SwapchainKHR(ApplicationInfo::RaiiDevice(), createInfo);
+}
+
+SwapChain::SwapChain(const Window& window, vk::SurfaceKHR windowSurface)
+: _internal(MakeSwapChainInternal(window, windowSurface)),
+Images(), _viewHandlers()
+{
+
+
+    std::vector<vk::Image> tempImages = ApplicationInfo::Device().getSwapchainImagesKHR(_internal);
+    uint32_t imageCount = static_cast<uint32_t>(tempImages.size());
 
     Images.Reserve(imageCount);
     _viewHandlers.Reserve(imageCount);
+
     for(uint32_t i = 0; i < imageCount; i++)
     {
-        _viewHandlers.EmplaceBack(tempImages[i], format.format, 1);
+        _viewHandlers.EmplaceBack(RaiiHelper::MakeImageView(tempImages[i], _imageFormat, 1));
         ImageReference image
         {
             .Image = tempImages[i],
-            .View = _viewHandlers.Internal(i),
-            .Format = format.format,
-            .Width = extents.width,
-            .Height = extents.height,
+            .View = _viewHandlers.Get(i),
+            .Format = _imageFormat,
+            .Width = _extents.width,
+            .Height = _extents.height,
             .MipCount = 1,
             .ArrayLayerCount = 1
         };
         Images.EmplaceBack(image);
     }
-
-    _imageFormat = format.format;
-    _extent = extents;
 }
 
 SwapChain::~SwapChain()
@@ -195,5 +192,4 @@ SwapChain::~SwapChain()
     vk::Device device = ApplicationInfo::Device();
     // if the system throw an error, ensure that the current frame is finished before destroying
     device.waitIdle();
-    device.destroySwapchainKHR(_internal);
 }

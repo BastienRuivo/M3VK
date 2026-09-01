@@ -80,36 +80,3 @@ class MultiFrameObject
     protected:
     std::vector<T> _internals;
 };
-
-template<typename T>
-concept HandlerType = requires(T t) {
-    t.Internal();
-};
-
-template <HandlerType T>
-class MultiFrameHandler : public MultiFrameObject<T>
-{
-    public:
-    using MultiFrameObject<T>::MultiFrameObject;
-
-    MultiFrameHandler(MultiFrameHandler&& other) noexcept
-        : MultiFrameObject<T>(std::move(other))
-    {
-
-    }
-
-    MultiFrameHandler& operator=(MultiFrameHandler&& other) noexcept {
-        if (this != &other) {
-            MultiFrameObject<T>::operator=(std::move(other));
-        }
-        return *this;
-    }
-
-    MultiFrameHandler(const MultiFrameHandler&) = delete;
-    MultiFrameHandler& operator=(const MultiFrameHandler&) = delete;
-
-    inline auto Internal(size_t frameIndex) const
-    {
-        return this->_internals[frameIndex].Internal();
-    }
-};

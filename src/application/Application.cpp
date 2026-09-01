@@ -84,10 +84,10 @@ void Application::RefreshSwapChain()
 
     // TODO : Swap chain is currently resetted the first frame beacause it is out of date
     _swapChain.reset();
-    _swapChain = std::make_unique<SwapChain>(_window, _windowSurface.Internal());
+    _swapChain = std::make_unique<SwapChain>(_window, _windowSurface);
 
     auto extents = _swapChain->GetExtent();
-    CommandBuffer cmdBuffer(_graphicsCommandPool.Internal(), _graphicsComputeQueue.Internal());
+    CommandBuffer cmdBuffer(_graphicsCommandPool, _graphicsComputeQueue);
     cmdBuffer.BeginSingleTime();
     {
         _pipeline.Refresh(cmdBuffer, extents);
@@ -99,23 +99,39 @@ void Application::RefreshSwapChain()
 void Application::DrawFrame()
 {
     uint32_t currentFrame = ApplicationInfo::CurrentFrame();
-    _waitFence.Get(currentFrame).Wait(UINT64_MAX);
 
-    // Acquire image to draw on
+    vk::Result res = ApplicationInfo::RaiiDevice().waitForFences(*_waitFence.Get(currentFrame), vk::True, UINT32_MAX);
+
+    if(res == vk::Result::eTimeout)
+    {
+        throw::std::runtime_error("FENCE TIMEOUT");
+    }
+
+    vk::AcquireNextImageInfoKHR acquireInfo = vk::AcquireNextImageInfoKHR{}
+        .setSwapchain(_swapChain->Internal())
+        .setTimeout(UINT32_MAX) // 4sec = timeout, just a test for now but seems rationnal ?
+        .setSemaphore(_availableImageSemaphore.Get(currentFrame))
+        .setFence(nullptr)
+        .setDeviceMask(1u);
+
+    // Use the raw-pointer, non-throwing overload: the enhanced ResultValue-returning acquireNextImage2KHR
+    // throws vk::OutOfDateKHRError instead of returning eErrorOutOfDateKHR as a value (unless
+    // VULKAN_HPP_HANDLE_ERROR_OUT_OF_DATE_AS_SUCCESS is defined), which would skip the manual check below.
     uint32_t imageIndex;
-    vk::Result result = ApplicationInfo::Device().acquireNextImageKHR(_swapChain->Internal(), UINT64_MAX, _availableImageSemaphore.Internal(currentFrame), VK_NULL_HANDLE, &imageIndex);
-    if(result == vk::Result::eErrorOutOfDateKHR)
+    vk::Result acquireResult = ApplicationInfo::Device().acquireNextImage2KHR(&acquireInfo, &imageIndex);
+
+    if(acquireResult == vk::Result::eErrorOutOfDateKHR)
     {
         RefreshSwapChain();
         return;
     }
-    else if (result != vk::Result::eSuccess && result != vk::Result::eSuboptimalKHR)
+    else if (acquireResult != vk::Result::eSuccess && acquireResult != vk::Result::eSuboptimalKHR)
     {
         throw std::runtime_error("failed to acquire swap chain image!");
     }
 
     // Only reset the fence if we are submitting work
-    _waitFence.Get(currentFrame).Reset();
+    ApplicationInfo::RaiiDevice().resetFences(*_waitFence.Get(currentFrame));
 
     // UI
     _userInterface.StartFrame();
@@ -129,10 +145,14 @@ void Application::DrawFrame()
     commandBuffer.Reset();
     _pipeline.Execute(commandBuffer, *_swapChain, _userInterface, imageIndex);
 
-    vk::SemaphoreSubmitInfo waitSemaphore = _availableImageSemaphore.Get(currentFrame).GetSubmitInfo(vk::PipelineStageFlagBits2::eColorAttachmentOutput);
-    vk::SemaphoreSubmitInfo signalSemaphore = _renderFinishedSemaphores.Get(imageIndex).GetSubmitInfo(vk::PipelineStageFlagBits2::eAllGraphics);
+    vk::SemaphoreSubmitInfo waitSemaphore = vk::SemaphoreSubmitInfo{}
+            .setSemaphore(_availableImageSemaphore.Get(currentFrame))
+            .setStageMask(vk::PipelineStageFlagBits2::eColorAttachmentOutput);
+    vk::SemaphoreSubmitInfo signalSemaphore = vk::SemaphoreSubmitInfo{}
+            .setSemaphore(_renderFinishedSemaphores.Get(imageIndex))
+            .setStageMask(vk::PipelineStageFlagBits2::eAllGraphics);
 
-    commandBuffer.Submit({&waitSemaphore, 1}, {&signalSemaphore, 1}, _waitFence.Internal(currentFrame));
+    commandBuffer.Submit({&waitSemaphore, 1}, {&signalSemaphore, 1}, _waitFence.Get(currentFrame));
 
     // actually present the frame
     vk::SwapchainKHR swapChain = _swapChain->Internal();
@@ -143,15 +163,25 @@ void Application::DrawFrame()
         .setPSwapchains(&swapChain)
         .setPImageIndices(&imageIndex);
 
-    auto presentRes = _graphicsComputeQueue.Internal().presentKHR(&presentInfo);
-
-    if(presentRes == vk::Result::eErrorOutOfDateKHR || presentRes == vk::Result::eSuboptimalKHR)
+    try
     {
-        RefreshSwapChain();
+        vk::Result presentRes = _graphicsComputeQueue.presentKHR(presentInfo);
+        // this can be thrown as error or silent depending on platform apparently
+        if(presentRes == vk::Result::eSuboptimalKHR)
+        {
+            RefreshSwapChain();
+        }
     }
-    else if(presentRes != vk::Result::eSuccess)
+    catch(const vk::SystemError& err)
     {
-        throw std::runtime_error("failed to present swap chain image!");
+        if(err.code() == vk::Result::eErrorOutOfDateKHR || err.code() == vk::Result::eSuboptimalKHR)
+        {
+            RefreshSwapChain();
+        }
+        else
+        {
+            throw;
+        }
     }
 
     ApplicationInfo::NextFrame();
@@ -160,28 +190,34 @@ void Application::DrawFrame()
 Application::Application() :
     // Core Window & Instance
     _window(1920, 1080, "Window", this, Application::ResizeCallback, Application::MouseMoveCallback, Application::WindowFocusCallback),
-    _instance(),
-    _vkDebugLayer(_instance.Internal()),
-    _windowSurface(_instance.Internal(), _window.Internal()),
-    _physicalDevice(_instance.Internal(), _windowSurface.Internal(), _deviceExtensions),
-    _device(_instance.Internal(), _windowSurface.Internal(), _deviceExtensions),
+    _context(vkGetInstanceProcAddr),
+    _instance(RaiiHelper::MakeInstance(_context, "M3VK", vk::makeVersion(0, 1, 0), vk::makeVersion(0, 1, 0), vk::ApiVersion14)),
+    _vkDebugLayer(_instance),
+    _windowSurface(RaiiHelper::MakeSurface(_instance, _window.Internal())),
+    _physicalDevice(RaiiHelper::MakePhysicalDevice(_instance, _windowSurface, _deviceExtensions)),
+    _device(RaiiHelper::MakeDevice(_physicalDevice, _windowSurface, _deviceExtensions)),
+
+    _appInfoInitializer(_instance, _windowSurface, _physicalDevice, _device),
 
     // Queues & Swapchain
-    _graphicsComputeQueue(VkQueueHandler::Graphics),
-    _presentQueue(VkQueueHandler::Present),
-    _swapChain(std::make_unique<SwapChain>(_window, _windowSurface.Internal())),
+    _graphicsComputeQueue(vk::raii::Queue(ApplicationInfo::RaiiDevice(), ApplicationInfo::Device().getQueue(ApplicationInfo::GetGraphicsQueueId(), 0))),
+    _presentQueue(vk::raii::Queue(ApplicationInfo::RaiiDevice(), ApplicationInfo::Device().getQueue(ApplicationInfo::GetPresentQueueId(), 0))),
+    _swapChain(std::make_unique<SwapChain>(_window, _windowSurface)),
 
     // Command pool
-    _graphicsCommandPool(ApplicationInfo::GetGraphicsQueueId()),
+    _graphicsCommandPool(vk::raii::CommandPool(ApplicationInfo::RaiiDevice(), vk::CommandPoolCreateInfo{}
+        .setFlags(vk::CommandPoolCreateFlags::BitsType::eResetCommandBuffer)
+        .setQueueFamilyIndex(ApplicationInfo::GetGraphicsQueueId()))),
     // Geometry & Data Buffers
-    _commandBuffer(ApplicationInfo::Constant::MaxFrameInFlight, _graphicsCommandPool.Internal(), _graphicsComputeQueue.Internal()),
-    _pipeline(*_swapChain, _graphicsCommandPool.Internal(), _graphicsComputeQueue.Internal()),
+    _commandBuffer(ApplicationInfo::Constant::MaxFrameInFlight, _graphicsCommandPool, _graphicsComputeQueue),
+    _pipeline(*_swapChain, _graphicsCommandPool, _graphicsComputeQueue),
 
     // Synchronization
-    _availableImageSemaphore(ApplicationInfo::Constant::MaxFrameInFlight),
-    _renderFinishedSemaphores(_swapChain->Images.Size()),
-    _waitFence(ApplicationInfo::Constant::MaxFrameInFlight),
-    _userInterface(_window.Internal(), *_swapChain, _graphicsComputeQueue.Internal(), _graphicsCommandPool.Internal())
+    _availableImageSemaphore(ApplicationInfo::Constant::MaxFrameInFlight, ApplicationInfo::RaiiDevice(), vk::SemaphoreCreateInfo{}),
+    _renderFinishedSemaphores(_swapChain->Images.Size(), ApplicationInfo::RaiiDevice(), vk::SemaphoreCreateInfo{}),
+    _waitFence(ApplicationInfo::Constant::MaxFrameInFlight, ApplicationInfo::RaiiDevice(), vk::FenceCreateInfo{}
+        .setFlags(vk::FenceCreateFlagBits::eSignaled)),
+    _userInterface(_window.Internal(), *_swapChain, _graphicsComputeQueue, _graphicsCommandPool)
 {
     _window.LockMouse(_mouseLocked);
     {

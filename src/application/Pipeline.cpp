@@ -10,6 +10,7 @@
 #include "allocation/MeshRegistry.h"
 #include "asset/MeshHelper.h"
 #include "glm/fwd.hpp"
+#include "allocation/RaiiHelper.h"
 #include "rendering/CommandBuffer.h"
 #include "rendering/SwapChain.h"
 #include <cstring>
@@ -17,12 +18,12 @@
 
 Pipeline::Pipeline(const SwapChain& swapChain, vk::CommandPool graphicsCommandPool, vk::Queue graphicsComputeQueue)
 : _bindingManager(),
-    _samplerLinear(),
-    _samplerNearest(vk::Filter::eNearest, vk::Filter::eNearest, vk::SamplerMipmapMode::eNearest, false),
+    _samplerLinear(RaiiHelper::MakeSampler()),
+    _samplerNearest(RaiiHelper::MakeSampler(vk::Filter::eNearest, vk::Filter::eNearest, vk::SamplerMipmapMode::eNearest, false)),
     _registries(
         {
             std::make_unique<MeshRegistry>(_bindingManager),
-            std::make_unique<MaterialRegistry>(_bindingManager, graphicsCommandPool, graphicsComputeQueue, _samplerLinear.Internal())
+            std::make_unique<MaterialRegistry>(_bindingManager, graphicsCommandPool, graphicsComputeQueue, _samplerLinear)
         }),
     _cameraDataBuffer(_bindingManager, BINDING_CAMERA_BUFFER, GraphicsBuffer::STORAGE, RessourceUsage::PerFrame, 1, sizeof(CameraData)),
     _camera(glm::vec3(-14.0f, 0.5f, 0.0f), glm::vec3(10, 0, 0), 45.0f, (float)swapChain.GetExtent().width / (float)swapChain.GetExtent().height),
@@ -37,13 +38,13 @@ Pipeline::Pipeline(const SwapChain& swapChain, vk::CommandPool graphicsCommandPo
         swapChain.GetExtent().width, swapChain.GetExtent().height,
         vk::ImageUsageFlagBits::eDepthStencilAttachment | vk::ImageUsageFlagBits::eTransientAttachment,
         ApplicationInfo::Constant::DepthFormat, 1, vk::ImageTiling::eOptimal, ApplicationInfo::GetMsaaSample()),
-    _finalColorTarget(BindlessTexture::Register(_bindingManager, RessourceUsage::PerFrame, _samplerNearest.Internal(), graphicsCommandPool, graphicsComputeQueue,
+    _finalColorTarget(BindlessTexture::Register(_bindingManager, RessourceUsage::PerFrame, _samplerNearest, graphicsCommandPool, graphicsComputeQueue,
         vk::ImageLayout::eTransferSrcOptimal,
         swapChain.GetExtent().width, swapChain.GetExtent().height,
         vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferSrc,
         swapChain.GetImageFormat(),
         1)),
-    _finalDepthTarget(BindlessTexture::Register(_bindingManager,RessourceUsage::PerFrame, _samplerNearest.Internal(), graphicsCommandPool, graphicsComputeQueue,
+    _finalDepthTarget(BindlessTexture::Register(_bindingManager,RessourceUsage::PerFrame, _samplerNearest, graphicsCommandPool, graphicsComputeQueue,
         vk::ImageLayout::eDepthAttachmentOptimal,
         swapChain.GetExtent().width, swapChain.GetExtent().height,
         vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eDepthStencilAttachment | vk::ImageUsageFlagBits::eTransferSrc,
@@ -239,7 +240,7 @@ void Pipeline::InitModules(const SwapChain& swapChain, vk::CommandPool pool, vk:
     _skyboxModule = static_cast<SkyboxModule*>(_modules.back().get());
     _modules.push_back(std::make_unique<CullingModule>(_shaderLibrary, _bindingManager));
     _cullingModule = static_cast<CullingModule*>(_modules.back().get());
-    _modules.push_back(std::make_unique<HiZGenerateModule>(swapChain, _shaderLibrary, _bindingManager, pool, queue, _samplerNearest.Internal()));
+    _modules.push_back(std::make_unique<HiZGenerateModule>(swapChain, _shaderLibrary, _bindingManager, pool, queue, _samplerNearest));
     _hizGenerateModule = static_cast<HiZGenerateModule*>(_modules.back().get());
 }
 

@@ -1,6 +1,5 @@
 #pragma once
 
-#include "handler/Handlers.h"
 #include "allocation/BindlessTexturePool.h"
 #include "allocation/DescriptorPool.h"
 #include "rendering/CommandBuffer.h"
@@ -78,7 +77,7 @@ class BindingManager
     void RegisterImage(const vk::DescriptorImageInfo& info, uint32_t dstBinding, uint32_t dstArrayElement) const;
 
     inline DescriptorSetHandle GlobalDescriptorSet() const { return _globalSet; }
-    inline vk::PipelineLayout GlobalLayout() const { return _globalLayout.Internal(); }
+    inline vk::PipelineLayout GlobalLayout() const { return _globalLayout; }
     inline const std::vector<vk::PushConstantRange>& GlobalPushConstantRanges() const { return _globalPushConstantRanges; }
     inline const std::vector<vk::DescriptorSetLayout>& GlobalSetLayouts() const { return _bindlessPool.Layouts(); }
 
@@ -92,7 +91,7 @@ class BindingManager
     DescriptorSetHandle _globalSet = {};
 
     std::vector<vk::PushConstantRange> _globalPushConstantRanges;
-    VkPipelineLayoutHandler _globalLayout;
+    vk::raii::PipelineLayout _globalLayout;
 };
 
 using BindlessTexture = BindingManager::BindlessTexture;

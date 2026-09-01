@@ -5,13 +5,22 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <vulkan/vulkan.hpp>
+#include <vulkan/vulkan_raii.hpp>
 #include "rendering/QueueFamilyIds.h"
-#include "handler/Handlers.h"
-#include "handler/VkPhysicalDeviceHandler.h"
 
 class ApplicationInfo
 {
     public:
+
+    class Initializer
+    {
+        public:
+        Initializer() = delete;
+        Initializer(const vk::raii::Instance& instance,
+            const vk::raii::SurfaceKHR& surface,
+            const vk::raii::PhysicalDevice& physicalDevice,
+            const vk::raii::Device& device);
+    };
 
     ApplicationInfo(const ApplicationInfo&) = delete;
     void operator=(const ApplicationInfo&) = delete;
@@ -22,9 +31,15 @@ class ApplicationInfo
         return instance;
     }
 
-    static inline vk::Instance Instance() { return ApplicationInfo::Get()._vkInstance; }
-    static inline vk::Device Device() { ApplicationInfo::Get(); return ApplicationInfo::Get()._device; }
-    static inline vk::PhysicalDevice PhysicalDevice() { return ApplicationInfo::Get()._physicalDevice; }
+    static inline vk::Instance Instance() { return *ApplicationInfo::Get()._vkInstance; }
+    static inline vk::SurfaceKHR Surface() { return *ApplicationInfo::Get()._surface; }
+    static inline vk::PhysicalDevice PhysicalDevice() { return *ApplicationInfo::Get()._physicalDevice; }
+    static inline vk::Device Device() { return *ApplicationInfo::Get()._device; }
+
+    static inline const vk::raii::Instance& RaiiInstance() { return *ApplicationInfo::Get()._vkInstance; }
+    static inline const vk::raii::SurfaceKHR& RaiiSurface() { return *ApplicationInfo::Get()._surface; }
+    static inline const vk::raii::PhysicalDevice& RaiiPhysicalDevice() { return *ApplicationInfo::Get()._physicalDevice; }
+    static inline const vk::raii::Device& RaiiDevice() { return *ApplicationInfo::Get()._device; }
 
     struct Constant
     {
@@ -67,20 +82,17 @@ class ApplicationInfo
     static void VRAMRelease(size_t size, AllocType aType);
 
     private:
-    void SetPhysicalDeviceInformation(vk::PhysicalDevice physicalDevice, vk::PhysicalDeviceProperties properties, const QueueFamilyIds& queueFamilyIds);
-
-    ApplicationInfo() {}
     vk::SampleCountFlagBits GetMaxUsableSampleCount(vk::SampleCountFlagBits maxSample) const;
+    ApplicationInfo() {}
+
+    const vk::raii::Instance* _vkInstance = nullptr;
+    const vk::raii::SurfaceKHR* _surface = nullptr;
+    const vk::raii::PhysicalDevice* _physicalDevice = nullptr;
+    const vk::raii::Device* _device = nullptr;
+
     QueueFamilyIds _queueFamilyIds;
     vk::PhysicalDeviceProperties _properties;
     vk::SampleCountFlagBits  _msaaSample = vk::SampleCountFlagBits::e1;
-    vk::PhysicalDevice _physicalDevice;
-    vk::Device _device;
-    vk::Instance _vkInstance;
     uint32_t _currentFrame = 0;
     uint32_t _currentVRAM = 0;
-
-    friend class VkPhysicalDeviceHandler;
-    friend class VkDeviceHandler;
-    friend class VkInstanceHandler;
 };
