@@ -16,7 +16,6 @@ template<typename T>
     || std::same_as<T, vk::Semaphore>
     || std::same_as<T, vk::ImageView>
     || std::same_as<T, vk::PipelineLayout>
-    || std::same_as<T, vk::Queue>
     || std::same_as<T, vk::Sampler>
 class Handler
 {
@@ -90,31 +89,6 @@ public:
             .setSemaphore(_internal)
             .setStageMask(stage);
     }
-};
-
-class VkQueueHandler : public Handler<vk::Queue>
-{
-public:
-
-    enum QueueTypeEnum
-    {
-        Graphics,
-        Present,
-        Transfer
-    };
-    VkQueueHandler(QueueTypeEnum queueType);
-    ~VkQueueHandler() override;
-
-    VkQueueHandler(VkQueueHandler&& other) noexcept;
-    VkQueueHandler& operator=(VkQueueHandler&& other) noexcept;
-
-    inline void WaitForIdle() const { _internal.waitIdle(); }
-    inline uint32_t QueueFamilyId() const { return _queueFamilyIndex; }
-    inline QueueTypeEnum QueueType() const { return _type; }
-
-    private:
-    uint32_t _queueFamilyIndex;
-    enum QueueTypeEnum _type;
 };
 
 class VkSamplerHandler : public Handler<vk::Sampler>

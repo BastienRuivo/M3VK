@@ -153,15 +153,26 @@ void Application::DrawFrame()
         .setPSwapchains(&swapChain)
         .setPImageIndices(&imageIndex);
 
-    auto presentRes = _graphicsComputeQueue.presentKHR(presentInfo);
 
-    if(presentRes == vk::Result::eErrorOutOfDateKHR || presentRes == vk::Result::eSuboptimalKHR)
+    try
     {
-        RefreshSwapChain();
+        vk::Result presentRes = _graphicsComputeQueue.presentKHR(presentInfo);
+        // this can be thrown as error or silent depending on platform apparently
+        if(presentRes == vk::Result::eSuboptimalKHR)
+        {
+            RefreshSwapChain();
+        }
     }
-    else if(presentRes != vk::Result::eSuccess)
+    catch(const vk::SystemError& err)
     {
-        throw std::runtime_error("failed to present swap chain image!");
+        if(err.code() == vk::Result::eErrorOutOfDateKHR || err.code() == vk::Result::eSuboptimalKHR)
+        {
+            RefreshSwapChain();
+        }
+        else
+        {
+            throw;
+        }
     }
 
     ApplicationInfo::NextFrame();

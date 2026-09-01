@@ -176,45 +176,6 @@ std::vector<const char *> M3VKConstruct::Helper::GetRequiredExtensions()
     return extensions;
 }
 
-VkQueueHandler::VkQueueHandler(VkQueueHandler::QueueTypeEnum queueType)
-{
-    uint32_t family;
-
-    switch (queueType)
-    {
-        case Present: family = ApplicationInfo::Get().GetPresentQueueId(); break;
-        case Graphics: family = ApplicationInfo::Get().GetGraphicsQueueId(); break;
-        case Transfer: family = ApplicationInfo::Get().GetTransferQueueId(); break;
-        default: throw std::runtime_error("Unimplemented graphics queue type");
-    }
-
-    _internal = ApplicationInfo::RaiiDevice().getQueue(family, 0);
-    _queueFamilyIndex = family;
-    _type = queueType;
-}
-
-VkQueueHandler::~VkQueueHandler()
-{
-}
-
-VkQueueHandler::VkQueueHandler(VkQueueHandler && other) noexcept
-{
-    _internal = std::exchange(other._internal, nullptr);
-    _queueFamilyIndex = std::exchange(other._queueFamilyIndex, 0);
-    _type = std::exchange(other._type, QueueTypeEnum::Graphics);
-}
-
-VkQueueHandler& VkQueueHandler::operator=(VkQueueHandler&& other) noexcept
-{
-    if(this != &other)
-    {
-        _internal = std::exchange(other._internal, nullptr);
-        _queueFamilyIndex = std::exchange(other._queueFamilyIndex, 0);
-        _type = std::exchange(other._type, QueueTypeEnum::Graphics);
-    }
-    return *this;
-}
-
 VkSamplerHandler::VkSamplerHandler(vk::Filter oversampling, vk::Filter undersampling, vk::SamplerMipmapMode mipmapMode, bool hasAniso)
 {
     // Mag -> Oversampling, Min -> Undersampling
