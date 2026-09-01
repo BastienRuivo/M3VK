@@ -95,6 +95,4 @@ class ApplicationInfo
     vk::SampleCountFlagBits  _msaaSample = vk::SampleCountFlagBits::e1;
     uint32_t _currentFrame = 0;
     uint32_t _currentVRAM = 0;
-
-    friend class VkQueueHandler;
 };
