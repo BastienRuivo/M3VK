@@ -396,77 +396,53 @@ vk::raii::Device M3VKConstruct::MakeDevice(const vk::raii::PhysicalDevice& physi
             .setPQueuePriorities(&queuePriority));
     }
 
-    VkPhysicalDeviceSynchronization2Features sync2Features
-    {
-        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES,
-        .pNext = nullptr,
-        .synchronization2 = VK_TRUE
-    };
+    vk::PhysicalDeviceSynchronization2Features sync2Features = vk::PhysicalDeviceSynchronization2Features()
+        .setSynchronization2(vk::True);
 
-    VkPhysicalDeviceExtendedDynamicState3FeaturesEXT extendedDynamicState3Features{};
-    extendedDynamicState3Features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTENDED_DYNAMIC_STATE_3_FEATURES_EXT;
-    extendedDynamicState3Features.pNext = &sync2Features;
-    extendedDynamicState3Features.extendedDynamicState3RasterizationSamples = VK_TRUE;
-    extendedDynamicState3Features.extendedDynamicState3ColorBlendEnable = VK_TRUE;
-    extendedDynamicState3Features.extendedDynamicState3ColorBlendEquation = VK_TRUE;
-    extendedDynamicState3Features.extendedDynamicState3ColorWriteMask = VK_TRUE;
-    extendedDynamicState3Features.extendedDynamicState3PolygonMode = VK_TRUE;
-    extendedDynamicState3Features.extendedDynamicState3AlphaToCoverageEnable = VK_TRUE;
-    extendedDynamicState3Features.extendedDynamicState3DepthClampEnable = VK_TRUE;
-    extendedDynamicState3Features.extendedDynamicState3LogicOpEnable = VK_TRUE;
-    extendedDynamicState3Features.extendedDynamicState3AlphaToOneEnable = VK_TRUE;
+    vk::PhysicalDeviceExtendedDynamicState3FeaturesEXT extendedDynamicState3Features = vk::PhysicalDeviceExtendedDynamicState3FeaturesEXT{}
+        .setPNext(&sync2Features)
+        .setExtendedDynamicState3RasterizationSamples(vk::True)
+        .setExtendedDynamicState3ColorBlendEnable(vk::True)
+        .setExtendedDynamicState3ColorBlendEquation(vk::True)
+        .setExtendedDynamicState3ColorWriteMask(vk::True)
+        .setExtendedDynamicState3PolygonMode(vk::True)
+        .setExtendedDynamicState3AlphaToCoverageEnable(vk::True)
+        .setExtendedDynamicState3DepthClampEnable(vk::True)
+        .setExtendedDynamicState3LogicOpEnable(vk::True)
+        .setExtendedDynamicState3AlphaToOneEnable(vk::True);
 
-    VkPhysicalDeviceExtendedDynamicState2FeaturesEXT extendedDynamicState2Features
-    {
-        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTENDED_DYNAMIC_STATE_2_FEATURES_EXT,
-        .pNext = &extendedDynamicState3Features,
-        .extendedDynamicState2 = VK_TRUE
-    };
+    vk::PhysicalDeviceExtendedDynamicState2FeaturesEXT extendedDynamicState2Features = vk::PhysicalDeviceExtendedDynamicState2FeaturesEXT{}
+        .setPNext(&extendedDynamicState3Features)
+        .setExtendedDynamicState2(vk::True);
 
-    VkPhysicalDeviceExtendedDynamicStateFeaturesEXT extendedDynamicStateFeatures
-    {
-        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTENDED_DYNAMIC_STATE_FEATURES_EXT,
-        .pNext = &extendedDynamicState2Features,
-        .extendedDynamicState = VK_TRUE
-    };
+    vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT extendedDynamicStateFeatures = vk::PhysicalDeviceExtendedDynamicStateFeaturesEXT{}
+        .setPNext(&extendedDynamicState2Features)
+        .setExtendedDynamicState(vk::True);
 
-    VkPhysicalDeviceShaderObjectFeaturesEXT shaderObjectFeatures
-    {
-        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_OBJECT_FEATURES_EXT,
-        .pNext = &extendedDynamicStateFeatures,
-        .shaderObject = VK_TRUE,
-    };
+    vk::PhysicalDeviceShaderObjectFeaturesEXT shaderObjectFeatures = vk::PhysicalDeviceShaderObjectFeaturesEXT{}
+        .setPNext(&extendedDynamicStateFeatures)
+        .setShaderObject(vk::True);
 
-    VkPhysicalDeviceVulkan11Features vulkan11Features
-    {
-        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES,
-        .pNext = &shaderObjectFeatures,
-        .shaderDrawParameters = VK_TRUE
-    };
+    vk::PhysicalDeviceVulkan11Features vulkan11Features = vk::PhysicalDeviceVulkan11Features{}
+        .setPNext(&shaderObjectFeatures)
+        .setShaderDrawParameters(vk::True);
 
     // enable bindless support
-    VkPhysicalDeviceDescriptorIndexingFeatures descriptorIndexingFeatures
-    {
-        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES,
-        .pNext = &vulkan11Features
-    };
+    vk::PhysicalDeviceDescriptorIndexingFeatures descriptorIndexingFeatures = vk::PhysicalDeviceDescriptorIndexingFeatures{}
+        .setPNext(&vulkan11Features)
+        .setShaderSampledImageArrayNonUniformIndexing(vk::True) // different instance in the same wave can access different textures
+        .setShaderStorageImageArrayNonUniformIndexing(vk::True)
+        .setShaderStorageBufferArrayNonUniformIndexing(vk::True)
+        .setDescriptorBindingSampledImageUpdateAfterBind(vk::True) // descriptor can be updated while bound
+        .setDescriptorBindingStorageBufferUpdateAfterBind(vk::True)
+        .setDescriptorBindingStorageImageUpdateAfterBind(vk::True)
+        .setDescriptorBindingPartiallyBound(vk::True) // slot can be empty
+        .setDescriptorBindingVariableDescriptorCount(vk::True) // actual count set at all location
+        .setRuntimeDescriptorArray(vk::True); // unsized array in shaders
 
-    descriptorIndexingFeatures.shaderSampledImageArrayNonUniformIndexing = VK_TRUE; // different instance in the same wave can access different textures
-    descriptorIndexingFeatures.shaderStorageImageArrayNonUniformIndexing = VK_TRUE;
-    descriptorIndexingFeatures.shaderStorageBufferArrayNonUniformIndexing = VK_TRUE;
-    descriptorIndexingFeatures.descriptorBindingSampledImageUpdateAfterBind = VK_TRUE; // descriptor can be updated while bound
-    descriptorIndexingFeatures.descriptorBindingStorageBufferUpdateAfterBind = VK_TRUE;
-    descriptorIndexingFeatures.descriptorBindingStorageImageUpdateAfterBind = VK_TRUE;
-    descriptorIndexingFeatures.descriptorBindingPartiallyBound = VK_TRUE; // slot can be empty
-    descriptorIndexingFeatures.descriptorBindingVariableDescriptorCount = VK_TRUE; // actual count set at all location
-    descriptorIndexingFeatures.runtimeDescriptorArray = VK_TRUE; // unsized array in shaders
-
-    VkPhysicalDeviceDynamicRenderingFeatures dynamicRenderingFeatures
-    {
-        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES,
-        .pNext = &descriptorIndexingFeatures,
-        .dynamicRendering = VK_TRUE,
-    };
+    vk::PhysicalDeviceDynamicRenderingFeatures dynamicRenderingFeatures = vk::PhysicalDeviceDynamicRenderingFeatures{}
+        .setPNext(&descriptorIndexingFeatures)
+       .setDynamicRendering(vk::True);
 
     vk::PhysicalDeviceFeatures deviceFeatures = vk::PhysicalDeviceFeatures{}
         .setSampleRateShading(VK_TRUE)

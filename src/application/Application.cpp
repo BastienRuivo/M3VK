@@ -153,7 +153,6 @@ void Application::DrawFrame()
         .setPSwapchains(&swapChain)
         .setPImageIndices(&imageIndex);
 
-
     try
     {
         vk::Result presentRes = _graphicsComputeQueue.presentKHR(presentInfo);
