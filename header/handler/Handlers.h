@@ -11,8 +11,7 @@
 #include <concepts>
 
 template<typename T>
-    requires std::same_as<T, vk::Fence>
-    || std::same_as<T, vk::ImageView>
+    requires std::same_as<T, vk::ImageView>
     || std::same_as<T, vk::PipelineLayout>
     || std::same_as<T, vk::Sampler>
 class Handler
@@ -40,20 +39,6 @@ public:
 
 protected:
     T _internal{};
-};
-
-
-class VkFenceHandler : public Handler<vk::Fence>
-{
-public:
-    VkFenceHandler();
-    ~VkFenceHandler() override;
-
-    VkFenceHandler(VkFenceHandler&& other) noexcept = default;
-    VkFenceHandler& operator=(VkFenceHandler&& other) noexcept = default;
-
-    void Wait(uint64_t timeout) const;
-    void Reset() const;
 };
 
 class VkSamplerHandler : public Handler<vk::Sampler>

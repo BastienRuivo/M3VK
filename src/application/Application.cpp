@@ -99,7 +99,13 @@ void Application::RefreshSwapChain()
 void Application::DrawFrame()
 {
     uint32_t currentFrame = ApplicationInfo::CurrentFrame();
-    _waitFence.Get(currentFrame).Wait(UINT64_MAX);
+
+    vk::Result res = ApplicationInfo::RaiiDevice().waitForFences(*_waitFence.Get(currentFrame), vk::True, UINT32_MAX);
+
+    if(res == vk::Result::eTimeout)
+    {
+        throw::std::runtime_error("FENCE TIMEOUT");
+    }
 
     vk::AcquireNextImageInfoKHR acquireInfo = vk::AcquireNextImageInfoKHR{}
         .setSwapchain(_swapChain->Internal())
@@ -125,7 +131,7 @@ void Application::DrawFrame()
     }
 
     // Only reset the fence if we are submitting work
-    _waitFence.Get(currentFrame).Reset();
+    ApplicationInfo::RaiiDevice().resetFences(*_waitFence.Get(currentFrame));
 
     // UI
     _userInterface.StartFrame();
@@ -146,7 +152,7 @@ void Application::DrawFrame()
             .setSemaphore(_renderFinishedSemaphores.Get(imageIndex))
             .setStageMask(vk::PipelineStageFlagBits2::eAllGraphics);
 
-    commandBuffer.Submit({&waitSemaphore, 1}, {&signalSemaphore, 1}, _waitFence.Internal(currentFrame));
+    commandBuffer.Submit({&waitSemaphore, 1}, {&signalSemaphore, 1}, _waitFence.Get(currentFrame));
 
     // actually present the frame
     vk::SwapchainKHR swapChain = _swapChain->Internal();
@@ -209,7 +215,8 @@ Application::Application() :
     // Synchronization
     _availableImageSemaphore(ApplicationInfo::Constant::MaxFrameInFlight, ApplicationInfo::RaiiDevice(), vk::SemaphoreCreateInfo{}),
     _renderFinishedSemaphores(_swapChain->Images.Size(), ApplicationInfo::RaiiDevice(), vk::SemaphoreCreateInfo{}),
-    _waitFence(ApplicationInfo::Constant::MaxFrameInFlight),
+    _waitFence(ApplicationInfo::Constant::MaxFrameInFlight, ApplicationInfo::RaiiDevice(), vk::FenceCreateInfo{}
+        .setFlags(vk::FenceCreateFlagBits::eSignaled)),
     _userInterface(_window.Internal(), *_swapChain, _graphicsComputeQueue, _graphicsCommandPool)
 {
     _window.LockMouse(_mouseLocked);

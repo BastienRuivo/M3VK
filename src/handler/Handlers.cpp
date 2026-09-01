@@ -10,36 +10,6 @@
 #include <vulkan/vulkan.hpp>
 #include "application/DebugLayer.h"
 
-VkFenceHandler::VkFenceHandler()
-{
-    // Create the queue in the "Signaled" state to ensure the first frame won't wait eternally for a fence that is not signaled, thus preventing an infinit loop
-    vk::FenceCreateInfo fenceCreateInfo = vk::FenceCreateInfo{}
-        .setFlags(vk::FenceCreateFlagBits::eSignaled);
-
-    vk::Result result = ApplicationInfo::Device().createFence(&fenceCreateInfo, nullptr, &_internal);
-    if(result != vk::Result::eSuccess)
-    {
-        throw std::runtime_error("Can't create fence");
-    }
-}
-
-VkFenceHandler::~VkFenceHandler()
-{
-    if(!_internal) return;
-
-    ApplicationInfo::Device().destroyFence(_internal);
-}
-
-void VkFenceHandler::Wait(uint64_t timeout) const
-{
-    (void)ApplicationInfo::Device().waitForFences(1, &_internal, VK_TRUE, timeout);
-}
-
-void VkFenceHandler::Reset() const
-{
-    (void)ApplicationInfo::Device().resetFences(1, &_internal);
-}
-
 vk::raii::Instance M3VKConstruct::MakeInstance(const vk::raii::Context& context,
         const std::string_view name,
         const uint32_t appVersion,
