@@ -11,8 +11,7 @@
 #include <concepts>
 
 template<typename T>
-    requires std::same_as<T, vk::CommandPool>
-    || std::same_as<T, vk::Fence>
+    requires std::same_as<T, vk::Fence>
     || std::same_as<T, vk::Semaphore>
     || std::same_as<T, vk::ImageView>
     || std::same_as<T, vk::PipelineLayout>
@@ -44,22 +43,6 @@ protected:
     T _internal{};
 };
 
-// -- HANDLER DEFINITION
-
-class VkCommandPoolHandler : public Handler<vk::CommandPool>
-{
-public:
-    VkCommandPoolHandler(uint32_t queueFamilyIndex);
-    ~VkCommandPoolHandler() override;
-
-    VkCommandPoolHandler(VkCommandPoolHandler&& other) noexcept = default;
-    VkCommandPoolHandler& operator=(VkCommandPoolHandler&& other) noexcept = default;
-
-    inline uint32_t QueueFamilyIndex() const { return _queueFamilyIndex; }
-
-    private:
-    uint32_t _queueFamilyIndex;
-};
 
 class VkFenceHandler : public Handler<vk::Fence>
 {

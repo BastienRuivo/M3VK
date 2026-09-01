@@ -87,7 +87,7 @@ void Application::RefreshSwapChain()
     _swapChain = std::make_unique<SwapChain>(_window, _windowSurface);
 
     auto extents = _swapChain->GetExtent();
-    CommandBuffer cmdBuffer(_graphicsCommandPool.Internal(), _graphicsComputeQueue);
+    CommandBuffer cmdBuffer(_graphicsCommandPool, _graphicsComputeQueue);
     cmdBuffer.BeginSingleTime();
     {
         _pipeline.Refresh(cmdBuffer, extents);
@@ -195,16 +195,18 @@ Application::Application() :
     _swapChain(std::make_unique<SwapChain>(_window, _windowSurface)),
 
     // Command pool
-    _graphicsCommandPool(ApplicationInfo::GetGraphicsQueueId()),
+    _graphicsCommandPool(vk::raii::CommandPool(ApplicationInfo::RaiiDevice(), vk::CommandPoolCreateInfo{}
+        .setFlags(vk::CommandPoolCreateFlags::BitsType::eResetCommandBuffer)
+        .setQueueFamilyIndex(ApplicationInfo::GetGraphicsQueueId()))),
     // Geometry & Data Buffers
-    _commandBuffer(ApplicationInfo::Constant::MaxFrameInFlight, _graphicsCommandPool.Internal(), _graphicsComputeQueue),
-    _pipeline(*_swapChain, _graphicsCommandPool.Internal(), _graphicsComputeQueue),
+    _commandBuffer(ApplicationInfo::Constant::MaxFrameInFlight, _graphicsCommandPool, _graphicsComputeQueue),
+    _pipeline(*_swapChain, _graphicsCommandPool, _graphicsComputeQueue),
 
     // Synchronization
     _availableImageSemaphore(ApplicationInfo::Constant::MaxFrameInFlight),
     _renderFinishedSemaphores(_swapChain->Images.Size()),
     _waitFence(ApplicationInfo::Constant::MaxFrameInFlight),
-    _userInterface(_window.Internal(), *_swapChain, _graphicsComputeQueue, _graphicsCommandPool.Internal())
+    _userInterface(_window.Internal(), *_swapChain, _graphicsComputeQueue, _graphicsCommandPool)
 {
     _window.LockMouse(_mouseLocked);
     {

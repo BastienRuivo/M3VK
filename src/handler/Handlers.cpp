@@ -10,27 +10,6 @@
 #include <vulkan/vulkan.hpp>
 #include "application/DebugLayer.h"
 
-VkCommandPoolHandler::VkCommandPoolHandler(uint32_t queueFamilyIndex)
-: Handler<vk::CommandPool>(), _queueFamilyIndex(queueFamilyIndex)
-{
-    vk::CommandPoolCreateInfo poolInfo = vk::CommandPoolCreateInfo{}
-        .setFlags(vk::CommandPoolCreateFlagBits::eResetCommandBuffer)
-        .setQueueFamilyIndex(_queueFamilyIndex);
-
-    vk::Result result = ApplicationInfo::Device().createCommandPool(&poolInfo, nullptr, &_internal);
-    if(result != vk::Result::eSuccess)
-    {
-        throw std::runtime_error("Failed to create command pool !");
-    }
-}
-
-VkCommandPoolHandler::~VkCommandPoolHandler()
-{
-    if(!_internal) return;
-
-    ApplicationInfo::Device().destroyCommandPool(_internal);
-}
-
 VkFenceHandler::VkFenceHandler()
 {
     // Create the queue in the "Signaled" state to ensure the first frame won't wait eternally for a fence that is not signaled, thus preventing an infinit loop

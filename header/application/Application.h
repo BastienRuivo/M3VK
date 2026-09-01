@@ -52,7 +52,7 @@ class Application
     vk::raii::Queue _presentQueue;
 
     // Dynamic lifetime
-    VkCommandPoolHandler _graphicsCommandPool;
+    vk::raii::CommandPool _graphicsCommandPool;
     std::unique_ptr<SwapChain> _swapChain;
 
     // used for object sharing data between cpu and gpu -> due to race condition we need one copy for each frame
