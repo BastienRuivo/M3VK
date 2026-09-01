@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.14)
+cmake_minimum_required(VERSION 3.16) # target_precompile_headers requires 3.16+
 project(M3VK)
 
 set(CMAKE_CXX_STANDARD 20)
@@ -145,6 +145,17 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
 )
 
 add_dependencies(${PROJECT_NAME} CompileShaders)
+
+# Precompiled header for the heavy, widely-included third-party headers
+# (mainly vulkan.hpp / vulkan_raii.hpp) - see header/pch.h for rationale.
+target_precompile_headers(${PROJECT_NAME} PRIVATE header/PrecompiledHeaders.h)
+
+# Split DWARF debug info out of the .o files into separate .dwo files.
+# Cuts peak per-TU compiler memory noticeably for debug builds (the RAII
+# wrapper types generate a lot of debug info) and speeds up linking.
+target_compile_options(${PROJECT_NAME} PRIVATE
+    $<$<CONFIG:Debug,RelWithDebInfo>:-gsplit-dwarf>
+)
 
 target_include_directories(${PROJECT_NAME} PRIVATE
     ${CMAKE_SOURCE_DIR}/common
