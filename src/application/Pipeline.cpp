@@ -193,37 +193,11 @@ void Pipeline::InitDrawModules(bool DebugOn)
     uint32_t sFragmentOpaque = _shaderLibrary.RegisterShader(std::filesystem::path(SHADER_DIRECTORY) / "Draw.frag.spv", ShaderLibrary::Fragment, _bindingManager, constants);
     uint32_t sFragmentCutout = _shaderLibrary.RegisterShader(std::filesystem::path(SHADER_DIRECTORY) / "DrawAlphaCutout.frag.spv", ShaderLibrary::Fragment, _bindingManager, constants);
 
-    ShaderLibrary::VertexBinding vertexCullBack =
-    {
-        .LibraryIndex = sVertex,
-        .Handle = _shaderLibrary.GetHandle(sVertex),
-        .State = VertexState()
-    };
+    ShaderLibrary::VertexBinding vertexCullBack = _shaderLibrary.MakeVertexBinding(sVertex, VertexState{.CullMode = vk::CullModeFlagBits::eBack});
+    ShaderLibrary::VertexBinding vertexCullOff = _shaderLibrary.MakeVertexBinding(sVertex, VertexState{.CullMode = vk::CullModeFlagBits::eNone});
 
-    vertexCullBack.State.CullMode = vk::CullModeFlagBits::eNone;
-
-    ShaderLibrary::VertexBinding vertexCullOff =
-    {
-        .LibraryIndex = vertexCullBack.LibraryIndex,
-        .Handle = vertexCullBack.Handle,
-        .State = VertexState()
-    };
-    vertexCullOff.State.CullMode = vk::CullModeFlagBits::eNone;
-
-
-    ShaderLibrary::FragmentBinding fragmentOpaque =
-    {
-        .LibraryIndex = sFragmentOpaque,
-        .Handle = _shaderLibrary.GetHandle(sFragmentOpaque),
-        .State = FragmentState()
-    };
-
-    ShaderLibrary::FragmentBinding fragmentCutout =
-    {
-        .LibraryIndex = sFragmentCutout,
-        .Handle = _shaderLibrary.GetHandle(sFragmentCutout),
-        .State = fragmentOpaque.State
-    };
+    ShaderLibrary::FragmentBinding fragmentOpaque = _shaderLibrary.MakeFragmentBinding(sFragmentOpaque);
+    ShaderLibrary::FragmentBinding fragmentCutout = _shaderLibrary.MakeFragmentBinding(sFragmentCutout, fragmentOpaque.State);
 
     RefreshDrawModule(MaterialType::Opaque, vertexCullBack, fragmentOpaque);
     RefreshDrawModule(MaterialType::Cutout, vertexCullBack, fragmentCutout);

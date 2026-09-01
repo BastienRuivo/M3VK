@@ -19,28 +19,10 @@ HiZGenerateModule::HiZGenerateModule(const SwapChain& swapChain, ShaderLibrary& 
     _hizImageViews(_hizTexture, bindingManager)
 {
     Shader::SpecializationConstant constants[] = {Shader::SpecializationConstant{"USE_ORIGINAL_DEPTH", false}};
-    uint32_t hizGenerateShader = shaderLibrary.RegisterShader(std::filesystem::path(SHADER_DIRECTORY) / "hizgenerate.comp.spv", ShaderLibrary::Compute, bindingManager, constants);
-    auto& hizGenerateShaderInfo = shaderLibrary.Get(hizGenerateShader);
-    _hizGenerateKernel =
-    {
-        .LibraryIndex = hizGenerateShader,
-        .Handle = hizGenerateShaderInfo.Handle,
-        .GX = hizGenerateShaderInfo.Info.Compute.X,
-        .GY = hizGenerateShaderInfo.Info.Compute.Y,
-        .GZ = hizGenerateShaderInfo.Info.Compute.Z
-    };
+    _hizGenerateKernel = shaderLibrary.RegisterComputeKernel(std::filesystem::path(SHADER_DIRECTORY) / "hizgenerate.comp.spv", bindingManager, constants);
 
     constants[0].enabled = true;
-    uint32_t hizGenerateMip0Shader = shaderLibrary.RegisterShader(std::filesystem::path(SHADER_DIRECTORY) / "hizgenerate.comp.spv", ShaderLibrary::Compute, bindingManager, constants);
-    auto& hizGenerateMip0ShaderInfo = shaderLibrary.Get(hizGenerateMip0Shader);
-    _hizGenerateMip0Kernel =
-    {
-        .LibraryIndex = hizGenerateMip0Shader,
-        .Handle = hizGenerateMip0ShaderInfo.Handle,
-        .GX = hizGenerateMip0ShaderInfo.Info.Compute.X,
-        .GY = hizGenerateMip0ShaderInfo.Info.Compute.Y,
-        .GZ = hizGenerateMip0ShaderInfo.Info.Compute.Z
-    };
+    _hizGenerateMip0Kernel = shaderLibrary.RegisterComputeKernel(std::filesystem::path(SHADER_DIRECTORY) / "hizgenerate.comp.spv", bindingManager, constants);
 
     _hizImageViews.Bind(bindingManager, BINDING_HIZ_TEXTURE);
 }

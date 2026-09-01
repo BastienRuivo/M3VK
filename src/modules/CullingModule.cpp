@@ -12,29 +12,8 @@ CullingModule::CullingModule(ShaderLibrary& shaderLibrary, BindingManager& alloc
 : _visibleIndirectBuffer(allocator, BINDING_VISIBLE_DRAW_INDIRECT_BUFFER, GraphicsBuffer::BufferType::INDIRECT_DRAW, RessourceUsage::PerFrame, ApplicationInfo::Constant::DrawIndirectBufferMaxSize, sizeof(DrawIndexedIndirectPadded)),
 _visibleIndirectionBuffer(allocator, BINDING_VISIBLE_INSTANCE_INDIRECTION_BUFFER, GraphicsBuffer::BufferType::STORAGE, RessourceUsage::PerFrame, ApplicationInfo::Constant::DrawIndirectBufferMaxSize, sizeof(uint32_t) * 4) // 16 bytes because SSBO have a 16 bytes alignment on Nvidia :/
 {
-    uint32_t cullingShader = shaderLibrary.RegisterShader(std::filesystem::path(SHADER_DIRECTORY) / "Culling.comp.spv", ShaderLibrary::Compute, allocator, {});
-
-    auto& cullingShaderInfo = shaderLibrary.Get(cullingShader);
-    _cullingKernel =
-    {
-        .LibraryIndex = cullingShader,
-        .Handle = cullingShaderInfo.Handle,
-        .GX = cullingShaderInfo.Info.Compute.X,
-        .GY = cullingShaderInfo.Info.Compute.Y,
-        .GZ = cullingShaderInfo.Info.Compute.Z
-    };
-
-    uint32_t cullingInitShader = shaderLibrary.RegisterShader(std::filesystem::path(SHADER_DIRECTORY) / "CullingInit.comp.spv", ShaderLibrary::Compute, allocator, {});
-
-    auto& initShaderInfo = shaderLibrary.Get(cullingInitShader);
-    _cullingInitKernel =
-    {
-        .LibraryIndex = cullingInitShader,
-        .Handle = initShaderInfo.Handle,
-        .GX = initShaderInfo.Info.Compute.X,
-        .GY = initShaderInfo.Info.Compute.Y,
-        .GZ = initShaderInfo.Info.Compute.Z
-    };
+    _cullingKernel = shaderLibrary.RegisterComputeKernel(std::filesystem::path(SHADER_DIRECTORY) / "Culling.comp.spv", allocator);
+    _cullingInitKernel = shaderLibrary.RegisterComputeKernel(std::filesystem::path(SHADER_DIRECTORY) / "CullingInit.comp.spv", allocator);
 }
 
 CullingModule::~CullingModule()

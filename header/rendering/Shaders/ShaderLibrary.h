@@ -86,6 +86,35 @@ class ShaderLibrary
     inline vk::ShaderEXT GetHandle(uint32_t id) const { return _shaders[id].Handle; }
     inline const Shader& Get(uint32_t id) const { return _shaders[id]; }
 
+    // Build a binding/kernel from a shader already registered via RegisterShader.
+    inline VertexBinding MakeVertexBinding(uint32_t id, VertexState state = {}) const
+    {
+        return VertexBinding
+        {
+            .LibraryIndex = id,
+            .Handle = GetHandle(id),
+            .State = std::move(state)
+        };
+    }
+    inline FragmentBinding MakeFragmentBinding(uint32_t id, FragmentState state = {}) const
+    {
+        return FragmentBinding
+        {
+            .LibraryIndex = id,
+            .Handle = GetHandle(id),
+            .State = std::move(state)
+        };
+    }
+    inline ComputeKernel MakeComputeKernel(uint32_t id) const
+    {
+        const auto& computeInfo = Get(id).Info.Compute;
+        return ComputeKernel{.LibraryIndex = id, .Handle = GetHandle(id), .GX = computeInfo.X, .GY = computeInfo.Y, .GZ = computeInfo.Z};
+    }
+
+    VertexBinding RegisterVertexBinding(std::filesystem::path path, const BindingManager& descriptorAllocator, VertexState state = {}, std::span<const Shader::SpecializationConstant> speConstants = {});
+    FragmentBinding RegisterFragmentBinding(std::filesystem::path path, const BindingManager& descriptorAllocator, FragmentState state = {}, std::span<const Shader::SpecializationConstant> speConstants = {});
+    ComputeKernel RegisterComputeKernel(std::filesystem::path path, const BindingManager& descriptorAllocator, std::span<const Shader::SpecializationConstant> speConstants = {});
+
     private:
     std::vector<Shader> _shaders;
     uint32_t _lastFreeIndex = 0;

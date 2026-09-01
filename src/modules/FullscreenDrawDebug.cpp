@@ -4,36 +4,14 @@
 
 FullscreenDrawDebug::FullscreenDrawDebug(ShaderLibrary& shaderLibrary, const BindingManager& manager)
 {
-    uint32_t fullscreenDrawVertex = shaderLibrary.RegisterShader(std::filesystem::path(SHADER_DIRECTORY) / "FullscreenDraw.vert.spv", ShaderLibrary::Vertex, manager);
-    auto& fullscreenDrawVertexInfo = shaderLibrary.Get(fullscreenDrawVertex);
-    VertexBinding = {
-        .LibraryIndex = fullscreenDrawVertex,
-        .Handle = fullscreenDrawVertexInfo.Handle,
-        .State = VertexState
-        {
-            .CullMode = vk::CullModeFlagBits::eNone
-        }
-    };
+    VertexBinding = shaderLibrary.RegisterVertexBinding(std::filesystem::path(SHADER_DIRECTORY) / "FullscreenDraw.vert.spv", manager,
+        VertexState{.CullMode = vk::CullModeFlagBits::eNone});
 
-    uint32_t fullscreenDrawFragment = shaderLibrary.RegisterShader(std::filesystem::path(SHADER_DIRECTORY) / "FullscreenDraw.frag.spv", ShaderLibrary::Fragment, manager);
-    auto& fullscreenDrawFragmentInfo = shaderLibrary.Get(fullscreenDrawFragment);
-    FragmentBinding =
-    {
-        .LibraryIndex = fullscreenDrawFragment,
-        .Handle = fullscreenDrawFragmentInfo.Handle,
-        .State = FragmentState
-        {
-            .depthTest = VK_FALSE,
-            .depthWrite = VK_FALSE
-        }
-    };
+    FragmentBinding = shaderLibrary.RegisterFragmentBinding(std::filesystem::path(SHADER_DIRECTORY) / "FullscreenDraw.frag.spv", manager,
+        FragmentState{.depthTest = VK_FALSE, .depthWrite = VK_FALSE});
 
     Shader::SpecializationConstant constant{.name = "DRAW_DEPTH", .enabled = true};
-    uint32_t fullscreenDrawDepthFragment = shaderLibrary.RegisterShader(std::filesystem::path(SHADER_DIRECTORY) / "FullscreenDraw.frag.spv", ShaderLibrary::Fragment, manager, {&constant, 1});
-    auto& fullscreenDrawDepthFragmentInfo = shaderLibrary.Get(fullscreenDrawDepthFragment);
-    FragmentDepthBinding = FragmentBinding;
-    FragmentDepthBinding.LibraryIndex = fullscreenDrawDepthFragment;
-    FragmentDepthBinding.Handle = fullscreenDrawDepthFragmentInfo.Handle;
+    FragmentDepthBinding = shaderLibrary.RegisterFragmentBinding(std::filesystem::path(SHADER_DIRECTORY) / "FullscreenDraw.frag.spv", manager, FragmentBinding.State, {&constant, 1});
 }
 
 FullscreenDrawDebug::~FullscreenDrawDebug()

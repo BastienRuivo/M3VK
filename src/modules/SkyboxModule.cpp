@@ -19,29 +19,11 @@ SkyboxModule::SkyboxModule(ShaderLibrary& shaderLibrary, BindingManager& allocat
         CPUImage("data/skybox/top.jpg", STBI_rgb_alpha),
         CPUImage("data/skybox/bottom.jpg", STBI_rgb_alpha)))
 {
-    uint32_t vertexShaderId = shaderLibrary.RegisterShader(std::filesystem::path(SHADER_DIRECTORY) / "Skybox.vert.spv", ShaderLibrary::Vertex, allocator);
-    uint32_t fragmentShaderId = shaderLibrary.RegisterShader(std::filesystem::path(SHADER_DIRECTORY) / "Skybox.frag.spv", ShaderLibrary::Fragment, allocator);
+    _vertexShader = shaderLibrary.RegisterVertexBinding(std::filesystem::path(SHADER_DIRECTORY) / "Skybox.vert.spv", allocator,
+        VertexState{.CullMode = vk::CullModeFlagBits::eNone});
 
-    auto& vertexShaderInfo = shaderLibrary.Get(vertexShaderId);
-    _vertexShader =
-    {
-        .LibraryIndex = vertexShaderId,
-        .Handle = vertexShaderInfo.Handle,
-        .State = VertexState()
-    };
-    _vertexShader.State.CullMode = vk::CullModeFlagBits::eNone;
-
-    auto& fragmentShaderInfo = shaderLibrary.Get(fragmentShaderId);
-    _fragmentShader =
-    {
-        .LibraryIndex = fragmentShaderId,
-        .Handle = fragmentShaderInfo.Handle,
-        .State = FragmentState()
-    };
-    _fragmentShader.State.depthTest = true;
-    _fragmentShader.State.depthWrite = false;
-    _fragmentShader.State.depthCompareOp = vk::CompareOp::eLessOrEqual;
-
+    _fragmentShader = shaderLibrary.RegisterFragmentBinding(std::filesystem::path(SHADER_DIRECTORY) / "Skybox.frag.spv", allocator,
+        FragmentState{.depthTest = true, .depthCompareOp = vk::CompareOp::eLessOrEqual, .depthWrite = false});
 }
 
 SkyboxModule::~SkyboxModule()

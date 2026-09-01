@@ -54,3 +54,18 @@ void ShaderLibrary::DisposeShader(uint32_t index)
     _shaders[index].Dispose();
     _lastFreeIndex = _lastFreeIndex > index ? index : _lastFreeIndex;
 }
+
+ShaderLibrary::VertexBinding ShaderLibrary::RegisterVertexBinding(std::filesystem::path path, const BindingManager& descriptorAllocator, VertexState state, std::span<const Shader::SpecializationConstant> speConstants)
+{
+    return MakeVertexBinding(RegisterShader(path, Vertex, descriptorAllocator, speConstants), std::move(state));
+}
+
+ShaderLibrary::FragmentBinding ShaderLibrary::RegisterFragmentBinding(std::filesystem::path path, const BindingManager& descriptorAllocator, FragmentState state, std::span<const Shader::SpecializationConstant> speConstants)
+{
+    return MakeFragmentBinding(RegisterShader(path, Fragment, descriptorAllocator, speConstants), std::move(state));
+}
+
+ShaderLibrary::ComputeKernel ShaderLibrary::RegisterComputeKernel(std::filesystem::path path, const BindingManager& descriptorAllocator, std::span<const Shader::SpecializationConstant> speConstants)
+{
+    return MakeComputeKernel(RegisterShader(path, Compute, descriptorAllocator, speConstants));
+}
