@@ -1,4 +1,4 @@
-#include "handler/Handlers.h"
+#include "allocation/RaiiHelper.h"
 #include "application/ApplicationHelper.h"
 #include "application/VkExtManager.h"
 #include "application/ApplicationInfo.h"
@@ -11,7 +11,7 @@
 #include <vulkan/vulkan_raii.hpp>
 #include "application/DebugLayer.h"
 
-vk::raii::Instance M3VKConstruct::MakeInstance(const vk::raii::Context& context,
+vk::raii::Instance RaiiHelper::MakeInstance(const vk::raii::Context& context,
         const std::string_view name,
         const uint32_t appVersion,
         const uint32_t engineVersion,
@@ -40,7 +40,7 @@ vk::raii::Instance M3VKConstruct::MakeInstance(const vk::raii::Context& context,
         }
     }
 
-    std::vector<const char *> requiredExtensions = M3VKConstruct::Helper::GetRequiredExtensions();
+    std::vector<const char *> requiredExtensions = RaiiHelper::GetRequiredExtensions();
     std::vector<const char *> missingExtensions;
     for(int i = 0; i < requiredExtensions.size(); ++i)
     {
@@ -93,7 +93,7 @@ vk::raii::Instance M3VKConstruct::MakeInstance(const vk::raii::Context& context,
     return instance;
 }
 
-std::vector<const char *> M3VKConstruct::Helper::GetRequiredExtensions()
+std::vector<const char *> RaiiHelper::GetRequiredExtensions()
 {
     uint32_t glfwExtensionCount = 0;
     const char** glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
@@ -108,7 +108,7 @@ std::vector<const char *> M3VKConstruct::Helper::GetRequiredExtensions()
     return extensions;
 }
 
-vk::raii::SurfaceKHR M3VKConstruct::MakeSurface(const vk::raii::Instance& instance, GLFWwindow *pWindow)
+vk::raii::SurfaceKHR RaiiHelper::MakeSurface(const vk::raii::Instance& instance, GLFWwindow *pWindow)
 {
     VkSurfaceKHR rawSurface;
     if(glfwCreateWindowSurface(*instance, pWindow, nullptr, &rawSurface) != VK_SUCCESS)
@@ -119,24 +119,7 @@ vk::raii::SurfaceKHR M3VKConstruct::MakeSurface(const vk::raii::Instance& instan
     return vk::raii::SurfaceKHR(instance, rawSurface);
 }
 
-VkPipelineLayoutHandler::VkPipelineLayoutHandler( std::span<const vk::DescriptorSetLayout> descriptorLayouts, std::span<const vk::PushConstantRange> pushConstantRanges)
-{
-    vk::PipelineLayoutCreateInfo layoutCreateInfo = vk::PipelineLayoutCreateInfo{}
-        .setSetLayouts(descriptorLayouts)
-        .setPushConstantRanges(pushConstantRanges);
-
-    if(ApplicationInfo::Device().createPipelineLayout(&layoutCreateInfo, nullptr, &_internal) != vk::Result::eSuccess)
-    {
-        throw std::runtime_error("Failed to create VK Layout !");
-    }
-}
-VkPipelineLayoutHandler::~VkPipelineLayoutHandler()
-{
-    if(!_internal) return;
-    ApplicationInfo::Device().destroyPipelineLayout(_internal);
-}
-
-bool M3VKConstruct::Helper::CheckPhysicalDeviceExtensionSupport(vk::PhysicalDevice device, const std::vector<const char *>& deviceExtensions)
+bool RaiiHelper::CheckPhysicalDeviceExtensionSupport(vk::PhysicalDevice device, const std::vector<const char *>& deviceExtensions)
 {
     uint32_t extensionCount = 0;
     vk::Result result = device.enumerateDeviceExtensionProperties(nullptr, &extensionCount, nullptr);
@@ -178,7 +161,7 @@ bool M3VKConstruct::Helper::CheckPhysicalDeviceExtensionSupport(vk::PhysicalDevi
     return true;
 }
 
-uint32_t M3VKConstruct::Helper::FindMemoryType(vk::PhysicalDevice device, uint32_t typeFilter, vk::MemoryPropertyFlags properties)
+uint32_t RaiiHelper::FindMemoryType(vk::PhysicalDevice device, uint32_t typeFilter, vk::MemoryPropertyFlags properties)
 {
     vk::PhysicalDeviceMemoryProperties memoryProperties;
     device.getMemoryProperties(&memoryProperties);
@@ -195,7 +178,7 @@ uint32_t M3VKConstruct::Helper::FindMemoryType(vk::PhysicalDevice device, uint32
     throw std::runtime_error("Can't find suitable memory type for buffer");
 }
 
-int M3VKConstruct::Helper::ScorePhysicalDeviceSuitability(vk::PhysicalDevice device, vk::SurfaceKHR windowSurface, const std::vector<const char *>& deviceExtensions, vk::PhysicalDeviceProperties& deviceProperties, QueueFamilyIds& familyIds)
+int RaiiHelper::ScorePhysicalDeviceSuitability(vk::PhysicalDevice device, vk::SurfaceKHR windowSurface, const std::vector<const char *>& deviceExtensions, vk::PhysicalDeviceProperties& deviceProperties, QueueFamilyIds& familyIds)
 {
     device.getProperties(&deviceProperties);
 
@@ -207,7 +190,7 @@ int M3VKConstruct::Helper::ScorePhysicalDeviceSuitability(vk::PhysicalDevice dev
 
     familyIds = QueueFamilyIds::QueryQueueFamilies(device, windowSurface);
 
-    bool areAllRequiredExtensionsSupported = M3VKConstruct::Helper::CheckPhysicalDeviceExtensionSupport(device, deviceExtensions);
+    bool areAllRequiredExtensionsSupported = RaiiHelper::CheckPhysicalDeviceExtensionSupport(device, deviceExtensions);
 
     ApplicationHelper::SwapChainSupportDetails swapChainDetails = ApplicationHelper::QuerySwapChainSupportDetail(device, windowSurface);
 
@@ -232,7 +215,7 @@ int M3VKConstruct::Helper::ScorePhysicalDeviceSuitability(vk::PhysicalDevice dev
     return score;
 }
 
-vk::raii::PhysicalDevice M3VKConstruct::MakePhysicalDevice(const vk::raii::Instance& instance, vk::SurfaceKHR windowSurface, const std::vector<const char *>& deviceExtensions)
+vk::raii::PhysicalDevice RaiiHelper::MakePhysicalDevice(const vk::raii::Instance& instance, vk::SurfaceKHR windowSurface, const std::vector<const char *>& deviceExtensions)
 {
     std::vector<vk::raii::PhysicalDevice> physicalDevices = instance.enumeratePhysicalDevices();
 
@@ -251,7 +234,7 @@ vk::raii::PhysicalDevice M3VKConstruct::MakePhysicalDevice(const vk::raii::Insta
     {
         QueueFamilyIds localQueueIds;
         vk::PhysicalDeviceProperties localProperties;
-        int score = Helper::ScorePhysicalDeviceSuitability(*physicalDevice, windowSurface, deviceExtensions, localProperties, localQueueIds);
+        int score = RaiiHelper::ScorePhysicalDeviceSuitability(*physicalDevice, windowSurface, deviceExtensions, localProperties, localQueueIds);
         if(score > bestScore)
         {
             bestScore = score;
@@ -269,7 +252,7 @@ vk::raii::PhysicalDevice M3VKConstruct::MakePhysicalDevice(const vk::raii::Insta
     return vk::raii::PhysicalDevice(instance, selected);
 }
 
-vk::raii::Device M3VKConstruct::MakeDevice(const vk::raii::PhysicalDevice& physicalDevice, vk::SurfaceKHR windowSurface, const std::vector<const char*>& deviceExtensions)
+vk::raii::Device RaiiHelper::MakeDevice(const vk::raii::PhysicalDevice& physicalDevice, vk::SurfaceKHR windowSurface, const std::vector<const char*>& deviceExtensions)
 {
     // Computed locally rather than read from ApplicationInfo: at this point in construction nothing
     // has populated ApplicationInfo's queue family ids yet, so Surface is taken as a parameter instead.
@@ -358,7 +341,7 @@ vk::raii::Device M3VKConstruct::MakeDevice(const vk::raii::PhysicalDevice& physi
     return device;
 }
 
-vk::raii::Sampler M3VKConstruct::MakeSampler(vk::Filter oversampling, vk::Filter undersampling, vk::SamplerMipmapMode mipmapMode, bool hasAniso)
+vk::raii::Sampler RaiiHelper::MakeSampler(vk::Filter oversampling, vk::Filter undersampling, vk::SamplerMipmapMode mipmapMode, bool hasAniso)
 {
     // Mag -> Oversampling, Min -> Undersampling
     // what to do when reading OOB (repeat, clamp, mirror...)
@@ -384,17 +367,17 @@ vk::raii::Sampler M3VKConstruct::MakeSampler(vk::Filter oversampling, vk::Filter
     return vk::raii::Sampler(ApplicationInfo::RaiiDevice(), createInfo);
 }
 
-vk::raii::ImageView M3VKConstruct::MakeImageView(vk::Image image, vk::Format format, uint32_t mipCount)
+vk::raii::ImageView RaiiHelper::MakeImageView(vk::Image image, vk::Format format, uint32_t mipCount)
 {
-    return M3VKConstruct::MakeImageView(image, format, mipCount, ApplicationHelper::GetImageAspectFlags(format));
+    return RaiiHelper::MakeImageView(image, format, mipCount, ApplicationHelper::GetImageAspectFlags(format));
 }
 
-vk::raii::ImageView M3VKConstruct::MakeImageView(vk::Image image, vk::Format format, uint32_t mipCount, vk::ImageAspectFlags aspectMask)
+vk::raii::ImageView RaiiHelper::MakeImageView(vk::Image image, vk::Format format, uint32_t mipCount, vk::ImageAspectFlags aspectMask)
 {
-    return M3VKConstruct::MakeImageView(image, format, mipCount, aspectMask, vk::ImageViewType::e2D);
+    return RaiiHelper::MakeImageView(image, format, mipCount, aspectMask, vk::ImageViewType::e2D);
 }
 
-vk::raii::ImageView M3VKConstruct::MakeImageView(vk::Image image, vk::Format format, uint32_t mipCount, vk::ImageAspectFlags aspectMask, vk::ImageViewType type)
+vk::raii::ImageView RaiiHelper::MakeImageView(vk::Image image, vk::Format format, uint32_t mipCount, vk::ImageAspectFlags aspectMask, vk::ImageViewType type)
 {
     vk::ImageSubresourceRange subresourceRange = vk::ImageSubresourceRange{}
         .setAspectMask(aspectMask)

@@ -2,7 +2,7 @@
 #include "application/ApplicationHelper.h"
 #include "application/ApplicationInfo.h"
 #include "application/DebugLayer.h"
-#include "handler/Handlers.h"
+#include "allocation/RaiiHelper.h"
 #include "rendering/GPUImage.h"
 #include "rendering/MultiFrame.h"
 #include "rendering/QueueFamilyIds.h"
@@ -172,7 +172,7 @@ Images(), _viewHandlers()
 
     for(uint32_t i = 0; i < imageCount; i++)
     {
-        _viewHandlers.EmplaceBack(M3VKConstruct::MakeImageView(tempImages[i], _imageFormat, 1));
+        _viewHandlers.EmplaceBack(RaiiHelper::MakeImageView(tempImages[i], _imageFormat, 1));
         ImageReference image
         {
             .Image = tempImages[i],

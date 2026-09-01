@@ -191,11 +191,11 @@ Application::Application() :
     // Core Window & Instance
     _window(1920, 1080, "Window", this, Application::ResizeCallback, Application::MouseMoveCallback, Application::WindowFocusCallback),
     _context(vkGetInstanceProcAddr),
-    _instance(M3VKConstruct::MakeInstance(_context, "M3VK", vk::makeVersion(0, 1, 0), vk::makeVersion(0, 1, 0), vk::ApiVersion14)),
+    _instance(RaiiHelper::MakeInstance(_context, "M3VK", vk::makeVersion(0, 1, 0), vk::makeVersion(0, 1, 0), vk::ApiVersion14)),
     _vkDebugLayer(_instance),
-    _windowSurface(M3VKConstruct::MakeSurface(_instance, _window.Internal())),
-    _physicalDevice(M3VKConstruct::MakePhysicalDevice(_instance, _windowSurface, _deviceExtensions)),
-    _device(M3VKConstruct::MakeDevice(_physicalDevice, _windowSurface, _deviceExtensions)),
+    _windowSurface(RaiiHelper::MakeSurface(_instance, _window.Internal())),
+    _physicalDevice(RaiiHelper::MakePhysicalDevice(_instance, _windowSurface, _deviceExtensions)),
+    _device(RaiiHelper::MakeDevice(_physicalDevice, _windowSurface, _deviceExtensions)),
 
     _appInfoInitializer(_instance, _windowSurface, _physicalDevice, _device),
 

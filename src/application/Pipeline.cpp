@@ -10,7 +10,7 @@
 #include "allocation/MeshRegistry.h"
 #include "asset/MeshHelper.h"
 #include "glm/fwd.hpp"
-#include "handler/Handlers.h"
+#include "allocation/RaiiHelper.h"
 #include "rendering/CommandBuffer.h"
 #include "rendering/SwapChain.h"
 #include <cstring>
@@ -18,8 +18,8 @@
 
 Pipeline::Pipeline(const SwapChain& swapChain, vk::CommandPool graphicsCommandPool, vk::Queue graphicsComputeQueue)
 : _bindingManager(),
-    _samplerLinear(M3VKConstruct::MakeSampler()),
-    _samplerNearest(M3VKConstruct::MakeSampler(vk::Filter::eNearest, vk::Filter::eNearest, vk::SamplerMipmapMode::eNearest, false)),
+    _samplerLinear(RaiiHelper::MakeSampler()),
+    _samplerNearest(RaiiHelper::MakeSampler(vk::Filter::eNearest, vk::Filter::eNearest, vk::SamplerMipmapMode::eNearest, false)),
     _registries(
         {
             std::make_unique<MeshRegistry>(_bindingManager),

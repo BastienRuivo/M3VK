@@ -1,7 +1,7 @@
 #include "modules/SkyboxModule.h"
 #include "asset/ImporterHelper.h"
 #include "allocation/BindingManager.h"
-#include "handler/Handlers.h"
+#include "allocation/RaiiHelper.h"
 #include "rendering/Shaders/ShaderLibrary.h"
 #include <cstdint>
 #include <vulkan/vulkan.hpp>
@@ -10,7 +10,7 @@
 
 SkyboxModule::SkyboxModule(ShaderLibrary& shaderLibrary, BindingManager& allocator, vk::CommandPool pool, vk::Queue queue)
 :
-    _sampler(M3VKConstruct::MakeSampler()),
+    _sampler(RaiiHelper::MakeSampler()),
     _skyboxTexture(ImporterHelper::CubemapFromCPU(allocator, BINDING_SKYBOX_TEXTURE, pool, queue, _sampler,
         CPUImage("data/skybox/front.jpg", STBI_rgb_alpha),
         CPUImage("data/skybox/back.jpg", STBI_rgb_alpha),
