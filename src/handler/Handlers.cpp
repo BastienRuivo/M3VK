@@ -383,3 +383,31 @@ vk::raii::Sampler M3VKConstruct::MakeSampler(vk::Filter oversampling, vk::Filter
 
     return vk::raii::Sampler(ApplicationInfo::RaiiDevice(), createInfo);
 }
+
+vk::raii::ImageView M3VKConstruct::MakeImageView(vk::Image image, vk::Format format, uint32_t mipCount)
+{
+    return M3VKConstruct::MakeImageView(image, format, mipCount, ApplicationHelper::GetImageAspectFlags(format));
+}
+
+vk::raii::ImageView M3VKConstruct::MakeImageView(vk::Image image, vk::Format format, uint32_t mipCount, vk::ImageAspectFlags aspectMask)
+{
+    return M3VKConstruct::MakeImageView(image, format, mipCount, aspectMask, vk::ImageViewType::e2D);
+}
+
+vk::raii::ImageView M3VKConstruct::MakeImageView(vk::Image image, vk::Format format, uint32_t mipCount, vk::ImageAspectFlags aspectMask, vk::ImageViewType type)
+{
+    vk::ImageSubresourceRange subresourceRange = vk::ImageSubresourceRange{}
+        .setAspectMask(aspectMask)
+        .setBaseMipLevel(0)
+        .setLevelCount(mipCount)
+        .setBaseArrayLayer(0)
+        .setLayerCount(type == vk::ImageViewType::eCube ? 6u : 1u);
+
+    vk::ImageViewCreateInfo createInfo = vk::ImageViewCreateInfo{}
+        .setImage(image)
+        .setViewType(type)
+        .setFormat(format)
+        .setSubresourceRange(subresourceRange);
+
+    return vk::raii::ImageView(ApplicationInfo::RaiiDevice(), createInfo);
+}

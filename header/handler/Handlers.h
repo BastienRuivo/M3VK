@@ -81,4 +81,9 @@ namespace M3VKConstruct
     vk::raii::Sampler MakeSampler(vk::Filter oversampling = vk::Filter::eLinear, vk::Filter undersampling = vk::Filter::eLinear,
         vk::SamplerMipmapMode mipmapMode = vk::SamplerMipmapMode::eLinear,
         bool hasAniso = true);
+
+
+    vk::raii::ImageView MakeImageView(vk::Image image, vk::Format format, uint32_t mipCount);
+    vk::raii::ImageView MakeImageView(vk::Image image, vk::Format format, uint32_t mipCount, vk::ImageAspectFlags aspectMask);
+    vk::raii::ImageView MakeImageView(vk::Image image, vk::Format format, uint32_t mipCount, vk::ImageAspectFlags aspectMask, vk::ImageViewType type);
 };

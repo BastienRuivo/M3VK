@@ -2,11 +2,11 @@
 
 #include "rendering/GPUImage.h"
 #include "rendering/MultiFrame.h"
-#include "handler/VkImageViewHandler.h"
 #include <vector>
 #include <vulkan/vk_platform.h>
 #include <vulkan/vulkan.hpp>
 #include <GLFW/glfw3.h>
+#include <vulkan/vulkan_raii.hpp>
 
 #include "application/Window.h"
 
@@ -29,7 +29,7 @@ class SwapChain
     inline uint32_t MinImageCount() const { return _minImageCount; }
 
     private:
-    MultiFrameHandler<VkImageViewHandler> _viewHandlers;
+    MultiFrameObject<vk::raii::ImageView> _viewHandlers;
     vk::raii::SwapchainKHR MakeSwapChainInternal(const Window& window, vk::SurfaceKHR windowSurface);
 
     vk::Format _imageFormat = vk::Format::eUndefined;
