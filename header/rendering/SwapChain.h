@@ -1,7 +1,6 @@
 #pragma once
 
 #include "rendering/GPUImage.h"
-#include "rendering/MultiFrame.h"
 #include <vector>
 #include <vulkan/vk_platform.h>
 #include <vulkan/vulkan.hpp>
@@ -14,7 +13,9 @@ class SwapChain
 {
     public:
 
-    MultiFrameObject<ImageReference> Images;
+    // One entry per swapchain image (not per frame in flight), indexed by the
+    // image index handed back from vkAcquireNextImage.
+    std::vector<ImageReference> Images;
     SwapChain(const Window & window, vk::SurfaceKHR windowSurface);
     ~SwapChain();
 
@@ -25,11 +26,11 @@ class SwapChain
     inline vk::Format GetImageFormat() const { return _imageFormat; }
     inline vk::Extent2D GetExtent() const { return _extents; }
     inline vk::SwapchainKHR Internal() const { return _internal; }
-    inline vk::ImageView View(uint32_t index) const { return Images.Get(index).View; }
+    inline vk::ImageView View(uint32_t index) const { return Images[index].View; }
     inline uint32_t MinImageCount() const { return _minImageCount; }
 
     private:
-    MultiFrameObject<vk::raii::ImageView> _viewHandlers;
+    std::vector<vk::raii::ImageView> _viewHandlers;
     vk::raii::SwapchainKHR MakeSwapChainInternal(const Window& window, vk::SurfaceKHR windowSurface);
 
     vk::Format _imageFormat = vk::Format::eUndefined;

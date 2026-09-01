@@ -167,23 +167,23 @@ Images(), _viewHandlers()
     std::vector<vk::Image> tempImages = ApplicationInfo::Device().getSwapchainImagesKHR(_internal);
     uint32_t imageCount = static_cast<uint32_t>(tempImages.size());
 
-    Images.Reserve(imageCount);
-    _viewHandlers.Reserve(imageCount);
+    Images.reserve(imageCount);
+    _viewHandlers.reserve(imageCount);
 
     for(uint32_t i = 0; i < imageCount; i++)
     {
-        _viewHandlers.EmplaceBack(RaiiHelper::MakeImageView(tempImages[i], _imageFormat, 1));
+        _viewHandlers.emplace_back(RaiiHelper::MakeImageView(tempImages[i], _imageFormat, 1));
         ImageReference image
         {
             .Image = tempImages[i],
-            .View = _viewHandlers.Get(i),
+            .View = _viewHandlers[i],
             .Format = _imageFormat,
             .Width = _extents.width,
             .Height = _extents.height,
             .MipCount = 1,
             .ArrayLayerCount = 1
         };
-        Images.EmplaceBack(image);
+        Images.emplace_back(image);
     }
 }
 

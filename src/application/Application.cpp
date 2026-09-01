@@ -98,9 +98,7 @@ void Application::RefreshSwapChain()
 
 void Application::DrawFrame()
 {
-    uint32_t currentFrame = ApplicationInfo::CurrentFrame();
-
-    vk::Result res = ApplicationInfo::RaiiDevice().waitForFences(*_waitFence.Get(currentFrame), vk::True, UINT32_MAX);
+    vk::Result res = ApplicationInfo::RaiiDevice().waitForFences(*_waitFence.Current(), vk::True, UINT32_MAX);
 
     if(res == vk::Result::eTimeout)
     {
@@ -110,7 +108,7 @@ void Application::DrawFrame()
     vk::AcquireNextImageInfoKHR acquireInfo = vk::AcquireNextImageInfoKHR{}
         .setSwapchain(_swapChain->Internal())
         .setTimeout(UINT32_MAX) // 4sec = timeout, just a test for now but seems rationnal ?
-        .setSemaphore(_availableImageSemaphore.Get(currentFrame))
+        .setSemaphore(_availableImageSemaphore.Current())
         .setFence(nullptr)
         .setDeviceMask(1u);
 
@@ -131,7 +129,7 @@ void Application::DrawFrame()
     }
 
     // Only reset the fence if we are submitting work
-    ApplicationInfo::RaiiDevice().resetFences(*_waitFence.Get(currentFrame));
+    ApplicationInfo::RaiiDevice().resetFences(*_waitFence.Current());
 
     // UI
     _userInterface.StartFrame();
@@ -140,19 +138,21 @@ void Application::DrawFrame()
 
     _pipeline.PreRender(_swapChain->GetExtent());
 
-    const CommandBuffer& commandBuffer = _commandBuffer.Get(currentFrame);
+    // Implicit conversion of _commandBuffer to the current frame's CommandBuffer&.
+    const CommandBuffer& commandBuffer = _commandBuffer;
 
     commandBuffer.Reset();
     _pipeline.Execute(commandBuffer, *_swapChain, _userInterface, imageIndex);
 
     vk::SemaphoreSubmitInfo waitSemaphore = vk::SemaphoreSubmitInfo{}
-            .setSemaphore(_availableImageSemaphore.Get(currentFrame))
+            .setSemaphore(_availableImageSemaphore.Current())
             .setStageMask(vk::PipelineStageFlagBits2::eColorAttachmentOutput);
+    // Signalled on presentation of `imageIndex`, not the current frame-in-flight - keyed by swapchain image index.
     vk::SemaphoreSubmitInfo signalSemaphore = vk::SemaphoreSubmitInfo{}
-            .setSemaphore(_renderFinishedSemaphores.Get(imageIndex))
+            .setSemaphore(_renderFinishedSemaphores[imageIndex])
             .setStageMask(vk::PipelineStageFlagBits2::eAllGraphics);
 
-    commandBuffer.Submit({&waitSemaphore, 1}, {&signalSemaphore, 1}, _waitFence.Get(currentFrame));
+    commandBuffer.Submit({&waitSemaphore, 1}, {&signalSemaphore, 1}, _waitFence.Current());
 
     // actually present the frame
     vk::SwapchainKHR swapChain = _swapChain->Internal();
@@ -187,6 +187,17 @@ void Application::DrawFrame()
     ApplicationInfo::NextFrame();
 }
 
+std::vector<vk::raii::Semaphore> Application::MakeRenderFinishedSemaphores(uint32_t count)
+{
+    std::vector<vk::raii::Semaphore> semaphores;
+    semaphores.reserve(count);
+    for(uint32_t i = 0; i < count; ++i)
+    {
+        semaphores.emplace_back(ApplicationInfo::RaiiDevice(), vk::SemaphoreCreateInfo{});
+    }
+    return semaphores;
+}
+
 Application::Application() :
     // Core Window & Instance
     _window(1920, 1080, "Window", this, Application::ResizeCallback, Application::MouseMoveCallback, Application::WindowFocusCallback),
@@ -209,13 +220,13 @@ Application::Application() :
         .setFlags(vk::CommandPoolCreateFlags::BitsType::eResetCommandBuffer)
         .setQueueFamilyIndex(ApplicationInfo::GetGraphicsQueueId()))),
     // Geometry & Data Buffers
-    _commandBuffer(ApplicationInfo::Constant::MaxFrameInFlight, _graphicsCommandPool, _graphicsComputeQueue),
+    _commandBuffer(_graphicsCommandPool, _graphicsComputeQueue),
     _pipeline(*_swapChain, _graphicsCommandPool, _graphicsComputeQueue),
 
     // Synchronization
-    _availableImageSemaphore(ApplicationInfo::Constant::MaxFrameInFlight, ApplicationInfo::RaiiDevice(), vk::SemaphoreCreateInfo{}),
-    _renderFinishedSemaphores(_swapChain->Images.Size(), ApplicationInfo::RaiiDevice(), vk::SemaphoreCreateInfo{}),
-    _waitFence(ApplicationInfo::Constant::MaxFrameInFlight, ApplicationInfo::RaiiDevice(), vk::FenceCreateInfo{}
+    _availableImageSemaphore(ApplicationInfo::RaiiDevice(), vk::SemaphoreCreateInfo{}),
+    _renderFinishedSemaphores(MakeRenderFinishedSemaphores(static_cast<uint32_t>(_swapChain->Images.size()))),
+    _waitFence(ApplicationInfo::RaiiDevice(), vk::FenceCreateInfo{}
         .setFlags(vk::FenceCreateFlagBits::eSignaled)),
     _userInterface(_window.Internal(), *_swapChain, _graphicsComputeQueue, _graphicsCommandPool)
 {
