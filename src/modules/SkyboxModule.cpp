@@ -3,7 +3,6 @@
 #include "allocation/BindingManager.h"
 #include "allocation/RaiiHelper.h"
 #include "rendering/Shaders/ShaderLibrary.h"
-#include <cstdint>
 #include <vulkan/vulkan.hpp>
 #include "ShaderBindings.h"
 #include "vulkan/vulkan.hpp"

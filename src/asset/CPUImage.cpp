@@ -41,7 +41,7 @@ CPUImage::CPUImage(CPUImage&& other) noexcept
     _data = other._data;
 
     other._data = nullptr;
-    _width = _height = _channels = 0;
+    other._width = other._height = other._channels = 0;
 }
 
 CPUImage& CPUImage::operator=(CPUImage&& other) noexcept
@@ -54,7 +54,7 @@ CPUImage& CPUImage::operator=(CPUImage&& other) noexcept
         _data = other._data;
 
         other._data = nullptr;
-        _width = _height = _channels = 0;
+        other._width = other._height = other._channels = 0;
     }
     return *this;
 }

@@ -12,8 +12,8 @@ public:
     Camera(glm::vec3 position, glm::vec3 target, float fov, float aspect, float near = 0.1f, float far = 1000.0f, glm::vec3 front = glm::vec3(0, 0, -1.0f), glm::vec3 up = glm::vec3(0, 1.0f, 0)) ;
     ~Camera();
 
-    Camera(Camera&& other) noexcept;
-    Camera& operator=(Camera&& other) noexcept;
+    Camera(Camera&& other) noexcept = default;
+    Camera& operator=(Camera&& other) noexcept = default;
 
     Camera(const Camera&) = delete;
     Camera& operator=(const Camera&) = delete;

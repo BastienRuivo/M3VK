@@ -95,8 +95,8 @@ class GraphicsBuffer : public MultiFrameRessource<BufferInternal>
 
     ~GraphicsBuffer();
 
-    GraphicsBuffer(GraphicsBuffer&& other) noexcept;
-    GraphicsBuffer& operator=(GraphicsBuffer&& other) noexcept;
+    GraphicsBuffer(GraphicsBuffer&& other) noexcept = default;
+    GraphicsBuffer& operator=(GraphicsBuffer&& other) noexcept = default;
 
     GraphicsBuffer(const GraphicsBuffer&) = delete;
     GraphicsBuffer& operator=(const GraphicsBuffer&) = delete;
@@ -164,8 +164,8 @@ class GeometryBuffer : public GraphicsBuffer
     GeometryBuffer(const GeometryBuffer&) = delete;
     GeometryBuffer& operator=(const GeometryBuffer&) = delete;
 
-    GeometryBuffer(GeometryBuffer&& other) noexcept;
-    GeometryBuffer& operator=(GeometryBuffer&& other) noexcept;
+    GeometryBuffer(GeometryBuffer&& other) noexcept = default;
+    GeometryBuffer& operator=(GeometryBuffer&& other) noexcept = default;
 
     void CopyToBuffer(const vk::Queue& queue,
         const vk::CommandPool& cmdPool,

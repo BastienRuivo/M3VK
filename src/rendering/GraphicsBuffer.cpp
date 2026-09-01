@@ -334,31 +334,6 @@ GraphicsBuffer::~GraphicsBuffer()
     }
 }
 
-GraphicsBuffer::GraphicsBuffer(GraphicsBuffer && other) noexcept
-{
-    _internals = std::move(other._internals);
-
-    _count = std::exchange(other._count, 0);
-    _stride = std::exchange(other._stride, 0);
-    _type = std::exchange(other._type, BufferType::VERTEX);
-    _usage = std::exchange(other._usage, RessourceUsage::Static);
-}
-
-GraphicsBuffer& GraphicsBuffer::operator=(GraphicsBuffer&& other) noexcept
-{
-    if(this != &other)
-    {
-        _internals = std::move(other._internals);
-
-        _count = std::exchange(other._count, 0);
-        _stride = std::exchange(other._stride, 0);
-        _type = std::exchange(other._type, BufferType::VERTEX);
-        _usage = std::exchange(other._usage, RessourceUsage::Static);
-    }
-
-    return *this;
-}
-
 void GeometryBuffer::CopyToBuffer(const vk::Queue& queue,
     const vk::CommandPool& cmdPool,
     void* srcData,
@@ -374,19 +349,3 @@ void GeometryBuffer::CopyToBuffer(const vk::Queue& queue,
     _currentSize += size;
 }
 
-GeometryBuffer::GeometryBuffer(GeometryBuffer&& other) noexcept
-    : GraphicsBuffer(std::move(other)),
-      _currentSize(std::exchange(other._currentSize, 0))
-{
-
-}
-
-GeometryBuffer& GeometryBuffer::operator=(GeometryBuffer&& other) noexcept
-{
-    if(this != &other)
-    {
-        GraphicsBuffer::operator=(std::move(other));
-        _currentSize = std::exchange(other._currentSize, 0);
-    }
-    return *this;
-}

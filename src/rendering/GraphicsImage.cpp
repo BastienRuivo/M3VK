@@ -10,24 +10,6 @@ bool GraphicsImage::Resize(uint32_t Width, uint32_t Height)
     return hasResize;
 }
 
-GraphicsImage::GraphicsImage(GraphicsImage&& other) noexcept
-{
-    _internals = std::move(other._internals);
-    _sampler = std::exchange(other._sampler, nullptr);
-    _usage = std::exchange(other._usage, RessourceUsage::Static);
-}
-
-GraphicsImage& GraphicsImage::operator=(GraphicsImage&& other) noexcept
-{
-    if (this != &other)
-    {
-        _internals = std::move(other._internals);
-        _sampler = other._sampler;
-        _usage = other._usage;
-    }
-    return *this;
-}
-
 void GraphicsImage::TransitionLayout(vk::CommandPool pool, vk::Queue queue, vk::ImageLayout newLayout) const
 {
     CommandBuffer cmdBuffer(pool, queue);

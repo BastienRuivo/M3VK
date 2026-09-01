@@ -34,6 +34,6 @@ public:
 
     MultiFramePerMipImageView(const MultiFramePerMipImageView&) = delete;
     MultiFramePerMipImageView& operator=(const MultiFramePerMipImageView&) = delete;
-    MultiFramePerMipImageView(MultiFramePerMipImageView&& other) noexcept;
-    MultiFramePerMipImageView& operator=(MultiFramePerMipImageView&& other) noexcept;
+    MultiFramePerMipImageView(MultiFramePerMipImageView&& other) noexcept = default;
+    MultiFramePerMipImageView& operator=(MultiFramePerMipImageView&& other) noexcept = default;
 };

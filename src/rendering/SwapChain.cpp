@@ -4,7 +4,6 @@
 #include "application/DebugLayer.h"
 #include "allocation/RaiiHelper.h"
 #include "rendering/GPUImage.h"
-#include "rendering/MultiFrame.h"
 #include "rendering/QueueFamilyIds.h"
 #include <GLFW/glfw3.h>
 #include <algorithm>

@@ -1,22 +1,5 @@
 #include "rendering/Camera.h"
 
-Camera::Camera(Camera&& other) noexcept
-{
-    this->position = other.position;
-    this->_front = other._front;
-    this->_up = other._up;
-}
-
-Camera& Camera::operator=(Camera&& other) noexcept
-{
-    if(this == &other) return *this;
-
-    this->position = other.position;
-    this->_front = other._front;
-    this->_up = other._up;
-    return *this;
-}
-
 Camera::Camera(glm::vec3 position, glm::vec3 target, float fov, float aspect, float near, float far, glm::vec3 front, glm::vec3 up) : position(position), _front(front), _up(up), _fov(fov), _aspect(aspect), _near(near), _far(far)
 {
     glm::vec3 dir = glm::normalize(target - position);

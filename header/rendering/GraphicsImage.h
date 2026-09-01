@@ -53,11 +53,11 @@ class GraphicsImage : public MultiFrameRessource<GPUImage>
 
     bool Resize(uint32_t Width, uint32_t Height);
 
-    GraphicsImage(GraphicsImage&& other) noexcept;
+    GraphicsImage(GraphicsImage&& other) noexcept = default;
     GraphicsImage(const GraphicsImage& other) = delete;
 
     GraphicsImage& operator=(const GraphicsImage& other) = delete;
-    GraphicsImage& operator=(GraphicsImage&& other) noexcept;
+    GraphicsImage& operator=(GraphicsImage&& other) noexcept = default;
 
     inline ImageReference Internal() const { return Current().Internal(); }
     inline vk::ImageView View() const { return Current().Internal().View; }
