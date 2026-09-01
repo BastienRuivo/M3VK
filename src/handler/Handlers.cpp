@@ -40,24 +40,6 @@ void VkFenceHandler::Reset() const
     (void)ApplicationInfo::Device().resetFences(1, &_internal);
 }
 
-VkSemaphoreHandler::VkSemaphoreHandler()
-{
-    vk::SemaphoreCreateInfo semaphoreCreateInfo{};
-
-    vk::Result result = ApplicationInfo::Device().createSemaphore(&semaphoreCreateInfo, nullptr, &_internal);
-    if(result != vk::Result::eSuccess)
-    {
-        throw std::runtime_error("Can't create image available semaphore");
-    }
-}
-
-VkSemaphoreHandler::~VkSemaphoreHandler()
-{
-    if(!_internal) return;
-
-    ApplicationInfo::Device().destroySemaphore(_internal);
-}
-
 vk::raii::Instance M3VKConstruct::MakeInstance(const vk::raii::Context& context,
         const std::string_view name,
         const uint32_t appVersion,

@@ -64,8 +64,8 @@ class Application
     MultiFrameObject<CommandBuffer> _commandBuffer;
 
     // GPU Sync
-    MultiFrameHandler<VkSemaphoreHandler> _availableImageSemaphore;
-    MultiFrameHandler<VkSemaphoreHandler> _renderFinishedSemaphores;
+    MultiFrameObject<vk::raii::Semaphore> _availableImageSemaphore;
+    MultiFrameObject<vk::raii::Semaphore> _renderFinishedSemaphores;
     MultiFrameHandler<VkFenceHandler>  _waitFence;
 
     bool _mouseLocked = true;

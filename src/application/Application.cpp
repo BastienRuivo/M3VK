@@ -104,7 +104,7 @@ void Application::DrawFrame()
     vk::AcquireNextImageInfoKHR acquireInfo = vk::AcquireNextImageInfoKHR{}
         .setSwapchain(_swapChain->Internal())
         .setTimeout(UINT32_MAX) // 4sec = timeout, just a test for now but seems rationnal ?
-        .setSemaphore(_availableImageSemaphore.Internal(currentFrame))
+        .setSemaphore(_availableImageSemaphore.Get(currentFrame))
         .setFence(nullptr)
         .setDeviceMask(1u);
 
@@ -139,8 +139,12 @@ void Application::DrawFrame()
     commandBuffer.Reset();
     _pipeline.Execute(commandBuffer, *_swapChain, _userInterface, imageIndex);
 
-    vk::SemaphoreSubmitInfo waitSemaphore = _availableImageSemaphore.Get(currentFrame).GetSubmitInfo(vk::PipelineStageFlagBits2::eColorAttachmentOutput);
-    vk::SemaphoreSubmitInfo signalSemaphore = _renderFinishedSemaphores.Get(imageIndex).GetSubmitInfo(vk::PipelineStageFlagBits2::eAllGraphics);
+    vk::SemaphoreSubmitInfo waitSemaphore = vk::SemaphoreSubmitInfo{}
+            .setSemaphore(_availableImageSemaphore.Get(currentFrame))
+            .setStageMask(vk::PipelineStageFlagBits2::eColorAttachmentOutput);
+    vk::SemaphoreSubmitInfo signalSemaphore = vk::SemaphoreSubmitInfo{}
+            .setSemaphore(_renderFinishedSemaphores.Get(imageIndex))
+            .setStageMask(vk::PipelineStageFlagBits2::eAllGraphics);
 
     commandBuffer.Submit({&waitSemaphore, 1}, {&signalSemaphore, 1}, _waitFence.Internal(currentFrame));
 
@@ -203,8 +207,8 @@ Application::Application() :
     _pipeline(*_swapChain, _graphicsCommandPool, _graphicsComputeQueue),
 
     // Synchronization
-    _availableImageSemaphore(ApplicationInfo::Constant::MaxFrameInFlight),
-    _renderFinishedSemaphores(_swapChain->Images.Size()),
+    _availableImageSemaphore(ApplicationInfo::Constant::MaxFrameInFlight, ApplicationInfo::RaiiDevice(), vk::SemaphoreCreateInfo{}),
+    _renderFinishedSemaphores(_swapChain->Images.Size(), ApplicationInfo::RaiiDevice(), vk::SemaphoreCreateInfo{}),
     _waitFence(ApplicationInfo::Constant::MaxFrameInFlight),
     _userInterface(_window.Internal(), *_swapChain, _graphicsComputeQueue, _graphicsCommandPool)
 {

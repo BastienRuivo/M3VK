@@ -12,7 +12,6 @@
 
 template<typename T>
     requires std::same_as<T, vk::Fence>
-    || std::same_as<T, vk::Semaphore>
     || std::same_as<T, vk::ImageView>
     || std::same_as<T, vk::PipelineLayout>
     || std::same_as<T, vk::Sampler>
@@ -55,23 +54,6 @@ public:
 
     void Wait(uint64_t timeout) const;
     void Reset() const;
-};
-
-class VkSemaphoreHandler : public Handler<vk::Semaphore>
-{
-public:
-    VkSemaphoreHandler();
-    ~VkSemaphoreHandler() override;
-
-    VkSemaphoreHandler(VkSemaphoreHandler&& other) noexcept = default;
-    VkSemaphoreHandler& operator=(VkSemaphoreHandler&& other) noexcept = default;
-
-    inline vk::SemaphoreSubmitInfo GetSubmitInfo(vk::PipelineStageFlags2 stage = vk::PipelineStageFlagBits2::eNone) const
-    {
-        return vk::SemaphoreSubmitInfo{}
-            .setSemaphore(_internal)
-            .setStageMask(stage);
-    }
 };
 
 class VkSamplerHandler : public Handler<vk::Sampler>
