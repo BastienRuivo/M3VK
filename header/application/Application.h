@@ -48,8 +48,8 @@ class Application
 
     ApplicationInfo::Initializer _appInfoInitializer;
 
-    VkQueueHandler _graphicsComputeQueue;
-    VkQueueHandler _presentQueue;
+    vk::raii::Queue _graphicsComputeQueue;
+    vk::raii::Queue _presentQueue;
 
     // Dynamic lifetime
     VkCommandPoolHandler _graphicsCommandPool;
