@@ -4,11 +4,13 @@
 
 #include "application/DebugLayer.h"
 #include "application/ApplicationInfo.h"
+#include "vulkan/vulkan.hpp"
 
 #include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <stdexcept>
+#include <vulkan/vulkan_raii.hpp>
 
 
 std::vector<char> ApplicationHelper::ReadFile(const std::filesystem::path& path)
@@ -70,9 +72,20 @@ void ApplicationHelper::CopyBufferToBuffer(const vk::Queue queue, const vk::Comm
     vk::SubmitInfo2 submitInfo = vk::SubmitInfo2{}
         .setCommandBufferInfos(cmdBufferSubmit);
 
+    vk::raii::Fence waitFence(ApplicationInfo::RaiiDevice(), vk::FenceCreateInfo{});
+
     // wait for the queue idle, we can use a fence to submit multiple shit later
-    (void)queue.submit2(1, &submitInfo, nullptr);
-    queue.waitIdle();
+    vk::Result result = queue.submit2(1, &submitInfo, waitFence);
+    if(result != vk::Result::eSuccess)
+    {
+        throw std::runtime_error("Failed to submit command buffer (CopyBufferToBuffer)");
+    }
+
+    result = ApplicationInfo::RaiiDevice().waitForFences(*waitFence, vk::True, UINT64_MAX);
+    if(result != vk::Result::eSuccess)
+    {
+        throw std::runtime_error("Wait for single command buffer fence failed (CopyBufferToBuffer)");
+    }
 
     device.freeCommandBuffers(cmdPool, 1, &cmdBuffer);
 }

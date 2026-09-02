@@ -1,9 +1,11 @@
 #include "rendering/CommandBuffer.h"
 #include "application/ApplicationInfo.h"
 #include "rendering/GraphicsBuffer.h"
+#include "vulkan/vulkan.hpp"
 #include <cstdint>
 #include <stdexcept>
 #include <vulkan/vulkan.hpp>
+#include <vulkan/vulkan_raii.hpp>
 
 CommandBuffer::CommandBuffer(vk::CommandPool pool, vk::Queue queue) : _pool(pool), _queue(queue)
 {
@@ -113,13 +115,23 @@ void CommandBuffer::SetViewport(float x, float y, float width, float height) con
 
 void CommandBuffer::WaitCompletion() const
 {
+    vk::raii::Fence waitFence(ApplicationInfo::RaiiDevice(), vk::FenceCreateInfo{});
     vk::CommandBufferSubmitInfo commandBufferSubmitInfo = GetSubmitInfo();
 
     vk::SubmitInfo2 submitInfo = vk::SubmitInfo2{}
         .setCommandBufferInfos(commandBufferSubmitInfo);
 
-    (void)_queue.submit2(1, &submitInfo, nullptr);
-    _queue.waitIdle();
+    vk::Result result = _queue.submit2(1, &submitInfo, waitFence);
+    if(result != vk::Result::eSuccess)
+    {
+        throw std::runtime_error("Failed to submit command buffer (CopyBufferToBuffer)");
+    }
+
+    result = ApplicationInfo::RaiiDevice().waitForFences(*waitFence, vk::True, UINT64_MAX);
+    if(result != vk::Result::eSuccess)
+    {
+        throw std::runtime_error("Wait for single command buffer failed !");
+    }
 }
 
 CommandBuffer::CommandBuffer(CommandBuffer&& other) noexcept
