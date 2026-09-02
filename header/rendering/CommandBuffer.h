@@ -210,17 +210,17 @@ class CommandBuffer
 
     inline void SetBlendEnable(vk::Bool32 enable) const
     {
-        vk::CommandBuffer(_internal).setColorBlendEnableEXT(0, enable);
+        _internal.setColorBlendEnableEXT(0, enable);
     }
 
     inline void SetBlendEquation(vk::ColorBlendEquationEXT equation) const
     {
-        vk::CommandBuffer(_internal).setColorBlendEquationEXT(0, equation);
+        _internal.setColorBlendEquationEXT(0, equation);
     }
 
     inline void SetColorWriteMask(vk::ColorComponentFlags mask) const
     {
-        vk::CommandBuffer(_internal).setColorWriteMaskEXT(0, mask);
+        _internal.setColorWriteMaskEXT(0, mask);
     }
 
     inline void SetPrimitiveTopology(vk::PrimitiveTopology topology) const
@@ -240,37 +240,37 @@ class CommandBuffer
 
     inline void SetCullMode(vk::CullModeFlags cullMode) const
     {
-        vk::CommandBuffer(_internal).setCullMode(cullMode);
+        _internal.setCullMode(cullMode);
     }
 
     inline void SetFrontFace(vk::FrontFace frontFace) const
     {
-        vk::CommandBuffer(_internal).setFrontFace(frontFace);
+        _internal.setFrontFace(frontFace);
     }
 
     inline void SetPolygonMode(vk::PolygonMode polygonMode) const
     {
-        vk::CommandBuffer(_internal).setPolygonModeEXT(polygonMode);
+        _internal.setPolygonModeEXT(polygonMode);
     }
 
     inline void SetLineWidth(float lineWidth) const
     {
-        vk::CommandBuffer(_internal).setLineWidth(lineWidth);
+        _internal.setLineWidth(lineWidth);
     }
 
     inline void SetDepthBiasEnable(vk::Bool32 enable) const
     {
-        vk::CommandBuffer(_internal).setDepthBiasEnable(enable);
+        _internal.setDepthBiasEnable(enable);
     }
 
     inline void SetRasterizationSamples(vk::SampleCountFlagBits samples) const
     {
-        vk::CommandBuffer(_internal).setRasterizationSamplesEXT(samples);
+        _internal.setRasterizationSamplesEXT(samples);
     }
 
     inline void SetSampleMask(vk::SampleCountFlagBits samples, vk::SampleMask sampleMask) const
     {
-        vk::CommandBuffer(_internal).setSampleMaskEXT(samples, &sampleMask);
+        _internal.setSampleMaskEXT(samples, &sampleMask);
     }
 
     inline void SetDepthBias(float depthBiasConstantFactor, float depthBiasClamp, float depthBiasSlopeFactor) const
@@ -280,32 +280,32 @@ class CommandBuffer
 
     inline void SetSampleMask(vk::SampleCountFlagBits samples, const vk::SampleMask* sampleMask)
     {
-        vk::CommandBuffer(_internal).setSampleMaskEXT(samples, sampleMask);
+        _internal.setSampleMaskEXT(samples, sampleMask);
     }
 
     inline void SetAlphaToCoverageEnable(vk::Bool32 enable) const
     {
-        vk::CommandBuffer(_internal).setAlphaToCoverageEnableEXT(enable);
+        _internal.setAlphaToCoverageEnableEXT(enable);
     }
 
     inline void SetAlphaToOneEnable(vk::Bool32 enable) const
     {
-        vk::CommandBuffer(_internal).setAlphaToOneEnableEXT(enable);
+        _internal.setAlphaToOneEnableEXT(enable);
     }
 
     inline void SetDepthClampEnable(vk::Bool32 enable) const
     {
-        vk::CommandBuffer(_internal).setDepthClampEnableEXT(enable);
+        _internal.setDepthClampEnableEXT(enable);
     }
 
     inline void SetVertexInput(std::span<const vk::VertexInputBindingDescription2EXT> vertexBindingDescriptions, std::span<const vk::VertexInputAttributeDescription2EXT> vertexAttributeDescriptions) const
     {
-        vk::CommandBuffer(_internal).setVertexInputEXT(vertexBindingDescriptions, vertexAttributeDescriptions);
+        _internal.setVertexInputEXT(vertexBindingDescriptions, vertexAttributeDescriptions);
     }
 
     inline void BindShaders(std::span<const vk::ShaderStageFlagBits> stages, std::span<const vk::ShaderEXT> pShaders) const
     {
-        vk::CommandBuffer(_internal).bindShadersEXT(stages, pShaders);
+        _internal.bindShadersEXT(stages, pShaders);
     }
 
     inline void Dispatch(uint32_t x, uint32_t y, uint32_t z) const
@@ -317,12 +317,12 @@ class CommandBuffer
     {
         vk::DebugUtilsLabelEXT label{};
         label.pLabelName = name;
-        vk::CommandBuffer(_internal).beginDebugUtilsLabelEXT(label);
+        _internal.beginDebugUtilsLabelEXT(label);
     }
 
     inline void EndMarker() const
     {
-        vk::CommandBuffer(_internal).endDebugUtilsLabelEXT();
+        _internal.endDebugUtilsLabelEXT();
     }
 
     inline vk::CommandBufferSubmitInfo GetSubmitInfo() const
