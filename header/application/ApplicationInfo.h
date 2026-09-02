@@ -94,5 +94,5 @@ class ApplicationInfo
     vk::PhysicalDeviceProperties _properties;
     vk::SampleCountFlagBits  _msaaSample = vk::SampleCountFlagBits::e1;
     uint32_t _currentFrame = 0;
-    uint32_t _currentVRAM = 0;
+    uint64_t _currentVRAM = 0;
 };
