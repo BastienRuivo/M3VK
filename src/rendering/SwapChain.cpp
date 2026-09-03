@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <cstdint>
 #include <limits>
+#include <stdexcept>
 #include <vector>
 #include <vulkan/vulkan.hpp>
 #include <vulkan/vulkan_to_string.hpp>
@@ -89,9 +90,8 @@ vk::SurfaceFormatKHR SwapChain::SelectSwapSurfaceFormat(const std::vector<vk::Su
         }
     }
 
-    DebugLayer::Log(DebugLayer::LogType::WARNING, "Can't find best swap chain format");
-
-    return availableFormats[0];
+    DebugLayer::Log(DebugLayer::LogType::ERROR, "Can't find swap chain format that satisfies B8G8R8Srgb");
+    throw std::runtime_error("Can't satisfy swap chain requirement !");
 }
 
 vk::raii::SwapchainKHR SwapChain::MakeSwapChainInternal(const Window& window, vk::SurfaceKHR windowSurface)
