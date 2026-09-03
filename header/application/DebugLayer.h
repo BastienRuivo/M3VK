@@ -7,8 +7,6 @@
 
 #include <vector>
 
-#define M3VK_VERBOSE_LOG 1
-
 class DebugLayer
 {
     public:
@@ -26,9 +24,7 @@ class DebugLayer
         VERBOSE,
         INFO,
         WARNING,
-        ERROR,
-        CREATE,
-        DESTROY
+        ERROR
     };
 
     static inline const char* TextColorGrey = "\033[0m";

@@ -11,6 +11,7 @@
 #include <limits>
 #include <vector>
 #include <vulkan/vulkan.hpp>
+#include <vulkan/vulkan_to_string.hpp>
 
 #include "application/DebugLayer.h"
 
@@ -55,30 +56,22 @@ vk::PresentModeKHR SwapChain::SelectSwapPresentMode(const std::vector<vk::Presen
 
     if(hasTripleBuffering)
     {
-#ifdef M3VK_VERBOSE_LOG
         DebugLayer::Log(DebugLayer::LogType::INFO, "Swap chain mode : Triple buffering");
-#endif
         return vk::PresentModeKHR::eMailbox;
     }
     else if(hasVBlank)
     {
-#ifdef M3VK_VERBOSE_LOG
         DebugLayer::Log(DebugLayer::LogType::INFO, "Swap chain mode : VBlank");
-#endif
         return vk::PresentModeKHR::eFifo;
     }
     else if(hasRelaxedDoubleBuffering)
     {
-#ifdef M3VK_VERBOSE_LOG
         DebugLayer::Log(DebugLayer::LogType::INFO, "Swap chain mode : Relaxed VBlank");
-#endif
         return vk::PresentModeKHR::eFifoRelaxed;
     }
     else if(hasImmediateMode)
     {
-#ifdef M3VK_VERBOSE_LOG
         DebugLayer::Log(DebugLayer::LogType::INFO, "Swap chain mode : Immediate");
-#endif
         return vk::PresentModeKHR::eImmediate;
     }
 
@@ -107,6 +100,8 @@ vk::raii::SwapchainKHR SwapChain::MakeSwapChainInternal(const Window& window, vk
     ApplicationHelper::SwapChainSupportDetails details = ApplicationHelper::QuerySwapChainSupportDetail(ApplicationInfo::PhysicalDevice(), windowSurface);
 
     vk::SurfaceFormatKHR format = SelectSwapSurfaceFormat(details.Formats);
+
+    DebugLayer::Log(DebugLayer::INFO, "Swap chain format : " + vk::to_string(format.format) + " Color space :" + vk::to_string(format.colorSpace));
     vk::PresentModeKHR presentMode = SelectSwapPresentMode(details.PresentsModes);
     _extents = SelectSwapExtents(window, details.Capabilities);
     _imageFormat = format.format;

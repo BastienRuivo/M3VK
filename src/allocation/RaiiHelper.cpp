@@ -29,14 +29,10 @@ vk::raii::Instance RaiiHelper::MakeInstance(const vk::raii::Context& context,
 
     if(DebugLayer::Enabled)
     {
-#ifdef M3VK_VERBOSE_LOG
-        DebugLayer::Log(DebugLayer::LogType::INFO, "List of actives VK Extensions");
-#endif
+        DebugLayer::Log(DebugLayer::LogType::VERBOSE, "List of actives VK Extensions");
         for(const vk::ExtensionProperties& extension : supportedExtensions)
         {
-#ifdef M3VK_VERBOSE_LOG
-            DebugLayer::Log(DebugLayer::LogType::INFO, std::string("\t - ") + extension.extensionName.data());
-#endif
+            DebugLayer::Log(DebugLayer::LogType::VERBOSE, std::string("\t - ") + extension.extensionName.data());
         }
     }
 

@@ -40,10 +40,12 @@ void DebugLayer::Log(DebugLayer::LogType LogType, std::string_view message)
         case DebugLayer::LogType::ERROR: title = "Error"; break;
         case DebugLayer::LogType::VERBOSE: title = "Verbose"; break;
         case DebugLayer::LogType::INFO: title = "Info"; break;
-        case DebugLayer::LogType::CREATE: title = "Create"; break;
-        case DebugLayer::LogType::DESTROY: title = "Destroy"; break;
         default: title = "Unknown"; break;
     }
+
+    #ifndef M3VK_VERBOSE_LOG
+    if(LogType == DebugLayer::LogType::VERBOSE) return;
+    #endif
 
     *stream << color << "[Validation Layer Message] - [M3VK] : [" << title << "] " << message << std::endl;
 }
